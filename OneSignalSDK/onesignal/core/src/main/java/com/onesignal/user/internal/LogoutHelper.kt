@@ -4,12 +4,14 @@ import com.onesignal.core.internal.config.ConfigModel
 import com.onesignal.core.internal.operations.IOperationRepo
 import com.onesignal.user.internal.identity.IdentityModelStore
 import com.onesignal.user.internal.operations.LoginUserOperation
+import com.onesignal.user.internal.subscriptions.SubscriptionModelStore
 
 class LogoutHelper(
     private val identityModelStore: IdentityModelStore,
     private val userSwitcher: UserSwitcher,
     private val operationRepo: IOperationRepo,
     private val configModel: ConfigModel,
+    private val subscriptionModelStore: SubscriptionModelStore,
     private val lock: Any,
 ) {
     fun logout() {
@@ -18,20 +20,41 @@ class LogoutHelper(
                 return
             }
 
-            // Create new device-scoped user (clears external ID)
-            userSwitcher.createAndSwitchToNewUser()
+            if (configModel.useIdentityVerification == true) {
+                configModel.pushSubscriptionId?.let { pushSubId ->
+                    subscriptionModelStore.get(pushSubId)
+                        ?.let { it.isDisabledInternally = true }
+                }
 
-            // Enqueue login operation for the new device-scoped user (no external ID)
-            operationRepo.enqueue(
-                LoginUserOperation(
-                    configModel.appId,
-                    identityModelStore.model.onesignalId,
-                    null,
-                    // No external ID for device-scoped user
-                ),
-            )
+                userSwitcher.createAndSwitchToNewUser(suppressBackendOperation = true)
+            } else if (configModel.useIdentityVerification == false) {
+                userSwitcher.createAndSwitchToNewUser()
 
-            // TODO: remove JWT Token for all future requests.
+                operationRepo.enqueue(
+                    LoginUserOperation(
+                        configModel.appId,
+                        identityModelStore.model.onesignalId,
+                        null,
+                    ),
+                )
+            } else {
+                // IV unknown (pre-HYDRATE): disable push, enqueue anonymous user.
+                // If IV=ON at HYDRATE, removeOperationsWithoutExternalId() purges these.
+                configModel.pushSubscriptionId?.let { pushSubId ->
+                    subscriptionModelStore.get(pushSubId)
+                        ?.let { it.isDisabledInternally = true }
+                }
+
+                userSwitcher.createAndSwitchToNewUser()
+
+                operationRepo.enqueue(
+                    LoginUserOperation(
+                        configModel.appId,
+                        identityModelStore.model.onesignalId,
+                        null,
+                    ),
+                )
+            }
         }
     }
 }

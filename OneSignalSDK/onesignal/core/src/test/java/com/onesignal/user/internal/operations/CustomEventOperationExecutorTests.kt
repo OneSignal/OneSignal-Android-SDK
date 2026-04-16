@@ -9,6 +9,7 @@ import com.onesignal.core.internal.operations.ExecutionResult
 import com.onesignal.core.internal.operations.Operation
 import com.onesignal.mocks.MockHelper
 import com.onesignal.user.internal.customEvents.ICustomEventBackendService
+import com.onesignal.user.internal.identity.JwtTokenStore
 import com.onesignal.user.internal.operations.impl.executors.CustomEventOperationExecutor
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.equals.shouldBeEqual
@@ -36,7 +37,7 @@ class CustomEventOperationExecutorTests : FunSpec({
         val properties = JSONObject().put("key", "value").toString()
 
         val customEventOperationExecutor =
-            CustomEventOperationExecutor(mockCustomEventBackendService, mockApplicationService, mockDeviceService)
+            CustomEventOperationExecutor(mockCustomEventBackendService, mockApplicationService, mockDeviceService, mockk<JwtTokenStore>(relaxed = true))
         val operations = listOf<Operation>(TrackCustomEventOperation("appId", "onesignalId", null, 1, "event-name", properties))
 
         // When

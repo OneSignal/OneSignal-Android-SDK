@@ -1,6 +1,7 @@
 package com.onesignal.user.internal.backend
 
 import com.onesignal.common.exceptions.BackendException
+import com.onesignal.debug.internal.logging.Logging
 
 interface IIdentityBackendService {
     /**
@@ -18,6 +19,7 @@ interface IIdentityBackendService {
         aliasLabel: String,
         aliasValue: String,
         identities: Map<String, String>,
+        jwt: String? = null,
     ): Map<String, String>
 
     /**
@@ -35,6 +37,7 @@ interface IIdentityBackendService {
         aliasLabel: String,
         aliasValue: String,
         aliasLabelToDelete: String,
+        jwt: String? = null,
     )
 }
 
@@ -48,4 +51,23 @@ object IdentityConstants {
      * The alias label for the internal onesignal ID alias.
      */
     const val ONESIGNAL_ID = "onesignal_id"
+
+    /**
+     * Resolves which alias (external_id vs onesignal_id) should be used in backend API paths.
+     * When identity verification is enabled and the operation has an externalId, routes through
+     * external_id; otherwise falls back to onesignal_id.
+     */
+    fun resolveAlias(
+        useIdentityVerification: Boolean?,
+        externalId: String?,
+        onesignalId: String,
+    ): Pair<String, String> {
+        if (useIdentityVerification == true) {
+            if (externalId != null) {
+                return EXTERNAL_ID to externalId
+            }
+            Logging.error("Identity verification is enabled but externalId is null. Falling back to onesignal_id.")
+        }
+        return ONESIGNAL_ID to onesignalId
+    }
 }

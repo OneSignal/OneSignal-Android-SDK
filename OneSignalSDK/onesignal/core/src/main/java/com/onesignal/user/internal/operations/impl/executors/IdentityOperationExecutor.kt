@@ -3,6 +3,7 @@ package com.onesignal.user.internal.operations.impl.executors
 import com.onesignal.common.NetworkUtils
 import com.onesignal.common.exceptions.BackendException
 import com.onesignal.common.modeling.ModelChangeTags
+import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.operations.ExecutionResponse
 import com.onesignal.core.internal.operations.ExecutionResult
 import com.onesignal.core.internal.operations.IOperationExecutor
@@ -12,6 +13,7 @@ import com.onesignal.user.internal.backend.IIdentityBackendService
 import com.onesignal.user.internal.backend.IdentityConstants
 import com.onesignal.user.internal.builduser.IRebuildUserService
 import com.onesignal.user.internal.identity.IdentityModelStore
+import com.onesignal.user.internal.identity.JwtTokenStore
 import com.onesignal.user.internal.operations.DeleteAliasOperation
 import com.onesignal.user.internal.operations.SetAliasOperation
 import com.onesignal.user.internal.operations.impl.states.NewRecordsState
@@ -21,6 +23,8 @@ internal class IdentityOperationExecutor(
     private val _identityModelStore: IdentityModelStore,
     private val _buildUserService: IRebuildUserService,
     private val _newRecordState: NewRecordsState,
+    private val _configModelStore: ConfigModelStore,
+    private val _jwtTokenStore: JwtTokenStore,
 ) : IOperationExecutor {
     override val operations: List<String>
         get() = listOf(SET_ALIAS, DELETE_ALIAS)
@@ -44,12 +48,21 @@ internal class IdentityOperationExecutor(
         val lastOperation = operations.last()
 
         if (lastOperation is SetAliasOperation) {
+            val (aliasLabel, aliasValue) =
+                IdentityConstants.resolveAlias(
+                    _configModelStore.model.useIdentityVerification,
+                    lastOperation.externalId,
+                    lastOperation.onesignalId,
+                )
+            val jwt = lastOperation.externalId?.let { _jwtTokenStore.getJwt(it) }
+
             try {
                 _identityBackend.setAlias(
                     lastOperation.appId,
-                    IdentityConstants.ONESIGNAL_ID,
-                    lastOperation.onesignalId,
+                    aliasLabel,
+                    aliasValue,
                     mapOf(lastOperation.label to lastOperation.value),
+                    jwt,
                 )
 
                 // ensure the now created alias is in the model as long as the user is still current.
@@ -87,12 +100,21 @@ internal class IdentityOperationExecutor(
                 }
             }
         } else if (lastOperation is DeleteAliasOperation) {
+            val (aliasLabel, aliasValue) =
+                IdentityConstants.resolveAlias(
+                    _configModelStore.model.useIdentityVerification,
+                    lastOperation.externalId,
+                    lastOperation.onesignalId,
+                )
+            val jwt = lastOperation.externalId?.let { _jwtTokenStore.getJwt(it) }
+
             try {
                 _identityBackend.deleteAlias(
                     lastOperation.appId,
-                    IdentityConstants.ONESIGNAL_ID,
-                    lastOperation.onesignalId,
+                    aliasLabel,
+                    aliasValue,
                     lastOperation.label,
+                    jwt,
                 )
 
                 // ensure the now deleted alias is not in the model as long as the user is still current.

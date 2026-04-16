@@ -13,6 +13,7 @@ import com.onesignal.user.internal.backend.ISubscriptionBackendService
 import com.onesignal.user.internal.backend.IdentityConstants
 import com.onesignal.user.internal.backend.SubscriptionObjectType
 import com.onesignal.user.internal.builduser.IRebuildUserService
+import com.onesignal.user.internal.identity.JwtTokenStore
 import com.onesignal.user.internal.operations.ExecutorMocks.Companion.getNewRecordState
 import com.onesignal.user.internal.operations.impl.executors.SubscriptionOperationExecutor
 import com.onesignal.user.internal.subscriptions.SubscriptionModel
@@ -68,6 +69,7 @@ class SubscriptionOperationExecutorTests :
                     mockBuildUserService,
                     getNewRecordState(),
                     mockConsistencyManager,
+                    mockk<JwtTokenStore>(relaxed = true),
                 )
 
             val operations =
@@ -75,6 +77,7 @@ class SubscriptionOperationExecutorTests :
                     CreateSubscriptionOperation(
                         appId,
                         remoteOneSignalId,
+                        null,
                         localSubscriptionId,
                         SubscriptionType.PUSH,
                         true,
@@ -128,6 +131,7 @@ class SubscriptionOperationExecutorTests :
                     mockBuildUserService,
                     getNewRecordState(),
                     mockConsistencyManager,
+                    mockk<JwtTokenStore>(relaxed = true),
                 )
 
             val operations =
@@ -135,6 +139,7 @@ class SubscriptionOperationExecutorTests :
                     CreateSubscriptionOperation(
                         appId,
                         remoteOneSignalId,
+                        null,
                         remoteSubscriptionId,
                         SubscriptionType.PUSH,
                         true,
@@ -178,6 +183,7 @@ class SubscriptionOperationExecutorTests :
                     mockBuildUserService,
                     getNewRecordState(),
                     mockConsistencyManager,
+                    mockk<JwtTokenStore>(relaxed = true),
                 )
 
             val operations =
@@ -185,6 +191,7 @@ class SubscriptionOperationExecutorTests :
                     CreateSubscriptionOperation(
                         appId,
                         remoteOneSignalId,
+                        null,
                         localSubscriptionId,
                         SubscriptionType.PUSH,
                         true,
@@ -233,6 +240,7 @@ class SubscriptionOperationExecutorTests :
                     mockBuildUserService,
                     getNewRecordState(),
                     mockConsistencyManager,
+                    mockk<JwtTokenStore>(relaxed = true),
                 )
 
             val operations =
@@ -240,6 +248,7 @@ class SubscriptionOperationExecutorTests :
                     CreateSubscriptionOperation(
                         appId,
                         remoteOneSignalId,
+                        null,
                         localSubscriptionId,
                         SubscriptionType.PUSH,
                         true,
@@ -288,6 +297,7 @@ class SubscriptionOperationExecutorTests :
                     mockBuildUserService,
                     newRecordState,
                     mockConsistencyManager,
+                    mockk<JwtTokenStore>(relaxed = true),
                 )
 
             val operations =
@@ -295,6 +305,7 @@ class SubscriptionOperationExecutorTests :
                     CreateSubscriptionOperation(
                         appId,
                         remoteOneSignalId,
+                        null,
                         localSubscriptionId,
                         SubscriptionType.PUSH,
                         true,
@@ -331,6 +342,7 @@ class SubscriptionOperationExecutorTests :
                     mockBuildUserService,
                     getNewRecordState(),
                     mockConsistencyManager,
+                    mockk<JwtTokenStore>(relaxed = true),
                 )
 
             val operations =
@@ -338,13 +350,14 @@ class SubscriptionOperationExecutorTests :
                     CreateSubscriptionOperation(
                         appId,
                         remoteOneSignalId,
+                        null,
                         localSubscriptionId,
                         SubscriptionType.PUSH,
                         true,
                         "pushToken",
                         SubscriptionStatus.SUBSCRIBED,
                     ),
-                    DeleteSubscriptionOperation(appId, remoteOneSignalId, localSubscriptionId),
+                    DeleteSubscriptionOperation(appId, remoteOneSignalId, null, localSubscriptionId),
                 )
 
             // When
@@ -377,6 +390,7 @@ class SubscriptionOperationExecutorTests :
                     mockBuildUserService,
                     getNewRecordState(),
                     mockConsistencyManager,
+                    mockk<JwtTokenStore>(relaxed = true),
                 )
 
             val operations =
@@ -384,6 +398,7 @@ class SubscriptionOperationExecutorTests :
                     CreateSubscriptionOperation(
                         appId,
                         remoteOneSignalId,
+                        null,
                         localSubscriptionId,
                         SubscriptionType.PUSH,
                         true,
@@ -393,6 +408,7 @@ class SubscriptionOperationExecutorTests :
                     UpdateSubscriptionOperation(
                         appId,
                         remoteOneSignalId,
+                        null,
                         localSubscriptionId,
                         SubscriptionType.PUSH,
                         true,
@@ -447,6 +463,7 @@ class SubscriptionOperationExecutorTests :
                     mockBuildUserService,
                     getNewRecordState(),
                     mockConsistencyManager,
+                    mockk<JwtTokenStore>(relaxed = true),
                 )
 
             val operations =
@@ -454,6 +471,7 @@ class SubscriptionOperationExecutorTests :
                     UpdateSubscriptionOperation(
                         appId,
                         remoteOneSignalId,
+                        null,
                         remoteSubscriptionId,
                         SubscriptionType.PUSH,
                         true,
@@ -463,6 +481,7 @@ class SubscriptionOperationExecutorTests :
                     UpdateSubscriptionOperation(
                         appId,
                         remoteOneSignalId,
+                        null,
                         remoteSubscriptionId,
                         SubscriptionType.PUSH,
                         true,
@@ -508,6 +527,7 @@ class SubscriptionOperationExecutorTests :
                     mockBuildUserService,
                     getNewRecordState(),
                     mockConsistencyManager,
+                    mockk<JwtTokenStore>(relaxed = true),
                 )
 
             val operations =
@@ -515,6 +535,7 @@ class SubscriptionOperationExecutorTests :
                     UpdateSubscriptionOperation(
                         appId,
                         remoteOneSignalId,
+                        null,
                         remoteSubscriptionId,
                         SubscriptionType.PUSH,
                         true,
@@ -560,6 +581,7 @@ class SubscriptionOperationExecutorTests :
                     mockBuildUserService,
                     getNewRecordState(),
                     mockConsistencyManager,
+                    mockk<JwtTokenStore>(relaxed = true),
                 )
 
             val operations =
@@ -567,6 +589,7 @@ class SubscriptionOperationExecutorTests :
                     UpdateSubscriptionOperation(
                         appId,
                         remoteOneSignalId,
+                        null,
                         remoteSubscriptionId,
                         SubscriptionType.PUSH,
                         true,
@@ -614,6 +637,7 @@ class SubscriptionOperationExecutorTests :
                     mockBuildUserService,
                     newRecordState,
                     mockConsistencyManager,
+                    mockk<JwtTokenStore>(relaxed = true),
                 )
 
             val operations =
@@ -621,6 +645,7 @@ class SubscriptionOperationExecutorTests :
                     UpdateSubscriptionOperation(
                         appId,
                         remoteOneSignalId,
+                        null,
                         remoteSubscriptionId,
                         SubscriptionType.PUSH,
                         true,
@@ -656,11 +681,12 @@ class SubscriptionOperationExecutorTests :
                     mockBuildUserService,
                     getNewRecordState(),
                     mockConsistencyManager,
+                    mockk<JwtTokenStore>(relaxed = true),
                 )
 
             val operations =
                 listOf<Operation>(
-                    DeleteSubscriptionOperation(appId, remoteOneSignalId, remoteSubscriptionId),
+                    DeleteSubscriptionOperation(appId, remoteOneSignalId, null, remoteSubscriptionId),
                 )
 
             // When
@@ -690,11 +716,12 @@ class SubscriptionOperationExecutorTests :
                     mockBuildUserService,
                     getNewRecordState(),
                     mockConsistencyManager,
+                    mockk<JwtTokenStore>(relaxed = true),
                 )
 
             val operations =
                 listOf<Operation>(
-                    DeleteSubscriptionOperation(appId, remoteOneSignalId, remoteSubscriptionId),
+                    DeleteSubscriptionOperation(appId, remoteOneSignalId, null, remoteSubscriptionId),
                 )
 
             // When
@@ -725,11 +752,12 @@ class SubscriptionOperationExecutorTests :
                     mockBuildUserService,
                     getNewRecordState(),
                     mockConsistencyManager,
+                    mockk<JwtTokenStore>(relaxed = true),
                 )
 
             val operations =
                 listOf<Operation>(
-                    DeleteSubscriptionOperation(appId, remoteOneSignalId, remoteSubscriptionId),
+                    DeleteSubscriptionOperation(appId, remoteOneSignalId, null, remoteSubscriptionId),
                 )
 
             // When
@@ -760,11 +788,12 @@ class SubscriptionOperationExecutorTests :
                     mockBuildUserService,
                     newRecordState,
                     mockConsistencyManager,
+                    mockk<JwtTokenStore>(relaxed = true),
                 )
 
             val operations =
                 listOf<Operation>(
-                    DeleteSubscriptionOperation(appId, remoteOneSignalId, remoteSubscriptionId),
+                    DeleteSubscriptionOperation(appId, remoteOneSignalId, null, remoteSubscriptionId),
                 )
 
             // When
@@ -801,6 +830,7 @@ class SubscriptionOperationExecutorTests :
                     mockBuildUserService,
                     getNewRecordState(),
                     mockConsistencyManager,
+                    mockk<JwtTokenStore>(relaxed = true),
                 )
 
             val operations =
@@ -808,6 +838,7 @@ class SubscriptionOperationExecutorTests :
                     UpdateSubscriptionOperation(
                         appId,
                         remoteOneSignalId,
+                        null,
                         remoteSubscriptionId,
                         SubscriptionType.PUSH,
                         true,

@@ -14,6 +14,7 @@ import com.onesignal.user.internal.backend.SubscriptionObject
 import com.onesignal.user.internal.backend.SubscriptionObjectType
 import com.onesignal.user.internal.builduser.IRebuildUserService
 import com.onesignal.user.internal.identity.IdentityModel
+import com.onesignal.user.internal.identity.JwtTokenStore
 import com.onesignal.user.internal.operations.ExecutorMocks.Companion.getNewRecordState
 import com.onesignal.user.internal.operations.impl.executors.RefreshUserOperationExecutor
 import com.onesignal.user.internal.properties.PropertiesModel
@@ -107,9 +108,10 @@ class RefreshUserOperationExecutorTests : FunSpec({
                 mockConfigModelStore,
                 mockBuildUserService,
                 getNewRecordState(),
+                mockk<JwtTokenStore>(relaxed = true),
             )
 
-        val operations = listOf<Operation>(RefreshUserOperation(appId, remoteOneSignalId))
+        val operations = listOf<Operation>(RefreshUserOperation(appId, remoteOneSignalId, null))
 
         try {
             // When
@@ -191,9 +193,10 @@ class RefreshUserOperationExecutorTests : FunSpec({
                 MockHelper.configModelStore(),
                 mockBuildUserService,
                 getNewRecordState(),
+                mockk<JwtTokenStore>(relaxed = true),
             )
 
-        val operations = listOf<Operation>(RefreshUserOperation(appId, remoteOneSignalId))
+        val operations = listOf<Operation>(RefreshUserOperation(appId, remoteOneSignalId, null))
 
         // When
         val response = refreshUserOperationExecutor.execute(operations)
@@ -230,9 +233,10 @@ class RefreshUserOperationExecutorTests : FunSpec({
                 MockHelper.configModelStore(),
                 mockBuildUserService,
                 getNewRecordState(),
+                mockk<JwtTokenStore>(relaxed = true),
             )
 
-        val operations = listOf<Operation>(RefreshUserOperation(appId, remoteOneSignalId))
+        val operations = listOf<Operation>(RefreshUserOperation(appId, remoteOneSignalId, null))
 
         // When
         val response = refreshUserOperationExecutor.execute(operations)
@@ -265,9 +269,10 @@ class RefreshUserOperationExecutorTests : FunSpec({
                 MockHelper.configModelStore(),
                 mockBuildUserService,
                 getNewRecordState(),
+                mockk<JwtTokenStore>(relaxed = true),
             )
 
-        val operations = listOf<Operation>(RefreshUserOperation(appId, remoteOneSignalId))
+        val operations = listOf<Operation>(RefreshUserOperation(appId, remoteOneSignalId, null))
 
         // When
         val response = refreshUserOperationExecutor.execute(operations)
@@ -300,9 +305,10 @@ class RefreshUserOperationExecutorTests : FunSpec({
                 MockHelper.configModelStore(),
                 mockBuildUserService,
                 getNewRecordState(),
+                mockk<JwtTokenStore>(relaxed = true),
             )
 
-        val operations = listOf<Operation>(RefreshUserOperation(appId, remoteOneSignalId))
+        val operations = listOf<Operation>(RefreshUserOperation(appId, remoteOneSignalId, null))
 
         // When
         val response = refreshUserOperationExecutor.execute(operations)
@@ -337,9 +343,10 @@ class RefreshUserOperationExecutorTests : FunSpec({
                 MockHelper.configModelStore(),
                 mockBuildUserService,
                 newRecordState,
+                mockk<JwtTokenStore>(relaxed = true),
             )
 
-        val operations = listOf<Operation>(RefreshUserOperation(appId, remoteOneSignalId))
+        val operations = listOf<Operation>(RefreshUserOperation(appId, remoteOneSignalId, null))
 
         // When
         val response = refreshUserOperationExecutor.execute(operations)

@@ -6,6 +6,7 @@ import com.onesignal.core.internal.time.impl.Time
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.mocks.MockHelper
+import com.onesignal.user.internal.identity.JwtTokenStore
 import com.onesignal.user.internal.operations.ExecutorMocks
 import com.onesignal.user.internal.operations.LoginUserOperation
 import io.kotest.core.spec.style.FunSpec
@@ -38,6 +39,8 @@ private class Mocks {
                 configModelStore,
                 Time(),
                 ExecutorMocks.getNewRecordState(configModelStore),
+                mockk<JwtTokenStore>(relaxed = true),
+                MockHelper.identityModelStore(),
             ),
         )
 

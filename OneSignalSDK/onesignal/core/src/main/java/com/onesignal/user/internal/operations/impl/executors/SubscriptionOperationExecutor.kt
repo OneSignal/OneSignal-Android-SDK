@@ -26,6 +26,7 @@ import com.onesignal.user.internal.backend.IdentityConstants
 import com.onesignal.user.internal.backend.SubscriptionObject
 import com.onesignal.user.internal.backend.SubscriptionObjectType
 import com.onesignal.user.internal.builduser.IRebuildUserService
+import com.onesignal.user.internal.identity.JwtTokenStore
 import com.onesignal.user.internal.operations.CreateSubscriptionOperation
 import com.onesignal.user.internal.operations.DeleteSubscriptionOperation
 import com.onesignal.user.internal.operations.TransferSubscriptionOperation
@@ -44,6 +45,7 @@ internal class SubscriptionOperationExecutor(
     private val _buildUserService: IRebuildUserService,
     private val _newRecordState: NewRecordsState,
     private val _consistencyManager: IConsistencyManager,
+    private val _jwtTokenStore: JwtTokenStore,
 ) : IOperationExecutor {
     override val operations: List<String>
         get() = listOf(CREATE_SUBSCRIPTION, UPDATE_SUBSCRIPTION, DELETE_SUBSCRIPTION, TRANSFER_SUBSCRIPTION)
@@ -107,12 +109,21 @@ internal class SubscriptionOperationExecutor(
                     AndroidUtils.getAppVersion(_applicationService.appContext),
                 )
 
+            val (aliasLabel, aliasValue) =
+                IdentityConstants.resolveAlias(
+                    _configModelStore.model.useIdentityVerification,
+                    createOperation.externalId,
+                    createOperation.onesignalId,
+                )
+            val jwt = createOperation.externalId?.let { _jwtTokenStore.getJwt(it) }
+
             val result =
                 _subscriptionBackend.createSubscription(
                     createOperation.appId,
-                    IdentityConstants.ONESIGNAL_ID,
-                    createOperation.onesignalId,
+                    aliasLabel,
+                    aliasValue,
                     subscription,
+                    jwt,
                 ) ?: return ExecutionResponse(ExecutionResult.SUCCESS)
 
             val backendSubscriptionId = result.first
@@ -190,7 +201,8 @@ internal class SubscriptionOperationExecutor(
                     AndroidUtils.getAppVersion(_applicationService.appContext),
                 )
 
-            val rywData = _subscriptionBackend.updateSubscription(lastOperation.appId, lastOperation.subscriptionId, subscription)
+            val jwt = lastOperation.externalId?.let { _jwtTokenStore.getJwt(it) }
+            val rywData = _subscriptionBackend.updateSubscription(lastOperation.appId, lastOperation.subscriptionId, subscription, jwt)
 
             if (rywData != null) {
                 _consistencyManager.setRywData(startingOperation.onesignalId, IamFetchRywTokenKey.SUBSCRIPTION, rywData)
@@ -220,6 +232,7 @@ internal class SubscriptionOperationExecutor(
                             CreateSubscriptionOperation(
                                 lastOperation.appId,
                                 lastOperation.onesignalId,
+                                lastOperation.externalId,
                                 lastOperation.subscriptionId,
                                 lastOperation.type,
                                 lastOperation.enabled,
@@ -239,12 +252,26 @@ internal class SubscriptionOperationExecutor(
 
     // TODO: whenever the end-user changes users, we need to add the read-your-write token here, currently no code to handle the re-fetch IAMs
     private suspend fun transferSubscription(startingOperation: TransferSubscriptionOperation): ExecutionResponse {
+        if (_configModelStore.model.useIdentityVerification == true) {
+            Logging.warn("TransferSubscriptionOperation is not supported when identity verification is enabled. Dropping.")
+            return ExecutionResponse(ExecutionResult.FAIL_NORETRY)
+        }
+
+        val (aliasLabel, aliasValue) =
+            IdentityConstants.resolveAlias(
+                _configModelStore.model.useIdentityVerification,
+                startingOperation.externalId,
+                startingOperation.onesignalId,
+            )
+        val jwt = startingOperation.externalId?.let { _jwtTokenStore.getJwt(it) }
+
         try {
             _subscriptionBackend.transferSubscription(
                 startingOperation.appId,
                 startingOperation.subscriptionId,
-                IdentityConstants.ONESIGNAL_ID,
-                startingOperation.onesignalId,
+                aliasLabel,
+                aliasValue,
+                jwt,
             )
         } catch (ex: BackendException) {
             val responseType = NetworkUtils.getResponseStatusType(ex.statusCode)
@@ -275,8 +302,10 @@ internal class SubscriptionOperationExecutor(
     }
 
     private suspend fun deleteSubscription(op: DeleteSubscriptionOperation): ExecutionResponse {
+        val jwt = op.externalId?.let { _jwtTokenStore.getJwt(it) }
+
         try {
-            _subscriptionBackend.deleteSubscription(op.appId, op.subscriptionId)
+            _subscriptionBackend.deleteSubscription(op.appId, op.subscriptionId, jwt)
 
             // remove the subscription model as a HYDRATE in case for some reason it still exists.
             _subscriptionModelStore.remove(op.subscriptionId, ModelChangeTags.HYDRATE)
@@ -299,6 +328,8 @@ internal class SubscriptionOperationExecutor(
                 }
                 NetworkUtils.ResponseStatusType.RETRYABLE ->
                     ExecutionResponse(ExecutionResult.FAIL_RETRY, retryAfterSeconds = ex.retryAfterSeconds)
+                NetworkUtils.ResponseStatusType.UNAUTHORIZED ->
+                    ExecutionResponse(ExecutionResult.FAIL_UNAUTHORIZED, retryAfterSeconds = ex.retryAfterSeconds)
                 else ->
                     ExecutionResponse(ExecutionResult.FAIL_NORETRY)
             }

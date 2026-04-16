@@ -65,9 +65,10 @@ class TrackPurchaseOperation() : Operation(UpdateUserOperationExecutor.TRACK_PUR
     override val canStartExecute: Boolean get() = !IDManager.isLocalId(onesignalId)
     override val applyToRecordId: String get() = onesignalId
 
-    constructor(appId: String, onesignalId: String, treatNewAsExisting: Boolean, amountSpent: BigDecimal, purchases: List<PurchaseInfo>) : this() {
+    constructor(appId: String, onesignalId: String, externalId: String?, treatNewAsExisting: Boolean, amountSpent: BigDecimal, purchases: List<PurchaseInfo>) : this() {
         this.appId = appId
         this.onesignalId = onesignalId
+        this.externalId = externalId
         this.treatNewAsExisting = treatNewAsExisting
         this.amountSpent = amountSpent
         this.purchases = purchases

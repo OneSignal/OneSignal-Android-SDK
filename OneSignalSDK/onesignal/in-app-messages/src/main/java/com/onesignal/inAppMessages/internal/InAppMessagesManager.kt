@@ -48,6 +48,7 @@ import com.onesignal.user.IUserManager
 import com.onesignal.user.internal.backend.IdentityConstants
 import com.onesignal.user.internal.identity.IdentityModel
 import com.onesignal.user.internal.identity.IdentityModelStore
+import com.onesignal.user.internal.identity.JwtTokenStore
 import com.onesignal.user.internal.subscriptions.ISubscriptionChangedHandler
 import com.onesignal.user.internal.subscriptions.ISubscriptionManager
 import com.onesignal.user.internal.subscriptions.SubscriptionModel
@@ -76,6 +77,7 @@ internal class InAppMessagesManager(
     private val _languageContext: ILanguageContext,
     private val _time: ITime,
     private val _consistencyManager: IConsistencyManager,
+    private val _jwtTokenStore: JwtTokenStore,
 ) : IInAppMessagesManager,
     IStartableService,
     ISubscriptionChangedHandler,
@@ -299,6 +301,21 @@ internal class InAppMessagesManager(
             return
         }
 
+        val externalId = _identityModelStore.model.externalId
+        // Capture JWT once to avoid TOCTOU: the same snapshot is used for the guard
+        // check and the backend call, so a concurrent invalidation can't slip between them.
+        val jwt = externalId?.let { _jwtTokenStore.getJwt(it) }
+        if (_configModelStore.model.useIdentityVerification == true) {
+            if (externalId == null) {
+                Logging.debug("InAppMessagesManager.fetchMessages: Skipping IAM fetch for anonymous user while identity verification is enabled.")
+                return
+            }
+            if (jwt == null) {
+                Logging.debug("InAppMessagesManager.fetchMessages: Skipping IAM fetch while JWT is invalidated for user: $externalId")
+                return
+            }
+        }
+
         fetchIAMMutex.withLock {
             val now = _time.currentTimeMillis
             if (lastTimeFetchedIAMs != null && (now - lastTimeFetchedIAMs!!) < _configModelStore.model.fetchIAMMinInterval) {
@@ -308,9 +325,15 @@ internal class InAppMessagesManager(
             lastTimeFetchedIAMs = now
         }
 
+        val (aliasLabel, aliasValue) =
+            IdentityConstants.resolveAlias(
+                _configModelStore.model.useIdentityVerification,
+                externalId,
+                _identityModelStore.model.onesignalId,
+            )
         // lambda so that it is updated on each potential retry
         val sessionDurationProvider = { _time.currentTimeMillis - _sessionService.startTime }
-        val newMessages = _backend.listInAppMessages(appId, subscriptionId, rywData, sessionDurationProvider)
+        val newMessages = _backend.listInAppMessages(appId, aliasLabel, aliasValue, subscriptionId, rywData, sessionDurationProvider, jwt)
 
         if (newMessages != null) {
             this.messages = newMessages as MutableList<InAppMessage>

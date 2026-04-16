@@ -5,7 +5,9 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
+import com.onesignal.IUserJwtInvalidatedListener
 import com.onesignal.OneSignal
+import com.onesignal.UserJwtInvalidatedEvent
 import com.onesignal.notifications.IPermissionObserver
 import com.onesignal.sdktest.data.model.NotificationType
 import com.onesignal.sdktest.data.repository.OneSignalRepository
@@ -19,7 +21,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-class MainViewModel(application: Application) : AndroidViewModel(application), IPushSubscriptionObserver, IPermissionObserver, IUserStateObserver {
+class MainViewModel(application: Application) : AndroidViewModel(application), IPushSubscriptionObserver, IPermissionObserver, IUserStateObserver, IUserJwtInvalidatedListener {
 
     private val repository = OneSignalRepository()
 
@@ -74,6 +76,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
     private val _locationShared = MutableLiveData<Boolean>()
     val locationShared: LiveData<Boolean> = _locationShared
 
+    // Identity Verification toggle (demo app only, controls alias used for API calls)
+    private val _useIdentityVerification = MutableLiveData<Boolean>()
+    val useIdentityVerification: LiveData<Boolean> = _useIdentityVerification
+
     // Toast messages
     private val _toastMessage = MutableLiveData<String?>()
     val toastMessage: LiveData<String?> = _toastMessage
@@ -99,6 +105,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
         OneSignal.User.pushSubscription.addObserver(this)
         OneSignal.Notifications.addPermissionObserver(this)
         OneSignal.User.addObserver(this)
+        OneSignal.addUserJwtInvalidatedListener(this)
         android.util.Log.d("MainViewModel", "init: observers registered, current onesignalId=${OneSignal.User.onesignalId}")
         LogManager.debug("OneSignal ID: ${OneSignal.User.onesignalId ?: "not set"}")
     }
@@ -127,6 +134,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
         _privacyConsentGiven.value = repository.getPrivacyConsent()
         _inAppMessagesPaused.value = repository.isInAppMessagesPaused()
         _locationShared.value = repository.isLocationShared()
+        _useIdentityVerification.value = SharedPreferenceUtil.getCachedIdentityVerification(context)
         
         val externalId = OneSignal.User.externalId
         _externalUserId.value = if (externalId.isEmpty()) null else externalId
@@ -145,16 +153,34 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
     }
     
     fun fetchUserDataFromApi() {
-        val onesignalId = OneSignal.User.onesignalId
-        if (onesignalId.isNullOrEmpty()) {
-            _isLoading.value = false
-            return
+        val useIV = _useIdentityVerification.value == true
+        val aliasLabel: String
+        val aliasValue: String
+
+        if (useIV) {
+            val externalId = _externalUserId.value
+            if (externalId.isNullOrEmpty()) {
+                _isLoading.value = false
+                return
+            }
+            aliasLabel = "external_id"
+            aliasValue = externalId
+        } else {
+            val onesignalId = OneSignal.User.onesignalId
+            if (onesignalId.isNullOrEmpty()) {
+                _isLoading.value = false
+                return
+            }
+            aliasLabel = "onesignal_id"
+            aliasValue = onesignalId
         }
         
+        val jwt = if (useIV) SharedPreferenceUtil.getCachedJwtToken(getApplication()) else null
+
         _isLoading.value = true
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val userData = repository.fetchUser(onesignalId)
+                val userData = repository.fetchUser(aliasLabel, aliasValue, jwt)
                 withContext(Dispatchers.Main) {
                     if (userData != null) {
                         aliasesList.clear()
@@ -217,12 +243,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
     private fun refreshTriggers() { _triggers.value = triggersList.toList() }
 
     // User operations
-    fun loginUser(externalUserId: String) {
+    fun loginUser(externalUserId: String, jwtToken: String? = null) {
         _isLoading.value = true
         viewModelScope.launch(Dispatchers.IO) {
-            repository.loginUser(externalUserId)
+            repository.loginUser(externalUserId, jwtToken)
             withContext(Dispatchers.Main) {
                 SharedPreferenceUtil.cacheUserExternalUserId(getApplication(), externalUserId)
+                SharedPreferenceUtil.cacheJwtToken(getApplication(), jwtToken)
                 _externalUserId.value = externalUserId
                 showToast("Logged in as: $externalUserId")
                 aliasesList.clear()
@@ -235,7 +262,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
                 refreshTriggers()
                 loadExistingTags()
                 refreshPushSubscription()
-                // Loading stays on; onUserStateChange will call fetchUserDataFromApi() to dismiss it
+                _isLoading.value = false
+            }
+        }
+    }
+
+    fun updateUserJwt(externalUserId: String, jwtToken: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.updateUserJwt(externalUserId, jwtToken)
+            withContext(Dispatchers.Main) {
+                SharedPreferenceUtil.cacheJwtToken(getApplication(), jwtToken)
+                showToast("Updated JWT for: $externalUserId")
             }
         }
     }
@@ -260,6 +297,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
                 refreshTriggers()
             }
         }
+    }
+
+    fun setUseIdentityVerification(enabled: Boolean) {
+        SharedPreferenceUtil.cacheIdentityVerification(getApplication(), enabled)
+        _useIdentityVerification.value = enabled
+        showToast(if (enabled) "Identity verification enabled" else "Identity verification disabled")
     }
 
     // Consent required
@@ -619,8 +662,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
         _pushEnabled.postValue(state.current.optedIn)
     }
 
+    override fun onUserJwtInvalidated(event: UserJwtInvalidatedEvent) {
+        LogManager.warn("JWT invalidated for externalId: ${event.externalId}")
+        showToast("JWT invalidated for: ${event.externalId}")
+    }
+
     override fun onCleared() {
         super.onCleared()
         OneSignal.User.pushSubscription.removeObserver(this)
+        OneSignal.removeUserJwtInvalidatedListener(this)
     }
 }

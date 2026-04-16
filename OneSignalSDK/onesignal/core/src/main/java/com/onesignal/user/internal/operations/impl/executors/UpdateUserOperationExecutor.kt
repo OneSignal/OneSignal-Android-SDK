@@ -6,6 +6,7 @@ import com.onesignal.common.consistency.enums.IamFetchRywTokenKey
 import com.onesignal.common.consistency.models.IConsistencyManager
 import com.onesignal.common.exceptions.BackendException
 import com.onesignal.common.modeling.ModelChangeTags
+import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.operations.ExecutionResponse
 import com.onesignal.core.internal.operations.ExecutionResult
 import com.onesignal.core.internal.operations.IOperationExecutor
@@ -19,6 +20,7 @@ import com.onesignal.user.internal.backend.PropertiesObject
 import com.onesignal.user.internal.backend.PurchaseObject
 import com.onesignal.user.internal.builduser.IRebuildUserService
 import com.onesignal.user.internal.identity.IdentityModelStore
+import com.onesignal.user.internal.identity.JwtTokenStore
 import com.onesignal.user.internal.operations.DeleteTagOperation
 import com.onesignal.user.internal.operations.SetPropertyOperation
 import com.onesignal.user.internal.operations.SetTagOperation
@@ -35,6 +37,8 @@ internal class UpdateUserOperationExecutor(
     private val _buildUserService: IRebuildUserService,
     private val _newRecordState: NewRecordsState,
     private val _consistencyManager: IConsistencyManager,
+    private val _configModelStore: ConfigModelStore,
+    private val _jwtTokenStore: JwtTokenStore,
 ) : IOperationExecutor {
     override val operations: List<String>
         get() = listOf(SET_TAG, DELETE_TAG, SET_PROPERTY, TRACK_SESSION_START, TRACK_SESSION_END, TRACK_PURCHASE)
@@ -137,15 +141,25 @@ internal class UpdateUserOperationExecutor(
         }
 
         if (appId != null && onesignalId != null) {
+            val firstOp = operations.first()
+            val (aliasLabel, aliasValue) =
+                IdentityConstants.resolveAlias(
+                    _configModelStore.model.useIdentityVerification,
+                    firstOp.externalId,
+                    onesignalId,
+                )
+            val jwt = firstOp.externalId?.let { _jwtTokenStore.getJwt(it) }
+
             try {
                 val rywData =
                     _userBackend.updateUser(
                         appId,
-                        IdentityConstants.ONESIGNAL_ID,
-                        onesignalId,
+                        aliasLabel,
+                        aliasValue,
                         propertiesObject,
                         refreshDeviceMetadata,
                         deltasObject,
+                        jwt,
                     )
 
                 if (rywData != null) {

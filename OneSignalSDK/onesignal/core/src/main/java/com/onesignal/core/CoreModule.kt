@@ -10,6 +10,7 @@ import com.onesignal.core.internal.background.IBackgroundManager
 import com.onesignal.core.internal.background.impl.BackgroundManager
 import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.config.impl.ConfigModelStoreListener
+import com.onesignal.core.internal.config.impl.IdentityVerificationService
 import com.onesignal.core.internal.database.IDatabaseProvider
 import com.onesignal.core.internal.database.impl.DatabaseProvider
 import com.onesignal.core.internal.device.IDeviceService
@@ -42,6 +43,7 @@ import com.onesignal.location.ILocationManager
 import com.onesignal.location.internal.MisconfiguredLocationManager
 import com.onesignal.notifications.INotificationsManager
 import com.onesignal.notifications.internal.MisconfiguredNotificationsManager
+import com.onesignal.user.internal.identity.JwtTokenStore
 
 internal class CoreModule : IModule {
     override fun register(builder: ServiceBuilder) {
@@ -62,6 +64,10 @@ internal class CoreModule : IModule {
         builder.register<FeatureManager>().provides<IFeatureManager>()
         builder.register<ParamsBackendService>().provides<IParamsBackendService>()
         builder.register<ConfigModelStoreListener>().provides<IStartableService>()
+
+        // Identity Verification
+        builder.register<JwtTokenStore>().provides<JwtTokenStore>()
+        builder.register<IdentityVerificationService>().provides<IStartableService>()
 
         // Operations
         builder.register<OperationModelStore>().provides<OperationModelStore>()

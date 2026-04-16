@@ -226,4 +226,46 @@ interface IOneSignal {
      * Logout the current user (suspend version).
      */
     suspend fun logoutSuspend()
+
+    /**
+     * Update the JWT bearer token for a user identified by [externalId]. Call this when
+     * a token is about to expire or after receiving an [IUserJwtInvalidatedListener] callback.
+     *
+     * @param externalId The external ID of the user whose token is being updated.
+     * @param token The new JWT bearer token.
+     */
+    fun updateUserJwt(
+        externalId: String,
+        token: String,
+    )
+
+    /**
+     * Update the JWT bearer token for a user identified by [externalId] (suspend version).
+     * Call this when a token is about to expire or after receiving an [IUserJwtInvalidatedListener]
+     * callback. This suspend variant waits for the SDK to be initialized before proceeding.
+     *
+     * @param externalId The external ID of the user whose token is being updated.
+     * @param token The new JWT bearer token.
+     */
+    suspend fun updateUserJwtSuspend(
+        externalId: String,
+        token: String,
+    )
+
+    /**
+     * Add a listener that will be called when a user's JWT is invalidated (e.g. expired
+     * or rejected by the server). Use this to provide a fresh token via [updateUserJwt].
+     *
+     * The listener is invoked on a background thread; see [IUserJwtInvalidatedListener].
+     *
+     * @param listener The listener to add.
+     */
+    fun addUserJwtInvalidatedListener(listener: IUserJwtInvalidatedListener)
+
+    /**
+     * Remove a previously added [IUserJwtInvalidatedListener].
+     *
+     * @param listener The listener to remove.
+     */
+    fun removeUserJwtInvalidatedListener(listener: IUserJwtInvalidatedListener)
 }
