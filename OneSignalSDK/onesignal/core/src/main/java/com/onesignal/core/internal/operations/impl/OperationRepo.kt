@@ -173,6 +173,19 @@ internal class OperationRepo(
                 return
             }
 
+            // Dedupe LoginUserOperation for the same user — prevents RecoverFromDroppedLoginBug
+            // and the real login() call from both enqueuing a login op during the timing window.
+            // Wake the waiter as if we succeeded, since the already-queued op will do the work
+            // and enqueueAndWait callers (e.g. loginSuspend) would otherwise hang forever.
+            val op = queueItem.operation
+            if (op is LoginUserOperation &&
+                queue.any { it.operation is LoginUserOperation && it.operation.onesignalId == op.onesignalId }
+            ) {
+                Logging.debug("OperationRepo: internalEnqueue - LoginUserOperation for onesignalId: ${op.onesignalId} already exists in the queue.")
+                queueItem.waiter?.wake(true)
+                return
+            }
+
             if (index != null) {
                 queue.add(index, queueItem)
             } else {
