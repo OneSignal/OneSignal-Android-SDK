@@ -555,9 +555,7 @@ internal class OperationRepo(
                 _operationModelStore.remove(it.operation.id)
                 it.waiter?.wake(false)
             }
-            if (toRemove.isNotEmpty()) {
-                Logging.debug("OperationRepo: removed ${toRemove.size} anonymous operations (no externalId)")
-            }
+            Logging.debug("OperationRepo: removeOperationsWithoutExternalId removed ${toRemove.size} of ${toRemove.size + queue.size} operations")
 
             // IV=ON never transfers anonymous state; clear existingOnesignalId so
             // the executor takes the createUser (upsert) path.

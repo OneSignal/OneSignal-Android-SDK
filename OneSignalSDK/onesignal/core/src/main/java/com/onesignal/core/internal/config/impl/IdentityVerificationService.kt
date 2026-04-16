@@ -3,6 +3,7 @@ package com.onesignal.core.internal.config.impl
 import com.onesignal.common.modeling.ISingletonModelStoreChangeHandler
 import com.onesignal.common.modeling.ModelChangeTags
 import com.onesignal.common.modeling.ModelChangedArgs
+import com.onesignal.common.threading.suspendifyOnIO
 import com.onesignal.core.internal.config.ConfigModel
 import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.operations.IOperationRepo
@@ -42,21 +43,25 @@ internal class IdentityVerificationService(
 
         val useIV = model.useIdentityVerification
 
-        var jwtInvalidatedExternalId: String? = null
-        if (useIV == true) {
-            Logging.debug("IdentityVerificationService: IV enabled, purging anonymous operations")
-            _operationRepo.removeOperationsWithoutExternalId()
+        suspendifyOnIO {
+            _operationRepo.awaitInitialized()
 
-            val externalId = _identityModelStore.model.externalId
-            if (externalId != null && _jwtTokenStore.getJwt(externalId) == null) {
-                Logging.debug("IdentityVerificationService: IV enabled but no JWT for $externalId, will fire invalidated event after queue wake")
-                jwtInvalidatedExternalId = externalId
+            var jwtInvalidatedExternalId: String? = null
+            if (useIV == true) {
+                Logging.debug("IdentityVerificationService: IV enabled, purging anonymous operations")
+                _operationRepo.removeOperationsWithoutExternalId()
+
+                val externalId = _identityModelStore.model.externalId
+                if (externalId != null && _jwtTokenStore.getJwt(externalId) == null) {
+                    Logging.debug("IdentityVerificationService: IV enabled but no JWT for $externalId, will fire invalidated event after queue wake")
+                    jwtInvalidatedExternalId = externalId
+                }
             }
+
+            _operationRepo.forceExecuteOperations()
+
+            jwtInvalidatedExternalId?.let { _userManager.fireJwtInvalidated(it) }
         }
-
-        _operationRepo.forceExecuteOperations()
-
-        jwtInvalidatedExternalId?.let { _userManager.fireJwtInvalidated(it) }
     }
 
     override fun onModelUpdated(
