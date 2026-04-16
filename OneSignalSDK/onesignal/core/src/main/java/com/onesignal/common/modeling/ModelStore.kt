@@ -7,6 +7,7 @@ import com.onesignal.core.internal.preferences.PreferenceOneSignalKeys
 import com.onesignal.core.internal.preferences.PreferenceStores
 import com.onesignal.debug.internal.logging.Logging
 import org.json.JSONArray
+import org.json.JSONObject
 
 /**
  * The abstract implementation of a model store.  Implements all but the [create] method,
@@ -212,12 +213,21 @@ abstract class ModelStore<TModel>(
         val jsonArray = JSONArray()
         synchronized(models) {
             for (model in models) {
-                jsonArray.put(model.toJSON())
+                jsonArray.put(transformJsonForPersistence(model, model.toJSON()))
             }
         }
 
         _prefs.saveString(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.MODEL_STORE_PREFIX + name, jsonArray.toString())
     }
+
+    /**
+     * Hook for subclasses to transform a model's JSON representation before it is
+     * written to SharedPreferences. The default implementation returns the JSON unchanged.
+     */
+    protected open fun transformJsonForPersistence(
+        model: TModel,
+        json: JSONObject,
+    ): JSONObject = json
 
     override fun subscribe(handler: IModelStoreChangeHandler<TModel>) = changeSubscription.subscribe(handler)
 
