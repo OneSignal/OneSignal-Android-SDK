@@ -61,7 +61,8 @@ class LoginHelperTests : FunSpec({
 
         // When
         runBlocking {
-            loginHelper.login(currentExternalId)
+            val context = loginHelper.switchUser(currentExternalId)
+            if (context != null) loginHelper.enqueueLogin(context)
         }
 
         // Then - should return early without any operations
@@ -113,7 +114,8 @@ class LoginHelperTests : FunSpec({
 
         // When
         runBlocking {
-            loginHelper.login(newExternalId)
+            val context = loginHelper.switchUser(newExternalId)
+            if (context != null) loginHelper.enqueueLogin(context)
         }
 
         // Then - should switch users and enqueue login operation
@@ -178,7 +180,8 @@ class LoginHelperTests : FunSpec({
 
         // When
         runBlocking {
-            loginHelper.login(newExternalId)
+            val context = loginHelper.switchUser(newExternalId)
+            if (context != null) loginHelper.enqueueLogin(context)
         }
 
         // Then - should provide existing OneSignal ID for anonymous user conversion
@@ -239,7 +242,8 @@ class LoginHelperTests : FunSpec({
 
         // When
         runBlocking {
-            loginHelper.login(newExternalId)
+            val context = loginHelper.switchUser(newExternalId)
+            if (context != null) loginHelper.enqueueLogin(context)
         }
 
         // Then - should still switch users but operation fails
