@@ -11,6 +11,7 @@ import com.onesignal.core.internal.startup.IStartableService
 import com.onesignal.core.internal.time.ITime
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
+import com.onesignal.user.internal.operations.LoginUserOperation
 import com.onesignal.user.internal.operations.impl.states.NewRecordsState
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -158,6 +159,27 @@ internal class OperationRepo(
             val hasExisting = queue.any { it.operation.id == queueItem.operation.id }
             if (hasExisting) {
                 Logging.debug("OperationRepo: internalEnqueue - operation.id: ${queueItem.operation.id} already exists in the queue.")
+                return
+            }
+
+            // Dedupe LoginUserOperation for the same user — prevents RecoverFromDroppedLoginBug
+            // and the real login() call from both enqueuing a login op during the timing window.
+            // Wake the waiter optimistically with `true`: the already-queued op will do the work,
+            // but we don't await its real result (that would require waiter chaining). enqueueAndWait
+            // callers like loginSuspend would otherwise hang forever. The only caller today is
+            // LoginHelper.enqueueLogin which just logs on failure, so the lost signal is acceptable.
+            // If the op came from loadSavedOperations (addToStore = false) it's also a stale
+            // duplicate in the store; remove it to avoid an orphan entry that lingers until the
+            // next cold start.
+            val op = queueItem.operation
+            if (op is LoginUserOperation &&
+                queue.any { it.operation is LoginUserOperation && it.operation.onesignalId == op.onesignalId }
+            ) {
+                Logging.debug("OperationRepo: internalEnqueue - LoginUserOperation for onesignalId: ${op.onesignalId} already exists in the queue.")
+                if (!addToStore) {
+                    _operationModelStore.remove(queueItem.operation.id)
+                }
+                queueItem.waiter?.wake(true)
                 return
             }
 
