@@ -333,9 +333,15 @@ internal class OperationRepo(
                     Logging.error("Operation execution failed with eventual retry, pausing the operation repo: $operations")
                     // keep the failed operation and pause the operation repo from executing
                     paused = true
-                    // add back all operations to the front of the queue to be re-executed.
+                    // Unblock any enqueueAndWait callers so loginSuspend doesn't hang.
+                    ops.forEach { it.waiter?.wake(false) }
+                    // Re-queue with waiter = null: the operation is preserved for retry
+                    // on next cold start, but the original waiter is detached since it
+                    // was already woken above.
                     synchronized(queue) {
-                        ops.reversed().forEach { queue.add(0, it) }
+                        ops.reversed().forEach {
+                            queue.add(0, OperationQueueItem(it.operation, waiter = null, bucket = it.bucket, retries = it.retries))
+                        }
                     }
                 }
             }
