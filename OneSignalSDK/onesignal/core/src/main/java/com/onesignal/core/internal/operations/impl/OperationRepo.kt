@@ -162,25 +162,29 @@ internal class OperationRepo(
                 return
             }
 
-            // Dedupe LoginUserOperation for the same user — prevents RecoverFromDroppedLoginBug
-            // and the real login() call from both enqueuing a login op during the timing window.
-            // Wake the waiter optimistically with `true`: the already-queued op will do the work,
-            // but we don't await its real result (that would require waiter chaining). enqueueAndWait
-            // callers like loginSuspend would otherwise hang forever. The only caller today is
-            // LoginHelper.enqueueLogin which just logs on failure, so the lost signal is acceptable.
-            // If the op came from loadSavedOperations (addToStore = false) it's also a stale
-            // duplicate in the store; remove it to avoid an orphan entry that lingers until the
-            // next cold start.
+            // Dedupe LoginUserOperation for the same user. Merge the incoming
+            // existingOnesignalId in so the anon-user conversion isn't lost when
+            // RecoverFromDroppedLoginBug wins the race (it enqueues with null).
             val op = queueItem.operation
-            if (op is LoginUserOperation &&
-                queue.any { it.operation is LoginUserOperation && it.operation.onesignalId == op.onesignalId }
-            ) {
-                Logging.debug("OperationRepo: internalEnqueue - LoginUserOperation for onesignalId: ${op.onesignalId} already exists in the queue.")
-                if (!addToStore) {
-                    _operationModelStore.remove(queueItem.operation.id)
+            if (op is LoginUserOperation) {
+                val existing =
+                    queue.firstOrNull {
+                        it.operation is LoginUserOperation && it.operation.onesignalId == op.onesignalId
+                    }
+                if (existing != null) {
+                    val existingOp = existing.operation as LoginUserOperation
+                    if (op.existingOnesignalId != null && existingOp.existingOnesignalId == null) {
+                        Logging.debug("OperationRepo: internalEnqueue - merged existingOnesignalId=${op.existingOnesignalId} into queued LoginUserOperation for onesignalId: ${op.onesignalId}.")
+                        existingOp.existingOnesignalId = op.existingOnesignalId
+                    } else {
+                        Logging.debug("OperationRepo: internalEnqueue - LoginUserOperation for onesignalId: ${op.onesignalId} already exists in the queue.")
+                    }
+                    if (!addToStore) {
+                        _operationModelStore.remove(queueItem.operation.id)
+                    }
+                    queueItem.waiter?.wake(true)
+                    return
                 }
-                queueItem.waiter?.wake(true)
-                return
             }
 
             if (index != null) {
