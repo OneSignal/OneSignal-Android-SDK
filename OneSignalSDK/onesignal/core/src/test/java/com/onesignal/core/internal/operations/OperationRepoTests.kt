@@ -100,8 +100,8 @@ class OperationRepoTests : FunSpec({
                 ),
             )
 
-        val cachedOperation = LoginUserOperation()
-        val newOperation = LoginUserOperation()
+        val cachedOperation = LoginUserOperation("appId", "cached-onesignal-id", null, null)
+        val newOperation = LoginUserOperation("appId", "new-onesignal-id", null, null)
         val jsonArray = JSONArray()
 
         // cache the operation
