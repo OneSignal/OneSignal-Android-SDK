@@ -142,6 +142,36 @@ class OperationRepoTests : FunSpec({
         operationRepo.queue.first().operation shouldBe cachedOperation
     }
 
+    test("enqueue dedupes LoginUserOperation for same onesignalId and merges existingOnesignalId") {
+        // Reproduces the RecoverFromDroppedLoginBug race: a recovery login op
+        // (existingOnesignalId=null) is already queued; an incoming enqueueLogin
+        // op for the same user carries the anon UUID needed for conversion.
+        // Dedup must merge the incoming existingOnesignalId into the queued op
+        // and transfer the waiter so the caller receives the real result.
+        val mocks = Mocks()
+        val operationRepo = mocks.operationRepo
+
+        val queuedOp = LoginUserOperation("appId", "local-new", "alice", null)
+        queuedOp.id = UUID.randomUUID().toString()
+        synchronized(operationRepo.queue) {
+            operationRepo.queue.add(OperationQueueItem(queuedOp, bucket = 0))
+        }
+
+        val incomingOp = LoginUserOperation("appId", "local-new", "alice", "anon-uuid")
+
+        // When — enqueue the incoming op (simulates enqueueLogin landing after recovery)
+        operationRepo.enqueue(incomingOp)
+
+        // Yield so the launched coroutine in enqueue() can run
+        kotlinx.coroutines.runBlocking { delay(100) }
+
+        // Then — queue has only the original op, with merged existingOnesignalId
+        operationRepo.queue.size shouldBe 1
+        val merged = operationRepo.queue.first().operation as LoginUserOperation
+        merged.onesignalId shouldBe "local-new"
+        merged.existingOnesignalId shouldBe "anon-uuid"
+    }
+
     test("containsInstanceOf") {
         // Given
         val mocks = Mocks()

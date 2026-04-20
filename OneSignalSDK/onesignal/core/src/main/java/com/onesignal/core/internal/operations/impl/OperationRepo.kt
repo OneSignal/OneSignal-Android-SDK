@@ -32,7 +32,7 @@ internal class OperationRepo(
 ) : IOperationRepo, IStartableService {
     internal class OperationQueueItem(
         val operation: Operation,
-        val waiter: WaiterWithValue<Boolean>? = null,
+        var waiter: WaiterWithValue<Boolean>? = null,
         val bucket: Int,
         var retries: Int = 0,
     ) {
@@ -163,8 +163,9 @@ internal class OperationRepo(
             }
 
             // Dedupe LoginUserOperation for the same user. Merge the incoming
-            // existingOnesignalId in so the anon-user conversion isn't lost when
+            // existingOnesignalId so the anon-user conversion isn't lost when
             // RecoverFromDroppedLoginBug wins the race (it enqueues with null).
+            // Transfer the waiter so enqueueAndWait callers get the real result.
             val op = queueItem.operation
             if (op is LoginUserOperation) {
                 val existing =
@@ -174,15 +175,19 @@ internal class OperationRepo(
                 if (existing != null) {
                     val existingOp = existing.operation as LoginUserOperation
                     if (op.existingOnesignalId != null && existingOp.existingOnesignalId == null) {
-                        Logging.debug("OperationRepo: internalEnqueue - merged existingOnesignalId=${op.existingOnesignalId} into queued LoginUserOperation for onesignalId: ${op.onesignalId}.")
+                        Logging.debug("OperationRepo: internalEnqueue - merging existingOnesignalId=${op.existingOnesignalId} into queued LoginUserOperation for onesignalId: ${op.onesignalId}.")
                         existingOp.existingOnesignalId = op.existingOnesignalId
                     } else {
                         Logging.debug("OperationRepo: internalEnqueue - LoginUserOperation for onesignalId: ${op.onesignalId} already exists in the queue.")
                     }
+                    if (queueItem.waiter != null && existing.waiter == null) {
+                        existing.waiter = queueItem.waiter
+                    } else {
+                        queueItem.waiter?.wake(true)
+                    }
                     if (!addToStore) {
                         _operationModelStore.remove(queueItem.operation.id)
                     }
-                    queueItem.waiter?.wake(true)
                     return
                 }
             }
