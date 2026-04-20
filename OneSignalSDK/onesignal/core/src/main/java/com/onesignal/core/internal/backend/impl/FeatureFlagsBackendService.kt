@@ -2,7 +2,7 @@ package com.onesignal.core.internal.backend.impl
 
 import com.onesignal.common.OneSignalUtils
 import com.onesignal.core.internal.backend.IFeatureFlagsBackendService
-import com.onesignal.core.internal.backend.RemoteFeatureFlagsResult
+import com.onesignal.core.internal.backend.RemoteFeatureFlagsFetchOutcome
 import com.onesignal.core.internal.http.IHttpClient
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
@@ -25,7 +25,7 @@ import com.onesignal.debug.internal.logging.Logging
 internal class FeatureFlagsBackendService(
     private val http: IHttpClient,
 ) : IFeatureFlagsBackendService {
-    override suspend fun fetchRemoteFeatureFlags(appId: String): RemoteFeatureFlagsResult {
+    override suspend fun fetchRemoteFeatureFlags(appId: String): RemoteFeatureFlagsFetchOutcome {
         Logging.log(LogLevel.DEBUG, "FeatureFlagsBackendService.fetchRemoteFeatureFlags(appId=$appId)")
 
         val sdkVersion = OneSignalUtils.sdkVersion
@@ -34,7 +34,7 @@ internal class FeatureFlagsBackendService(
                 "FeatureFlagsBackendService: sdk version not usable for Turbine path (expected " +
                     "6-digit label optional -suffix, e.g. 050801 or 050801-beta): '$sdkVersion'",
             )
-            return RemoteFeatureFlagsResult.EMPTY
+            return RemoteFeatureFlagsFetchOutcome.Unavailable
         }
 
         val path =
@@ -50,10 +50,16 @@ internal class FeatureFlagsBackendService(
             Logging.debug(
                 "FeatureFlagsBackendService: non-success or empty body, status=${response.statusCode}",
             )
-            return RemoteFeatureFlagsResult.EMPTY
+            return RemoteFeatureFlagsFetchOutcome.Unavailable
         }
 
-        return FeatureFlagsJsonParser.parse(body)
+        val parsed = FeatureFlagsJsonParser.parseSuccessful(body)
+        return if (parsed != null) {
+            RemoteFeatureFlagsFetchOutcome.Success(parsed)
+        } else {
+            Logging.debug("FeatureFlagsBackendService: response body is not valid Turbine feature-flags JSON")
+            RemoteFeatureFlagsFetchOutcome.Unavailable
+        }
     }
 
     companion object {

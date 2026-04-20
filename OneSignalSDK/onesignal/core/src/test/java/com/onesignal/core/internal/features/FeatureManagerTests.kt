@@ -54,6 +54,21 @@ class FeatureManagerTests : FunSpec({
         ThreadingMode.useBackgroundThreading shouldBe true
     }
 
+    test("initial state enables BACKGROUND_THREADING when remote key differs only by letter case") {
+        val initialModel = mockk<ConfigModel>()
+        stubConfigModel(initialModel)
+        every { initialModel.features } returns emptyList()
+        every { initialModel.sdkRemoteFeatureFlags } returns listOf("SDK_Background_Threading")
+        val configModelStore = mockk<ConfigModelStore>()
+        every { configModelStore.model } returns initialModel
+        every { configModelStore.subscribe(any()) } just runs
+
+        val manager = FeatureManager(configModelStore)
+
+        manager.isEnabled(FeatureFlag.SDK_BACKGROUND_THREADING) shouldBe true
+        ThreadingMode.useBackgroundThreading shouldBe true
+    }
+
     test("onModelReplaced should not switch threading mode after startup") {
         // Given
         val initialModel = mockk<ConfigModel>()

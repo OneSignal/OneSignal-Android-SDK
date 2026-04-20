@@ -74,6 +74,18 @@ class FeatureFlagsJsonParserTests : FunSpec({
         FeatureFlagsJsonParser.parse("{") shouldBe RemoteFeatureFlagsResult.EMPTY
     }
 
+    test("parseSuccessful returns empty enabled keys for valid empty features array") {
+        val r = requireNotNull(FeatureFlagsJsonParser.parseSuccessful("""{"features":[]}"""))
+        r.enabledKeys shouldBe emptyList()
+        r.metadata shouldBe null
+    }
+
+    test("parseSuccessful returns null for invalid json or contract") {
+        FeatureFlagsJsonParser.parseSuccessful("{") shouldBe null
+        FeatureFlagsJsonParser.parseSuccessful("""{"feature_a":{}}""") shouldBe null
+        FeatureFlagsJsonParser.parseSuccessful("""{"features":"bad"}""") shouldBe null
+    }
+
     test("encodeMetadata round-trips for storage string") {
         val payload =
             """

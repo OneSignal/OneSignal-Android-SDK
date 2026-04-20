@@ -19,10 +19,22 @@ internal data class RemoteFeatureFlagsResult(
 }
 
 /**
+ * Outcome of [IFeatureFlagsBackendService.fetchRemoteFeatureFlags].
+ * [Unavailable] means the client did not get a trustworthy response (HTTP error, invalid body, etc.);
+ * callers should keep previously cached flags. [Success] includes a valid HTTP parse, including an
+ * empty `features` array from the server.
+ */
+internal sealed class RemoteFeatureFlagsFetchOutcome {
+    data class Success(val result: RemoteFeatureFlagsResult) : RemoteFeatureFlagsFetchOutcome()
+
+    data object Unavailable : RemoteFeatureFlagsFetchOutcome()
+}
+
+/**
  * Fetches remote feature flags for the current app via **GET**
  * `apps/{app_id}/sdk/features/{platform}/{sdk_version}` (Turbine; see
  * [com.onesignal.core.internal.backend.impl.FeatureFlagsBackendService]).
  */
 internal interface IFeatureFlagsBackendService {
-    suspend fun fetchRemoteFeatureFlags(appId: String): RemoteFeatureFlagsResult
+    suspend fun fetchRemoteFeatureFlags(appId: String): RemoteFeatureFlagsFetchOutcome
 }

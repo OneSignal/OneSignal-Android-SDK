@@ -6,7 +6,6 @@ import com.onesignal.common.modeling.ModelChangedArgs
 import com.onesignal.common.threading.ThreadingMode
 import com.onesignal.core.internal.backend.impl.FeatureFlagsJsonParser
 import com.onesignal.core.internal.config.ConfigModel
-import com.onesignal.core.internal.config.ConfigModelChangeTags
 import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.debug.internal.logging.Logging
 import kotlinx.serialization.json.JsonObject
@@ -56,10 +55,7 @@ internal class FeatureManager(
         tag: String,
     ) {
         Logging.debug("OneSignal: FeatureManager.onModelReplaced(tag=$tag)")
-        if (tag == ModelChangeTags.HYDRATE ||
-            tag == ModelChangeTags.NORMAL ||
-            tag == ConfigModelChangeTags.REMOTE_FEATURE_FLAGS
-        ) {
+        if (tag == ModelChangeTags.HYDRATE || tag == ModelChangeTags.NORMAL) {
             try {
                 refreshEnabledFeatures(model, applyNextRunOnlyFeatures = false)
             } catch (t: Throwable) {
@@ -93,9 +89,9 @@ internal class FeatureManager(
     ) {
         val enabledFeatureKeys =
             (
-                model.features +
-                    model.sdkRemoteFeatureFlags +
-                    localFeatureOverrides
+                model.features.map { canonicalizeFeatureKey(it) } +
+                    model.sdkRemoteFeatureFlags.map { canonicalizeFeatureKey(it) } +
+                    localFeatureOverrides.map { canonicalizeFeatureKey(it) }
             ).toSet()
         if (localFeatureOverrides.isNotEmpty()) {
             Logging.warn(
@@ -132,6 +128,13 @@ internal class FeatureManager(
 
         featureStates = nextStates
     }
+
+    private fun canonicalizeFeatureKey(key: String): String =
+        buildString(key.length) {
+            for (c in key) {
+                append(c.lowercaseChar())
+            }
+        }
 
     private fun applySideEffects(
         feature: FeatureFlag,

@@ -50,18 +50,25 @@ internal object FeatureFlagsJsonParser {
 
     private const val FEATURES_PROPERTY = "features"
 
-    fun parse(payload: String): RemoteFeatureFlagsResult {
+    fun parse(payload: String): RemoteFeatureFlagsResult = parseSuccessful(payload) ?: RemoteFeatureFlagsResult.EMPTY
+
+    /**
+     * Parses a successful Turbine response body. Returns `null` if JSON is invalid or the payload does not
+     * match the expected contract (missing `features` array, wrong types). A valid `{"features":[]}` returns
+     * [RemoteFeatureFlagsResult] with an empty [RemoteFeatureFlagsResult.enabledKeys] list.
+     */
+    fun parseSuccessful(payload: String): RemoteFeatureFlagsResult? {
         return try {
-            val root = format.parseToJsonElement(payload) as? JsonObject ?: return RemoteFeatureFlagsResult.EMPTY
-            parseRoot(root)
+            val root = format.parseToJsonElement(payload) as? JsonObject ?: return null
+            parseRootStrict(root)
         } catch (_: Throwable) {
-            RemoteFeatureFlagsResult.EMPTY
+            null
         }
     }
 
-    private fun parseRoot(root: JsonObject): RemoteFeatureFlagsResult {
-        val featuresEl = root[FEATURES_PROPERTY] ?: return RemoteFeatureFlagsResult.EMPTY
-        val featuresArray = featuresEl as? JsonArray ?: return RemoteFeatureFlagsResult.EMPTY
+    private fun parseRootStrict(root: JsonObject): RemoteFeatureFlagsResult? {
+        val featuresEl = root[FEATURES_PROPERTY] ?: return null
+        val featuresArray = featuresEl as? JsonArray ?: return null
         val flagEntries =
             featuresArray.mapNotNull { el ->
                 (el as? JsonPrimitive)
