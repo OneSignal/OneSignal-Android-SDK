@@ -19,7 +19,7 @@ buildscript {
 
 allprojects {
     repositories {
-        // TODO(revert-before-merge): mavenLocal first so locally-published SDK builds
+        // mavenLocal first so locally-published SDK builds resolve over Central when testing against a snapshot.
         mavenLocal()
         google()
         mavenCentral()

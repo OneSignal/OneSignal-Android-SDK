@@ -97,8 +97,6 @@ internal class FeatureFlagsRefreshService(
                             Logging.warn("FeatureFlagsRefreshService: fetch failed", e)
                         }
                     }
-                    // TODO(revert-before-merge): makes the compiled poll interval obvious in logcat; remove
-                    // for production. If you see 600_000ms here, the app is not using your local AAR.
                     Logging.debug("FeatureFlagsRefreshService: next fetch in ${REFRESH_INTERVAL_MS}ms")
                     delay(REFRESH_INTERVAL_MS)
                 }
@@ -115,7 +113,6 @@ internal class FeatureFlagsRefreshService(
         val newMetaString = FeatureFlagsJsonParser.encodeMetadata(result.metadata)
         val beforeKeys = current.sdkRemoteFeatureFlags.toSet()
         val afterKeys = result.enabledKeys.toSet()
-        // TODO(revert-before-merge): verbose diff line for manual cold-start + mid-session flip testing.
         Logging.debug(
             "FeatureFlagsRefreshService: appId=$appId before=${beforeKeys.sorted()} " +
                 "after=${afterKeys.sorted()} changed=${beforeKeys != afterKeys}",
