@@ -97,6 +97,9 @@ internal class FeatureFlagsRefreshService(
                             Logging.warn("FeatureFlagsRefreshService: fetch failed", e)
                         }
                     }
+                    // TODO(revert-before-merge): makes the compiled poll interval obvious in logcat; remove
+                    // for production. If you see 600_000ms here, the app is not using your local AAR.
+                    Logging.debug("FeatureFlagsRefreshService: next fetch in ${REFRESH_INTERVAL_MS}ms")
                     delay(REFRESH_INTERVAL_MS)
                 }
             }
@@ -110,9 +113,14 @@ internal class FeatureFlagsRefreshService(
             }
         val current = configModelStore.model
         val newMetaString = FeatureFlagsJsonParser.encodeMetadata(result.metadata)
-        if (result.enabledKeys.toSet() == current.sdkRemoteFeatureFlags.toSet() &&
-            newMetaString == current.sdkRemoteFeatureFlagMetadata
-        ) {
+        val beforeKeys = current.sdkRemoteFeatureFlags.toSet()
+        val afterKeys = result.enabledKeys.toSet()
+        // TODO(revert-before-merge): verbose diff line for manual cold-start + mid-session flip testing.
+        Logging.debug(
+            "FeatureFlagsRefreshService: appId=$appId before=${beforeKeys.sorted()} " +
+                "after=${afterKeys.sorted()} changed=${beforeKeys != afterKeys}",
+        )
+        if (afterKeys == beforeKeys && newMetaString == current.sdkRemoteFeatureFlagMetadata) {
             return
         }
 
@@ -122,6 +130,7 @@ internal class FeatureFlagsRefreshService(
     }
 
     companion object {
-        private const val REFRESH_INTERVAL_MS = 600_000L
+        // Foreground polling cadence for remote feature flags (8 minutes).
+        private const val REFRESH_INTERVAL_MS = 480_000L
     }
 }

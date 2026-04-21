@@ -34,4 +34,11 @@ class HttpResponse(
      */
     val isSuccess: Boolean
         get() = statusCode == HttpURLConnection.HTTP_OK || statusCode == HttpURLConnection.HTTP_ACCEPTED || statusCode == HttpURLConnection.HTTP_NOT_MODIFIED || statusCode == HttpURLConnection.HTTP_CREATED
+
+    /**
+     * Whether the response is a client error (HTTP 4xx). Useful for distinguishing "probably
+     * permanent misconfiguration" from transient failures (5xx, network errors with statusCode=0).
+     */
+    val isClientError: Boolean
+        get() = statusCode in HttpURLConnection.HTTP_BAD_REQUEST until HttpURLConnection.HTTP_INTERNAL_ERROR
 }

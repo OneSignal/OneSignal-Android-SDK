@@ -86,6 +86,11 @@ class FeatureFlagsJsonParserTests : FunSpec({
         FeatureFlagsJsonParser.parseSuccessful("""{"features":"bad"}""") shouldBe null
     }
 
+    test("parseSuccessful returns null for Turbine error body (e.g. 403 Forbidden)") {
+        FeatureFlagsJsonParser.parseSuccessful("""{"errors":["Forbidden"]}""") shouldBe null
+        FeatureFlagsJsonParser.parseSuccessful("""{"errors":["Not Found"]}""") shouldBe null
+    }
+
     test("encodeMetadata round-trips for storage string") {
         val payload =
             """

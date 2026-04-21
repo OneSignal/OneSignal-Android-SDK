@@ -47,9 +47,12 @@ internal class FeatureFlagsBackendService(
         val response = http.get(path, null)
         val body = response.payload
         if (!response.isSuccess || body.isNullOrBlank()) {
-            Logging.debug(
-                "FeatureFlagsBackendService: non-success or empty body, status=${response.statusCode}",
-            )
+            val msg =
+                "FeatureFlagsBackendService: non-success status=${response.statusCode} body=${bodySnippet(body)}"
+            // 4xx is likely a permanent misconfiguration (e.g. 403 Forbidden when the app is not
+            // enrolled for Turbine feature flags) and worth surfacing at WARN; other failures are
+            // typically transient (network blip, 5xx) and stay at DEBUG to avoid log spam.
+            if (response.isClientError) Logging.warn(msg) else Logging.debug(msg)
             return RemoteFeatureFlagsFetchOutcome.Unavailable
         }
 
@@ -57,8 +60,25 @@ internal class FeatureFlagsBackendService(
         return if (parsed != null) {
             RemoteFeatureFlagsFetchOutcome.Success(parsed)
         } else {
-            Logging.debug("FeatureFlagsBackendService: response body is not valid Turbine feature-flags JSON")
+            Logging.warn(
+                "FeatureFlagsBackendService: response body is not valid Turbine feature-flags JSON: " +
+                    bodySnippet(body),
+            )
             RemoteFeatureFlagsFetchOutcome.Unavailable
+        }
+    }
+
+    /**
+     * Trim [body] to a short, single-line snippet safe for logcat. Caps at
+     * [LOG_BODY_SNIPPET_MAX_CHARS] so we never dump large payloads into logs.
+     */
+    private fun bodySnippet(body: String?): String {
+        if (body.isNullOrEmpty()) return "<empty>"
+        val flattened = body.replace('\n', ' ').replace('\r', ' ')
+        return if (flattened.length <= LOG_BODY_SNIPPET_MAX_CHARS) {
+            flattened
+        } else {
+            flattened.take(LOG_BODY_SNIPPET_MAX_CHARS) + "…"
         }
     }
 
@@ -67,6 +87,13 @@ internal class FeatureFlagsBackendService(
          * Turbine `:platform` segment for the OneSignal Android SDK (this client).
          */
         const val TURBINE_FEATURES_PLATFORM_ANDROID = "android"
+
+        /**
+         * Max chars of an HTTP response body included in diagnostic logs. Turbine error bodies
+         * (e.g. `{"errors":["Forbidden"]}`) are tiny, so 200 chars is plenty and bounds worst-case
+         * log size if an unexpected payload is returned.
+         */
+        private const val LOG_BODY_SNIPPET_MAX_CHARS = 200
 
         /**
          * Returns true when [label] is safe to send as the Turbine `:sdk_version` path segment.

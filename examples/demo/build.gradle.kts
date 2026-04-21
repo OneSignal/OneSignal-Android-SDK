@@ -19,6 +19,8 @@ buildscript {
 
 allprojects {
     repositories {
+        // TODO(revert-before-merge): mavenLocal first so locally-published SDK builds
+        mavenLocal()
         google()
         mavenCentral()
         // Huawei maven
