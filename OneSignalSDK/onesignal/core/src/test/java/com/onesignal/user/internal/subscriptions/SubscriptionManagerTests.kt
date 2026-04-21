@@ -1,6 +1,7 @@
 package com.onesignal.user.internal.subscriptions
 
 import com.onesignal.common.IDManager.LOCAL_PREFIX
+import com.onesignal.common.PIIHasher
 import com.onesignal.common.modeling.ModelChangeTags
 import com.onesignal.common.modeling.ModelChangedArgs
 import com.onesignal.core.internal.application.IApplicationService
@@ -415,5 +416,205 @@ class SubscriptionManagerTests : FunSpec({
                 },
             )
         }
+    }
+
+    test("remove email subscription matches hashed address (pre-hydration)") {
+        // Given
+        val mockSubscriptionModelStore = mockk<SubscriptionModelStore>()
+        val mockApplicationService = mockk<IApplicationService>()
+        val mockSessionService = mockk<ISessionService>(relaxed = true)
+
+        val emailSubscription = SubscriptionModel()
+        emailSubscription.id = "subscription1"
+        emailSubscription.type = SubscriptionType.EMAIL
+        emailSubscription.status = SubscriptionStatus.SUBSCRIBED
+        emailSubscription.optedIn = true
+        emailSubscription.address = PIIHasher.hash("name@company.com")
+
+        val listOfSubscriptions = listOf(emailSubscription)
+
+        every { mockSubscriptionModelStore.subscribe(any()) } just runs
+        every { mockSubscriptionModelStore.add(any()) } just runs
+        every { mockSubscriptionModelStore.list() } returns listOfSubscriptions
+        every { mockSubscriptionModelStore.remove("subscription1") } just runs
+
+        val subscriptionManager = SubscriptionManager(mockApplicationService, mockSessionService, mockSubscriptionModelStore)
+
+        // When — raw email is passed but model has hashed address
+        subscriptionManager.removeEmailSubscription("name@company.com")
+
+        // Then
+        verify(exactly = 1) { mockSubscriptionModelStore.remove("subscription1") }
+    }
+
+    test("remove sms subscription matches hashed address (pre-hydration)") {
+        // Given
+        val mockSubscriptionModelStore = mockk<SubscriptionModelStore>()
+        val mockApplicationService = mockk<IApplicationService>()
+        val mockSessionService = mockk<ISessionService>(relaxed = true)
+
+        val smsSubscription = SubscriptionModel()
+        smsSubscription.id = "subscription1"
+        smsSubscription.type = SubscriptionType.SMS
+        smsSubscription.status = SubscriptionStatus.SUBSCRIBED
+        smsSubscription.optedIn = true
+        smsSubscription.address = PIIHasher.hash("+18458675309")
+
+        val listOfSubscriptions = listOf(smsSubscription)
+
+        every { mockSubscriptionModelStore.subscribe(any()) } just runs
+        every { mockSubscriptionModelStore.add(any()) } just runs
+        every { mockSubscriptionModelStore.list() } returns listOfSubscriptions
+        every { mockSubscriptionModelStore.remove("subscription1") } just runs
+
+        val subscriptionManager = SubscriptionManager(mockApplicationService, mockSessionService, mockSubscriptionModelStore)
+
+        // When — raw phone is passed but model has hashed address
+        subscriptionManager.removeSmsSubscription("+18458675309")
+
+        // Then
+        verify(exactly = 1) { mockSubscriptionModelStore.remove("subscription1") }
+    }
+
+    test("email getter returns empty string when address is hashed") {
+        // Given
+        val emailSubscription = SubscriptionModel()
+        emailSubscription.id = "subscription1"
+        emailSubscription.type = SubscriptionType.EMAIL
+        emailSubscription.address = PIIHasher.hash("user@example.com")
+
+        val mockSubscriptionModelStore = mockk<SubscriptionModelStore>()
+        val mockApplicationService = mockk<IApplicationService>()
+        val mockSessionService = mockk<ISessionService>(relaxed = true)
+
+        every { mockSubscriptionModelStore.subscribe(any()) } just runs
+        every { mockSubscriptionModelStore.list() } returns listOf(emailSubscription)
+
+        val subscriptionManager = SubscriptionManager(mockApplicationService, mockSessionService, mockSubscriptionModelStore)
+
+        // When
+        val subscriptions = subscriptionManager.subscriptions
+
+        // Then — public getter returns "" for hashed address
+        subscriptions.emails.count() shouldBe 1
+        subscriptions.emails[0].email shouldBe ""
+    }
+
+    test("email getter returns raw value when address is not hashed") {
+        // Given
+        val emailSubscription = SubscriptionModel()
+        emailSubscription.id = "subscription1"
+        emailSubscription.type = SubscriptionType.EMAIL
+        emailSubscription.address = "user@example.com"
+
+        val mockSubscriptionModelStore = mockk<SubscriptionModelStore>()
+        val mockApplicationService = mockk<IApplicationService>()
+        val mockSessionService = mockk<ISessionService>(relaxed = true)
+
+        every { mockSubscriptionModelStore.subscribe(any()) } just runs
+        every { mockSubscriptionModelStore.list() } returns listOf(emailSubscription)
+
+        val subscriptionManager = SubscriptionManager(mockApplicationService, mockSessionService, mockSubscriptionModelStore)
+
+        // When
+        val subscriptions = subscriptionManager.subscriptions
+
+        // Then
+        subscriptions.emails[0].email shouldBe "user@example.com"
+    }
+
+    test("sms getter returns empty string when address is hashed") {
+        // Given
+        val smsSubscription = SubscriptionModel()
+        smsSubscription.id = "subscription1"
+        smsSubscription.type = SubscriptionType.SMS
+        smsSubscription.address = PIIHasher.hash("+15558675309")
+
+        val mockSubscriptionModelStore = mockk<SubscriptionModelStore>()
+        val mockApplicationService = mockk<IApplicationService>()
+        val mockSessionService = mockk<ISessionService>(relaxed = true)
+
+        every { mockSubscriptionModelStore.subscribe(any()) } just runs
+        every { mockSubscriptionModelStore.list() } returns listOf(smsSubscription)
+
+        val subscriptionManager = SubscriptionManager(mockApplicationService, mockSessionService, mockSubscriptionModelStore)
+
+        // When
+        val subscriptions = subscriptionManager.subscriptions
+
+        // Then — public getter returns "" for hashed address
+        subscriptions.smss.count() shouldBe 1
+        subscriptions.smss[0].number shouldBe ""
+    }
+
+    test("sms getter returns raw value when address is not hashed") {
+        // Given
+        val smsSubscription = SubscriptionModel()
+        smsSubscription.id = "subscription1"
+        smsSubscription.type = SubscriptionType.SMS
+        smsSubscription.address = "+15558675309"
+
+        val mockSubscriptionModelStore = mockk<SubscriptionModelStore>()
+        val mockApplicationService = mockk<IApplicationService>()
+        val mockSessionService = mockk<ISessionService>(relaxed = true)
+
+        every { mockSubscriptionModelStore.subscribe(any()) } just runs
+        every { mockSubscriptionModelStore.list() } returns listOf(smsSubscription)
+
+        val subscriptionManager = SubscriptionManager(mockApplicationService, mockSessionService, mockSubscriptionModelStore)
+
+        // When
+        val subscriptions = subscriptionManager.subscriptions
+
+        // Then
+        subscriptions.smss[0].number shouldBe "+15558675309"
+    }
+
+    test("getByEmail finds subscription with hashed address") {
+        // Given
+        val emailSubscription = SubscriptionModel()
+        emailSubscription.id = "subscription1"
+        emailSubscription.type = SubscriptionType.EMAIL
+        emailSubscription.address = PIIHasher.hash("user@example.com")
+
+        val mockSubscriptionModelStore = mockk<SubscriptionModelStore>()
+        val mockApplicationService = mockk<IApplicationService>()
+        val mockSessionService = mockk<ISessionService>(relaxed = true)
+
+        every { mockSubscriptionModelStore.subscribe(any()) } just runs
+        every { mockSubscriptionModelStore.list() } returns listOf(emailSubscription)
+
+        val subscriptionManager = SubscriptionManager(mockApplicationService, mockSessionService, mockSubscriptionModelStore)
+
+        // When
+        val result = subscriptionManager.subscriptions.getByEmail("user@example.com")
+
+        // Then
+        result shouldNotBe null
+        result!!.id shouldBe "subscription1"
+    }
+
+    test("getBySMS finds subscription with hashed address") {
+        // Given
+        val smsSubscription = SubscriptionModel()
+        smsSubscription.id = "subscription1"
+        smsSubscription.type = SubscriptionType.SMS
+        smsSubscription.address = PIIHasher.hash("+15558675309")
+
+        val mockSubscriptionModelStore = mockk<SubscriptionModelStore>()
+        val mockApplicationService = mockk<IApplicationService>()
+        val mockSessionService = mockk<ISessionService>(relaxed = true)
+
+        every { mockSubscriptionModelStore.subscribe(any()) } just runs
+        every { mockSubscriptionModelStore.list() } returns listOf(smsSubscription)
+
+        val subscriptionManager = SubscriptionManager(mockApplicationService, mockSessionService, mockSubscriptionModelStore)
+
+        // When
+        val result = subscriptionManager.subscriptions.getBySMS("+15558675309")
+
+        // Then
+        result shouldNotBe null
+        result!!.id shouldBe "subscription1"
     }
 })
