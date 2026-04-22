@@ -402,14 +402,20 @@ internal class OneSignalImp(
 
         if (isBackgroundThreadingEnabled) {
             waitForInit(operationName = "logout")
-            suspendifyOnIO { logoutHelper.logout() }
         } else {
             if (!isInitialized) {
                 throw IllegalStateException("Must call 'initWithContext' before 'logout'")
             }
+        }
+
+        val context = logoutHelper.switchUser() ?: return
+
+        if (isBackgroundThreadingEnabled) {
+            suspendifyOnIO { logoutHelper.enqueueLogout(context) }
+        } else {
             Thread {
                 runBlocking(runtimeIoDispatcher) {
-                    logoutHelper.logout()
+                    logoutHelper.enqueueLogout(context)
                 }
             }.start()
         }
@@ -666,6 +672,7 @@ internal class OneSignalImp(
                 throw IllegalStateException("'initWithContext failed' before 'logout'")
             }
 
-            logoutHelper.logout()
+            val context = logoutHelper.switchUser() ?: return@withContext
+            logoutHelper.enqueueLogout(context)
         }
 }
