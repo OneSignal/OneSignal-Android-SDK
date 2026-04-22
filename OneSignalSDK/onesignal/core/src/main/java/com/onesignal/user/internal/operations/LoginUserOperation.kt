@@ -48,7 +48,7 @@ class LoginUserOperation() : Operation(LoginUserOperationExecutor.LOGIN_USER) {
      */
     var existingOnesignalId: String?
         get() = getOptStringProperty(::existingOnesignalId.name)
-        internal set(value) {
+        internal set(value) { // `internal` so OperationRepo can merge during de-dupe
             setOptStringProperty(::existingOnesignalId.name, value)
         }
 
