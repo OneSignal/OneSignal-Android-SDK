@@ -1,5 +1,6 @@
 package com.onesignal.core.internal.operations.impl
 
+import com.onesignal.common.IDManager
 import com.onesignal.common.threading.WaiterWithValue
 import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.operations.ExecutionResult
@@ -172,9 +173,15 @@ internal class OperationRepo(
                 if (existing != null) {
                     val existingOp = existing.operation as LoginUserOperation
                     // Preserve the anon-user conversion link if the queued op lacks it (e.g. RecoverFromDroppedLoginBug enqueued with null).
-                    if (op.existingOnesignalId != null && existingOp.existingOnesignalId == null) {
-                        Logging.debug("OperationRepo: internalEnqueue - merging existingOnesignalId=${op.existingOnesignalId} into queued LoginUserOperation for onesignalId: ${op.onesignalId}.")
-                        existingOp.existingOnesignalId = op.existingOnesignalId
+                    // Skip local ids: merging one would flip canStartExecute to false and strand the op,
+                    // since a local id that never hit the backend will never receive an idTranslation.
+                    val incomingExistingId = op.existingOnesignalId
+                    if (incomingExistingId != null &&
+                        !IDManager.isLocalId(incomingExistingId) &&
+                        existingOp.existingOnesignalId == null
+                    ) {
+                        Logging.debug("OperationRepo: internalEnqueue - merging existingOnesignalId=$incomingExistingId into queued LoginUserOperation for onesignalId: ${op.onesignalId}.")
+                        existingOp.existingOnesignalId = incomingExistingId
                     } else {
                         Logging.debug("OperationRepo: internalEnqueue - LoginUserOperation for onesignalId: ${op.onesignalId} already exists in the queue.")
                     }
