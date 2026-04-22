@@ -161,9 +161,7 @@ class OperationRepoTests : FunSpec({
 
         // When — enqueue the incoming op (simulates enqueueLogin landing after recovery)
         operationRepo.enqueue(incomingOp)
-
-        // Yield so the launched coroutine in enqueue() can run
-        kotlinx.coroutines.runBlocking { delay(100) }
+        mocks.waitForInternalEnqueue()
 
         // Then — queue has only the original op, with merged existingOnesignalId
         operationRepo.queue.size shouldBe 1
