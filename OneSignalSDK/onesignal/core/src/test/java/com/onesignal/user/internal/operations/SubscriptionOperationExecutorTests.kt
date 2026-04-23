@@ -105,11 +105,14 @@ class SubscriptionOperationExecutorTests :
             }
         }
 
-        test("create subscription includes the subscription ID if non-local") {
+        // SDK-4388: A CreateSubscriptionOperation can carry a non-local subscriptionId when
+        // a subscription that already exists on the backend is re-attached to a new local user
+        // (e.g. createAndSwitchToNewUser after login). POSTing to /subscriptions with that id is
+        // silently a no-op on the server, so we must PATCH the existing subscription instead.
+        test("create subscription PATCHes existing subscription when subscription ID is non-local") {
             // Given
             val mockSubscriptionBackendService = mockk<ISubscriptionBackendService>()
-            coEvery { mockSubscriptionBackendService.createSubscription(any(), any(), any(), any()) } returns
-                Pair(remoteSubscriptionId, rywData)
+            coEvery { mockSubscriptionBackendService.updateSubscription(any(), any(), any()) } returns rywData
 
             val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
             val subscriptionModel = SubscriptionModel()
@@ -144,16 +147,22 @@ class SubscriptionOperationExecutorTests :
                 )
 
             // When
-            subscriptionOperationExecutor.execute(operations)
+            val response = subscriptionOperationExecutor.execute(operations)
 
             // Then
+            response.result shouldBe ExecutionResult.SUCCESS
+            coVerify(exactly = 0) {
+                mockSubscriptionBackendService.createSubscription(any(), any(), any(), any())
+            }
             coVerify(exactly = 1) {
-                mockSubscriptionBackendService.createSubscription(
+                mockSubscriptionBackendService.updateSubscription(
                     appId,
-                    IdentityConstants.ONESIGNAL_ID,
-                    remoteOneSignalId,
+                    remoteSubscriptionId,
                     withArg {
-                        it.id shouldBe remoteSubscriptionId
+                        it.type shouldBe SubscriptionObjectType.ANDROID_PUSH
+                        it.enabled shouldBe true
+                        it.token shouldBe "pushToken"
+                        it.notificationTypes shouldBe SubscriptionStatus.SUBSCRIBED.value
                     },
                 )
             }
@@ -821,6 +830,77 @@ class SubscriptionOperationExecutorTests :
             // Then
             coVerify(exactly = 1) {
                 mockConsistencyManager.setRywData(remoteOneSignalId, IamFetchRywTokenKey.SUBSCRIPTION, rywData)
+            }
+        }
+
+        // Repro for SDK-4388: when a CreateSubscriptionOperation is grouped with a follow-up
+        // UpdateSubscriptionOperation for a subscription that already exists on the server
+        // (non-local subscriptionId), the executor must PATCH the merged final state instead
+        // of POSTing (which the backend treats as a no-op, silently dropping enabled/status).
+        test("create subscription with non-local id PATCHes instead of POSTing when grouped with update") {
+            // Given
+            val mockSubscriptionBackendService = mockk<ISubscriptionBackendService>()
+            coEvery { mockSubscriptionBackendService.updateSubscription(any(), any(), any()) } returns rywData
+
+            val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
+            val subscriptionModel = SubscriptionModel().apply { id = remoteSubscriptionId }
+            every { mockSubscriptionsModelStore.get(remoteSubscriptionId) } returns subscriptionModel
+
+            val mockBuildUserService = mockk<IRebuildUserService>()
+
+            val subscriptionOperationExecutor =
+                SubscriptionOperationExecutor(
+                    mockSubscriptionBackendService,
+                    MockHelper.deviceService(),
+                    AndroidMockHelper.applicationService(),
+                    mockSubscriptionsModelStore,
+                    MockHelper.configModelStore(),
+                    mockBuildUserService,
+                    getNewRecordState(),
+                    mockConsistencyManager,
+                )
+
+            val operations =
+                listOf<Operation>(
+                    CreateSubscriptionOperation(
+                        appId,
+                        remoteOneSignalId,
+                        remoteSubscriptionId,
+                        SubscriptionType.PUSH,
+                        false,
+                        "pushToken",
+                        SubscriptionStatus.NO_PERMISSION,
+                    ),
+                    UpdateSubscriptionOperation(
+                        appId,
+                        remoteOneSignalId,
+                        remoteSubscriptionId,
+                        SubscriptionType.PUSH,
+                        true,
+                        "pushToken",
+                        SubscriptionStatus.SUBSCRIBED,
+                    ),
+                )
+
+            // When
+            val response = subscriptionOperationExecutor.execute(operations)
+
+            // Then
+            response.result shouldBe ExecutionResult.SUCCESS
+            coVerify(exactly = 0) {
+                mockSubscriptionBackendService.createSubscription(any(), any(), any(), any())
+            }
+            coVerify(exactly = 1) {
+                mockSubscriptionBackendService.updateSubscription(
+                    appId,
+                    remoteSubscriptionId,
+                    withArg {
+                        it.type shouldBe SubscriptionObjectType.ANDROID_PUSH
+                        it.enabled shouldBe true
+                        it.token shouldBe "pushToken"
+                        it.notificationTypes shouldBe SubscriptionStatus.SUBSCRIBED.value
+                    },
+                )
             }
         }
     })
