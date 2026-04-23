@@ -22,27 +22,9 @@ class FeatureManagerTests : FunSpec({
         every { model.sdkRemoteFeatureFlagMetadata } returns null
     }
 
-    test("initial state should enable BACKGROUND_THREADING when feature is present") {
-        // Given
+    test("initial state enables BACKGROUND_THREADING when key is present in sdk remote flags") {
         val initialModel = mockk<ConfigModel>()
         stubConfigModel(initialModel)
-        every { initialModel.features } returns listOf(FeatureFlag.SDK_BACKGROUND_THREADING.key)
-        val configModelStore = mockk<ConfigModelStore>()
-        every { configModelStore.model } returns initialModel
-        every { configModelStore.subscribe(any()) } just runs
-
-        // When
-        val manager = FeatureManager(configModelStore)
-
-        // Then
-        manager.isEnabled(FeatureFlag.SDK_BACKGROUND_THREADING) shouldBe true
-        ThreadingMode.useBackgroundThreading shouldBe true
-    }
-
-    test("initial state enables BACKGROUND_THREADING when key only exists on sdk remote flags") {
-        val initialModel = mockk<ConfigModel>()
-        stubConfigModel(initialModel)
-        every { initialModel.features } returns emptyList()
         every { initialModel.sdkRemoteFeatureFlags } returns listOf(FeatureFlag.SDK_BACKGROUND_THREADING.key)
         val configModelStore = mockk<ConfigModelStore>()
         every { configModelStore.model } returns initialModel
@@ -57,7 +39,6 @@ class FeatureManagerTests : FunSpec({
     test("initial state enables BACKGROUND_THREADING when remote key differs only by letter case") {
         val initialModel = mockk<ConfigModel>()
         stubConfigModel(initialModel)
-        every { initialModel.features } returns emptyList()
         every { initialModel.sdkRemoteFeatureFlags } returns listOf("SDK_Background_Threading")
         val configModelStore = mockk<ConfigModelStore>()
         every { configModelStore.model } returns initialModel
@@ -73,7 +54,6 @@ class FeatureManagerTests : FunSpec({
         // Given
         val initialModel = mockk<ConfigModel>()
         stubConfigModel(initialModel)
-        every { initialModel.features } returns emptyList()
         val configModelStore = mockk<ConfigModelStore>()
         every { configModelStore.model } returns initialModel
         every { configModelStore.subscribe(any()) } just runs
@@ -81,7 +61,7 @@ class FeatureManagerTests : FunSpec({
 
         val updatedModel = mockk<ConfigModel>()
         stubConfigModel(updatedModel)
-        every { updatedModel.features } returns listOf(FeatureFlag.SDK_BACKGROUND_THREADING.key)
+        every { updatedModel.sdkRemoteFeatureFlags } returns listOf(FeatureFlag.SDK_BACKGROUND_THREADING.key)
 
         // When
         manager.onModelReplaced(updatedModel, ModelChangeTags.HYDRATE)
@@ -95,18 +75,17 @@ class FeatureManagerTests : FunSpec({
         // Given
         val model = mockk<ConfigModel>()
         stubConfigModel(model)
-        every { model.features } returns emptyList()
         val configModelStore = mockk<ConfigModelStore>()
         every { configModelStore.model } returns model
         every { configModelStore.subscribe(any()) } just runs
         val manager = FeatureManager(configModelStore)
 
-        every { model.features } returns listOf(FeatureFlag.SDK_BACKGROUND_THREADING.key)
+        every { model.sdkRemoteFeatureFlags } returns listOf(FeatureFlag.SDK_BACKGROUND_THREADING.key)
 
         // When
         manager.onModelUpdated(
             args = mockk {
-                every { property } returns ConfigModel::features.name
+                every { property } returns ConfigModel::sdkRemoteFeatureFlags.name
             },
             tag = ModelChangeTags.NORMAL
         )
@@ -120,18 +99,18 @@ class FeatureManagerTests : FunSpec({
         // Given
         val model = mockk<ConfigModel>()
         stubConfigModel(model)
-        every { model.features } returns listOf(FeatureFlag.SDK_BACKGROUND_THREADING.key)
+        every { model.sdkRemoteFeatureFlags } returns listOf(FeatureFlag.SDK_BACKGROUND_THREADING.key)
         val configModelStore = mockk<ConfigModelStore>()
         every { configModelStore.model } returns model
         every { configModelStore.subscribe(any()) } just runs
         val manager = FeatureManager(configModelStore)
 
-        every { model.features } returns emptyList()
+        every { model.sdkRemoteFeatureFlags } returns emptyList()
 
         // When
         manager.onModelUpdated(
             args = mockk {
-                every { property } returns ConfigModel::features.name
+                every { property } returns ConfigModel::sdkRemoteFeatureFlags.name
             },
             tag = ModelChangeTags.NORMAL
         )
@@ -144,7 +123,6 @@ class FeatureManagerTests : FunSpec({
     test("remoteFeatureFlagMetadata returns parsed JSON from config") {
         val initialModel = mockk<ConfigModel>()
         stubConfigModel(initialModel)
-        every { initialModel.features } returns emptyList()
         every { initialModel.sdkRemoteFeatureFlagMetadata } returns """{"X":{"note":"y"}}"""
         val configModelStore = mockk<ConfigModelStore>()
         every { configModelStore.model } returns initialModel
@@ -159,7 +137,6 @@ class FeatureManagerTests : FunSpec({
     test("remoteFeatureFlagMetadata is null when config has no stored metadata") {
         val initialModel = mockk<ConfigModel>()
         stubConfigModel(initialModel)
-        every { initialModel.features } returns emptyList()
         every { initialModel.sdkRemoteFeatureFlagMetadata } returns null
         val configModelStore = mockk<ConfigModelStore>()
         every { configModelStore.model } returns initialModel

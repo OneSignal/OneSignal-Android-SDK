@@ -35,7 +35,6 @@ internal class ParamsObject(
     var locationShared: Boolean? = null,
     var requiresUserPrivacyConsent: Boolean? = null,
     var opRepoExecutionInterval: Long? = null,
-    val features: List<String> = emptyList(),
     var influenceParams: InfluenceParamsObject,
     var fcmParams: FCMParamsObject,
     val remoteLoggingParams: RemoteLoggingParamsObject,

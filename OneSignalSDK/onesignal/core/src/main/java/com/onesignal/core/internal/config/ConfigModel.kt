@@ -291,21 +291,10 @@ class ConfigModel : Model() {
         }
 
     /**
-     * Feature ids from the main OneSignal config / params response (legacy channel).
-     * Presence of a name means the feature is on. This list is distinct from [sdkRemoteFeatureFlags];
-     * [com.onesignal.core.internal.features.FeatureManager] unions both (plus any local test overrides).
-     */
-    var features: List<String>
-        get() = getListProperty(::features.name) { emptyList() }
-        set(value) {
-            setListProperty(::features.name, value)
-        }
-
-    /**
      * Feature ids from the Turbine SDK feature-flags HTTP endpoint
      * ([com.onesignal.core.internal.backend.IFeatureFlagsBackendService]), updated while the app is
-     * foreground. Unioned with [features] in [com.onesignal.core.internal.features.FeatureManager]
-     * when evaluating [com.onesignal.core.internal.features.FeatureFlag] entries.
+     * foreground. [com.onesignal.core.internal.features.FeatureManager] unions these with any local
+     * test overrides when evaluating [com.onesignal.core.internal.features.FeatureFlag] entries.
      */
     var sdkRemoteFeatureFlags: List<String>
         get() = getListProperty(::sdkRemoteFeatureFlags.name) { emptyList() }
@@ -369,7 +358,7 @@ class ConfigModel : Model() {
         property: String,
         jsonArray: JSONArray,
     ): List<*>? {
-        if (property == ::features.name || property == ::sdkRemoteFeatureFlags.name) {
+        if (property == ::sdkRemoteFeatureFlags.name) {
             return buildList {
                 for (i in 0 until jsonArray.length()) {
                     val featureName = jsonArray.optString(i, "")

@@ -69,8 +69,7 @@ internal class FeatureManager(
         args: ModelChangedArgs,
         tag: String,
     ) {
-        if (args.property == ConfigModel::features.name ||
-            args.property == ConfigModel::sdkRemoteFeatureFlags.name ||
+        if (args.property == ConfigModel::sdkRemoteFeatureFlags.name ||
             args.property == ConfigModel::sdkRemoteFeatureFlagMetadata.name
         ) {
             Logging.debug("OneSignal: FeatureManager.onModelUpdated(property=${args.property}, tag=$tag)")
@@ -89,8 +88,7 @@ internal class FeatureManager(
     ) {
         val enabledFeatureKeys =
             (
-                model.features.map { canonicalizeFeatureKey(it) } +
-                    model.sdkRemoteFeatureFlags.map { canonicalizeFeatureKey(it) } +
+                model.sdkRemoteFeatureFlags.map { canonicalizeFeatureKey(it) } +
                     localFeatureOverrides.map { canonicalizeFeatureKey(it) }
             ).toSet()
         if (localFeatureOverrides.isNotEmpty()) {
