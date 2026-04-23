@@ -291,8 +291,9 @@ class ConfigModel : Model() {
         }
 
     /**
-     * Remote feature switches controlled by backend.
-     * Presence of a feature name indicates enabled.
+     * Feature ids from the main OneSignal config / params response (legacy channel).
+     * Presence of a name means the feature is on. This list is distinct from [sdkRemoteFeatureFlags];
+     * [com.onesignal.core.internal.features.FeatureManager] unions both (plus any local test overrides).
      */
     var features: List<String>
         get() = getListProperty(::features.name) { emptyList() }
@@ -301,8 +302,10 @@ class ConfigModel : Model() {
         }
 
     /**
-     * Feature keys from the dedicated SDK feature-flags HTTP endpoint (see [com.onesignal.core.internal.backend.IFeatureFlagsBackendService]).
-     * Unioned with [features] for [com.onesignal.core.internal.features.FeatureManager].
+     * Feature ids from the Turbine SDK feature-flags HTTP endpoint
+     * ([com.onesignal.core.internal.backend.IFeatureFlagsBackendService]), updated while the app is
+     * foreground. Unioned with [features] in [com.onesignal.core.internal.features.FeatureManager]
+     * when evaluating [com.onesignal.core.internal.features.FeatureFlag] entries.
      */
     var sdkRemoteFeatureFlags: List<String>
         get() = getListProperty(::sdkRemoteFeatureFlags.name) { emptyList() }
@@ -311,7 +314,10 @@ class ConfigModel : Model() {
         }
 
     /**
-     * JSON object string: flag id → metadata (e.g. `note` or structured values) from the feature-flags endpoint.
+     * Compacted JSON object: canonical flag id → metadata object, from the same Turbine response
+     * as [sdkRemoteFeatureFlags]. Persisted so metadata survives process death and is available
+     * to [com.onesignal.core.internal.features.IFeatureManager.remoteFeatureFlagMetadata] without
+     * a new network fetch on the next launch.
      */
     var sdkRemoteFeatureFlagMetadata: String?
         get() = getOptStringProperty(::sdkRemoteFeatureFlagMetadata.name)

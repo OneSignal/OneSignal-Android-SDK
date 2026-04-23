@@ -1,5 +1,6 @@
 package com.onesignal.core.internal.backend.impl
 
+import com.onesignal.common.OneSignalUtils
 import com.onesignal.core.internal.backend.RemoteFeatureFlagsFetchOutcome
 import com.onesignal.core.internal.http.HttpResponse
 import com.onesignal.core.internal.http.IHttpClient
@@ -134,6 +135,59 @@ class FeatureFlagsBackendServiceTests : FunSpec({
         val outcome = FeatureFlagsBackendService(http).fetchRemoteFeatureFlags("appId")
         outcome.shouldBeSuccessWithEmptyKeys()
         logsForService().any { it.level == LogLevel.WARN } shouldBe false
+    }
+
+    test("200 with empty body logs at WARN for contract anomaly and returns Unavailable") {
+        val http = mockk<IHttpClient>()
+        coEvery { http.get(any(), any()) } returns HttpResponse(200, null)
+
+        val outcome = FeatureFlagsBackendService(http).fetchRemoteFeatureFlags("appId")
+        outcome shouldBe RemoteFeatureFlagsFetchOutcome.Unavailable
+        val warns = logsForService().filter { it.level == LogLevel.WARN }
+        warns.any { it.entry.contains("empty body for success status=200") } shouldBe true
+    }
+
+    test("buildFeatureFlagsGetPath matches Turbine /apps/:app_id/sdk/features/:platform/:sdk_version") {
+        FeatureFlagsBackendService.buildFeatureFlagsGetPath(
+            appId = "14719551-23f1-4d20-8dab-81496ffca5ea",
+            platform = FeatureFlagsBackendService.TURBINE_FEATURES_PLATFORM_ANDROID,
+            sdkVersion = "050801",
+        ) shouldBe "apps/14719551-23f1-4d20-8dab-81496ffca5ea/sdk/features/android/050801"
+    }
+
+    test("buildFeatureFlagsGetPath encodes prerelease sdk version label") {
+        FeatureFlagsBackendService.buildFeatureFlagsGetPath(
+            appId = "14719551-23f1-4d20-8dab-81496ffca5ea",
+            platform = FeatureFlagsBackendService.TURBINE_FEATURES_PLATFORM_ANDROID,
+            sdkVersion = "050801-beta",
+        ) shouldBe "apps/14719551-23f1-4d20-8dab-81496ffca5ea/sdk/features/android/050801-beta"
+    }
+
+    test("isValidFeaturesSdkVersionLabel accepts only 6-digit labels with optional -suffix") {
+        val valid =
+            listOf(
+                "050801",
+                "050801-beta",
+                "050801-beta1",
+                "010203-rc.2",
+                "000000",
+            )
+        val invalid =
+            listOf(
+                "5.8.1",
+                "05080",
+                "0508010",
+                "",
+                "050801-",
+                "050801/",
+                "v050801",
+            )
+        valid.forEach { FeatureFlagsBackendService.isValidFeaturesSdkVersionLabel(it) shouldBe true }
+        invalid.forEach { FeatureFlagsBackendService.isValidFeaturesSdkVersionLabel(it) shouldBe false }
+    }
+
+    test("OneSignalUtils.sdkVersion from BuildConfig matches Turbine label rules") {
+        FeatureFlagsBackendService.isValidFeaturesSdkVersionLabel(OneSignalUtils.sdkVersion) shouldBe true
     }
 })
 

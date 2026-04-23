@@ -9,28 +9,21 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 
 /**
- * Parses the feature-flags API response with kotlinx.serialization.
+ * **What this is:** strict JSON parsing for the Turbine SDK feature-flags response
+ * ([OneSignal/turbine#1681](https://github.com/OneSignal/turbine/pull/1681)).
  *
- * Expected shape:
- * ```json
- * {
- *   "features": ["feature_a", "feature_b"],
- *   "feature_a": { "weight": 0.1 },
- *   "feature_b": { ... }
- * }
- * ```
+ * **Wire shape:** root object with a `features` array of **string** flag ids. Optional per-flag JSON
+ * objects may appear as **sibling root properties** (same name as the id); those are merged into
+ * [RemoteFeatureFlagsResult.metadata].
  *
- * Turbine returns only `features` ([OneSignal/turbine#1681](https://github.com/OneSignal/turbine/pull/1681)).
- * If the same flag id also appears as a root property with a JSON object value, that object is copied
- * into [RemoteFeatureFlagsResult.metadata] for forward-compatible extras (flags without a sibling
- * object stay enabled via [RemoteFeatureFlagsResult.enabledKeys] only).
+ * **Optional metadata:** for a string entry `"foo"`, if the root also has a property `"foo"` (or
+ * case-insensitive match) whose value is a JSON object, that object is stored per-flag in
+ * [RemoteFeatureFlagsResult.metadata]. That lets a future API add per-flag config without a new
+ * top-level field; the SDK persists it in [com.onesignal.core.internal.config.ConfigModel.sdkRemoteFeatureFlagMetadata]
+ * so a later process or SDK version can read it without re-fetching.
  *
- * Payload must be valid JSON (e.g. a comma between `"features": [...]` and the next property).
- *
- * Flag ids from the `features` array are normalized with [Char.lowercaseChar] (Unicode case mapping, no
- * `java.util.Locale`) so they align with [com.onesignal.core.internal.features.FeatureFlag.key]. Sibling
- * objects are resolved with exact key, then canonical key, then a case-insensitive match against other root
- * properties (excluding `features`).
+ * **API surface:** [parseSuccessful] for HTTP 200 bodies; [parse] for lenient “best effort”;
+ * [encodeMetadata] / [parseStoredMetadataMap] for the persisted metadata column.
  *
  * Uses only Kotlin stdlib + kotlinx.serialization (Kotlin Multiplatform-friendly).
  */
@@ -53,9 +46,9 @@ internal object FeatureFlagsJsonParser {
     fun parse(payload: String): RemoteFeatureFlagsResult = parseSuccessful(payload) ?: RemoteFeatureFlagsResult.EMPTY
 
     /**
-     * Parses a successful Turbine response body. Returns `null` if JSON is invalid or the payload does not
-     * match the expected contract (missing `features` array, wrong types). A valid `{"features":[]}` returns
-     * [RemoteFeatureFlagsResult] with an empty [RemoteFeatureFlagsResult.enabledKeys] list.
+     * Parses a 200 response body. Returns `null` if the text is not JSON, not an object, or does not
+     * contain a `features` **array** of the expected element types. Returns an empty result for
+     * `{"features":[]}`.
      */
     fun parseSuccessful(payload: String): RemoteFeatureFlagsResult? {
         return try {

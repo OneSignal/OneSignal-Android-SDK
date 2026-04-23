@@ -46,13 +46,19 @@ internal class FeatureFlagsBackendService(
 
         val response = http.get(path, null)
         val body = response.payload
-        if (!response.isSuccess || body.isNullOrBlank()) {
+        if (!response.isSuccess) {
             val msg =
                 "FeatureFlagsBackendService: non-success status=${response.statusCode} body=${bodySnippet(body)}"
             // 4xx is likely a permanent misconfiguration (e.g. 403 Forbidden when the app is not
             // enrolled for Turbine feature flags) and worth surfacing at WARN; other failures are
             // typically transient (network blip, 5xx) and stay at DEBUG to avoid log spam.
             if (response.isClientError) Logging.warn(msg) else Logging.debug(msg)
+            return RemoteFeatureFlagsFetchOutcome.Unavailable
+        }
+        if (body.isNullOrBlank()) {
+            Logging.warn(
+                "FeatureFlagsBackendService: empty body for success status=${response.statusCode}",
+            )
             return RemoteFeatureFlagsFetchOutcome.Unavailable
         }
 

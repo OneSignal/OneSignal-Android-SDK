@@ -3,7 +3,6 @@ package com.onesignal.core.internal.config.impl
 import com.onesignal.common.modeling.ISingletonModelStoreChangeHandler
 import com.onesignal.common.modeling.ModelChangeTags
 import com.onesignal.common.modeling.ModelChangedArgs
-import com.onesignal.core.internal.config.ConfigModelChangeTags
 import com.onesignal.common.threading.OneSignalDispatchers
 import com.onesignal.core.internal.application.IApplicationLifecycleHandler
 import com.onesignal.core.internal.application.IApplicationService
@@ -11,15 +10,15 @@ import com.onesignal.core.internal.backend.IFeatureFlagsBackendService
 import com.onesignal.core.internal.backend.RemoteFeatureFlagsFetchOutcome
 import com.onesignal.core.internal.backend.impl.FeatureFlagsJsonParser
 import com.onesignal.core.internal.config.ConfigModel
+import com.onesignal.core.internal.config.ConfigModelChangeTags
 import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.startup.IStartableService
 import com.onesignal.debug.internal.logging.Logging
-import kotlin.coroutines.coroutineContext
-import kotlin.jvm.Volatile
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
+import kotlin.coroutines.coroutineContext
 
 /**
  * Fetches remote SDK feature flags when the app is in the foreground, immediately on focus and then
@@ -37,7 +36,6 @@ internal class FeatureFlagsRefreshService(
 ) : IStartableService,
     IApplicationLifecycleHandler,
     ISingletonModelStoreChangeHandler<ConfigModel> {
-    @Volatile
     private var pollJob: Job? = null
 
     override fun start() {
@@ -51,8 +49,10 @@ internal class FeatureFlagsRefreshService(
     }
 
     override fun onUnfocused() {
-        pollJob?.cancel()
-        pollJob = null
+        synchronized(this) {
+            pollJob?.cancel()
+            pollJob = null
+        }
     }
 
     override fun onModelUpdated(
@@ -80,27 +80,28 @@ internal class FeatureFlagsRefreshService(
     }
 
     private fun restartForegroundPolling() {
-        pollJob?.cancel()
-        pollJob =
-            OneSignalDispatchers.launchOnIO {
-                while (coroutineContext.isActive) {
-                    if (!applicationService.isInForeground) {
-                        break
-                    }
-                    val appId = configModelStore.model.appId
-                    if (appId.isNotEmpty()) {
-                        try {
-                            fetchAndApply(appId)
-                        } catch (e: CancellationException) {
-                            throw e
-                        } catch (e: Exception) {
-                            Logging.warn("FeatureFlagsRefreshService: fetch failed", e)
+        synchronized(this) {
+            pollJob?.cancel()
+            pollJob =
+                OneSignalDispatchers.launchOnIO {
+                    while (coroutineContext.isActive) {
+                        if (!applicationService.isInForeground) {
+                            break
                         }
+                        val appId = configModelStore.model.appId
+                        if (appId.isNotEmpty()) {
+                            try {
+                                fetchAndApply(appId)
+                            } catch (e: CancellationException) {
+                                throw e
+                            } catch (e: Exception) {
+                                Logging.warn("FeatureFlagsRefreshService: fetch failed", e)
+                            }
+                        }
+                        delay(REFRESH_INTERVAL_MS)
                     }
-                    Logging.debug("FeatureFlagsRefreshService: next fetch in ${REFRESH_INTERVAL_MS}ms")
-                    delay(REFRESH_INTERVAL_MS)
                 }
-            }
+        }
     }
 
     private suspend fun fetchAndApply(appId: String) {
@@ -113,10 +114,6 @@ internal class FeatureFlagsRefreshService(
         val newMetaString = FeatureFlagsJsonParser.encodeMetadata(result.metadata)
         val beforeKeys = current.sdkRemoteFeatureFlags.toSet()
         val afterKeys = result.enabledKeys.toSet()
-        Logging.debug(
-            "FeatureFlagsRefreshService: appId=$appId before=${beforeKeys.sorted()} " +
-                "after=${afterKeys.sorted()} changed=${beforeKeys != afterKeys}",
-        )
         if (afterKeys == beforeKeys && newMetaString == current.sdkRemoteFeatureFlagMetadata) {
             return
         }

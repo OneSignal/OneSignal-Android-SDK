@@ -19,8 +19,6 @@ buildscript {
 
 allprojects {
     repositories {
-        // mavenLocal first so locally-published SDK builds resolve over Central when testing against a snapshot.
-        mavenLocal()
         google()
         mavenCentral()
         // Huawei maven

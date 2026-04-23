@@ -6,8 +6,9 @@ package com.onesignal.core.internal.config
  */
 internal object ConfigModelChangeTags {
     /**
-     * Remote feature-flags HTTP endpoint updated [ConfigModel] SDK flag fields only
-     * ([ConfigModel.sdkRemoteFeatureFlags], [ConfigModel.sdkRemoteFeatureFlagMetadata]).
+     * A partial update from the Turbine feature-flags refresh: only
+     * [ConfigModel.sdkRemoteFeatureFlags] and [ConfigModel.sdkRemoteFeatureFlagMetadata] changed
+     * (in-place on the live model, not a full [ConfigModel] replace).
      */
     const val REMOTE_FEATURE_FLAGS = "REMOTE_FEATURE_FLAGS"
 }
