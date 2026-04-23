@@ -37,6 +37,17 @@ internal class DeviceRegistrationListener(
         _configModelStore.subscribe(this)
         _notificationsManager.addPermissionObserver(this)
         _subscriptionManager.subscribe(this)
+
+        // If notification permission is already granted at startup (e.g. after reinstall or
+        // app data clear), the push subscription status may still be NO_PERMISSION because
+        // no permission-change event will fire — permission was already true when the SDK
+        // initialized, so oldPermission == newPermission and no event is emitted.
+        // The config-hydration path (onModelReplaced/HYDRATE) only fires when the config
+        // cache is invalid, so it cannot be relied on either.
+        // Eagerly retrieve the push token here to ensure the subscription is active.
+        if (_notificationsManager.permission) {
+            retrievePushTokenAndUpdateSubscription()
+        }
     }
 
     override fun onModelReplaced(
