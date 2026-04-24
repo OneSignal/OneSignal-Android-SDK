@@ -12,6 +12,9 @@ import com.onesignal.core.internal.startup.IStartableService
 import com.onesignal.core.internal.time.ITime
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
+import com.onesignal.user.internal.jwt.IdentityVerificationGates
+import com.onesignal.user.internal.jwt.JwtRequirement
+import com.onesignal.user.internal.jwt.JwtTokenStore
 import com.onesignal.user.internal.operations.LoginUserOperation
 import com.onesignal.user.internal.operations.impl.states.NewRecordsState
 import kotlinx.coroutines.CompletableDeferred
@@ -30,7 +33,13 @@ internal class OperationRepo(
     private val _configModelStore: ConfigModelStore,
     private val _time: ITime,
     private val _newRecordState: NewRecordsState,
+    private val _jwtTokenStore: JwtTokenStore,
 ) : IOperationRepo, IStartableService {
+    // IV-related state. Handler is fired from the op-processing thread and set from
+    // the main thread by the public-API layer
+    @Volatile
+    private var _jwtInvalidatedHandler: ((String) -> Unit)? = null
+
     internal class OperationQueueItem(
         val operation: Operation,
         var waiter: WaiterWithValue<Boolean>? = null, // waiter may transfer during operation de-dupe
@@ -244,6 +253,24 @@ internal class OperationRepo(
         waiter.wake(LoopWaiterMessage(false))
     }
 
+    override fun setJwtInvalidatedHandler(handler: ((externalId: String) -> Unit)?) {
+        _jwtInvalidatedHandler = handler
+    }
+
+    override fun removeOperationsWithoutExternalId() {
+        val removedIds: List<String> =
+            synchronized(queue) {
+                val anonymous = queue.filter { it.operation.externalId == null }
+                anonymous.forEach { it.waiter?.wake(false) }
+                queue.removeAll(anonymous)
+                anonymous.map { it.operation.id }
+            }
+        // Persistent store removal outside the queue lock; ModelStore has its own locking.
+        removedIds.forEach { _operationModelStore.remove(it) }
+    }
+
+    internal fun jwtInvalidatedHandler(): ((String) -> Unit)? = _jwtInvalidatedHandler
+
     /**
      *  Waits until a new operation is enqueued, then wait an additional
      *  amount of time afterwards, so operations can be grouped/batched.
@@ -305,7 +332,18 @@ internal class OperationRepo(
                     ops.forEach { _operationModelStore.remove(it.operation.id) }
                     ops.forEach { it.waiter?.wake(true) }
                 }
-                ExecutionResult.FAIL_UNAUTHORIZED, // TODO: Need to provide callback for app to reset JWT. For now, fail with no retry.
+                ExecutionResult.FAIL_UNAUTHORIZED -> {
+                    // Outer gate: dispatch to IV extension only on new code paths.
+                    val handled =
+                        IdentityVerificationGates.newCodePathsRun &&
+                            handleFailUnauthorized(startingOp, ops, _jwtTokenStore, _jwtInvalidatedHandler)
+                    if (!handled) {
+                        // IV inactive or anon op: drop and wake waiters, matching FAIL_NORETRY.
+                        Logging.warn("Operation execution failed without retry: $operations")
+                        ops.forEach { _operationModelStore.remove(it.operation.id) }
+                        ops.forEach { it.waiter?.wake(false) }
+                    }
+                }
                 ExecutionResult.FAIL_NORETRY,
                 ExecutionResult.FAIL_CONFLICT,
                 -> {
@@ -415,12 +453,22 @@ internal class OperationRepo(
     }
 
     internal fun getNextOps(bucketFilter: Int): List<OperationQueueItem>? {
+        // Pre-HYDRATE deferral: don't dispatch until we know whether IV is required.
+        // Applies unconditionally — even non-IV users wait briefly on first launch —
+        // because pre-HYDRATE we can't tell Phase 1/2/3 apart. `IdentityVerificationService`
+        // wakes the loop via `forceExecuteOperations` once HYDRATE resolves this.
+        if (_configModelStore.model.useIdentityVerification == JwtRequirement.UNKNOWN) {
+            return null
+        }
+
         return synchronized(queue) {
             val startingOp =
                 queue.firstOrNull {
                     it.operation.canStartExecute &&
                         _newRecordState.canAccess(it.operation.applyToRecordId) &&
-                        it.bucket <= bucketFilter
+                        it.bucket <= bucketFilter &&
+                        // Outer gate: skip IV JWT check entirely on old code path.
+                        (!IdentityVerificationGates.newCodePathsRun || hasValidJwtIfRequired(_jwtTokenStore, it.operation))
                 }
 
             if (startingOp != null) {

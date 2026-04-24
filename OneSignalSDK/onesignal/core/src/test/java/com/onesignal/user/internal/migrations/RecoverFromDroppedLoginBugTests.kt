@@ -6,6 +6,9 @@ import com.onesignal.core.internal.time.impl.Time
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.mocks.MockHelper
+import com.onesignal.mocks.MockPreferencesService
+import com.onesignal.user.internal.jwt.JwtRequirement
+import com.onesignal.user.internal.jwt.JwtTokenStore
 import com.onesignal.user.internal.operations.ExecutorMocks
 import com.onesignal.user.internal.operations.LoginUserOperation
 import io.kotest.core.spec.style.FunSpec
@@ -29,7 +32,10 @@ private class Mocks {
             every { mockOperationModelStore.remove(any()) } just runs
             mockOperationModelStore
         }
-    val configModelStore = MockHelper.configModelStore()
+    val configModelStore =
+        MockHelper.configModelStore {
+            it.useIdentityVerification = JwtRequirement.NOT_REQUIRED
+        }
     val operationRepo =
         spyk(
             OperationRepo(
@@ -38,6 +44,7 @@ private class Mocks {
                 configModelStore,
                 Time(),
                 ExecutorMocks.getNewRecordState(configModelStore),
+                JwtTokenStore(MockPreferencesService()),
             ),
         )
 
