@@ -59,6 +59,7 @@ internal object FeatureFlagsJsonParser {
         }
     }
 
+    @Suppress("ReturnCount")
     private fun parseRootStrict(root: JsonObject): RemoteFeatureFlagsResult? {
         val featuresEl = root[FEATURES_PROPERTY] ?: return null
         val featuresArray = featuresEl as? JsonArray ?: return null
@@ -88,6 +89,7 @@ internal object FeatureFlagsJsonParser {
         return RemoteFeatureFlagsResult(keys, metaOut)
     }
 
+    @Suppress("ReturnCount")
     private fun findSiblingJsonObject(
         root: JsonObject,
         rawKeyFromFeaturesArray: String,
@@ -127,6 +129,7 @@ internal object FeatureFlagsJsonParser {
      * Decodes [ConfigModel.sdkRemoteFeatureFlagMetadata] (a JSON object of flag id → object) into a map.
      * Non-object values are skipped so each entry stays a [JsonObject] for nested decoding (e.g. with `Json.decodeFromJsonElement`).
      */
+    @Suppress("ReturnCount")
     fun parseStoredMetadataMap(raw: String?): Map<String, JsonObject> {
         if (raw.isNullOrBlank()) {
             return emptyMap()

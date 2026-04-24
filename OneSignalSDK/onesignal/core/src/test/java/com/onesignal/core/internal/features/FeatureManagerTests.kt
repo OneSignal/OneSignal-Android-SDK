@@ -7,10 +7,10 @@ import com.onesignal.core.internal.config.ConfigModelStore
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.mockk.every
-import kotlinx.serialization.json.jsonPrimitive
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.runs
+import kotlinx.serialization.json.jsonPrimitive
 
 class FeatureManagerTests : FunSpec({
     beforeEach {

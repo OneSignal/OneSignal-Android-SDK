@@ -90,7 +90,7 @@ internal class FeatureManager(
             (
                 model.sdkRemoteFeatureFlags.map { canonicalizeFeatureKey(it) } +
                     localFeatureOverrides.map { canonicalizeFeatureKey(it) }
-            ).toSet()
+                ).toSet()
         if (localFeatureOverrides.isNotEmpty()) {
             Logging.warn(
                 "OneSignal: Local feature override enabled for testing only: $localFeatureOverrides",
