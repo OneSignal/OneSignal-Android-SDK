@@ -255,4 +255,32 @@ class HttpClientTests : FunSpec({
         response2 shouldBe null
         response3 shouldNotBe null
     }
+
+    test("Authorization header is set when OptionalHeaders.jwt is provided") {
+        // Given
+        val mocks = Mocks()
+
+        // When
+        mocks.httpClient.get("URL", OptionalHeaders(jwt = "abc.def.ghi"))
+        mocks.httpClient.post("URL", JSONObject(), OptionalHeaders(jwt = "abc.def.ghi"))
+
+        // Then
+        for (connection in mocks.factory.connections) {
+            connection.getRequestProperty("Authorization") shouldBe "Bearer abc.def.ghi"
+        }
+    }
+
+    test("Authorization header is NOT set when OptionalHeaders.jwt is null") {
+        // Given
+        val mocks = Mocks()
+
+        // When
+        mocks.httpClient.get("URL", OptionalHeaders(jwt = null))
+        mocks.httpClient.post("URL", JSONObject())
+
+        // Then
+        for (connection in mocks.factory.connections) {
+            connection.getRequestProperty("Authorization") shouldBe null
+        }
+    }
 })

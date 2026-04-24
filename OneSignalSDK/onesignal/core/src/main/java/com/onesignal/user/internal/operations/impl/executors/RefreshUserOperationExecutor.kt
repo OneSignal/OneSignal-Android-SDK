@@ -12,11 +12,12 @@ import com.onesignal.core.internal.operations.Operation
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.user.internal.backend.IUserBackendService
-import com.onesignal.user.internal.backend.IdentityConstants
 import com.onesignal.user.internal.backend.SubscriptionObjectType
 import com.onesignal.user.internal.builduser.IRebuildUserService
 import com.onesignal.user.internal.identity.IdentityModel
 import com.onesignal.user.internal.identity.IdentityModelStore
+import com.onesignal.user.internal.jwt.IdentityVerificationGates
+import com.onesignal.user.internal.jwt.JwtTokenStore
 import com.onesignal.user.internal.operations.RefreshUserOperation
 import com.onesignal.user.internal.operations.impl.states.NewRecordsState
 import com.onesignal.user.internal.properties.PropertiesModel
@@ -34,6 +35,7 @@ internal class RefreshUserOperationExecutor(
     private val _configModelStore: ConfigModelStore,
     private val _buildUserService: IRebuildUserService,
     private val _newRecordState: NewRecordsState,
+    private val _jwtTokenStore: JwtTokenStore,
 ) : IOperationExecutor {
     override val operations: List<String>
         get() = listOf(REFRESH_USER)
@@ -54,12 +56,19 @@ internal class RefreshUserOperationExecutor(
     }
 
     private suspend fun getUser(op: RefreshUserOperation): ExecutionResponse {
+        val params =
+            if (IdentityVerificationGates.newCodePathsRun) {
+                resolveIvBackendParams(op, op.onesignalId, _jwtTokenStore)
+            } else {
+                IvBackendParams.legacyFor(op.onesignalId)
+            }
         try {
             val response =
                 _userBackend.getUser(
                     op.appId,
-                    IdentityConstants.ONESIGNAL_ID,
-                    op.onesignalId,
+                    params.aliasLabel,
+                    params.aliasValue,
+                    params.jwt,
                 )
 
             if (op.onesignalId != _identityModelStore.model.onesignalId) {
