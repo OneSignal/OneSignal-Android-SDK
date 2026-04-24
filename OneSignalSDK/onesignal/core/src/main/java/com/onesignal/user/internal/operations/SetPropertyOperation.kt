@@ -52,9 +52,10 @@ class SetPropertyOperation() : Operation(UpdateUserOperationExecutor.SET_PROPERT
     override val canStartExecute: Boolean get() = !IDManager.isLocalId(onesignalId)
     override val applyToRecordId: String get() = onesignalId
 
-    constructor(appId: String, onesignalId: String, property: String, value: Any?) : this() {
+    constructor(appId: String, onesignalId: String, externalId: String?, property: String, value: Any?) : this() {
         this.appId = appId
         this.onesignalId = onesignalId
+        this.externalId = externalId
         this.property = property
         this.value = value
     }

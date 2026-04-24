@@ -28,7 +28,7 @@ class OperationModelStoreTests : FunSpec({
         val jsonArray = JSONArray()
 
         // 1. Create a VALID Operation with onesignalId
-        val validOperation = SetPropertyOperation(UUID.randomUUID().toString(), UUID.randomUUID().toString(), "property", "value")
+        val validOperation = SetPropertyOperation(UUID.randomUUID().toString(), UUID.randomUUID().toString(), null, "property", "value")
         validOperation.id = UUID.randomUUID().toString()
 
         // 2. Create a VALID operation missing onesignalId

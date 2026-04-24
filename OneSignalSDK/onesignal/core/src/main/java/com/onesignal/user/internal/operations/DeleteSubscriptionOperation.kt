@@ -44,9 +44,10 @@ class DeleteSubscriptionOperation() : Operation(SubscriptionOperationExecutor.DE
     override val canStartExecute: Boolean get() = !IDManager.isLocalId(onesignalId) && !IDManager.isLocalId(subscriptionId)
     override val applyToRecordId: String get() = subscriptionId
 
-    constructor(appId: String, onesignalId: String, subscriptionId: String) : this() {
+    constructor(appId: String, onesignalId: String, externalId: String?, subscriptionId: String) : this() {
         this.appId = appId
         this.onesignalId = onesignalId
+        this.externalId = externalId
         this.subscriptionId = subscriptionId
     }
 

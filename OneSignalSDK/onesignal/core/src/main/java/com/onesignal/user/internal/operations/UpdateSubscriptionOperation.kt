@@ -87,9 +87,10 @@ class UpdateSubscriptionOperation() : Operation(SubscriptionOperationExecutor.UP
     override val canStartExecute: Boolean get() = !IDManager.isLocalId(onesignalId) && !IDManager.isLocalId(subscriptionId)
     override val applyToRecordId: String get() = subscriptionId
 
-    constructor(appId: String, onesignalId: String, subscriptionId: String, type: SubscriptionType, enabled: Boolean, address: String, status: SubscriptionStatus) : this() {
+    constructor(appId: String, onesignalId: String, externalId: String?, subscriptionId: String, type: SubscriptionType, enabled: Boolean, address: String, status: SubscriptionStatus) : this() {
         this.appId = appId
         this.onesignalId = onesignalId
+        this.externalId = externalId
         this.subscriptionId = subscriptionId
         this.type = type
         this.enabled = enabled

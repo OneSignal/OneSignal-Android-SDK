@@ -109,7 +109,7 @@ class RefreshUserOperationExecutorTests : FunSpec({
                 getNewRecordState(),
             )
 
-        val operations = listOf<Operation>(RefreshUserOperation(appId, remoteOneSignalId))
+        val operations = listOf<Operation>(RefreshUserOperation(appId, remoteOneSignalId, null))
 
         try {
             // When
@@ -193,7 +193,7 @@ class RefreshUserOperationExecutorTests : FunSpec({
                 getNewRecordState(),
             )
 
-        val operations = listOf<Operation>(RefreshUserOperation(appId, remoteOneSignalId))
+        val operations = listOf<Operation>(RefreshUserOperation(appId, remoteOneSignalId, null))
 
         // When
         val response = refreshUserOperationExecutor.execute(operations)
@@ -232,7 +232,7 @@ class RefreshUserOperationExecutorTests : FunSpec({
                 getNewRecordState(),
             )
 
-        val operations = listOf<Operation>(RefreshUserOperation(appId, remoteOneSignalId))
+        val operations = listOf<Operation>(RefreshUserOperation(appId, remoteOneSignalId, null))
 
         // When
         val response = refreshUserOperationExecutor.execute(operations)
@@ -267,7 +267,7 @@ class RefreshUserOperationExecutorTests : FunSpec({
                 getNewRecordState(),
             )
 
-        val operations = listOf<Operation>(RefreshUserOperation(appId, remoteOneSignalId))
+        val operations = listOf<Operation>(RefreshUserOperation(appId, remoteOneSignalId, null))
 
         // When
         val response = refreshUserOperationExecutor.execute(operations)
@@ -302,7 +302,7 @@ class RefreshUserOperationExecutorTests : FunSpec({
                 getNewRecordState(),
             )
 
-        val operations = listOf<Operation>(RefreshUserOperation(appId, remoteOneSignalId))
+        val operations = listOf<Operation>(RefreshUserOperation(appId, remoteOneSignalId, null))
 
         // When
         val response = refreshUserOperationExecutor.execute(operations)
@@ -339,7 +339,7 @@ class RefreshUserOperationExecutorTests : FunSpec({
                 newRecordState,
             )
 
-        val operations = listOf<Operation>(RefreshUserOperation(appId, remoteOneSignalId))
+        val operations = listOf<Operation>(RefreshUserOperation(appId, remoteOneSignalId, null))
 
         // When
         val response = refreshUserOperationExecutor.execute(operations)
