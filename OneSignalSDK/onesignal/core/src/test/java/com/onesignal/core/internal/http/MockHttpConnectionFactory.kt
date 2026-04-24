@@ -32,6 +32,13 @@ internal class MockHttpConnectionFactory(
         url: URL?,
         private val mockResponse: MockResponse,
     ) : HttpURLConnection(url) {
+        // Real HttpURLConnection (both stock JDK and Android's OkHttp-backed impl) commits the
+        // request line + headers to the wire when `getOutputStream()` / `setFixedLengthStreamingMode`
+        // is used to stream a body, and rejects `setRequestProperty` afterward. The stock mock
+        // lets headers be set at any time, which hides header-ordering bugs. Simulate the real
+        // contract so HttpClientTests will fail fast if headers are set after the body begins.
+        private var headersCommitted: Boolean = false
+
         override fun disconnect() {}
 
         override fun usingProxy(): Boolean {
@@ -40,6 +47,14 @@ internal class MockHttpConnectionFactory(
 
         @Throws(IOException::class)
         override fun connect() {
+            headersCommitted = true
+        }
+
+        override fun setRequestProperty(key: String, value: String?) {
+            if (headersCommitted) {
+                throw IllegalStateException("Cannot set request property '$key' after connection is made")
+            }
+            super.setRequestProperty(key, value)
         }
 
         override fun getHeaderField(name: String): String? {
@@ -48,6 +63,7 @@ internal class MockHttpConnectionFactory(
 
         @Throws(IOException::class)
         override fun getResponseCode(): Int {
+            headersCommitted = true
             if (mockResponse.mockRequestTime != null) {
                 try {
                     Thread.sleep(mockResponse.mockRequestTime!!)
@@ -60,6 +76,7 @@ internal class MockHttpConnectionFactory(
         }
 
         override fun getOutputStream(): OutputStream {
+            headersCommitted = true
             return NullOutputStream()
         }
 

@@ -77,10 +77,18 @@ internal class LoginUserOperationExecutor(
         if (!containsSubscriptionOperation && loginUserOp.externalId == null) {
             return ExecutionResponse(ExecutionResult.FAIL_NORETRY)
         }
-        if (loginUserOp.existingOnesignalId == null || loginUserOp.externalId == null) {
+        if (loginUserOp.existingOnesignalId == null || loginUserOp.externalId == null ||
+            IdentityVerificationGates.ivBehaviorActive
+        ) {
             // When there is no existing user to attempt to associate with the externalId provided, we go right to
             // createUser.  If there is no externalId provided this is an insert, if there is this will be an
             // "upsert with retrieval" as the user may already exist.
+            //
+            // Under IV, also skip the optimistic SetAliasOperation: that inline op identifies the
+            // target user by `onesignal_id = existingOnesignalId`, but IV's alias-resolution would
+            // rewrite the call to identify by the new (not-yet-registered) `external_id`, producing
+            // a 404 or idempotent success against the wrong user. createUser's identities-map path
+            // handles the merge correctly through backend upsert semantics.
             return createUser(loginUserOp, operations)
         } else {
             // before we create a user we attempt to associate the user defined by existingOnesignalId with the
