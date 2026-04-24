@@ -204,6 +204,9 @@ object PreferenceOneSignalKeys {
      */
     const val PREFS_OS_LOCATION_SHARED = "OS_LOCATION_SHARED"
 
+    /** (String) JSON object mapping externalId -> JWT token. */
+    const val PREFS_OS_JWT_TOKENS = "PREFS_OS_JWT_TOKENS"
+
     // Permissions
 
     /**
