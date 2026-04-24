@@ -8,6 +8,7 @@ import com.onesignal.core.internal.backend.impl.FeatureFlagsJsonParser
 import com.onesignal.core.internal.config.ConfigModel
 import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.debug.internal.logging.Logging
+import com.onesignal.user.internal.jwt.IdentityVerificationGates
 import kotlinx.serialization.json.JsonObject
 
 internal interface IFeatureManager {
@@ -103,14 +104,14 @@ internal class FeatureManager(
             when (feature.activationMode) {
                 FeatureActivationMode.IMMEDIATE -> {
                     nextStates[feature] = desiredState
-                    applySideEffects(feature, desiredState)
+                    applySideEffects(feature, desiredState, model)
                 }
 
                 FeatureActivationMode.APP_STARTUP -> {
                     val hasBeenInitialized = nextStates.containsKey(feature)
                     if (applyNextRunOnlyFeatures || !hasBeenInitialized) {
                         nextStates[feature] = desiredState
-                        applySideEffects(feature, desiredState)
+                        applySideEffects(feature, desiredState, model)
                     } else {
                         val currentState = nextStates[feature] ?: false
                         if (currentState != desiredState) {
@@ -137,11 +138,19 @@ internal class FeatureManager(
     private fun applySideEffects(
         feature: FeatureFlag,
         enabled: Boolean,
+        model: ConfigModel,
     ) {
         when (feature) {
             FeatureFlag.SDK_BACKGROUND_THREADING ->
                 ThreadingMode.updateUseBackgroundThreading(
                     enabled = enabled,
+                    source = "FeatureManager:${feature.activationMode}"
+                )
+
+            FeatureFlag.IDENTITY_VERIFICATION ->
+                IdentityVerificationGates.update(
+                    featureFlagOn = enabled,
+                    jwtRequired = model.useIdentityVerification,
                     source = "FeatureManager:${feature.activationMode}"
                 )
         }

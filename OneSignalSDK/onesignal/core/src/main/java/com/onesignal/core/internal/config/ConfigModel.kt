@@ -236,13 +236,11 @@ class ConfigModel : Model() {
             setBooleanProperty(::enterprise.name, value)
         }
 
-    /**
-     * Whether SMS auth hash should be used.
-     */
-    var useIdentityVerification: Boolean
-        get() = getBooleanProperty(::useIdentityVerification.name) { false }
+    /** Mirrors backend `jwt_required`. `null` = pre-HYDRATE (distinguish from `false`). */
+    var useIdentityVerification: Boolean?
+        get() = getOptBooleanProperty(::useIdentityVerification.name)
         set(value) {
-            setBooleanProperty(::useIdentityVerification.name, value)
+            setOptBooleanProperty(::useIdentityVerification.name, value)
         }
 
     /**
