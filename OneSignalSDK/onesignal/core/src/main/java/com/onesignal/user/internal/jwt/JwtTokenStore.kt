@@ -51,11 +51,11 @@ internal class JwtTokenStore(
             }
         }
         if (changed) {
-            updates.fire { it.onJwtUpdated(externalId, jwt) }
+            updates.fire { it.onJwtUpdated(externalId) }
         }
     }
 
-    /** Removes the JWT for [externalId] and broadcasts with `jwt = null`. */
+    /** Removes the JWT for [externalId] and notifies subscribers. */
     fun invalidateJwt(externalId: String) {
         val existed: Boolean
         synchronized(tokens) {
@@ -66,7 +66,7 @@ internal class JwtTokenStore(
             }
         }
         if (existed) {
-            updates.fire { it.onJwtUpdated(externalId, null) }
+            updates.fire { it.onJwtUpdated(externalId) }
         }
     }
 
@@ -83,7 +83,7 @@ internal class JwtTokenStore(
             }
         }
         for (externalId in removed) {
-            updates.fire { it.onJwtUpdated(externalId, null) }
+            updates.fire { it.onJwtUpdated(externalId) }
         }
     }
 
