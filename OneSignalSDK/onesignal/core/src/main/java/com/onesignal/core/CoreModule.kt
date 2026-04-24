@@ -13,6 +13,7 @@ import com.onesignal.core.internal.background.impl.BackgroundManager
 import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.config.impl.ConfigModelStoreListener
 import com.onesignal.core.internal.config.impl.FeatureFlagsRefreshService
+import com.onesignal.core.internal.config.impl.IdentityVerificationService
 import com.onesignal.core.internal.database.IDatabaseProvider
 import com.onesignal.core.internal.database.impl.DatabaseProvider
 import com.onesignal.core.internal.device.IDeviceService
@@ -70,6 +71,7 @@ internal class CoreModule : IModule {
         builder.register<FeatureFlagsRefreshService>().provides<IStartableService>()
 
         builder.register<JwtTokenStore>().provides<JwtTokenStore>()
+        builder.register<IdentityVerificationService>().provides<IStartableService>()
 
         // Operations
         builder.register<OperationModelStore>().provides<OperationModelStore>()
