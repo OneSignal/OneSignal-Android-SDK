@@ -150,7 +150,7 @@ internal class FeatureManager(
             FeatureFlag.IDENTITY_VERIFICATION ->
                 IdentityVerificationGates.update(
                     featureFlagOn = enabled,
-                    jwtRequired = model.useIdentityVerification,
+                    jwtRequirement = model.useIdentityVerification,
                     source = "FeatureManager:${feature.activationMode}"
                 )
         }

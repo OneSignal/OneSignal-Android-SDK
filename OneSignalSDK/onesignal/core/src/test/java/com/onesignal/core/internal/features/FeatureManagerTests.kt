@@ -5,6 +5,7 @@ import com.onesignal.common.threading.ThreadingMode
 import com.onesignal.core.internal.config.ConfigModel
 import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.user.internal.jwt.IdentityVerificationGates
+import com.onesignal.user.internal.jwt.JwtRequirement
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.mockk.every
@@ -16,13 +17,13 @@ import kotlinx.serialization.json.jsonPrimitive
 class FeatureManagerTests : FunSpec({
     beforeEach {
         ThreadingMode.useBackgroundThreading = false
-        IdentityVerificationGates.update(false, null, "test-reset")
+        IdentityVerificationGates.update(false, JwtRequirement.UNKNOWN, "test-reset")
     }
 
     fun stubConfigModel(model: ConfigModel) {
         every { model.sdkRemoteFeatureFlags } returns emptyList()
         every { model.sdkRemoteFeatureFlagMetadata } returns null
-        every { model.useIdentityVerification } returns null
+        every { model.useIdentityVerification } returns JwtRequirement.UNKNOWN
     }
 
     test("initial state enables BACKGROUND_THREADING when key is present in sdk remote flags") {
@@ -180,7 +181,7 @@ class FeatureManagerTests : FunSpec({
     test("ERROR STATE: flag off + jwt_required=true → both gates true (customer config wins)") {
         val initialModel = mockk<ConfigModel>()
         stubConfigModel(initialModel)
-        every { initialModel.useIdentityVerification } returns true
+        every { initialModel.useIdentityVerification } returns JwtRequirement.REQUIRED
         val configModelStore = mockk<ConfigModelStore>()
         every { configModelStore.model } returns initialModel
         every { configModelStore.subscribe(any()) } just runs
@@ -196,7 +197,7 @@ class FeatureManagerTests : FunSpec({
         val initialModel = mockk<ConfigModel>()
         stubConfigModel(initialModel)
         every { initialModel.sdkRemoteFeatureFlags } returns listOf(FeatureFlag.IDENTITY_VERIFICATION.key)
-        every { initialModel.useIdentityVerification } returns true
+        every { initialModel.useIdentityVerification } returns JwtRequirement.REQUIRED
         val configModelStore = mockk<ConfigModelStore>()
         every { configModelStore.model } returns initialModel
         every { configModelStore.subscribe(any()) } just runs
@@ -220,7 +221,7 @@ class FeatureManagerTests : FunSpec({
 
         val updatedModel = mockk<ConfigModel>()
         stubConfigModel(updatedModel)
-        every { updatedModel.useIdentityVerification } returns true
+        every { updatedModel.useIdentityVerification } returns JwtRequirement.REQUIRED
 
         manager.onModelReplaced(updatedModel, ModelChangeTags.HYDRATE)
 
@@ -240,7 +241,7 @@ class FeatureManagerTests : FunSpec({
         val updatedModel = mockk<ConfigModel>()
         stubConfigModel(updatedModel)
         every { updatedModel.sdkRemoteFeatureFlags } returns listOf(FeatureFlag.IDENTITY_VERIFICATION.key)
-        every { updatedModel.useIdentityVerification } returns false
+        every { updatedModel.useIdentityVerification } returns JwtRequirement.NOT_REQUIRED
 
         manager.onModelReplaced(updatedModel, ModelChangeTags.HYDRATE)
 

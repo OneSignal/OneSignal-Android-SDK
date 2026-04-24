@@ -23,20 +23,21 @@ internal object IdentityVerificationGates {
     /** Idempotent. [source] is logged for traceability when gates change. */
     fun update(
         featureFlagOn: Boolean,
-        jwtRequired: Boolean?,
+        jwtRequirement: JwtRequirement,
         source: String,
     ) {
         val previousNewCode = newCodePathsRun
         val previousIvActive = ivBehaviorActive
 
-        newCodePathsRun = featureFlagOn || (jwtRequired == true)
-        ivBehaviorActive = jwtRequired == true
+        val required = jwtRequirement == JwtRequirement.REQUIRED
+        newCodePathsRun = featureFlagOn || required
+        ivBehaviorActive = required
 
         if (previousNewCode != newCodePathsRun || previousIvActive != ivBehaviorActive) {
             Logging.info(
                 "OneSignal: IdentityVerificationGates updated: " +
                     "newCodePathsRun=$newCodePathsRun, ivBehaviorActive=$ivBehaviorActive " +
-                    "(source=$source, featureFlagOn=$featureFlagOn, jwtRequired=$jwtRequired)",
+                    "(source=$source, featureFlagOn=$featureFlagOn, jwtRequirement=$jwtRequirement)",
             )
         } else {
             Logging.debug(
