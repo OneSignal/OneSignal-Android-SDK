@@ -266,6 +266,8 @@ class FeatureManagerTests : FunSpec({
         val updatedModel = mockk<ConfigModel>()
         stubConfigModel(updatedModel)
         every { updatedModel.useIdentityVerification } returns JwtRequirement.REQUIRED
+        // Match production: store's model is swapped before onModelReplaced fires.
+        every { configModelStore.model } returns updatedModel
 
         manager.onModelReplaced(updatedModel, ModelChangeTags.HYDRATE)
 
@@ -286,6 +288,7 @@ class FeatureManagerTests : FunSpec({
         stubConfigModel(updatedModel)
         every { updatedModel.sdkRemoteFeatureFlags } returns listOf(FeatureFlag.IDENTITY_VERIFICATION.key)
         every { updatedModel.useIdentityVerification } returns JwtRequirement.NOT_REQUIRED
+        every { configModelStore.model } returns updatedModel
 
         manager.onModelReplaced(updatedModel, ModelChangeTags.HYDRATE)
 

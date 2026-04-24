@@ -123,14 +123,14 @@ internal class FeatureManager(
             when (feature.activationMode) {
                 FeatureActivationMode.IMMEDIATE -> {
                     nextStates[feature] = desiredState
-                    applySideEffects(feature, desiredState, model)
+                    applySideEffects(feature, desiredState)
                 }
 
                 FeatureActivationMode.APP_STARTUP -> {
                     val hasBeenInitialized = nextStates.containsKey(feature)
                     if (applyNextRunOnlyFeatures || !hasBeenInitialized) {
                         nextStates[feature] = desiredState
-                        applySideEffects(feature, desiredState, model)
+                        applySideEffects(feature, desiredState)
                     } else {
                         val currentState = nextStates[feature] ?: false
                         if (currentState != desiredState) {
@@ -157,7 +157,6 @@ internal class FeatureManager(
     private fun applySideEffects(
         feature: FeatureFlag,
         enabled: Boolean,
-        model: ConfigModel,
     ) {
         when (feature) {
             FeatureFlag.SDK_BACKGROUND_THREADING ->
@@ -169,7 +168,7 @@ internal class FeatureManager(
             FeatureFlag.IDENTITY_VERIFICATION ->
                 IdentityVerificationGates.update(
                     featureFlagOn = enabled,
-                    jwtRequirement = model.useIdentityVerification,
+                    jwtRequirement = configModelStore.model.useIdentityVerification,
                     source = "FeatureManager:${feature.activationMode}"
                 )
         }
