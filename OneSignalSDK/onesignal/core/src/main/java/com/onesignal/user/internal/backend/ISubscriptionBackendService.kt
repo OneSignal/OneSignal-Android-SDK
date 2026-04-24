@@ -22,6 +22,7 @@ interface ISubscriptionBackendService {
         aliasLabel: String,
         aliasValue: String,
         subscription: SubscriptionObject,
+        jwt: String? = null,
     ): Pair<String, RywData?>?
 
     /**
@@ -35,6 +36,7 @@ interface ISubscriptionBackendService {
         appId: String,
         subscriptionId: String,
         subscription: SubscriptionObject,
+        jwt: String? = null,
     ): RywData?
 
     /**
@@ -46,6 +48,7 @@ interface ISubscriptionBackendService {
     suspend fun deleteSubscription(
         appId: String,
         subscriptionId: String,
+        jwt: String? = null,
     )
 
     /**
@@ -61,10 +64,14 @@ interface ISubscriptionBackendService {
         subscriptionId: String,
         aliasLabel: String,
         aliasValue: String,
+        jwt: String? = null,
     )
 
     /**
      * Given an existing subscription, retrieve all identities associated to it.
+     *
+     * Note: this endpoint is not used when `jwt_required == true`; the v4→v5 migration path it
+     * supports is explicitly blocked under IV. See [LoginUserFromSubscriptionOperationExecutor].
      *
      * @param appId The ID of the OneSignal application this subscription exists under.
      * @param subscriptionId The ID of the subscription to retrieve identities for.

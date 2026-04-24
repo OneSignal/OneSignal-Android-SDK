@@ -27,7 +27,7 @@ class SubscriptionBackendServiceTests : FunSpec({
         val aliasLabel = "onesignal_id"
         val aliasValue = "11111111-1111-1111-1111-111111111111"
         val spyHttpClient = mockk<IHttpClient>()
-        coEvery { spyHttpClient.post(any(), any()) } returns HttpResponse(202, "{ \"subscription\": { id: \"subscriptionId\" }, \"ryw_token\": \"123\"}")
+        coEvery { spyHttpClient.post(any(), any(), any()) } returns HttpResponse(202, "{ \"subscription\": { id: \"subscriptionId\" }, \"ryw_token\": \"123\"}")
         val subscriptionBackendService = SubscriptionBackendService(spyHttpClient)
 
         // When
@@ -55,6 +55,7 @@ class SubscriptionBackendServiceTests : FunSpec({
                     sub.getBoolean("enabled") shouldBe true
                     sub.getInt("notification_types") shouldBe 1
                 },
+                any(),
             )
         }
     }
@@ -64,7 +65,7 @@ class SubscriptionBackendServiceTests : FunSpec({
         val aliasLabel = "onesignal_id"
         val aliasValue = "11111111-1111-1111-1111-111111111111"
         val spyHttpClient = mockk<IHttpClient>()
-        coEvery { spyHttpClient.post(any(), any()) } returns HttpResponse(404, "NOT FOUND")
+        coEvery { spyHttpClient.post(any(), any(), any()) } returns HttpResponse(404, "NOT FOUND")
         val subscriptionBackendService = SubscriptionBackendService(spyHttpClient)
 
         // When
@@ -100,6 +101,7 @@ class SubscriptionBackendServiceTests : FunSpec({
                     sub.getBoolean("enabled") shouldBe true
                     sub.getInt("notification_types") shouldBe 1
                 },
+                any(),
             )
         }
     }

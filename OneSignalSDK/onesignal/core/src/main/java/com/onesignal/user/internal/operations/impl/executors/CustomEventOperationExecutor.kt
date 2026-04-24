@@ -13,12 +13,15 @@ import com.onesignal.core.internal.operations.IOperationExecutor
 import com.onesignal.core.internal.operations.Operation
 import com.onesignal.user.internal.customEvents.ICustomEventBackendService
 import com.onesignal.user.internal.customEvents.impl.CustomEventMetadata
+import com.onesignal.user.internal.jwt.IdentityVerificationGates
+import com.onesignal.user.internal.jwt.JwtTokenStore
 import com.onesignal.user.internal.operations.TrackCustomEventOperation
 
 internal class CustomEventOperationExecutor(
     private val customEventBackendService: ICustomEventBackendService,
     private val applicationService: IApplicationService,
     private val deviceService: IDeviceService,
+    private val jwtTokenStore: JwtTokenStore,
 ) : IOperationExecutor {
     override val operations: List<String>
         get() = listOf(CUSTOM_EVENT)
@@ -40,6 +43,7 @@ internal class CustomEventOperationExecutor(
         try {
             when (operation) {
                 is TrackCustomEventOperation -> {
+                    val jwt = if (IdentityVerificationGates.newCodePathsRun) resolveIvJwt(operation, jwtTokenStore) else null
                     customEventBackendService.sendCustomEvent(
                         operation.appId,
                         operation.onesignalId,
@@ -48,6 +52,7 @@ internal class CustomEventOperationExecutor(
                         operation.eventName,
                         operation.eventProperties,
                         eventMetadataJson,
+                        jwt,
                     )
                 }
             }

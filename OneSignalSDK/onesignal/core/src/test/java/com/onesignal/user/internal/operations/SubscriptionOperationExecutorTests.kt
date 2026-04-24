@@ -13,6 +13,7 @@ import com.onesignal.user.internal.backend.ISubscriptionBackendService
 import com.onesignal.user.internal.backend.IdentityConstants
 import com.onesignal.user.internal.backend.SubscriptionObjectType
 import com.onesignal.user.internal.builduser.IRebuildUserService
+import com.onesignal.user.internal.operations.ExecutorMocks.Companion.getJwtTokenStore
 import com.onesignal.user.internal.operations.ExecutorMocks.Companion.getNewRecordState
 import com.onesignal.user.internal.operations.impl.executors.SubscriptionOperationExecutor
 import com.onesignal.user.internal.subscriptions.SubscriptionModel
@@ -68,6 +69,7 @@ class SubscriptionOperationExecutorTests :
                     mockBuildUserService,
                     getNewRecordState(),
                     mockConsistencyManager,
+                    getJwtTokenStore(),
                 )
 
             val operations =
@@ -129,6 +131,7 @@ class SubscriptionOperationExecutorTests :
                     mockBuildUserService,
                     getNewRecordState(),
                     mockConsistencyManager,
+                    getJwtTokenStore(),
                 )
 
             val operations =
@@ -180,6 +183,7 @@ class SubscriptionOperationExecutorTests :
                     mockBuildUserService,
                     getNewRecordState(),
                     mockConsistencyManager,
+                    getJwtTokenStore(),
                 )
 
             val operations =
@@ -236,6 +240,7 @@ class SubscriptionOperationExecutorTests :
                     mockBuildUserService,
                     getNewRecordState(),
                     mockConsistencyManager,
+                    getJwtTokenStore(),
                 )
 
             val operations =
@@ -292,6 +297,7 @@ class SubscriptionOperationExecutorTests :
                     mockBuildUserService,
                     newRecordState,
                     mockConsistencyManager,
+                    getJwtTokenStore(),
                 )
 
             val operations =
@@ -336,6 +342,7 @@ class SubscriptionOperationExecutorTests :
                     mockBuildUserService,
                     getNewRecordState(),
                     mockConsistencyManager,
+                    getJwtTokenStore(),
                 )
 
             val operations =
@@ -383,6 +390,7 @@ class SubscriptionOperationExecutorTests :
                     mockBuildUserService,
                     getNewRecordState(),
                     mockConsistencyManager,
+                    getJwtTokenStore(),
                 )
 
             val operations =
@@ -455,6 +463,7 @@ class SubscriptionOperationExecutorTests :
                     mockBuildUserService,
                     getNewRecordState(),
                     mockConsistencyManager,
+                    getJwtTokenStore(),
                 )
 
             val operations =
@@ -518,6 +527,7 @@ class SubscriptionOperationExecutorTests :
                     mockBuildUserService,
                     getNewRecordState(),
                     mockConsistencyManager,
+                    getJwtTokenStore(),
                 )
 
             val operations =
@@ -571,6 +581,7 @@ class SubscriptionOperationExecutorTests :
                     mockBuildUserService,
                     getNewRecordState(),
                     mockConsistencyManager,
+                    getJwtTokenStore(),
                 )
 
             val operations =
@@ -626,6 +637,7 @@ class SubscriptionOperationExecutorTests :
                     mockBuildUserService,
                     newRecordState,
                     mockConsistencyManager,
+                    getJwtTokenStore(),
                 )
 
             val operations =
@@ -669,6 +681,7 @@ class SubscriptionOperationExecutorTests :
                     mockBuildUserService,
                     getNewRecordState(),
                     mockConsistencyManager,
+                    getJwtTokenStore(),
                 )
 
             val operations =
@@ -703,6 +716,7 @@ class SubscriptionOperationExecutorTests :
                     mockBuildUserService,
                     getNewRecordState(),
                     mockConsistencyManager,
+                    getJwtTokenStore(),
                 )
 
             val operations =
@@ -738,6 +752,7 @@ class SubscriptionOperationExecutorTests :
                     mockBuildUserService,
                     getNewRecordState(),
                     mockConsistencyManager,
+                    getJwtTokenStore(),
                 )
 
             val operations =
@@ -773,6 +788,7 @@ class SubscriptionOperationExecutorTests :
                     mockBuildUserService,
                     newRecordState,
                     mockConsistencyManager,
+                    getJwtTokenStore(),
                 )
 
             val operations =
@@ -814,6 +830,7 @@ class SubscriptionOperationExecutorTests :
                     mockBuildUserService,
                     getNewRecordState(),
                     mockConsistencyManager,
+                    getJwtTokenStore(),
                 )
 
             val operations =

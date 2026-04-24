@@ -9,6 +9,7 @@ import com.onesignal.core.internal.operations.ExecutionResult
 import com.onesignal.core.internal.operations.Operation
 import com.onesignal.mocks.MockHelper
 import com.onesignal.user.internal.customEvents.ICustomEventBackendService
+import com.onesignal.user.internal.operations.ExecutorMocks.Companion.getJwtTokenStore
 import com.onesignal.user.internal.operations.impl.executors.CustomEventOperationExecutor
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.equals.shouldBeEqual
@@ -23,7 +24,7 @@ class CustomEventOperationExecutorTests : FunSpec({
     test("execution of track event operation") {
         // Given
         val mockCustomEventBackendService = mockk<ICustomEventBackendService>()
-        coEvery { mockCustomEventBackendService.sendCustomEvent(any(), any(), any(), any(), any(), any(), any()) } returns ExecutionResponse(ExecutionResult.SUCCESS)
+        coEvery { mockCustomEventBackendService.sendCustomEvent(any(), any(), any(), any(), any(), any(), any(), any()) } returns ExecutionResponse(ExecutionResult.SUCCESS)
 
         val mockApplicationService = MockHelper.applicationService()
         val mockContext = mockk<Context>(relaxed = true)
@@ -36,7 +37,7 @@ class CustomEventOperationExecutorTests : FunSpec({
         val properties = JSONObject().put("key", "value").toString()
 
         val customEventOperationExecutor =
-            CustomEventOperationExecutor(mockCustomEventBackendService, mockApplicationService, mockDeviceService)
+            CustomEventOperationExecutor(mockCustomEventBackendService, mockApplicationService, mockDeviceService, getJwtTokenStore())
         val operations = listOf<Operation>(TrackCustomEventOperation("appId", "onesignalId", null, 1, "event-name", properties))
 
         // When
@@ -60,6 +61,7 @@ class CustomEventOperationExecutorTests : FunSpec({
                     it.deviceModel shouldBe deviceMode
                     it.deviceOS shouldBe deviceOS
                 },
+                null,
             )
         }
     }

@@ -11,6 +11,7 @@ import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.user.internal.backend.ISubscriptionBackendService
 import com.onesignal.user.internal.backend.IdentityConstants
 import com.onesignal.user.internal.identity.IdentityModelStore
+import com.onesignal.user.internal.jwt.IdentityVerificationGates
 import com.onesignal.user.internal.operations.LoginUserFromSubscriptionOperation
 import com.onesignal.user.internal.operations.RefreshUserOperation
 import com.onesignal.user.internal.properties.PropertiesModel
@@ -26,6 +27,13 @@ internal class LoginUserFromSubscriptionOperationExecutor(
 
     override suspend fun execute(operations: List<Operation>): ExecutionResponse {
         Logging.debug("LoginUserFromSubscriptionOperationExecutor(operation: $operations)")
+
+        // The getIdentityFromSubscription endpoint isn't allowed when `jwt_required == true`; the
+        // v4→v5 migration path this executor exists for only applies to non-IV apps. Drop on IV.
+        if (IdentityVerificationGates.newCodePathsRun && shouldFailLoginUserFromSubscription()) {
+            Logging.warn("LoginUserFromSubscriptionOperation is not supported when identity verification is enabled. Dropping.")
+            return ExecutionResponse(ExecutionResult.FAIL_NORETRY)
+        }
 
         if (operations.size > 1) {
             throw Exception("Only supports one operation! Attempted operations:\n$operations")
