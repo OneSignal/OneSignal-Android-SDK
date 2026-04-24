@@ -44,7 +44,14 @@ internal class SessionListener(
 
     override fun onSessionStarted() {
         _propertiesModelStore.model.timezone = TimeUtils.getTimeZoneId()
-        _operationRepo.enqueue(TrackSessionStartOperation(_configModelStore.model.appId, _identityModelStore.model.onesignalId), true)
+        _operationRepo.enqueue(
+            TrackSessionStartOperation(
+                _configModelStore.model.appId,
+                _identityModelStore.model.onesignalId,
+                _identityModelStore.model.externalId,
+            ),
+            true,
+        )
     }
 
     override fun onSessionActive() {
@@ -60,7 +67,12 @@ internal class SessionListener(
         }
 
         _operationRepo.enqueue(
-            TrackSessionEndOperation(_configModelStore.model.appId, _identityModelStore.model.onesignalId, durationInSeconds),
+            TrackSessionEndOperation(
+                _configModelStore.model.appId,
+                _identityModelStore.model.onesignalId,
+                _identityModelStore.model.externalId,
+                durationInSeconds,
+            ),
         )
 
         suspendifyOnIO {

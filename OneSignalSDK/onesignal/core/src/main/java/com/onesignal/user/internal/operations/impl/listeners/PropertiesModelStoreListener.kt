@@ -4,6 +4,7 @@ import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.operations.IOperationRepo
 import com.onesignal.core.internal.operations.Operation
 import com.onesignal.core.internal.operations.listeners.SingletonModelStoreListener
+import com.onesignal.user.internal.identity.IdentityModelStore
 import com.onesignal.user.internal.operations.DeleteTagOperation
 import com.onesignal.user.internal.operations.SetPropertyOperation
 import com.onesignal.user.internal.operations.SetTagOperation
@@ -14,6 +15,7 @@ internal class PropertiesModelStoreListener(
     store: PropertiesModelStore,
     opRepo: IOperationRepo,
     private val _configModelStore: ConfigModelStore,
+    private val _identityModelStore: IdentityModelStore,
 ) : SingletonModelStoreListener<PropertiesModel>(store, opRepo) {
     override fun getReplaceOperation(model: PropertiesModel): Operation? {
         // when the property model is replaced, nothing to do on the backend. Already handled via login process.
@@ -36,14 +38,15 @@ internal class PropertiesModelStoreListener(
             return null
         }
 
+        val externalId = _identityModelStore.model.externalId
         if (path.startsWith(PropertiesModel::tags.name)) {
             return if (newValue != null && newValue is String) {
-                SetTagOperation(_configModelStore.model.appId, model.onesignalId, property, newValue)
+                SetTagOperation(_configModelStore.model.appId, model.onesignalId, externalId, property, newValue)
             } else {
-                DeleteTagOperation(_configModelStore.model.appId, model.onesignalId, property)
+                DeleteTagOperation(_configModelStore.model.appId, model.onesignalId, externalId, property)
             }
         }
 
-        return SetPropertyOperation(_configModelStore.model.appId, model.onesignalId, property, newValue)
+        return SetPropertyOperation(_configModelStore.model.appId, model.onesignalId, externalId, property, newValue)
     }
 }

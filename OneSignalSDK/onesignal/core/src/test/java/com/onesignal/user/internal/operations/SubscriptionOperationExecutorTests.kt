@@ -75,6 +75,7 @@ class SubscriptionOperationExecutorTests :
                     CreateSubscriptionOperation(
                         appId,
                         remoteOneSignalId,
+                        null,
                         localSubscriptionId,
                         SubscriptionType.PUSH,
                         true,
@@ -135,6 +136,7 @@ class SubscriptionOperationExecutorTests :
                     CreateSubscriptionOperation(
                         appId,
                         remoteOneSignalId,
+                        null,
                         remoteSubscriptionId,
                         SubscriptionType.PUSH,
                         true,
@@ -185,6 +187,7 @@ class SubscriptionOperationExecutorTests :
                     CreateSubscriptionOperation(
                         appId,
                         remoteOneSignalId,
+                        null,
                         localSubscriptionId,
                         SubscriptionType.PUSH,
                         true,
@@ -240,6 +243,7 @@ class SubscriptionOperationExecutorTests :
                     CreateSubscriptionOperation(
                         appId,
                         remoteOneSignalId,
+                        null,
                         localSubscriptionId,
                         SubscriptionType.PUSH,
                         true,
@@ -295,6 +299,7 @@ class SubscriptionOperationExecutorTests :
                     CreateSubscriptionOperation(
                         appId,
                         remoteOneSignalId,
+                        null,
                         localSubscriptionId,
                         SubscriptionType.PUSH,
                         true,
@@ -338,13 +343,14 @@ class SubscriptionOperationExecutorTests :
                     CreateSubscriptionOperation(
                         appId,
                         remoteOneSignalId,
+                        null,
                         localSubscriptionId,
                         SubscriptionType.PUSH,
                         true,
                         "pushToken",
                         SubscriptionStatus.SUBSCRIBED,
                     ),
-                    DeleteSubscriptionOperation(appId, remoteOneSignalId, localSubscriptionId),
+                    DeleteSubscriptionOperation(appId, remoteOneSignalId, null, localSubscriptionId),
                 )
 
             // When
@@ -384,6 +390,7 @@ class SubscriptionOperationExecutorTests :
                     CreateSubscriptionOperation(
                         appId,
                         remoteOneSignalId,
+                        null,
                         localSubscriptionId,
                         SubscriptionType.PUSH,
                         true,
@@ -393,6 +400,7 @@ class SubscriptionOperationExecutorTests :
                     UpdateSubscriptionOperation(
                         appId,
                         remoteOneSignalId,
+                        null,
                         localSubscriptionId,
                         SubscriptionType.PUSH,
                         true,
@@ -454,6 +462,7 @@ class SubscriptionOperationExecutorTests :
                     UpdateSubscriptionOperation(
                         appId,
                         remoteOneSignalId,
+                        null,
                         remoteSubscriptionId,
                         SubscriptionType.PUSH,
                         true,
@@ -463,6 +472,7 @@ class SubscriptionOperationExecutorTests :
                     UpdateSubscriptionOperation(
                         appId,
                         remoteOneSignalId,
+                        null,
                         remoteSubscriptionId,
                         SubscriptionType.PUSH,
                         true,
@@ -515,6 +525,7 @@ class SubscriptionOperationExecutorTests :
                     UpdateSubscriptionOperation(
                         appId,
                         remoteOneSignalId,
+                        null,
                         remoteSubscriptionId,
                         SubscriptionType.PUSH,
                         true,
@@ -567,6 +578,7 @@ class SubscriptionOperationExecutorTests :
                     UpdateSubscriptionOperation(
                         appId,
                         remoteOneSignalId,
+                        null,
                         remoteSubscriptionId,
                         SubscriptionType.PUSH,
                         true,
@@ -621,6 +633,7 @@ class SubscriptionOperationExecutorTests :
                     UpdateSubscriptionOperation(
                         appId,
                         remoteOneSignalId,
+                        null,
                         remoteSubscriptionId,
                         SubscriptionType.PUSH,
                         true,
@@ -660,7 +673,7 @@ class SubscriptionOperationExecutorTests :
 
             val operations =
                 listOf<Operation>(
-                    DeleteSubscriptionOperation(appId, remoteOneSignalId, remoteSubscriptionId),
+                    DeleteSubscriptionOperation(appId, remoteOneSignalId, null, remoteSubscriptionId),
                 )
 
             // When
@@ -694,7 +707,7 @@ class SubscriptionOperationExecutorTests :
 
             val operations =
                 listOf<Operation>(
-                    DeleteSubscriptionOperation(appId, remoteOneSignalId, remoteSubscriptionId),
+                    DeleteSubscriptionOperation(appId, remoteOneSignalId, null, remoteSubscriptionId),
                 )
 
             // When
@@ -729,7 +742,7 @@ class SubscriptionOperationExecutorTests :
 
             val operations =
                 listOf<Operation>(
-                    DeleteSubscriptionOperation(appId, remoteOneSignalId, remoteSubscriptionId),
+                    DeleteSubscriptionOperation(appId, remoteOneSignalId, null, remoteSubscriptionId),
                 )
 
             // When
@@ -764,7 +777,7 @@ class SubscriptionOperationExecutorTests :
 
             val operations =
                 listOf<Operation>(
-                    DeleteSubscriptionOperation(appId, remoteOneSignalId, remoteSubscriptionId),
+                    DeleteSubscriptionOperation(appId, remoteOneSignalId, null, remoteSubscriptionId),
                 )
 
             // When
@@ -808,6 +821,7 @@ class SubscriptionOperationExecutorTests :
                     UpdateSubscriptionOperation(
                         appId,
                         remoteOneSignalId,
+                        null,
                         remoteSubscriptionId,
                         SubscriptionType.PUSH,
                         true,
