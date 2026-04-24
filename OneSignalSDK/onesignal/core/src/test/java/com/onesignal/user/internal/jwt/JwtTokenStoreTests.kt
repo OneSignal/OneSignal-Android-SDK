@@ -102,28 +102,28 @@ class JwtTokenStoreTests : FunSpec({
 
     test("subscribers are notified when a new JWT is put") {
         val store = JwtTokenStore(MockPreferencesService())
-        val calls = mutableListOf<Pair<String, String?>>()
+        val calls = mutableListOf<String>()
         store.subscribe(
             object : IJwtUpdateListener {
-                override fun onJwtUpdated(externalId: String, jwt: String?) {
-                    calls.add(externalId to jwt)
+                override fun onJwtUpdated(externalId: String) {
+                    calls.add(externalId)
                 }
             },
         )
 
         store.putJwt("alice", "token-a")
 
-        calls shouldBe listOf("alice" to "token-a")
+        calls shouldBe listOf("alice")
     }
 
     test("subscribers are NOT notified when putJwt does not change the stored token") {
         val store = JwtTokenStore(MockPreferencesService())
         store.putJwt("alice", "token-a")
-        val calls = mutableListOf<Pair<String, String?>>()
+        val calls = mutableListOf<String>()
         store.subscribe(
             object : IJwtUpdateListener {
-                override fun onJwtUpdated(externalId: String, jwt: String?) {
-                    calls.add(externalId to jwt)
+                override fun onJwtUpdated(externalId: String) {
+                    calls.add(externalId)
                 }
             },
         )
@@ -133,30 +133,30 @@ class JwtTokenStoreTests : FunSpec({
         calls.isEmpty() shouldBe true
     }
 
-    test("subscribers are notified on invalidation with null jwt") {
+    test("subscribers are notified on invalidation") {
         val store = JwtTokenStore(MockPreferencesService())
         store.putJwt("alice", "token-a")
-        val calls = mutableListOf<Pair<String, String?>>()
+        val calls = mutableListOf<String>()
         store.subscribe(
             object : IJwtUpdateListener {
-                override fun onJwtUpdated(externalId: String, jwt: String?) {
-                    calls.add(externalId to jwt)
+                override fun onJwtUpdated(externalId: String) {
+                    calls.add(externalId)
                 }
             },
         )
 
         store.invalidateJwt("alice")
 
-        calls shouldBe listOf("alice" to null)
+        calls shouldBe listOf("alice")
     }
 
     test("subscribers are NOT notified when invalidating a non-existent token") {
         val store = JwtTokenStore(MockPreferencesService())
-        val calls = mutableListOf<Pair<String, String?>>()
+        val calls = mutableListOf<String>()
         store.subscribe(
             object : IJwtUpdateListener {
-                override fun onJwtUpdated(externalId: String, jwt: String?) {
-                    calls.add(externalId to jwt)
+                override fun onJwtUpdated(externalId: String) {
+                    calls.add(externalId)
                 }
             },
         )
@@ -166,16 +166,16 @@ class JwtTokenStoreTests : FunSpec({
         calls.isEmpty() shouldBe true
     }
 
-    test("pruneToExternalIds fires invalidation for each removed externalId") {
+    test("pruneToExternalIds fires for each removed externalId") {
         val store = JwtTokenStore(MockPreferencesService())
         store.putJwt("alice", "token-a")
         store.putJwt("bob", "token-b")
         store.putJwt("chris", "token-c")
-        val calls = mutableListOf<Pair<String, String?>>()
+        val calls = mutableListOf<String>()
         store.subscribe(
             object : IJwtUpdateListener {
-                override fun onJwtUpdated(externalId: String, jwt: String?) {
-                    calls.add(externalId to jwt)
+                override fun onJwtUpdated(externalId: String) {
+                    calls.add(externalId)
                 }
             },
         )
@@ -183,16 +183,16 @@ class JwtTokenStoreTests : FunSpec({
         store.pruneToExternalIds(setOf("alice"))
 
         // Order is not deterministic across JVMs; check set semantics.
-        calls.toSet() shouldBe setOf("bob" to null, "chris" to null)
+        calls.toSet() shouldBe setOf("bob", "chris")
     }
 
     test("unsubscribed listener is not notified") {
         val store = JwtTokenStore(MockPreferencesService())
-        val calls = mutableListOf<Pair<String, String?>>()
+        val calls = mutableListOf<String>()
         val listener =
             object : IJwtUpdateListener {
-                override fun onJwtUpdated(externalId: String, jwt: String?) {
-                    calls.add(externalId to jwt)
+                override fun onJwtUpdated(externalId: String) {
+                    calls.add(externalId)
                 }
             }
         store.subscribe(listener)
