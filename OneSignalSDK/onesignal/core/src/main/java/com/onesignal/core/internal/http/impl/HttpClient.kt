@@ -159,17 +159,10 @@ internal class HttpClient(
                         con.doOutput = true
                     }
 
-                    logHTTPSent(con.requestMethod, con.url, jsonBody, con.requestProperties)
-
-                    if (jsonBody != null) {
-                        val strJsonBody = JSONUtils.toUnescapedEUIDString(jsonBody)
-                        val sendBytes = strJsonBody.toByteArray(charset("UTF-8"))
-                        con.setFixedLengthStreamingMode(sendBytes.size)
-                        val outputStream = con.outputStream
-                        outputStream.write(sendBytes)
-                    }
-
-                    // H E A D E R S
+                    // H E A D E R S — must be set before any body write below. `getOutputStream()`
+                    // (and `setFixedLengthStreamingMode`) commit the request line + headers to the
+                    // wire; `setRequestProperty` after that point either throws IllegalStateException
+                    // or is silently dropped, depending on the HttpURLConnection implementation.
 
                     if (headers?.cacheKey != null) {
                         val eTag =
@@ -197,6 +190,16 @@ internal class HttpClient(
 
                     if (headers?.jwt != null) {
                         con.setRequestProperty("Authorization", "Bearer ${headers.jwt}")
+                    }
+
+                    logHTTPSent(con.requestMethod, con.url, jsonBody, con.requestProperties)
+
+                    if (jsonBody != null) {
+                        val strJsonBody = JSONUtils.toUnescapedEUIDString(jsonBody)
+                        val sendBytes = strJsonBody.toByteArray(charset("UTF-8"))
+                        con.setFixedLengthStreamingMode(sendBytes.size)
+                        val outputStream = con.outputStream
+                        outputStream.write(sendBytes)
                     }
 
                     // Network request is made from getResponseCode()

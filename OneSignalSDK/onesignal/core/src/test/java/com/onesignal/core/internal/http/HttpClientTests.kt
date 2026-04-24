@@ -283,4 +283,20 @@ class HttpClientTests : FunSpec({
             connection.getRequestProperty("Authorization") shouldBe null
         }
     }
+
+    test("POST + JWT does not throw (headers must be set before body write)") {
+        // Given: MockHttpURLConnection now throws IllegalStateException if setRequestProperty is
+        // called after connect()/getOutputStream()/getResponseCode (matching real Android behavior).
+        // This test fails if the HttpClient regresses to setting Authorization after the body write.
+        val mocks = Mocks()
+        mocks.response.status = 200
+        mocks.response.responseBody = "{}"
+
+        // When
+        val response = mocks.httpClient.post("URL", JSONObject().put("k", "v"), OptionalHeaders(jwt = "the-jwt"))
+
+        // Then: the request completed without the mock throwing, and the header actually stuck.
+        response.throwable shouldBe null
+        mocks.factory.connections.last().getRequestProperty("Authorization") shouldBe "Bearer the-jwt"
+    }
 })

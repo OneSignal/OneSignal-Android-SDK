@@ -3,6 +3,8 @@ package com.onesignal.user.internal.operations
 import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
 import com.onesignal.common.exceptions.BackendException
 import com.onesignal.core.internal.operations.ExecutionResponse
+import com.onesignal.user.internal.jwt.IdentityVerificationGates
+import com.onesignal.user.internal.jwt.JwtRequirement
 import com.onesignal.user.internal.operations.ExecutorMocks.Companion.getJwtTokenStore
 import com.onesignal.core.internal.operations.ExecutionResult
 import com.onesignal.core.internal.operations.Operation
@@ -879,5 +881,70 @@ class LoginUserOperationExecutorTests : FunSpec({
         // pushSubscriptionId should be updated from local to remote id
         configModelStore.model.pushSubscriptionId shouldBe remoteSubscriptionId1
         coVerify(exactly = 1) { mockUserBackendService.createUser(appId, mapOf(), any(), any()) }
+    }
+
+    test("IV active: loginUser with existingOnesignalId + externalId goes straight to createUser, skipping optimistic SetAliasOperation") {
+        // Given: IV active. Under legacy or Phase 3 this input would hit the optimistic-merge
+        // SetAliasOperation path; under IV we must skip that because IdentityOperationExecutor
+        // would resolve alias to (external_id, newExternalId) and target the wrong user.
+        IdentityVerificationGates.update(false, JwtRequirement.REQUIRED, "test")
+        try {
+            val mockUserBackendService = mockk<IUserBackendService>()
+            coEvery { mockUserBackendService.createUser(any(), any(), any(), any(), any()) } returns
+                CreateUserResponse(
+                    mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId),
+                    PropertiesObject(),
+                    listOf(),
+                )
+
+            // Strict mock: if the optimistic-merge path is reached, the test fails because no
+            // `execute` stub is registered on IdentityOperationExecutor.
+            val mockIdentityOperationExecutor = mockk<IdentityOperationExecutor>()
+
+            val mockIdentityModelStore = MockHelper.identityModelStore()
+            val mockPropertiesModelStore = MockHelper.propertiesModelStore()
+            val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
+
+            val loginUserOperationExecutor =
+                LoginUserOperationExecutor(
+                    mockIdentityOperationExecutor,
+                    AndroidMockHelper.applicationService(),
+                    MockHelper.deviceService(),
+                    mockUserBackendService,
+                    mockIdentityModelStore,
+                    mockPropertiesModelStore,
+                    mockSubscriptionsModelStore,
+                    MockHelper.configModelStore(),
+                    MockHelper.languageContext(),
+                    getJwtTokenStore(),
+                )
+
+            // LoginUserOperation has existingOnesignalId AND externalId — the input shape that
+            // triggers the optimistic-merge branch under legacy.
+            val operations =
+                listOf<Operation>(
+                    LoginUserOperation(appId, localOneSignalId, "new-external-id", "existing-osid"),
+                )
+
+            // When
+            val response = loginUserOperationExecutor.execute(operations)
+
+            // Then
+            response.result shouldBe ExecutionResult.SUCCESS
+            coVerify(exactly = 1) {
+                mockUserBackendService.createUser(
+                    appId,
+                    mapOf(IdentityConstants.EXTERNAL_ID to "new-external-id"),
+                    any(),
+                    any(),
+                    any(),
+                )
+            }
+            // IdentityOperationExecutor must NOT be invoked (strict mock enforces this via kotest's
+            // unstubbed-call failure; coVerify(exactly = 0) makes the expectation explicit).
+            coVerify(exactly = 0) { mockIdentityOperationExecutor.execute(any()) }
+        } finally {
+            IdentityVerificationGates.update(false, JwtRequirement.UNKNOWN, "test-teardown")
+        }
     }
 })
