@@ -2,6 +2,7 @@ package com.onesignal.core.internal.config
 
 import com.onesignal.common.modeling.Model
 import com.onesignal.core.internal.http.OneSignalService.ONESIGNAL_API_BASE_URL
+import com.onesignal.user.internal.jwt.JwtRequirement
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -236,11 +237,18 @@ class ConfigModel : Model() {
             setBooleanProperty(::enterprise.name, value)
         }
 
-    /** Mirrors backend `jwt_required`. `null` = pre-HYDRATE (distinguish from `false`). */
-    var useIdentityVerification: Boolean?
-        get() = getOptBooleanProperty(::useIdentityVerification.name)
+    /** Mirrors backend `jwt_required`. Pre-HYDRATE callers see [JwtRequirement.UNKNOWN]. */
+    internal var useIdentityVerification: JwtRequirement
+        get() = JwtRequirement.fromBoolean(getOptBooleanProperty(::useIdentityVerification.name))
         set(value) {
-            setOptBooleanProperty(::useIdentityVerification.name, value)
+            setOptBooleanProperty(
+                ::useIdentityVerification.name,
+                when (value) {
+                    JwtRequirement.UNKNOWN -> null
+                    JwtRequirement.NOT_REQUIRED -> false
+                    JwtRequirement.REQUIRED -> true
+                },
+            )
         }
 
     /**
