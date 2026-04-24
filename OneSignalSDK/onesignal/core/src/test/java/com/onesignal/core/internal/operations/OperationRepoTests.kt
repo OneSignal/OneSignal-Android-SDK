@@ -45,8 +45,9 @@ import java.util.UUID
 private class Mocks {
     val configModelStore =
         MockHelper.configModelStore {
-            // Default to NOT_REQUIRED so pre-HYDRATE deferral doesn't hold up
-            // tests that aren't exercising IV state.
+            // Default to "post-HYDRATE" so the pre-HYDRATE deferral doesn't hold up
+            // tests that aren't exercising that path.
+            it.isInitializedWithRemote = true
             it.useIdentityVerification = JwtRequirement.NOT_REQUIRED
         }
 
@@ -999,9 +1000,9 @@ class OperationRepoTests : FunSpec({
     // ---- PR 3: IV queue-runtime tests ----
     //
 
-    test("pre-HYDRATE deferral: getNextOps returns null when useIdentityVerification == UNKNOWN") {
+    test("pre-HYDRATE deferral: getNextOps returns null when isInitializedWithRemote is false") {
         val mocks = Mocks()
-        mocks.configModelStore.model.useIdentityVerification = JwtRequirement.UNKNOWN
+        mocks.configModelStore.model.isInitializedWithRemote = false
 
         // enqueue an op and start processing
         mocks.operationRepo.start()
@@ -1014,18 +1015,32 @@ class OperationRepoTests : FunSpec({
         mocks.operationRepo.queue.size shouldBe 1
     }
 
-    test("post-HYDRATE resume: flipping useIdentityVerification to NOT_REQUIRED unblocks the queue") {
+    test("post-HYDRATE resume: flipping isInitializedWithRemote unblocks the queue") {
         val mocks = Mocks()
-        mocks.configModelStore.model.useIdentityVerification = JwtRequirement.UNKNOWN
+        mocks.configModelStore.model.isInitializedWithRemote = false
 
         mocks.operationRepo.start()
         mocks.operationRepo.enqueue(mockOperation())
         delay(100)
         coVerify(exactly = 0) { mocks.executor.execute(any()) }
 
-        // Simulate HYDRATE completing with non-IV state, then wake the queue.
-        mocks.configModelStore.model.useIdentityVerification = JwtRequirement.NOT_REQUIRED
+        // Simulate HYDRATE completing, then wake the queue.
+        mocks.configModelStore.model.isInitializedWithRemote = true
         mocks.operationRepo.forceExecuteOperations()
+        delay(500)
+
+        coVerify(exactly = 1) { mocks.executor.execute(any()) }
+    }
+
+    test("post-HYDRATE with backend silent on require_ident_auth: ops flow (no deadlock)") {
+        // Regression: bot found that gating on `useIdentityVerification == UNKNOWN`
+        // would permanently stall the queue if the backend response omits the field.
+        val mocks = Mocks()
+        mocks.configModelStore.model.isInitializedWithRemote = true
+        mocks.configModelStore.model.useIdentityVerification = JwtRequirement.UNKNOWN
+
+        mocks.operationRepo.start()
+        mocks.operationRepo.enqueue(mockOperation())
         delay(500)
 
         coVerify(exactly = 1) { mocks.executor.execute(any()) }

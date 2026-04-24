@@ -13,7 +13,6 @@ import com.onesignal.core.internal.time.ITime
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.user.internal.jwt.IdentityVerificationGates
-import com.onesignal.user.internal.jwt.JwtRequirement
 import com.onesignal.user.internal.jwt.JwtTokenStore
 import com.onesignal.user.internal.operations.LoginUserOperation
 import com.onesignal.user.internal.operations.impl.states.NewRecordsState
@@ -453,11 +452,15 @@ internal class OperationRepo(
     }
 
     internal fun getNextOps(bucketFilter: Int): List<OperationQueueItem>? {
-        // Pre-HYDRATE deferral: don't dispatch until we know whether IV is required.
-        // Applies unconditionally — even non-IV users wait briefly on first launch —
-        // because pre-HYDRATE we can't tell Phase 1/2/3 apart. `IdentityVerificationService`
-        // wakes the loop via `forceExecuteOperations` once HYDRATE resolves this.
-        if (_configModelStore.model.useIdentityVerification == JwtRequirement.UNKNOWN) {
+        // Pre-HYDRATE deferral: wait until params have been fetched at least once so we know
+        // whether IV is required. Gated on `isInitializedWithRemote` (set unconditionally by
+        // `ConfigModelStoreListener` on any successful HYDRATE) rather than on
+        // `useIdentityVerification` being non-UNKNOWN, because the backend may legitimately
+        // omit `require_ident_auth` (older deployments, dev/test environments, partial
+        // rollouts) — if we gated on the param itself we would deadlock the queue for those
+        // users. Post-HYDRATE with a silent backend, `useIdentityVerification` stays UNKNOWN
+        // and `ivBehaviorActive` is false, so ops flow through the old code path normally.
+        if (!_configModelStore.model.isInitializedWithRemote) {
             return null
         }
 

@@ -34,6 +34,7 @@ private class Mocks {
         }
     val configModelStore =
         MockHelper.configModelStore {
+            it.isInitializedWithRemote = true
             it.useIdentityVerification = JwtRequirement.NOT_REQUIRED
         }
     val operationRepo =
