@@ -195,6 +195,10 @@ internal class HttpClient(
                         con.setRequestProperty("OneSignal-Session-Duration", headers.sessionDuration.toString())
                     }
 
+                    if (headers?.jwt != null) {
+                        con.setRequestProperty("Authorization", "Bearer ${headers.jwt}")
+                    }
+
                     // Network request is made from getResponseCode()
                     httpResponse = con.responseCode
 
@@ -325,7 +329,11 @@ internal class HttpClient(
         jsonBody: JSONObject?,
         headers: Map<String, List<String>>,
     ) {
-        val headersStr = headers.entries.joinToString()
+        // Redact Authorization so JWTs never reach logs even if this call moves below the header block.
+        val headersStr =
+            headers.entries.joinToString {
+                if (it.key.equals("Authorization", ignoreCase = true)) "${it.key}=[REDACTED]" else it.toString()
+            }
         val methodStr = method ?: "GET"
         val bodyStr = if (jsonBody != null) JSONUtils.toUnescapedEUIDString(jsonBody) else null
         Logging.debug("HttpClient: Request Sent = $methodStr $url - Body: $bodyStr - Headers: $headersStr")

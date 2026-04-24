@@ -18,6 +18,7 @@ interface IIdentityBackendService {
         aliasLabel: String,
         aliasValue: String,
         identities: Map<String, String>,
+        jwt: String? = null,
     ): Map<String, String>
 
     /**
@@ -35,6 +36,7 @@ interface IIdentityBackendService {
         aliasLabel: String,
         aliasValue: String,
         aliasLabelToDelete: String,
+        jwt: String? = null,
     )
 }
 
