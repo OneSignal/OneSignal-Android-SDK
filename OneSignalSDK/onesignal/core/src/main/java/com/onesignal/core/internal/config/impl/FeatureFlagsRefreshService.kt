@@ -22,12 +22,23 @@ import kotlin.coroutines.coroutineContext
 
 /**
  * Fetches remote SDK feature flags when the app is in the foreground, immediately on focus and then
- * every [REFRESH_INTERVAL_MS] while the session stays in the foreground. Updates
+ * every [refreshIntervalMs] while the session stays in the foreground. Updates
  * [ConfigModel.sdkRemoteFeatureFlags] / [ConfigModel.sdkRemoteFeatureFlagMetadata] so
  * [com.onesignal.core.internal.features.FeatureManager] stays in sync.
  *
  * Remote fields are updated in place on the live [ConfigModel] (with [ConfigModelChangeTags.REMOTE_FEATURE_FLAGS])
  * so concurrent hydration cannot be overwritten by a stale full-model snapshot.
+ *
+ * Polling is keyed on the active [ConfigModel.appId]: once a poll loop is running for a given
+ * appId, redundant triggers (e.g. [com.onesignal.common.modeling.ModelChangeTags.HYDRATE] replaces
+ * from [ConfigModelStoreListener.fetchParams] that write the same appId back) are a no-op so we
+ * don't double-fire the Turbine GET at startup. Genuine appId changes still cancel and restart.
+ *
+ * IMPORTANT: Constructor parameters must remain limited to types the IoC reflection can resolve
+ * via [com.onesignal.common.services.IServiceProvider] (registered services or `List<Service>`).
+ * Configuration knobs like [refreshIntervalMs] live as `internal var` instead so reflection in
+ * [com.onesignal.common.services.ServiceRegistrationReflection.resolve] still picks the only
+ * constructor and tests can still override the value before [start].
  */
 internal class FeatureFlagsRefreshService(
     private val applicationService: IApplicationService,
@@ -36,7 +47,21 @@ internal class FeatureFlagsRefreshService(
 ) : IStartableService,
     IApplicationLifecycleHandler,
     ISingletonModelStoreChangeHandler<ConfigModel> {
+    /**
+     * Foreground polling cadence; defaults to [DEFAULT_REFRESH_INTERVAL_MS] (8 minutes). Test-only
+     * override (must be set before [start] / focus) – keep out of the constructor so the IoC's
+     * reflection-based resolver doesn't trip on a non-service `Long` parameter (see class KDoc).
+     */
+    internal var refreshIntervalMs: Long = DEFAULT_REFRESH_INTERVAL_MS
+
     private var pollJob: Job? = null
+
+    /**
+     * AppId currently being polled. Used to dedup redundant `restartForegroundPolling` triggers
+     * (e.g. HYDRATE replace from [ConfigModelStoreListener.fetchParams] that doesn't change the
+     * appId). Cleared in [onUnfocused] so the next focus event always re-arms polling.
+     */
+    private var pollingAppId: String? = null
 
     override fun start() {
         applicationService.addApplicationLifecycleHandler(this)
@@ -52,6 +77,7 @@ internal class FeatureFlagsRefreshService(
         synchronized(this) {
             pollJob?.cancel()
             pollJob = null
+            pollingAppId = null
         }
     }
 
@@ -81,24 +107,36 @@ internal class FeatureFlagsRefreshService(
 
     private fun restartForegroundPolling() {
         synchronized(this) {
+            val appId = configModelStore.model.appId
+            if (appId.isEmpty()) {
+                pollJob?.cancel()
+                pollJob = null
+                pollingAppId = null
+                return
+            }
+            // Dedup: an active loop for the same appId is already covering us.
+            if (pollingAppId == appId) {
+                return
+            }
             pollJob?.cancel()
+            pollingAppId = appId
             pollJob =
                 OneSignalDispatchers.launchOnIO {
                     while (coroutineContext.isActive) {
                         if (!applicationService.isInForeground) {
                             break
                         }
-                        val appId = configModelStore.model.appId
-                        if (appId.isNotEmpty()) {
+                        val current = configModelStore.model.appId
+                        if (current.isNotEmpty()) {
                             try {
-                                fetchAndApply(appId)
+                                fetchAndApply(current)
                             } catch (e: CancellationException) {
                                 throw e
                             } catch (e: Exception) {
                                 Logging.warn("FeatureFlagsRefreshService: fetch failed", e)
                             }
                         }
-                        delay(REFRESH_INTERVAL_MS)
+                        delay(refreshIntervalMs)
                     }
                 }
         }
@@ -125,6 +163,6 @@ internal class FeatureFlagsRefreshService(
 
     companion object {
         // Foreground polling cadence for remote feature flags (8 minutes).
-        private const val REFRESH_INTERVAL_MS = 480_000L
+        private const val DEFAULT_REFRESH_INTERVAL_MS = 480_000L
     }
 }
