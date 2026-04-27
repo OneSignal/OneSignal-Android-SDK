@@ -15,4 +15,9 @@ class FeatureFlagTests : FunSpec({
     test("SDK_BACKGROUND_THREADING uses the expected remote key") {
         FeatureFlag.SDK_BACKGROUND_THREADING.key shouldBe "sdk_background_threading"
     }
+
+    test("SDK_IDENTITY_VERIFICATION uses the expected remote key and IMMEDIATE activation") {
+        FeatureFlag.SDK_IDENTITY_VERIFICATION.key shouldBe "sdk_identity_verification"
+        FeatureFlag.SDK_IDENTITY_VERIFICATION.activationMode shouldBe FeatureActivationMode.IMMEDIATE
+    }
 })
