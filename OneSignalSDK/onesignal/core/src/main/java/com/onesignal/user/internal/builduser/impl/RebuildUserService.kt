@@ -52,6 +52,7 @@ class RebuildUserService(
                 CreateSubscriptionOperation(
                     appId,
                     onesignalId,
+                    identityModel.externalId,
                     pushSubscription.id,
                     pushSubscription.type,
                     pushSubscription.optedIn,
@@ -60,7 +61,7 @@ class RebuildUserService(
                 ),
             )
         }
-        operations.add(RefreshUserOperation(appId, onesignalId))
+        operations.add(RefreshUserOperation(appId, onesignalId, identityModel.externalId))
         return operations
     }
 }

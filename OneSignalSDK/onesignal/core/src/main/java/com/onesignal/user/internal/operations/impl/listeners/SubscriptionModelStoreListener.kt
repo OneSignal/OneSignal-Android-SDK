@@ -23,6 +23,7 @@ internal class SubscriptionModelStoreListener(
         return CreateSubscriptionOperation(
             _configModelStore.model.appId,
             _identityModelStore.model.onesignalId,
+            _identityModelStore.model.externalId,
             model.id,
             model.type,
             enabledAndStatus.first,
@@ -32,7 +33,12 @@ internal class SubscriptionModelStoreListener(
     }
 
     override fun getRemoveOperation(model: SubscriptionModel): Operation {
-        return DeleteSubscriptionOperation(_configModelStore.model.appId, _identityModelStore.model.onesignalId, model.id)
+        return DeleteSubscriptionOperation(
+            _configModelStore.model.appId,
+            _identityModelStore.model.onesignalId,
+            _identityModelStore.model.externalId,
+            model.id,
+        )
     }
 
     override fun getUpdateOperation(
@@ -46,6 +52,7 @@ internal class SubscriptionModelStoreListener(
         return UpdateSubscriptionOperation(
             _configModelStore.model.appId,
             _identityModelStore.model.onesignalId,
+            _identityModelStore.model.externalId,
             model.id,
             model.type,
             enabledAndStatus.first,

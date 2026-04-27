@@ -28,7 +28,8 @@ class LoginUserFromSubscriptionOperation() : Operation(LoginUserFromSubscription
         }
 
     /**
-     * The optional external ID of this newly logged-in user. Must be unique for the [appId].
+     * The subscription ID used to look up the user to log in as. Typically a v4 player ID being
+     * migrated to v5.
      */
     var subscriptionId: String
         get() = getStringProperty(::subscriptionId.name)
@@ -42,9 +43,10 @@ class LoginUserFromSubscriptionOperation() : Operation(LoginUserFromSubscription
     override val canStartExecute: Boolean = true
     override val applyToRecordId: String get() = subscriptionId
 
-    constructor(appId: String, onesignalId: String, subscriptionId: String) : this() {
+    constructor(appId: String, onesignalId: String, externalId: String?, subscriptionId: String) : this() {
         this.appId = appId
         this.onesignalId = onesignalId
+        this.externalId = externalId
         this.subscriptionId = subscriptionId
     }
 }
