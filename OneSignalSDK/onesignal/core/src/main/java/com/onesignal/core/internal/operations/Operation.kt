@@ -23,7 +23,7 @@ abstract class Operation(name: String) : Model() {
      */
     var externalId: String?
         get() = getOptStringProperty(::externalId.name)
-        set(value) {
+        internal set(value) { // `internal` so subclass constructors can assign at construction time
             setOptStringProperty(::externalId.name, value)
         }
 

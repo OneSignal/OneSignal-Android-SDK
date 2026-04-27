@@ -28,7 +28,8 @@ class LoginUserFromSubscriptionOperation() : Operation(LoginUserFromSubscription
         }
 
     /**
-     * The optional external ID of this newly logged-in user. Must be unique for the [appId].
+     * The subscription ID used to look up the user to log in as. Typically a v4 player ID being
+     * migrated to v5.
      */
     var subscriptionId: String
         get() = getStringProperty(::subscriptionId.name)
