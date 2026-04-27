@@ -34,28 +34,34 @@ internal object TurbineSdkFeatureFlagsPath {
      */
     internal fun percentEncodePathSegmentUtf8(segment: String): String {
         val bytes = segment.encodeToByteArray()
-        return buildString(bytes.size * 3) {
+        return buildString(bytes.size * PCT_ENCODED_MAX_OUTPUT_CHARS_PER_INPUT_BYTE) {
             for (b in bytes) {
-                val u = b.toInt() and 0xff
+                val u = b.toInt() and BYTE_MASK
                 if (isUnreservedByte(u)) {
                     append(u.toChar())
                 } else {
                     append('%')
-                    append(HEX_DIGITS[u shr 4])
-                    append(HEX_DIGITS[u and 15])
+                    append(HEX_DIGITS[u shr HEX_NYBBLE_SHIFT])
+                    append(HEX_DIGITS[u and HEX_NYBBLE_MASK])
                 }
             }
         }
     }
 
+    /** Per RFC 3986 section 2.3 unreserved (ALPHA / DIGIT / "-" / "." / "_" / "~"). */
     private fun isUnreservedByte(u: Int): Boolean =
-        u in 0x41..0x5A ||
-            u in 0x61..0x7A ||
-            u in 0x30..0x39 ||
-            u == 0x2D ||
-            u == 0x2E ||
-            u == 0x5F ||
-            u == 0x7E
+        u in 'A'.code..'Z'.code ||
+            u in 'a'.code..'z'.code ||
+            u in '0'.code..'9'.code ||
+            u == '-'.code ||
+            u == '.'.code ||
+            u == '_'.code ||
+            u == '~'.code
+
+    private const val BYTE_MASK: Int = 0xFF
+    private const val PCT_ENCODED_MAX_OUTPUT_CHARS_PER_INPUT_BYTE: Int = 3
+    private const val HEX_NYBBLE_MASK: Int = 0b1111
+    private const val HEX_NYBBLE_SHIFT: Int = 4
 
     private const val HEX_DIGITS = "0123456789ABCDEF"
 }
