@@ -86,6 +86,25 @@ class FeatureFlagsJsonParserTests : FunSpec({
         FeatureFlagsJsonParser.parseSuccessful("""{"features":"bad"}""") shouldBe null
     }
 
+    test("parseSuccessful returns null when features array is non-empty but every element is contract-violating") {
+        // Element-type violations on a non-empty array must be Unavailable, not Success(empty);
+        // otherwise callers would overwrite the cached list with [].
+        FeatureFlagsJsonParser.parseSuccessful("""{"features":[1,2,3]}""") shouldBe null
+        FeatureFlagsJsonParser.parseSuccessful("""{"features":[null]}""") shouldBe null
+        FeatureFlagsJsonParser.parseSuccessful("""{"features":[{}]}""") shouldBe null
+        FeatureFlagsJsonParser.parseSuccessful("""{"features":[[]]}""") shouldBe null
+        FeatureFlagsJsonParser.parseSuccessful("""{"features":[true,false]}""") shouldBe null
+        FeatureFlagsJsonParser.parseSuccessful("""{"features":[""]}""") shouldBe null
+        FeatureFlagsJsonParser.parseSuccessful("""{"features":["   "]}""") shouldBe null
+    }
+
+    test("parseSuccessful keeps mixed arrays (drops invalid elements, keeps valid ones)") {
+        // Tolerance contract: any valid string id keeps the result; invalid siblings are dropped.
+        val r = requireNotNull(FeatureFlagsJsonParser.parseSuccessful("""{"features":["good", 1, null, {}, ""]}"""))
+        r.enabledKeys shouldBe listOf("good")
+        r.metadata shouldBe null
+    }
+
     test("parseSuccessful returns null for Turbine error body (e.g. 403 Forbidden)") {
         FeatureFlagsJsonParser.parseSuccessful("""{"errors":["Forbidden"]}""") shouldBe null
         FeatureFlagsJsonParser.parseSuccessful("""{"errors":["Not Found"]}""") shouldBe null

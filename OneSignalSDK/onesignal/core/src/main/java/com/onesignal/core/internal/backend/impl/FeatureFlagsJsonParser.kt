@@ -74,7 +74,10 @@ internal object FeatureFlagsJsonParser {
             }.distinctBy { it.second }
 
         if (flagEntries.isEmpty()) {
-            return RemoteFeatureFlagsResult(emptyList(), null)
+            // `[]` is an authoritative empty config; a non-empty array that filtered down
+            // to empty is a contract violation. Null surfaces as Unavailable upstream so
+            // callers preserve the cached list instead of overwriting it with [].
+            return if (featuresArray.isEmpty()) RemoteFeatureFlagsResult(emptyList(), null) else null
         }
 
         val keys = flagEntries.map { it.second }

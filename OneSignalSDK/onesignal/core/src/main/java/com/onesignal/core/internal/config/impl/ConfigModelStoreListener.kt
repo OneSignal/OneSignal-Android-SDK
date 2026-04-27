@@ -106,6 +106,11 @@ internal class ConfigModelStoreListener(
                     params.remoteLoggingParams.logLevel?.let { config.remoteLoggingParams.logLevel = it }
                     config.remoteLoggingParams.isEnabled = params.remoteLoggingParams.isEnabled
 
+                    // Re-source from live model: replace() is a full data.clear()+putAll(),
+                    // and these fields are written in-place by FeatureFlagsRefreshService.
+                    config.sdkRemoteFeatureFlags = _configModelStore.model.sdkRemoteFeatureFlags
+                    config.sdkRemoteFeatureFlagMetadata = _configModelStore.model.sdkRemoteFeatureFlagMetadata
+
                     _configModelStore.replace(config, ModelChangeTags.HYDRATE)
                     success = true
                 } catch (ex: BackendException) {
