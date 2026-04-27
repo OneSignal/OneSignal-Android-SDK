@@ -27,29 +27,18 @@ internal object IdentityVerificationGates {
     val newCodePathsRun: Boolean
         get() = _featureFlagOn || ivBehaviorActive
 
-    /** Idempotent. [source] is logged for traceability when gates change. */
+    /** Idempotent. [source] is logged for traceability. */
     fun update(
         featureFlagOn: Boolean,
         jwtRequirement: JwtRequirement,
         source: String,
     ) {
-        val previousNewCode = newCodePathsRun
-        val previousIvActive = ivBehaviorActive
-
         _featureFlagOn = featureFlagOn
         ivBehaviorActive = jwtRequirement == JwtRequirement.REQUIRED
 
-        if (previousNewCode != newCodePathsRun || previousIvActive != ivBehaviorActive) {
-            Logging.info(
-                "OneSignal: IdentityVerificationGates updated: " +
-                    "newCodePathsRun=$newCodePathsRun, ivBehaviorActive=$ivBehaviorActive " +
-                    "(source=$source, featureFlagOn=$featureFlagOn, jwtRequirement=$jwtRequirement)",
-            )
-        } else {
-            Logging.debug(
-                "OneSignal: IdentityVerificationGates unchanged " +
-                    "(source=$source, newCodePathsRun=$newCodePathsRun, ivBehaviorActive=$ivBehaviorActive)",
-            )
-        }
+        Logging.debug(
+            "OneSignal: IdentityVerificationGates.update: newCodePathsRun=$newCodePathsRun, " +
+                "ivBehaviorActive=$ivBehaviorActive (source=$source)",
+        )
     }
 }

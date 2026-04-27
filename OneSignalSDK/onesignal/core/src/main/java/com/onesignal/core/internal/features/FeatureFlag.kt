@@ -32,8 +32,8 @@ internal enum class FeatureFlag(
     ),
 
     /** JWT signing of SDK requests. IMMEDIATE so a kill-switch doesn't need a cold start. */
-    IDENTITY_VERIFICATION(
-        "identity_verification",
+    SDK_IDENTITY_VERIFICATION(
+        "sdk_identity_verification",
         FeatureActivationMode.IMMEDIATE
     ),
     ;
