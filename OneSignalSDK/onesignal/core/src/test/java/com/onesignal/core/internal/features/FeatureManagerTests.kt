@@ -158,7 +158,7 @@ class FeatureManagerTests : FunSpec({
 
         val manager = FeatureManager(configModelStore)
 
-        manager.isEnabled(FeatureFlag.IDENTITY_VERIFICATION) shouldBe false
+        manager.isEnabled(FeatureFlag.SDK_IDENTITY_VERIFICATION) shouldBe false
         IdentityVerificationGates.newCodePathsRun shouldBe false
         IdentityVerificationGates.ivBehaviorActive shouldBe false
     }
@@ -166,14 +166,14 @@ class FeatureManagerTests : FunSpec({
     test("initial state: IDENTITY_VERIFICATION flag on → newCodePathsRun=true, ivBehaviorActive=false") {
         val initialModel = mockk<ConfigModel>()
         stubConfigModel(initialModel)
-        every { initialModel.sdkRemoteFeatureFlags } returns listOf(FeatureFlag.IDENTITY_VERIFICATION.key)
+        every { initialModel.sdkRemoteFeatureFlags } returns listOf(FeatureFlag.SDK_IDENTITY_VERIFICATION.key)
         val configModelStore = mockk<ConfigModelStore>()
         every { configModelStore.model } returns initialModel
         every { configModelStore.subscribe(any()) } just runs
 
         val manager = FeatureManager(configModelStore)
 
-        manager.isEnabled(FeatureFlag.IDENTITY_VERIFICATION) shouldBe true
+        manager.isEnabled(FeatureFlag.SDK_IDENTITY_VERIFICATION) shouldBe true
         IdentityVerificationGates.newCodePathsRun shouldBe true
         IdentityVerificationGates.ivBehaviorActive shouldBe false
     }
@@ -188,7 +188,7 @@ class FeatureManagerTests : FunSpec({
 
         val manager = FeatureManager(configModelStore)
 
-        manager.isEnabled(FeatureFlag.IDENTITY_VERIFICATION) shouldBe false
+        manager.isEnabled(FeatureFlag.SDK_IDENTITY_VERIFICATION) shouldBe false
         IdentityVerificationGates.newCodePathsRun shouldBe true
         IdentityVerificationGates.ivBehaviorActive shouldBe true
     }
@@ -196,7 +196,7 @@ class FeatureManagerTests : FunSpec({
     test("initial state: flag on + jwt_required=true → full IV (both gates true)") {
         val initialModel = mockk<ConfigModel>()
         stubConfigModel(initialModel)
-        every { initialModel.sdkRemoteFeatureFlags } returns listOf(FeatureFlag.IDENTITY_VERIFICATION.key)
+        every { initialModel.sdkRemoteFeatureFlags } returns listOf(FeatureFlag.SDK_IDENTITY_VERIFICATION.key)
         every { initialModel.useIdentityVerification } returns JwtRequirement.REQUIRED
         val configModelStore = mockk<ConfigModelStore>()
         every { configModelStore.model } returns initialModel
@@ -204,7 +204,7 @@ class FeatureManagerTests : FunSpec({
 
         val manager = FeatureManager(configModelStore)
 
-        manager.isEnabled(FeatureFlag.IDENTITY_VERIFICATION) shouldBe true
+        manager.isEnabled(FeatureFlag.SDK_IDENTITY_VERIFICATION) shouldBe true
         IdentityVerificationGates.newCodePathsRun shouldBe true
         IdentityVerificationGates.ivBehaviorActive shouldBe true
     }
@@ -242,14 +242,14 @@ class FeatureManagerTests : FunSpec({
         // Mid-session model replacement enables the flag remotely.
         val updatedModel = mockk<ConfigModel>()
         stubConfigModel(updatedModel)
-        every { updatedModel.sdkRemoteFeatureFlags } returns listOf(FeatureFlag.IDENTITY_VERIFICATION.key)
+        every { updatedModel.sdkRemoteFeatureFlags } returns listOf(FeatureFlag.SDK_IDENTITY_VERIFICATION.key)
         every { updatedModel.useIdentityVerification } returns JwtRequirement.NOT_REQUIRED
         every { configModelStore.model } returns updatedModel
 
         manager.onModelReplaced(updatedModel, ModelChangeTags.HYDRATE)
 
         // Feature flag flips in-memory because IDENTITY_VERIFICATION is IMMEDIATE.
-        manager.isEnabled(FeatureFlag.IDENTITY_VERIFICATION) shouldBe true
+        manager.isEnabled(FeatureFlag.SDK_IDENTITY_VERIFICATION) shouldBe true
         // newCodePathsRun reflects the flipped flag; ivBehaviorActive still false (jwt_required=false).
         IdentityVerificationGates.newCodePathsRun shouldBe true
         IdentityVerificationGates.ivBehaviorActive shouldBe false

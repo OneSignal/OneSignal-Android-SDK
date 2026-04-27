@@ -6,7 +6,7 @@ package com.onesignal.user.internal.jwt
  * [NOT_REQUIRED] (customer opted out).
  *
  * Represents only the customer-config side of Identity Verification; do not confuse
- * with [com.onesignal.core.internal.features.FeatureFlag.IDENTITY_VERIFICATION] (our
+ * with [com.onesignal.core.internal.features.FeatureFlag.SDK_IDENTITY_VERIFICATION] (our
  * SDK-side rollout switch).
  */
 internal enum class JwtRequirement {
