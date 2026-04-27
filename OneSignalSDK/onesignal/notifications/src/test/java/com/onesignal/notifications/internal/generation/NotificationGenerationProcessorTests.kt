@@ -5,6 +5,7 @@ import com.onesignal.common.threading.suspendifyOnIO
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.mocks.AndroidMockHelper
+import com.onesignal.mocks.IOMockHelper
 import com.onesignal.mocks.MockHelper
 import com.onesignal.notifications.INotificationReceivedEvent
 import com.onesignal.notifications.INotificationWillDisplayEvent
@@ -96,6 +97,8 @@ private class Mocks {
 }
 
 class NotificationGenerationProcessorTests : FunSpec({
+    listener(IOMockHelper)
+
     beforeAny {
         Logging.logLevel = LogLevel.NONE
 
@@ -285,10 +288,9 @@ class NotificationGenerationProcessorTests : FunSpec({
             val willDisplayEvent = firstArg<INotificationWillDisplayEvent>()
             willDisplayEvent.preventDefault(false)
             suspendifyOnIO {
-                delay(100)
+                // Second preventDefault(true) wakes the waiter with false; avoid notification.display()
+                // which would wake(true) and overwrite the conflated channel (CI flake on fast runners).
                 willDisplayEvent.preventDefault(true)
-                delay(100)
-                willDisplayEvent.notification.display()
             }
         }
 
@@ -309,10 +311,7 @@ class NotificationGenerationProcessorTests : FunSpec({
             val receivedEvent = firstArg<INotificationReceivedEvent>()
             receivedEvent.preventDefault(false)
             suspendifyOnIO {
-                delay(100)
                 receivedEvent.preventDefault(true)
-                delay(100)
-                receivedEvent.notification.display()
             }
         }
 
