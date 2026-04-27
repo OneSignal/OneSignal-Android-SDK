@@ -29,6 +29,7 @@ import io.mockk.runs
 import io.mockk.slot
 import io.mockk.spyk
 import io.mockk.verify
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -197,6 +198,41 @@ class OperationRepoTests : FunSpec({
         val survivor = operationRepo.queue.first().operation as LoginUserOperation
         survivor.existingOnesignalId shouldBe null
         survivor.canStartExecute shouldBe true
+    }
+
+    test("enqueue dedupe wakes both queued and incoming enqueueAndWait callers on SUCCESS") {
+        // A LoginUserOperation is queued via enqueueAndWait while the loop is not yet
+        // started, so it sits in the queue with its waiter attached. A second
+        // enqueueAndWait arrives for the same onesignalId. Dedupe wakes the incoming
+        // caller immediately with true; the queued op's waiter wakes with the real
+        // execution result when SUCCESS lands.
+        val mocks = Mocks()
+        val opRepo = mocks.operationRepo
+        val executeOperationsCall = mockExecuteOperations(opRepo)
+
+        val queuedOp = LoginUserOperation("appId", "alice", "ext", "anon-uuid")
+        val incomingOp = LoginUserOperation("appId", "alice", "ext", "anon-uuid")
+
+        // When — first enqueueAndWait runs (loop not started, op stays in queue).
+        // UNDISPATCHED so enqueueAndWait reaches its scope.launch + suspend before
+        // we send the incoming op below; otherwise the scope's single thread would
+        // see the incoming op's internalEnqueue first and dedupe direction reverses.
+        val queuedDone = WaiterWithValue<Boolean>()
+        launch(start = CoroutineStart.UNDISPATCHED) {
+            queuedDone.wake(opRepo.enqueueAndWait(queuedOp))
+        }
+        mocks.waitForInternalEnqueue()
+
+        // Incoming dedupes against the queued op and is woken immediately
+        val incomingResult = withTimeout(1_000) { opRepo.enqueueAndWait(incomingOp) }
+        // Run the loop; mocked executor SUCCESS wakes the queued op's waiter
+        opRepo.start()
+        executeOperationsCall.waitForWake()
+        val queuedResult = withTimeout(1_000) { queuedDone.waitForWake() }
+
+        // Then
+        incomingResult shouldBe true
+        queuedResult shouldBe true
     }
 
     test("containsInstanceOf") {
