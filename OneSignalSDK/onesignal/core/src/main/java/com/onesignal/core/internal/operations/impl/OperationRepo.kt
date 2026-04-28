@@ -2,6 +2,7 @@ package com.onesignal.core.internal.operations.impl
 
 import com.onesignal.common.IDManager
 import com.onesignal.common.threading.WaiterWithValue
+import com.onesignal.common.threading.suspendifyOnIO
 import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.operations.ExecutionResult
 import com.onesignal.core.internal.operations.GroupComparisonType
@@ -13,6 +14,7 @@ import com.onesignal.core.internal.time.ITime
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.user.internal.jwt.IdentityVerificationGates
+import com.onesignal.user.internal.jwt.JwtRequirement
 import com.onesignal.user.internal.jwt.JwtTokenStore
 import com.onesignal.user.internal.operations.LoginUserOperation
 import com.onesignal.user.internal.operations.impl.states.NewRecordsState
@@ -34,8 +36,7 @@ internal class OperationRepo(
     private val _newRecordState: NewRecordsState,
     private val _jwtTokenStore: JwtTokenStore,
 ) : IOperationRepo, IStartableService {
-    // IV-related state. Handler is fired from the op-processing thread and set from
-    // the main thread by the public-API layer
+
     @Volatile
     private var _jwtInvalidatedHandler: ((String) -> Unit)? = null
 
@@ -233,7 +234,8 @@ internal class OperationRepo(
             }
 
             val ops = getNextOps(executeBucket)
-            Logging.debug("processQueueForever:ops:\n$ops")
+            val queueSnapshotForLogging = synchronized(queue) { queue.toList() }
+            Logging.debug("processQueueForever:ops:\n$ops\nqueue(${queueSnapshotForLogging.size}):\n$queueSnapshotForLogging")
 
             if (ops != null) {
                 executeOperations(ops)
@@ -267,13 +269,28 @@ internal class OperationRepo(
                 val anonymous = queue.filter { it.operation.externalId == null }
                 anonymous.forEach { it.waiter?.wake(false) }
                 queue.removeAll(anonymous)
+                Logging.debug("OperationRepo: removeOperationsWithoutExternalId removed ${anonymous.size} of ${anonymous.size + queue.size} operations")
                 anonymous.map { it.operation.id }
             }
         // Persistent store removal outside the queue lock; ModelStore has its own locking.
         removedIds.forEach { _operationModelStore.remove(it) }
     }
 
-    override fun onJwtConfigHydrated(ivRequired: Boolean) = onJwtConfigHydratedIv(ivRequired)
+    /**
+     * Post-HYDRATE maintenance: scheduled on IO so it runs *after* `loadSavedOperations`
+     * populates the queue (fix for an earlier race where the purge ran against an empty
+     * in-memory queue on cold start). Force-execute always fires to release the pre-HYDRATE
+     * deferral in [getNextOps].
+     */
+    override fun onJwtConfigHydrated(ivRequired: Boolean) {
+        suspendifyOnIO {
+            awaitInitialized()
+            if (ivRequired) {
+                removeOperationsWithoutExternalId()
+            }
+            forceExecuteOperations()
+        }
+    }
 
     /**
      *  Waits until a new operation is enqueued, then wait an additional
@@ -457,15 +474,14 @@ internal class OperationRepo(
     }
 
     internal fun getNextOps(bucketFilter: Int): List<OperationQueueItem>? {
-        // Pre-HYDRATE deferral: wait until params have been fetched at least once so we know
-        // whether IV is required. Gated on `isInitializedWithRemote` (set unconditionally by
-        // `ConfigModelStoreListener` on any successful HYDRATE) rather than on
-        // `useIdentityVerification` being non-UNKNOWN, because the backend may legitimately
-        // omit `require_ident_auth` (older deployments, dev/test environments, partial
-        // rollouts) — if we gated on the param itself we would deadlock the queue for those
-        // users. Post-HYDRATE with a silent backend, `useIdentityVerification` stays UNKNOWN
-        // and `ivBehaviorActive` is false, so ops flow through the old code path normally.
-        if (!_configModelStore.model.isInitializedWithRemote) {
+        // Pre-HYDRATE deferral: wait until we know whether IV is required before dispatching
+        // any op, otherwise we could send an unsigned request when the customer has IV enabled.
+        // `isInitializedWithRemote` would be wrong here: pre-IV SDKs persisted it as `true`
+        // without ever reading `jwt_required`, so cached config from an upgrade looks
+        // "initialized" while `useIdentityVerification` is still UNKNOWN. Gating on UNKNOWN
+        // directly is correct because the IV-aware backend ships alongside this SDK — every
+        // successful HYDRATE will populate the field with REQUIRED or NOT_REQUIRED.
+        if (_configModelStore.model.useIdentityVerification == JwtRequirement.UNKNOWN) {
             return null
         }
 
