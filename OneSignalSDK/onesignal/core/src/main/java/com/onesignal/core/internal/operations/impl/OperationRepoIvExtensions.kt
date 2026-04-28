@@ -1,6 +1,5 @@
 package com.onesignal.core.internal.operations.impl
 
-import com.onesignal.common.threading.suspendifyOnIO
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.user.internal.jwt.IdentityVerificationGates
 import com.onesignal.user.internal.jwt.JwtTokenStore
@@ -24,8 +23,7 @@ internal fun OperationRepo.hasValidJwtIfRequired(
     jwtTokenStore: JwtTokenStore,
     op: com.onesignal.core.internal.operations.Operation,
 ): Boolean {
-    if (!IdentityVerificationGates.ivBehaviorActive) return true
-    if (!op.requiresJwt) return true
+    if (!IdentityVerificationGates.ivBehaviorActive || !op.requiresJwt) return true
     val externalId = op.externalId ?: return false
     return jwtTokenStore.getJwt(externalId) != null
 }
@@ -50,18 +48,15 @@ internal fun OperationRepo.handleFailUnauthorized(
     val externalId = startingOp.operation.externalId ?: return false
 
     jwtTokenStore.invalidateJwt(externalId)
-    Logging.warn(
+    Logging.info(
         "Operation execution failed with 401 Unauthorized, JWT invalidated for user: $externalId. " +
             "Operations re-queued.",
     )
     // Fire the handler BEFORE waking waiters — otherwise an `enqueueAndWait` caller
     // could return before the handler has a chance to propagate to the app.
-    if (jwtInvalidatedHandler != null) {
-        try {
-            jwtInvalidatedHandler(externalId)
-        } catch (t: Throwable) {
-            Logging.warn("JWT-invalidated handler threw", t)
-        }
+    jwtInvalidatedHandler?.let { handler ->
+        runCatching { handler(externalId) }
+            .onFailure { ex -> Logging.warn("Failed to run JWT invalidated handler for externalId=$externalId", ex) }
     }
     // Wake enqueueAndWait callers; re-queue with waiter = null because the original waiter
     // is already woken.
@@ -72,19 +67,4 @@ internal fun OperationRepo.handleFailUnauthorized(
         }
     }
     return true
-}
-
-/**
- * Post-HYDRATE maintenance: scheduled on IO so it runs *after* `loadSavedOperations` populates
- * the queue (fix for an earlier race where the purge ran against an empty in-memory queue on
- * cold start). Force-execute always fires to release the pre-HYDRATE deferral in `getNextOps`.
- */
-internal fun OperationRepo.onJwtConfigHydratedIv(ivRequired: Boolean) {
-    suspendifyOnIO {
-        awaitInitialized()
-        if (ivRequired) {
-            removeOperationsWithoutExternalId()
-        }
-        forceExecuteOperations()
-    }
 }

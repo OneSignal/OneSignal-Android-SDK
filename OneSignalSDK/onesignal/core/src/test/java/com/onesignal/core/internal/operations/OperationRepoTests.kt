@@ -1000,9 +1000,9 @@ class OperationRepoTests : FunSpec({
     // ---- PR 3: IV queue-runtime tests ----
     //
 
-    test("pre-HYDRATE deferral: getNextOps returns null when isInitializedWithRemote is false") {
+    test("pre-HYDRATE deferral: getNextOps returns null when useIdentityVerification is UNKNOWN") {
         val mocks = Mocks()
-        mocks.configModelStore.model.isInitializedWithRemote = false
+        mocks.configModelStore.model.useIdentityVerification = JwtRequirement.UNKNOWN
 
         // enqueue an op and start processing
         mocks.operationRepo.start()
@@ -1015,32 +1015,18 @@ class OperationRepoTests : FunSpec({
         mocks.operationRepo.queue.size shouldBe 1
     }
 
-    test("post-HYDRATE resume: flipping isInitializedWithRemote unblocks the queue") {
+    test("post-HYDRATE resume: useIdentityVerification flipping out of UNKNOWN unblocks the queue") {
         val mocks = Mocks()
-        mocks.configModelStore.model.isInitializedWithRemote = false
+        mocks.configModelStore.model.useIdentityVerification = JwtRequirement.UNKNOWN
 
         mocks.operationRepo.start()
         mocks.operationRepo.enqueue(mockOperation())
         delay(100)
         coVerify(exactly = 0) { mocks.executor.execute(any()) }
 
-        // Simulate HYDRATE completing, then wake the queue.
-        mocks.configModelStore.model.isInitializedWithRemote = true
+        // Simulate HYDRATE completing with jwt_required=false, then wake the queue.
+        mocks.configModelStore.model.useIdentityVerification = JwtRequirement.NOT_REQUIRED
         mocks.operationRepo.forceExecuteOperations()
-        delay(500)
-
-        coVerify(exactly = 1) { mocks.executor.execute(any()) }
-    }
-
-    test("post-HYDRATE with backend silent on require_ident_auth: ops flow (no deadlock)") {
-        // Regression: bot found that gating on `useIdentityVerification == UNKNOWN`
-        // would permanently stall the queue if the backend response omits the field.
-        val mocks = Mocks()
-        mocks.configModelStore.model.isInitializedWithRemote = true
-        mocks.configModelStore.model.useIdentityVerification = JwtRequirement.UNKNOWN
-
-        mocks.operationRepo.start()
-        mocks.operationRepo.enqueue(mockOperation())
         delay(500)
 
         coVerify(exactly = 1) { mocks.executor.execute(any()) }
