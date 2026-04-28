@@ -256,7 +256,12 @@ internal class OperationRepo(
         _jwtInvalidatedHandler = handler
     }
 
-    override fun removeOperationsWithoutExternalId() {
+    /**
+     * Drops queued operations whose externalId is null. Called by the IV-aware HYDRATE
+     * choreography in [OperationRepoIvExtensions] when `jwt_required` becomes REQUIRED
+     * to evict anon ops that can no longer execute.
+     */
+    internal fun removeOperationsWithoutExternalId() {
         val removedIds: List<String> =
             synchronized(queue) {
                 val anonymous = queue.filter { it.operation.externalId == null }
@@ -268,7 +273,7 @@ internal class OperationRepo(
         removedIds.forEach { _operationModelStore.remove(it) }
     }
 
-    internal fun jwtInvalidatedHandler(): ((String) -> Unit)? = _jwtInvalidatedHandler
+    override fun onJwtConfigHydrated(ivRequired: Boolean) = onJwtConfigHydratedIv(ivRequired)
 
     /**
      *  Waits until a new operation is enqueued, then wait an additional

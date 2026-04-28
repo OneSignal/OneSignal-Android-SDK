@@ -1066,16 +1066,35 @@ class OperationRepoTests : FunSpec({
         verify(exactly = 0) { mocks.operationModelStore.remove(identifiedId) }
     }
 
-    test("setJwtInvalidatedHandler stores and exposes the handler") {
+    test("onJwtConfigHydrated(true) awaits init, purges anon ops, then force-executes (in order)") {
         val mocks = Mocks()
-        var receivedExternalId: String? = null
-        val handler: (String) -> Unit = { receivedExternalId = it }
+        coEvery { mocks.operationRepo.awaitInitialized() } just runs
+        every { mocks.operationRepo.removeOperationsWithoutExternalId() } just runs
+        every { mocks.operationRepo.forceExecuteOperations() } just runs
 
-        mocks.operationRepo.setJwtInvalidatedHandler(handler)
+        mocks.operationRepo.onJwtConfigHydrated(ivRequired = true)
+        // suspendifyOnIO launches on IO; allow the orchestration to land.
+        delay(100)
 
-        // Internal accessor surfaced for testing.
-        mocks.operationRepo.jwtInvalidatedHandler()?.invoke("alice")
-        receivedExternalId shouldBe "alice"
+        coVerifyOrder {
+            mocks.operationRepo.awaitInitialized()
+            mocks.operationRepo.removeOperationsWithoutExternalId()
+            mocks.operationRepo.forceExecuteOperations()
+        }
+    }
+
+    test("onJwtConfigHydrated(false) skips the purge but still force-executes") {
+        val mocks = Mocks()
+        coEvery { mocks.operationRepo.awaitInitialized() } just runs
+        every { mocks.operationRepo.removeOperationsWithoutExternalId() } just runs
+        every { mocks.operationRepo.forceExecuteOperations() } just runs
+
+        mocks.operationRepo.onJwtConfigHydrated(ivRequired = false)
+        delay(100)
+
+        coVerify(exactly = 1) { mocks.operationRepo.awaitInitialized() }
+        verify(exactly = 0) { mocks.operationRepo.removeOperationsWithoutExternalId() }
+        verify(exactly = 1) { mocks.operationRepo.forceExecuteOperations() }
     }
 
     test("FAIL_UNAUTHORIZED with IV active invalidates JWT, re-queues ops, and fires handler") {

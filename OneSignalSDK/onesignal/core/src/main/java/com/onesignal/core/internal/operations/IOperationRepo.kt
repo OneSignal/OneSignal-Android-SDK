@@ -44,19 +44,20 @@ interface IOperationRepo {
     fun forceExecuteOperations()
 
     /**
-     * Drops queued operations whose externalId is null. Called by the IV service when
-     * `jwt_required` becomes REQUIRED to evict anon ops that can no longer execute.
-     * Removes from both the in-memory queue and the persisted store.
-     */
-    fun removeOperationsWithoutExternalId()
-
-    /**
      * Registers a handler invoked with the externalId of the user whose op just hit a
      * FAIL_UNAUTHORIZED response. Set once by the public-API layer so it can forward to
      * developer-facing [com.onesignal.user.internal.jwt.IUserJwtInvalidatedListener]s
      * (single handler — not multi-subscriber).
      */
     fun setJwtInvalidatedHandler(handler: ((externalId: String) -> Unit)?)
+
+    /**
+     * Notification from [com.onesignal.core.internal.config.impl.IdentityVerificationService]
+     * that a config HYDRATE event landed. Implementor handles the post-HYDRATE maintenance:
+     * await initialization, evict anon ops if [ivRequired], release the pre-HYDRATE deferral
+     * by force-executing.
+     */
+    fun onJwtConfigHydrated(ivRequired: Boolean)
 }
 
 // Extension function so the syntax containsInstanceOf<Operation>() can be used over

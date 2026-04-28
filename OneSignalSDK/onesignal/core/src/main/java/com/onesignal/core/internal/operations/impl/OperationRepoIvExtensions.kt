@@ -1,5 +1,6 @@
 package com.onesignal.core.internal.operations.impl
 
+import com.onesignal.common.threading.suspendifyOnIO
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.user.internal.jwt.IdentityVerificationGates
 import com.onesignal.user.internal.jwt.JwtTokenStore
@@ -71,4 +72,19 @@ internal fun OperationRepo.handleFailUnauthorized(
         }
     }
     return true
+}
+
+/**
+ * Post-HYDRATE maintenance: scheduled on IO so it runs *after* `loadSavedOperations` populates
+ * the queue (fix for an earlier race where the purge ran against an empty in-memory queue on
+ * cold start). Force-execute always fires to release the pre-HYDRATE deferral in `getNextOps`.
+ */
+internal fun OperationRepo.onJwtConfigHydratedIv(ivRequired: Boolean) {
+    suspendifyOnIO {
+        awaitInitialized()
+        if (ivRequired) {
+            removeOperationsWithoutExternalId()
+        }
+        forceExecuteOperations()
+    }
 }
