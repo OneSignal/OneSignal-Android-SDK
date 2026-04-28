@@ -69,6 +69,7 @@ fun MainScreen(viewModel: MainViewModel) {
     val consentRequired by viewModel.consentRequired.observeAsState(false)
     val privacyConsentGiven by viewModel.privacyConsentGiven.observeAsState(false)
     val externalUserId by viewModel.externalUserId.observeAsState()
+    val useIdentityVerification by viewModel.useIdentityVerification.observeAsState(false)
     val aliases by viewModel.aliases.observeAsState(emptyList())
     val emails by viewModel.emails.observeAsState(emptyList())
     val smsNumbers by viewModel.smsNumbers.observeAsState(emptyList())
@@ -80,6 +81,7 @@ fun MainScreen(viewModel: MainViewModel) {
     
     // Dialog states
     var showLoginDialog by remember { mutableStateOf(false) }
+    var showUpdateJwtDialog by remember { mutableStateOf(false) }
     var showAddAliasDialog by remember { mutableStateOf(false) }
     var showAddMultipleAliasDialog by remember { mutableStateOf(false) }
     var showAddEmailDialog by remember { mutableStateOf(false) }
@@ -159,8 +161,11 @@ fun MainScreen(viewModel: MainViewModel) {
                 // === USER SECTION ===
                 UserSection(
                     externalUserId = externalUserId,
+                    useIdentityVerification = useIdentityVerification,
+                    onUseIdentityVerificationChange = { viewModel.setUseIdentityVerification(it) },
                     onLoginClick = { showLoginDialog = true },
-                    onLogoutClick = { viewModel.logoutUser() }
+                    onLogoutClick = { viewModel.logoutUser() },
+                    onUpdateJwtClick = { showUpdateJwtDialog = true }
                 )
                 
                 // === PUSH SECTION ===
@@ -284,9 +289,22 @@ fun MainScreen(viewModel: MainViewModel) {
     if (showLoginDialog) {
         LoginDialog(
             onDismiss = { showLoginDialog = false },
-            onConfirm = { userId ->
-                viewModel.loginUser(userId)
+            onConfirm = { userId, jwt ->
+                viewModel.loginUser(userId, jwt)
                 showLoginDialog = false
+            }
+        )
+    }
+
+    if (showUpdateJwtDialog) {
+        PairInputDialog(
+            title = "Update User JWT",
+            keyLabel = "External User Id",
+            valueLabel = "JWT Token",
+            onDismiss = { showUpdateJwtDialog = false },
+            onConfirm = { externalId, token ->
+                viewModel.updateUserJwt(externalId, token)
+                showUpdateJwtDialog = false
             }
         )
     }

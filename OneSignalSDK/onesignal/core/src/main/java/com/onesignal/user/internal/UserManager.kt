@@ -1,5 +1,7 @@
 package com.onesignal.user.internal
 
+import com.onesignal.IUserJwtInvalidatedListener
+import com.onesignal.UserJwtInvalidatedEvent
 import com.onesignal.common.IDManager
 import com.onesignal.common.JSONUtils
 import com.onesignal.common.OneSignalUtils
@@ -22,6 +24,10 @@ import com.onesignal.user.state.IUserStateObserver
 import com.onesignal.user.state.UserChangedState
 import com.onesignal.user.state.UserState
 import com.onesignal.user.subscriptions.IPushSubscription
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 
 internal open class UserManager(
     private val _subscriptionManager: ISubscriptionManager,
@@ -43,6 +49,35 @@ internal open class UserManager(
         get() = _subscriptionManager.subscriptions
 
     val changeHandlersNotifier = EventProducer<IUserStateObserver>()
+    private val jwtInvalidatedNotifier = EventProducer<IUserJwtInvalidatedListener>()
+
+    // Coroutine scope for async JWT invalidated listener delivery (non-blocking)
+    private val jwtInvalidatedAppCallbackScope =
+        CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+    fun addJwtInvalidatedListener(listener: IUserJwtInvalidatedListener) {
+        jwtInvalidatedNotifier.subscribe(listener)
+    }
+
+    fun removeJwtInvalidatedListener(listener: IUserJwtInvalidatedListener) {
+        jwtInvalidatedNotifier.unsubscribe(listener)
+    }
+
+    /**
+     * Schedules [IUserJwtInvalidatedListener] delivery on a background dispatcher so HYDRATE and
+     * operation-repo paths can finish internal work before app code runs.
+     */
+    fun fireJwtInvalidated(externalId: String) {
+        jwtInvalidatedAppCallbackScope.launch {
+            runCatching {
+                jwtInvalidatedNotifier.fire { listener ->
+                    listener.onUserJwtInvalidated(UserJwtInvalidatedEvent(externalId))
+                }
+            }.onFailure {
+                Logging.warn("Failed to deliver JWT invalidated event for externalId=$externalId", it)
+            }
+        }
+    }
 
     override val pushSubscription: IPushSubscription
         get() = _subscriptionManager.subscriptions.push

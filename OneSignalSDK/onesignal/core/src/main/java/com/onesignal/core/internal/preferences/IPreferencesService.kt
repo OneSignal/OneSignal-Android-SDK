@@ -272,6 +272,13 @@ object PreferenceOneSignalKeys {
      */
     const val PREFS_OS_IAM_LAST_DISMISSED_TIME = "PREFS_OS_IAM_LAST_DISMISSED_TIME"
 
+    // Identity Verification
+
+    /**
+     * (String) JSON map of externalId -> JWT token for identity verification.
+     */
+    const val PREFS_OS_JWT_TOKENS = "PREFS_OS_JWT_TOKENS"
+
     // Models
 
     /**

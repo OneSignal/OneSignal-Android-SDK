@@ -84,8 +84,7 @@ internal class ParamsBackendService(
         return ParamsObject(
             googleProjectNumber = responseJson.safeString("android_sender_id"),
             enterprise = responseJson.safeBool("enterp"),
-            // TODO: New
-            useIdentityVerification = responseJson.safeBool("require_ident_auth"),
+            useIdentityVerification = responseJson.safeBool("jwt_required") ?: false,
             notificationChannels = responseJson.optJSONArray("chnl_lst"),
             firebaseAnalytics = responseJson.safeBool("fba"),
             restoreTTLFilter = responseJson.safeBool("restore_ttl_filter"),
@@ -95,7 +94,6 @@ internal class ParamsBackendService(
             unsubscribeWhenNotificationsDisabled = responseJson.safeBool("unsubscribe_on_notifications_disabled"),
             locationShared = responseJson.safeBool("location_shared"),
             requiresUserPrivacyConsent = responseJson.safeBool("requires_user_privacy_consent"),
-            // TODO: New
             opRepoExecutionInterval = responseJson.safeLong("oprepo_execution_interval"),
             features = features,
             influenceParams = influenceParams ?: InfluenceParamsObject(),

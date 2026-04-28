@@ -43,9 +43,10 @@ class DeleteAliasOperation() : Operation(IdentityOperationExecutor.DELETE_ALIAS)
     override val canStartExecute: Boolean get() = !IDManager.isLocalId(onesignalId)
     override val applyToRecordId: String get() = onesignalId
 
-    constructor(appId: String, onesignalId: String, label: String) : this() {
+    constructor(appId: String, onesignalId: String, externalId: String?, label: String) : this() {
         this.appId = appId
         this.onesignalId = onesignalId
+        this.externalId = externalId
         this.label = label
     }
 

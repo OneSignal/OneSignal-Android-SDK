@@ -17,6 +17,7 @@ import com.onesignal.user.internal.backend.SubscriptionObjectType
 import com.onesignal.user.internal.builduser.IRebuildUserService
 import com.onesignal.user.internal.identity.IdentityModel
 import com.onesignal.user.internal.identity.IdentityModelStore
+import com.onesignal.user.internal.identity.JwtTokenStore
 import com.onesignal.user.internal.operations.RefreshUserOperation
 import com.onesignal.user.internal.operations.impl.states.NewRecordsState
 import com.onesignal.user.internal.properties.PropertiesModel
@@ -34,6 +35,7 @@ internal class RefreshUserOperationExecutor(
     private val _configModelStore: ConfigModelStore,
     private val _buildUserService: IRebuildUserService,
     private val _newRecordState: NewRecordsState,
+    private val _jwtTokenStore: JwtTokenStore,
 ) : IOperationExecutor {
     override val operations: List<String>
         get() = listOf(REFRESH_USER)
@@ -54,12 +56,21 @@ internal class RefreshUserOperationExecutor(
     }
 
     private suspend fun getUser(op: RefreshUserOperation): ExecutionResponse {
+        val (aliasLabel, aliasValue) =
+            IdentityConstants.resolveAlias(
+                _configModelStore.model.useIdentityVerification,
+                op.externalId,
+                op.onesignalId,
+            )
+        val jwt = op.externalId?.let { _jwtTokenStore.getJwt(it) }
+
         try {
             val response =
                 _userBackend.getUser(
                     op.appId,
-                    IdentityConstants.ONESIGNAL_ID,
-                    op.onesignalId,
+                    aliasLabel,
+                    aliasValue,
+                    jwt,
                 )
 
             if (op.onesignalId != _identityModelStore.model.onesignalId) {

@@ -6,6 +6,8 @@ import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.mocks.MockHelper
 import com.onesignal.user.internal.operations.LoginUserOperation
+import com.onesignal.user.internal.subscriptions.SubscriptionModel
+import com.onesignal.user.internal.subscriptions.SubscriptionModelStore
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.mockk.every
@@ -41,6 +43,7 @@ class LogoutHelperTests : FunSpec({
         val mockOperationRepo = mockk<IOperationRepo>(relaxed = true)
         val mockConfigModel = mockk<ConfigModel>()
         every { mockConfigModel.appId } returns appId
+        every { mockConfigModel.useIdentityVerification } returns false
         val logoutLock = Any()
 
         val logoutHelper =
@@ -49,6 +52,7 @@ class LogoutHelperTests : FunSpec({
                 userSwitcher = mockUserSwitcher,
                 operationRepo = mockOperationRepo,
                 configModel = mockConfigModel,
+                subscriptionModelStore = mockk<SubscriptionModelStore>(relaxed = true),
                 lock = logoutLock,
             )
 
@@ -71,6 +75,7 @@ class LogoutHelperTests : FunSpec({
         val mockOperationRepo = mockk<IOperationRepo>(relaxed = true)
         val mockConfigModel = mockk<ConfigModel>()
         every { mockConfigModel.appId } returns appId
+        every { mockConfigModel.useIdentityVerification } returns false
         val logoutLock = Any()
 
         val logoutHelper =
@@ -79,6 +84,7 @@ class LogoutHelperTests : FunSpec({
                 userSwitcher = mockUserSwitcher,
                 operationRepo = mockOperationRepo,
                 configModel = mockConfigModel,
+                subscriptionModelStore = mockk<SubscriptionModelStore>(relaxed = true),
                 lock = logoutLock,
             )
 
@@ -110,6 +116,7 @@ class LogoutHelperTests : FunSpec({
         val mockOperationRepo = mockk<IOperationRepo>(relaxed = true)
         val mockConfigModel = mockk<ConfigModel>()
         every { mockConfigModel.appId } returns appId
+        every { mockConfigModel.useIdentityVerification } returns false
         val logoutLock = Any()
 
         val logoutHelper =
@@ -118,6 +125,7 @@ class LogoutHelperTests : FunSpec({
                 userSwitcher = mockUserSwitcher,
                 operationRepo = mockOperationRepo,
                 configModel = mockConfigModel,
+                subscriptionModelStore = mockk<SubscriptionModelStore>(relaxed = true),
                 lock = logoutLock,
             )
 
@@ -142,6 +150,7 @@ class LogoutHelperTests : FunSpec({
         val mockOperationRepo = mockk<IOperationRepo>(relaxed = true)
         val mockConfigModel = mockk<ConfigModel>()
         every { mockConfigModel.appId } returns appId
+        every { mockConfigModel.useIdentityVerification } returns false
         val logoutLock = Any()
 
         val logoutHelper =
@@ -150,6 +159,7 @@ class LogoutHelperTests : FunSpec({
                 userSwitcher = mockUserSwitcher,
                 operationRepo = mockOperationRepo,
                 configModel = mockConfigModel,
+                subscriptionModelStore = mockk<SubscriptionModelStore>(relaxed = true),
                 lock = logoutLock,
             )
 
@@ -167,5 +177,86 @@ class LogoutHelperTests : FunSpec({
         // Then - due to synchronization, operations should complete properly
         verify(atLeast = 1) { mockUserSwitcher.createAndSwitchToNewUser() }
         verify(atLeast = 1) { mockOperationRepo.enqueue(any()) }
+    }
+
+    test("logout with IV=true disables push and suppresses backend operation") {
+        // Given - identified user with IV enabled
+        val pushSubId = "push-sub-id"
+        val mockSubscriptionModel = mockk<SubscriptionModel>(relaxed = true)
+        val mockIdentityModelStore =
+            MockHelper.identityModelStore { model ->
+                model.externalId = externalId
+                model.onesignalId = onesignalId
+            }
+        val mockUserSwitcher = mockk<UserSwitcher>(relaxed = true)
+        val mockOperationRepo = mockk<IOperationRepo>(relaxed = true)
+        val mockConfigModel = mockk<ConfigModel>()
+        every { mockConfigModel.appId } returns appId
+        every { mockConfigModel.useIdentityVerification } returns true
+        every { mockConfigModel.pushSubscriptionId } returns pushSubId
+        val mockSubscriptionModelStore = mockk<SubscriptionModelStore>(relaxed = true)
+        every { mockSubscriptionModelStore.get(pushSubId) } returns mockSubscriptionModel
+
+        val logoutHelper =
+            LogoutHelper(
+                identityModelStore = mockIdentityModelStore,
+                userSwitcher = mockUserSwitcher,
+                operationRepo = mockOperationRepo,
+                configModel = mockConfigModel,
+                subscriptionModelStore = mockSubscriptionModelStore,
+                lock = Any(),
+            )
+
+        // When
+        logoutHelper.logout()
+
+        // Then
+        verify { mockSubscriptionModel.isDisabledInternally = true }
+        verify { mockUserSwitcher.createAndSwitchToNewUser(suppressBackendOperation = true) }
+        verify(exactly = 0) { mockOperationRepo.enqueue(any()) }
+    }
+
+    test("logout with IV=null (pre-HYDRATE) disables push and enqueues anonymous user") {
+        // Given - identified user, IV state unknown
+        val pushSubId = "push-sub-id"
+        val mockSubscriptionModel = mockk<SubscriptionModel>(relaxed = true)
+        val mockIdentityModelStore =
+            MockHelper.identityModelStore { model ->
+                model.externalId = externalId
+                model.onesignalId = onesignalId
+            }
+        val mockUserSwitcher = mockk<UserSwitcher>(relaxed = true)
+        val mockOperationRepo = mockk<IOperationRepo>(relaxed = true)
+        val mockConfigModel = mockk<ConfigModel>()
+        every { mockConfigModel.appId } returns appId
+        every { mockConfigModel.useIdentityVerification } returns null
+        every { mockConfigModel.pushSubscriptionId } returns pushSubId
+        val mockSubscriptionModelStore = mockk<SubscriptionModelStore>(relaxed = true)
+        every { mockSubscriptionModelStore.get(pushSubId) } returns mockSubscriptionModel
+
+        val logoutHelper =
+            LogoutHelper(
+                identityModelStore = mockIdentityModelStore,
+                userSwitcher = mockUserSwitcher,
+                operationRepo = mockOperationRepo,
+                configModel = mockConfigModel,
+                subscriptionModelStore = mockSubscriptionModelStore,
+                lock = Any(),
+            )
+
+        // When
+        logoutHelper.logout()
+
+        // Then - push disabled, no suppression, anonymous LoginUserOperation enqueued
+        verify { mockSubscriptionModel.isDisabledInternally = true }
+        verify { mockUserSwitcher.createAndSwitchToNewUser() }
+        verify {
+            mockOperationRepo.enqueue(
+                withArg<LoginUserOperation> { operation ->
+                    operation.appId shouldBe appId
+                    operation.externalId shouldBe null
+                },
+            )
+        }
     }
 })
