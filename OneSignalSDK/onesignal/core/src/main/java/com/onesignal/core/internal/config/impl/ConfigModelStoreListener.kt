@@ -95,7 +95,6 @@ internal class ConfigModelStoreListener(
                     params.locationShared?.let { config.locationShared = it }
                     params.requiresUserPrivacyConsent?.let { config.consentRequired = it }
                     params.opRepoExecutionInterval?.let { config.opRepoExecutionInterval = it }
-                    config.features = params.features
                     params.influenceParams.notificationLimit?.let { config.influenceParams.notificationLimit = it }
                     params.influenceParams.indirectNotificationAttributionWindow?.let { config.influenceParams.indirectNotificationAttributionWindow = it }
                     params.influenceParams.iamLimit?.let { config.influenceParams.iamLimit = it }
@@ -106,6 +105,11 @@ internal class ConfigModelStoreListener(
 
                     params.remoteLoggingParams.logLevel?.let { config.remoteLoggingParams.logLevel = it }
                     config.remoteLoggingParams.isEnabled = params.remoteLoggingParams.isEnabled
+
+                    // Re-source from live model: replace() is a full data.clear()+putAll(),
+                    // and these fields are written in-place by FeatureFlagsRefreshService.
+                    config.sdkRemoteFeatureFlags = _configModelStore.model.sdkRemoteFeatureFlags
+                    config.sdkRemoteFeatureFlagMetadata = _configModelStore.model.sdkRemoteFeatureFlagMetadata
 
                     _configModelStore.replace(config, ModelChangeTags.HYDRATE)
                     success = true

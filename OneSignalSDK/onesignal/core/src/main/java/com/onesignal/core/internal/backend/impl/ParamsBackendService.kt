@@ -68,19 +68,6 @@ internal class ParamsBackendService(
                 )
         }
 
-        val features =
-            responseJson.optJSONArray("features")
-                ?.let { featuresJson ->
-                    buildList {
-                        for (i in 0 until featuresJson.length()) {
-                            val featureName = featuresJson.optString(i, "")
-                            if (featureName.isNotBlank()) {
-                                add(featureName)
-                            }
-                        }
-                    }
-                } ?: emptyList()
-
         return ParamsObject(
             googleProjectNumber = responseJson.safeString("android_sender_id"),
             enterprise = responseJson.safeBool("enterp"),
@@ -97,7 +84,6 @@ internal class ParamsBackendService(
             requiresUserPrivacyConsent = responseJson.safeBool("requires_user_privacy_consent"),
             // TODO: New
             opRepoExecutionInterval = responseJson.safeLong("oprepo_execution_interval"),
-            features = features,
             influenceParams = influenceParams ?: InfluenceParamsObject(),
             fcmParams = fcmParams ?: FCMParamsObject(),
             remoteLoggingParams = remoteLoggingParams ?: RemoteLoggingParamsObject(),

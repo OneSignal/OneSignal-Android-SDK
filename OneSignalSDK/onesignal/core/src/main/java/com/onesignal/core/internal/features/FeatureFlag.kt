@@ -17,6 +17,8 @@ internal enum class FeatureActivationMode {
 
 /**
  * Backend-driven feature switches used by the SDK.
+ *
+ * [key] values are **lowercase** strings as returned from remote config / Turbine `features` arrays.
  */
 internal enum class FeatureFlag(
     val key: String,
@@ -24,14 +26,10 @@ internal enum class FeatureFlag(
 ) {
     // Threading mode is selected once per app startup to avoid mixed-mode behavior mid-session.
     //
-    // Naming convention:
-    //   SDK_<MMmmpp>_<FEATURE_DESCRIPTION>
+    // Remote key (lowercase) must match backend / Turbine flag id.
     //
-    // Example:
-    //   SDK_050800_BACKGROUND_THREADING
-    //
-    SDK_050800_BACKGROUND_THREADING(
-        "SDK_050800_BACKGROUND_THREADING",
+    SDK_BACKGROUND_THREADING(
+        "sdk_background_threading",
         FeatureActivationMode.APP_STARTUP
     ),
     ;

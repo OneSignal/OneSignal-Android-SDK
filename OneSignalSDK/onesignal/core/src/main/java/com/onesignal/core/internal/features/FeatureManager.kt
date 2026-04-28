@@ -4,12 +4,22 @@ import com.onesignal.common.modeling.ISingletonModelStoreChangeHandler
 import com.onesignal.common.modeling.ModelChangeTags
 import com.onesignal.common.modeling.ModelChangedArgs
 import com.onesignal.common.threading.ThreadingMode
+import com.onesignal.core.internal.backend.impl.FeatureFlagsJsonParser
 import com.onesignal.core.internal.config.ConfigModel
 import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.debug.internal.logging.Logging
+import kotlinx.serialization.json.JsonObject
 
 internal interface IFeatureManager {
     fun isEnabled(feature: FeatureFlag): Boolean
+
+    /**
+     * Per-flag payloads from [com.onesignal.core.internal.backend.IFeatureFlagsBackendService].
+     * Each value is a [JsonObject] so callers can decode nested fields or map to `@Serializable` types.
+     *
+     * `null` when no metadata has been stored yet ([ConfigModel.sdkRemoteFeatureFlagMetadata] null/blank).
+     */
+    fun remoteFeatureFlagMetadata(): Map<String, JsonObject>?
 }
 
 @Suppress("TooGenericExceptionCaught")
@@ -31,6 +41,14 @@ internal class FeatureManager(
 
     override fun isEnabled(feature: FeatureFlag): Boolean = featureStates[feature] ?: false
 
+    override fun remoteFeatureFlagMetadata(): Map<String, JsonObject>? {
+        val raw = configModelStore.model.sdkRemoteFeatureFlagMetadata
+        if (raw.isNullOrBlank()) {
+            return null
+        }
+        return FeatureFlagsJsonParser.parseStoredMetadataMap(raw)
+    }
+
     @Suppress("TooGenericExceptionCaught")
     override fun onModelReplaced(
         model: ConfigModel,
@@ -51,7 +69,9 @@ internal class FeatureManager(
         args: ModelChangedArgs,
         tag: String,
     ) {
-        if (args.property == ConfigModel::features.name) {
+        if (args.property == ConfigModel::sdkRemoteFeatureFlags.name ||
+            args.property == ConfigModel::sdkRemoteFeatureFlagMetadata.name
+        ) {
             Logging.debug("OneSignal: FeatureManager.onModelUpdated(property=${args.property}, tag=$tag)")
             try {
                 refreshEnabledFeatures(configModelStore.model, applyNextRunOnlyFeatures = false)
@@ -66,7 +86,11 @@ internal class FeatureManager(
         model: ConfigModel,
         applyNextRunOnlyFeatures: Boolean,
     ) {
-        val enabledFeatureKeys = (model.features + localFeatureOverrides).toSet()
+        val enabledFeatureKeys =
+            (
+                model.sdkRemoteFeatureFlags.map { canonicalizeFeatureKey(it) } +
+                    localFeatureOverrides.map { canonicalizeFeatureKey(it) }
+                ).toSet()
         if (localFeatureOverrides.isNotEmpty()) {
             Logging.warn(
                 "OneSignal: Local feature override enabled for testing only: $localFeatureOverrides",
@@ -103,12 +127,19 @@ internal class FeatureManager(
         featureStates = nextStates
     }
 
+    private fun canonicalizeFeatureKey(key: String): String =
+        buildString(key.length) {
+            for (c in key) {
+                append(c.lowercaseChar())
+            }
+        }
+
     private fun applySideEffects(
         feature: FeatureFlag,
         enabled: Boolean,
     ) {
         when (feature) {
-            FeatureFlag.SDK_050800_BACKGROUND_THREADING ->
+            FeatureFlag.SDK_BACKGROUND_THREADING ->
                 ThreadingMode.updateUseBackgroundThreading(
                     enabled = enabled,
                     source = "FeatureManager:${feature.activationMode}"
@@ -120,10 +151,10 @@ internal class FeatureManager(
         /**
          * Local-only test hook for forcing features ON without backend config.
          * Add feature keys here while testing locally, e.g.:
-         * setOf(FeatureFlag.BACKGROUND_THREADING.key)
+         * setOf(FeatureFlag.SDK_BACKGROUND_THREADING.key)
          */
         private val localFeatureOverrides: Set<String> = emptySet()
 //        private val localFeatureOverrides: Set<String> =
-//            setOf(FeatureFlag.BACKGROUND_THREADING.key)
+//            setOf(FeatureFlag.SDK_BACKGROUND_THREADING.key)
     }
 }
