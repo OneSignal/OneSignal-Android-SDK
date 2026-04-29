@@ -235,11 +235,17 @@ internal class OneSignalImp(
     }
 
     private fun initEssentials(context: Context) {
-        otelManager = OtelLifecycleManager(context).also { it.initializeFromCachedConfig() }
-
+        // Application service must be started before resolving FeatureManager (it transitively
+        // needs an Android Context to read SharedPreferences via PreferencesService).
+        ensureApplicationServiceStarted(context)
         PreferenceStoreFix.ensureNoObfuscatedPrefStore(context)
 
-        ensureApplicationServiceStarted(context)
+        // FeatureManager is constructor-injected into OtelLifecycleManager so OTel resource
+        // attributes (ossdk.features_enabled) reflect applied flag state from the very first
+        // log emission — no late binding, no rebuild needed for IMMEDIATE-mode flag changes.
+        otelManager = OtelLifecycleManager(context, featureManager).also {
+            it.initializeFromCachedConfig()
+        }
     }
 
     private fun ensureApplicationServiceStarted(context: Context) {
@@ -344,8 +350,8 @@ internal class OneSignalImp(
 
         val startupService = bootstrapServices()
 
-        // Now that the IoC container is ready, subscribe the Otel lifecycle
-        // manager to config store events so it reacts to fresh remote config.
+        // Now that the IoC container is ready, subscribe the Otel lifecycle manager to config
+        // store events so it reacts to fresh remote config.
         otelManager?.subscribeToConfigStore(services.getService<ConfigModelStore>())
 
         val result = resolveAppId(appId, configModel, preferencesService)

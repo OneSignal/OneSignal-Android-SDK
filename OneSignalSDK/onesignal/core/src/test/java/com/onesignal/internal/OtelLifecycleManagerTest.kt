@@ -6,19 +6,42 @@ import androidx.test.core.app.ApplicationProvider
 import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
 import com.onesignal.common.modeling.ModelChangeTags
 import com.onesignal.core.internal.config.ConfigModel
+import com.onesignal.core.internal.features.IFeatureManager
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.crash.OtelSdkSupport
 import com.onesignal.debug.internal.logging.Logging
+import com.onesignal.debug.internal.logging.otel.android.OtelPlatformProvider
 import io.kotest.core.spec.style.FunSpec
+import io.kotest.matchers.shouldBe
+import io.mockk.every
+import io.mockk.mockk
 import org.robolectric.annotation.Config
 
 @RobolectricTest
 @Config(sdk = [Build.VERSION_CODES.O])
 class OtelLifecycleManagerTest : FunSpec({
     lateinit var context: Context
+    lateinit var featureManager: IFeatureManager
+
+    fun newManager(
+        fm: IFeatureManager = featureManager,
+        platformProviderFactory: ((Context, IFeatureManager) -> OtelPlatformProvider)? = null,
+    ): OtelLifecycleManager =
+        if (platformProviderFactory != null) {
+            OtelLifecycleManager(
+                context = context,
+                featureManager = fm,
+                platformProviderFactory = platformProviderFactory,
+            )
+        } else {
+            OtelLifecycleManager(context = context, featureManager = fm)
+        }
 
     beforeEach {
         context = ApplicationProvider.getApplicationContext()
+        featureManager = mockk<IFeatureManager>().also {
+            every { it.enabledFeatureKeys() } returns emptyList()
+        }
         OtelSdkSupport.isSupported = true
     }
 
@@ -28,29 +51,29 @@ class OtelLifecycleManagerTest : FunSpec({
 
     test("initializeFromCachedConfig does not crash when SDK unsupported") {
         OtelSdkSupport.isSupported = false
-        val manager = OtelLifecycleManager(context)
+        val manager = newManager()
         manager.initializeFromCachedConfig()
     }
 
     test("initializeFromCachedConfig does not throw on supported SDK") {
-        val manager = OtelLifecycleManager(context)
+        val manager = newManager()
         manager.initializeFromCachedConfig()
     }
 
     test("onModelReplaced does not crash when SDK unsupported") {
         OtelSdkSupport.isSupported = false
-        val manager = OtelLifecycleManager(context)
+        val manager = newManager()
         manager.onModelReplaced(configWith(isEnabled = true, logLevel = LogLevel.ERROR), ModelChangeTags.HYDRATE)
     }
 
     test("onModelReplaced ignores non-HYDRATE tags") {
-        val manager = OtelLifecycleManager(context)
+        val manager = newManager()
         manager.initializeFromCachedConfig()
         manager.onModelReplaced(configWith(isEnabled = true, logLevel = LogLevel.ERROR), ModelChangeTags.NORMAL)
     }
 
     test("onModelReplaced enable then disable does not throw") {
-        val manager = OtelLifecycleManager(context)
+        val manager = newManager()
         manager.initializeFromCachedConfig()
 
         manager.onModelReplaced(configWith(isEnabled = true, logLevel = LogLevel.ERROR), ModelChangeTags.HYDRATE)
@@ -58,7 +81,7 @@ class OtelLifecycleManagerTest : FunSpec({
     }
 
     test("onModelReplaced updates log level without throwing") {
-        val manager = OtelLifecycleManager(context)
+        val manager = newManager()
         manager.initializeFromCachedConfig()
 
         manager.onModelReplaced(configWith(isEnabled = true, logLevel = LogLevel.ERROR), ModelChangeTags.HYDRATE)
@@ -66,7 +89,7 @@ class OtelLifecycleManagerTest : FunSpec({
     }
 
     test("onModelReplaced with same config is no-op") {
-        val manager = OtelLifecycleManager(context)
+        val manager = newManager()
         manager.initializeFromCachedConfig()
 
         manager.onModelReplaced(configWith(isEnabled = true, logLevel = LogLevel.ERROR), ModelChangeTags.HYDRATE)
@@ -74,7 +97,7 @@ class OtelLifecycleManagerTest : FunSpec({
     }
 
     test("disable clears Otel telemetry from Logging") {
-        val manager = OtelLifecycleManager(context)
+        val manager = newManager()
         manager.initializeFromCachedConfig()
 
         manager.onModelReplaced(configWith(isEnabled = true, logLevel = LogLevel.ERROR), ModelChangeTags.HYDRATE)
@@ -84,7 +107,7 @@ class OtelLifecycleManagerTest : FunSpec({
     }
 
     test("full lifecycle: init -> enable -> update level -> disable -> re-enable") {
-        val manager = OtelLifecycleManager(context)
+        val manager = newManager()
         manager.initializeFromCachedConfig()
 
         manager.onModelReplaced(configWith(isEnabled = true, logLevel = LogLevel.ERROR), ModelChangeTags.HYDRATE)
@@ -92,6 +115,24 @@ class OtelLifecycleManagerTest : FunSpec({
         manager.onModelReplaced(configWith(isEnabled = true, logLevel = LogLevel.INFO), ModelChangeTags.HYDRATE)
         manager.onModelReplaced(configWith(isEnabled = false, logLevel = null), ModelChangeTags.HYDRATE)
         manager.onModelReplaced(configWith(isEnabled = true, logLevel = LogLevel.DEBUG), ModelChangeTags.HYDRATE)
+    }
+
+    test("FeatureManager is forwarded to the platform provider via the factory") {
+        var capturedFm: IFeatureManager? = null
+        val pp = mockk<OtelPlatformProvider>(relaxed = true)
+        val fm = mockk<IFeatureManager>()
+        every { fm.enabledFeatureKeys() } returns listOf("sdk_background_threading")
+
+        val manager = newManager(
+            fm = fm,
+            platformProviderFactory = { _, captured ->
+                capturedFm = captured
+                pp
+            },
+        )
+        manager.initializeFromCachedConfig()
+
+        capturedFm shouldBe fm
     }
 })
 

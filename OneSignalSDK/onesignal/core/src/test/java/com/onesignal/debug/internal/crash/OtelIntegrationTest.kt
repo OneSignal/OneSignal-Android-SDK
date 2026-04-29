@@ -6,6 +6,7 @@ import android.os.Build
 import androidx.test.core.app.ApplicationProvider
 import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
 import com.onesignal.core.internal.config.ConfigModel
+import com.onesignal.core.internal.features.IFeatureManager
 import com.onesignal.core.internal.preferences.PreferenceOneSignalKeys
 import com.onesignal.core.internal.preferences.PreferenceStores
 import com.onesignal.debug.internal.logging.otel.android.AndroidOtelLogger
@@ -18,6 +19,8 @@ import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.types.shouldBeInstanceOf
+import io.mockk.every
+import io.mockk.mockk
 import kotlinx.coroutines.runBlocking
 import org.json.JSONArray
 import org.json.JSONObject
@@ -85,7 +88,7 @@ class OtelIntegrationTest : FunSpec() {
         }
 
         test("AndroidOtelPlatformProvider should provide correct Android values") {
-            val provider = createAndroidOtelPlatformProvider(appContext)
+            val provider = createAndroidOtelPlatformProvider(appContext, mockk<IFeatureManager>().also { every { it.enabledFeatureKeys() } returns emptyList() })
 
             provider.shouldBeInstanceOf<IOtelPlatformProvider>()
             provider.sdkBase shouldBe "android"
@@ -102,7 +105,7 @@ class OtelIntegrationTest : FunSpec() {
         }
 
         test("AndroidOtelPlatformProvider should provide per-event values") {
-            val provider = createAndroidOtelPlatformProvider(appContext)
+            val provider = createAndroidOtelPlatformProvider(appContext, mockk<IFeatureManager>().also { every { it.enabledFeatureKeys() } returns emptyList() })
 
             provider.appId shouldBe "test-app-id"
             provider.onesignalId shouldBe "test-onesignal-id"
@@ -123,7 +126,7 @@ class OtelIntegrationTest : FunSpec() {
         }
 
         test("OtelFactory should create crash handler with Android provider") {
-            val provider = createAndroidOtelPlatformProvider(appContext)
+            val provider = createAndroidOtelPlatformProvider(appContext, mockk<IFeatureManager>().also { every { it.enabledFeatureKeys() } returns emptyList() })
             val logger = AndroidOtelLogger()
 
             val handler = OtelFactory.createCrashHandler(provider, logger)
@@ -134,7 +137,7 @@ class OtelIntegrationTest : FunSpec() {
         }
 
         test("OneSignalCrashHandlerFactory should create working crash handler") {
-            val provider = createAndroidOtelPlatformProvider(appContext)
+            val provider = createAndroidOtelPlatformProvider(appContext, mockk<IFeatureManager>().also { every { it.enabledFeatureKeys() } returns emptyList() })
             val logger = AndroidOtelLogger()
             val handler = OtelFactory.createCrashHandler(provider, logger)
 
@@ -144,7 +147,7 @@ class OtelIntegrationTest : FunSpec() {
         }
 
         test("AndroidOtelPlatformProvider should provide crash storage path") {
-            val provider = createAndroidOtelPlatformProvider(appContext)
+            val provider = createAndroidOtelPlatformProvider(appContext, mockk<IFeatureManager>().also { every { it.enabledFeatureKeys() } returns emptyList() })
 
             provider.crashStoragePath.contains("onesignal") shouldBe true
             provider.crashStoragePath.contains("otel") shouldBe true
@@ -153,7 +156,7 @@ class OtelIntegrationTest : FunSpec() {
         }
 
         test("AndroidOtelPlatformProvider should handle remote logging config") {
-            val provider = createAndroidOtelPlatformProvider(appContext)
+            val provider = createAndroidOtelPlatformProvider(appContext, mockk<IFeatureManager>().also { every { it.enabledFeatureKeys() } returns emptyList() })
 
             provider.remoteLogLevel shouldBe "ERROR"
             provider.appIdForHeaders shouldBe "test-app-id"

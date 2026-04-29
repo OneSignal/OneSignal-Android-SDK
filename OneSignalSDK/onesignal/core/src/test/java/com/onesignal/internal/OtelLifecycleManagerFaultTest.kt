@@ -6,6 +6,7 @@ import androidx.test.core.app.ApplicationProvider
 import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
 import com.onesignal.common.modeling.ModelChangeTags
 import com.onesignal.core.internal.config.ConfigModel
+import com.onesignal.core.internal.features.IFeatureManager
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.crash.OtelSdkSupport
 import com.onesignal.debug.internal.logging.Logging
@@ -38,6 +39,7 @@ class OtelLifecycleManagerFaultTest : FunSpec({
     lateinit var mockTelemetry: IOtelOpenTelemetryRemote
     lateinit var mockLogger: IOtelLogger
     lateinit var mockPlatformProvider: OtelPlatformProvider
+    lateinit var mockFeatureManager: IFeatureManager
 
     beforeEach {
         context = ApplicationProvider.getApplicationContext()
@@ -47,13 +49,17 @@ class OtelLifecycleManagerFaultTest : FunSpec({
         mockAnrDetector = mockk(relaxed = true)
         mockTelemetry = mockk(relaxed = true)
         mockLogger = mockk(relaxed = true)
+        mockFeatureManager = mockk<IFeatureManager>().also {
+            every { it.enabledFeatureKeys() } returns emptyList()
+        }
         mockPlatformProvider = OtelPlatformProvider(
             OtelPlatformProviderConfig(
                 crashStoragePath = "/test/path",
                 appPackageId = "com.test",
                 appVersion = "1.0",
                 context = context,
-            )
+            ),
+            featureManager = mockFeatureManager,
         )
     }
 
@@ -63,13 +69,14 @@ class OtelLifecycleManagerFaultTest : FunSpec({
     }
 
     fun createManager(
-        crashFactory: (Context, IOtelLogger) -> IOtelCrashHandler = { _, _ -> mockCrashHandler },
+        crashFactory: (Context, IOtelLogger, IFeatureManager) -> IOtelCrashHandler = { _, _, _ -> mockCrashHandler },
         anrFactory: (IOtelPlatformProvider, IOtelLogger, Long, Long) -> IOtelAnrDetector = { _, _, _, _ -> mockAnrDetector },
         telemetryFactory: (IOtelPlatformProvider) -> IOtelOpenTelemetryRemote = { mockTelemetry },
-        ppFactory: (Context) -> OtelPlatformProvider = { mockPlatformProvider },
+        ppFactory: (Context, IFeatureManager) -> OtelPlatformProvider = { _, _ -> mockPlatformProvider },
     ): OtelLifecycleManager =
         OtelLifecycleManager(
             context = context,
+            featureManager = mockFeatureManager,
             crashHandlerFactory = crashFactory,
             anrDetectorFactory = anrFactory,
             remoteTelemetryFactory = telemetryFactory,
@@ -84,7 +91,7 @@ class OtelLifecycleManagerFaultTest : FunSpec({
     test("crash handler factory throws — ANR and logging still start") {
         var telemetryCreated = false
         val manager = createManager(
-            crashFactory = { _, _ -> throw RuntimeException("crash factory boom") },
+            crashFactory = { _, _, _ -> throw RuntimeException("crash factory boom") },
             telemetryFactory = { telemetryCreated = true; mockTelemetry },
         )
         manager.onModelReplaced(configWith(isEnabled = true, logLevel = LogLevel.ERROR), ModelChangeTags.HYDRATE)
@@ -117,7 +124,7 @@ class OtelLifecycleManagerFaultTest : FunSpec({
 
     test("all three factories throw — no exception propagates") {
         val manager = createManager(
-            crashFactory = { _, _ -> throw RuntimeException("crash") },
+            crashFactory = { _, _, _ -> throw RuntimeException("crash") },
             anrFactory = { _, _, _, _ -> throw RuntimeException("anr") },
             telemetryFactory = { throw RuntimeException("telemetry") },
         )
@@ -196,7 +203,7 @@ class OtelLifecycleManagerFaultTest : FunSpec({
 
     test("platform provider factory throws — initializeFromCachedConfig does not propagate") {
         val manager = createManager(
-            ppFactory = { throw RuntimeException("provider boom") },
+            ppFactory = { _, _ -> throw RuntimeException("provider boom") },
         )
         manager.initializeFromCachedConfig()
     }
@@ -273,7 +280,7 @@ class OtelLifecycleManagerFaultTest : FunSpec({
 
     test("OutOfMemoryError from factory does not propagate") {
         val manager = createManager(
-            crashFactory = { _, _ -> throw OutOfMemoryError("oom") },
+            crashFactory = { _, _, _ -> throw OutOfMemoryError("oom") },
         )
         manager.onModelReplaced(configWith(isEnabled = true, logLevel = LogLevel.ERROR), ModelChangeTags.HYDRATE)
 
@@ -295,7 +302,7 @@ class OtelLifecycleManagerFaultTest : FunSpec({
 
     test("initializeFromCachedConfig catches factory failure and does not propagate") {
         val manager = createManager(
-            crashFactory = { _, _ -> throw RuntimeException("crash") },
+            crashFactory = { _, _, _ -> throw RuntimeException("crash") },
             anrFactory = { _, _, _, _ -> throw RuntimeException("anr") },
             telemetryFactory = { throw RuntimeException("telemetry") },
         )

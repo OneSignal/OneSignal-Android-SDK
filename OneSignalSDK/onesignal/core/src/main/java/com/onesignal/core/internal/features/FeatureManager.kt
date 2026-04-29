@@ -14,6 +14,16 @@ internal interface IFeatureManager {
     fun isEnabled(feature: FeatureFlag): Boolean
 
     /**
+     * The canonical keys of feature flags that are currently enabled for this device run,
+     * after applying remote config, [FeatureActivationMode] latching rules, and any local
+     * test overrides. Order is not guaranteed.
+     *
+     * Empty when no flags have been resolved yet (e.g. before the first refresh on a fresh
+     * install) or when none are enabled.
+     */
+    fun enabledFeatureKeys(): List<String>
+
+    /**
      * Per-flag payloads from [com.onesignal.core.internal.backend.IFeatureFlagsBackendService].
      * Each value is a [JsonObject] so callers can decode nested fields or map to `@Serializable` types.
      *
@@ -40,6 +50,15 @@ internal class FeatureManager(
     }
 
     override fun isEnabled(feature: FeatureFlag): Boolean = featureStates[feature] ?: false
+
+    override fun enabledFeatureKeys(): List<String> {
+        val snapshot = featureStates
+        return snapshot.entries
+            .asSequence()
+            .filter { it.value }
+            .map { it.key.key }
+            .toList()
+    }
 
     override fun remoteFeatureFlagMetadata(): Map<String, JsonObject>? {
         val raw = configModelStore.model.sdkRemoteFeatureFlagMetadata
@@ -153,8 +172,8 @@ internal class FeatureManager(
          * Add feature keys here while testing locally, e.g.:
          * setOf(FeatureFlag.SDK_BACKGROUND_THREADING.key)
          */
-        private val localFeatureOverrides: Set<String> = emptySet()
-//        private val localFeatureOverrides: Set<String> =
-//            setOf(FeatureFlag.SDK_BACKGROUND_THREADING.key)
+//        private val localFeatureOverrides: Set<String> = emptySet()
+        private val localFeatureOverrides: Set<String> =
+            setOf(FeatureFlag.SDK_BACKGROUND_THREADING.key)
     }
 }

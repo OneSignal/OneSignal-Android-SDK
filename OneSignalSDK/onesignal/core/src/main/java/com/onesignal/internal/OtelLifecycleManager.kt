@@ -6,6 +6,7 @@ import com.onesignal.common.modeling.ModelChangeTags
 import com.onesignal.common.modeling.ModelChangedArgs
 import com.onesignal.core.internal.config.ConfigModel
 import com.onesignal.core.internal.config.ConfigModelStore
+import com.onesignal.core.internal.features.IFeatureManager
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.crash.AnrConstants
 import com.onesignal.debug.internal.crash.OneSignalCrashHandlerFactory
@@ -41,20 +42,21 @@ import com.onesignal.otel.crash.IOtelAnrDetector
 @Suppress("TooManyFunctions")
 internal class OtelLifecycleManager(
     private val context: Context,
-    private val crashHandlerFactory: (Context, IOtelLogger) -> IOtelCrashHandler =
-        { ctx, log -> OneSignalCrashHandlerFactory.createCrashHandler(ctx, log) },
+    private val featureManager: IFeatureManager,
+    private val crashHandlerFactory: (Context, IOtelLogger, IFeatureManager) -> IOtelCrashHandler =
+        { ctx, log, fm -> OneSignalCrashHandlerFactory.createCrashHandler(ctx, log, fm) },
     private val anrDetectorFactory: (IOtelPlatformProvider, IOtelLogger, Long, Long) -> IOtelAnrDetector =
         { pp, log, threshold, interval -> createAnrDetector(pp, log, threshold, interval) },
     private val remoteTelemetryFactory: (IOtelPlatformProvider) -> IOtelOpenTelemetryRemote =
         { pp -> OtelFactory.createRemoteTelemetry(pp) },
-    private val platformProviderFactory: (Context) -> OtelPlatformProvider =
-        { ctx -> createAndroidOtelPlatformProvider(ctx) },
+    private val platformProviderFactory: (Context, IFeatureManager) -> OtelPlatformProvider =
+        { ctx, fm -> createAndroidOtelPlatformProvider(ctx, fm) },
     private val loggerFactory: () -> IOtelLogger = { AndroidOtelLogger() },
 ) : ISingletonModelStoreChangeHandler<ConfigModel> {
     private val lock = Any()
 
     private val platformProvider: OtelPlatformProvider by lazy {
-        platformProviderFactory(context)
+        platformProviderFactory(context, featureManager)
     }
 
     private val logger: IOtelLogger by lazy { loggerFactory() }
@@ -207,7 +209,7 @@ internal class OtelLifecycleManager(
 
     private fun startCrashHandler() {
         if (crashHandler != null) return
-        val handler = crashHandlerFactory(context, logger)
+        val handler = crashHandlerFactory(context, logger, featureManager)
         handler.initialize()
         crashHandler = handler
         Logging.info("OneSignal: Crash handler initialized — logs at: ${platformProvider.crashStoragePath}")

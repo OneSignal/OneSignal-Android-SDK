@@ -37,9 +37,10 @@ internal class OneSignalCrashUploaderWrapper(
     private val featureManager: IFeatureManager,
 ) : IStartableService {
     private val uploader: OtelCrashUploader by lazy {
-        // Create Android-specific platform provider (injects Android values)
+        // Create Android-specific platform provider (injects Android values + FeatureManager)
         val platformProvider = createAndroidOtelPlatformProvider(
-            applicationService.appContext
+            applicationService.appContext,
+            featureManager,
         )
         // Create Android-specific logger (delegates to Android Logging)
         val logger = AndroidOtelLogger()

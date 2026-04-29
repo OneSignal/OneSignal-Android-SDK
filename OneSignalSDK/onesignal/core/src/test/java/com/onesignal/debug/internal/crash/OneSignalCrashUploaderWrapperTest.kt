@@ -42,6 +42,8 @@ class OneSignalCrashUploaderWrapperTest : FunSpec({
     fun mockFeatureManager(backgroundThreadingEnabled: Boolean = true): IFeatureManager {
         val featureManager = mockk<IFeatureManager>()
         every { featureManager.isEnabled(FeatureFlag.SDK_BACKGROUND_THREADING) } returns backgroundThreadingEnabled
+        every { featureManager.enabledFeatureKeys() } returns
+            if (backgroundThreadingEnabled) listOf(FeatureFlag.SDK_BACKGROUND_THREADING.key) else emptyList()
         every { featureManager.remoteFeatureFlagMetadata() } returns null
         return featureManager
     }

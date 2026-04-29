@@ -5,6 +5,7 @@ import android.content.Context
 import android.os.Build
 import com.onesignal.common.OneSignalUtils
 import com.onesignal.common.OneSignalWrapper
+import com.onesignal.core.internal.features.IFeatureManager
 import com.onesignal.core.internal.http.OneSignalService
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.otel.IOtelPlatformProvider
@@ -33,6 +34,7 @@ internal data class OtelPlatformProviderConfig(
  */
 internal class OtelPlatformProvider(
     config: OtelPlatformProviderConfig,
+    private val featureManager: IFeatureManager,
 ) : IOtelPlatformProvider {
     override val appPackageId: String = config.appPackageId
     override val appVersion: String = config.appVersion
@@ -60,6 +62,18 @@ internal class OtelPlatformProvider(
     override val sdkWrapper: String? = OneSignalWrapper.sdkType
 
     override val sdkWrapperVersion: String? = OneSignalWrapper.sdkVersion
+
+    // Read directly from FeatureManager on every access so per-event attributes always reflect
+    // the current featureStates snapshot (including IMMEDIATE-mode flag changes). Returns an
+    // empty list when the manager throws — the ossdk.features_enabled attribute is simply
+    // omitted by OtelFieldsPerEvent in that case.
+    @Suppress("TooGenericExceptionCaught", "SwallowedException")
+    override val enabledFeatureFlags: List<String>
+        get() = try {
+            featureManager.enabledFeatureKeys()
+        } catch (t: Throwable) {
+            emptyList()
+        }
 
     // Per-event attributes - IDs are cached (calculated once), appState is dynamic (calculated per access)
     override val appId: String? by lazy {
@@ -147,11 +161,13 @@ internal class OtelPlatformProvider(
 }
 
 /**
- * Factory function to create AndroidOtelPlatformProvider without service dependencies.
- * Reads all values directly from SharedPreferences and system services.
+ * Factory function to create AndroidOtelPlatformProvider. Reads value-config directly from
+ * SharedPreferences / system services; receives [IFeatureManager] via constructor injection so
+ * `enabledFeatureFlags` always reads the current `featureStates` snapshot.
  */
 internal fun createAndroidOtelPlatformProvider(
     context: Context,
+    featureManager: IFeatureManager,
 ): OtelPlatformProvider {
     val crashStoragePath = context.cacheDir.path + java.io.File.separator +
         "onesignal" + java.io.File.separator +
@@ -164,6 +180,7 @@ internal fun createAndroidOtelPlatformProvider(
             appPackageId = context.packageName,
             appVersion = com.onesignal.common.AndroidUtils.getAppVersion(context) ?: "unknown",
             context = context,
-        )
+        ),
+        featureManager = featureManager,
     )
 }
