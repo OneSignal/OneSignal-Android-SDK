@@ -42,21 +42,21 @@ import com.onesignal.otel.crash.IOtelAnrDetector
 @Suppress("TooManyFunctions")
 internal class OtelLifecycleManager(
     private val context: Context,
-    private val featureManager: IFeatureManager,
-    private val crashHandlerFactory: (Context, IOtelLogger, IFeatureManager) -> IOtelCrashHandler =
+    private val featureManagerProvider: () -> IFeatureManager,
+    private val crashHandlerFactory: (Context, IOtelLogger, () -> IFeatureManager) -> IOtelCrashHandler =
         { ctx, log, fm -> OneSignalCrashHandlerFactory.createCrashHandler(ctx, log, fm) },
     private val anrDetectorFactory: (IOtelPlatformProvider, IOtelLogger, Long, Long) -> IOtelAnrDetector =
         { pp, log, threshold, interval -> createAnrDetector(pp, log, threshold, interval) },
     private val remoteTelemetryFactory: (IOtelPlatformProvider) -> IOtelOpenTelemetryRemote =
         { pp -> OtelFactory.createRemoteTelemetry(pp) },
-    private val platformProviderFactory: (Context, IFeatureManager) -> OtelPlatformProvider =
+    private val platformProviderFactory: (Context, () -> IFeatureManager) -> OtelPlatformProvider =
         { ctx, fm -> createAndroidOtelPlatformProvider(ctx, fm) },
     private val loggerFactory: () -> IOtelLogger = { AndroidOtelLogger() },
 ) : ISingletonModelStoreChangeHandler<ConfigModel> {
     private val lock = Any()
 
     private val platformProvider: OtelPlatformProvider by lazy {
-        platformProviderFactory(context, featureManager)
+        platformProviderFactory(context, featureManagerProvider)
     }
 
     private val logger: IOtelLogger by lazy { loggerFactory() }
@@ -209,7 +209,7 @@ internal class OtelLifecycleManager(
 
     private fun startCrashHandler() {
         if (crashHandler != null) return
-        val handler = crashHandlerFactory(context, logger, featureManager)
+        val handler = crashHandlerFactory(context, logger, featureManagerProvider)
         handler.initialize()
         crashHandler = handler
         Logging.info("OneSignal: Crash handler initialized — logs at: ${platformProvider.crashStoragePath}")

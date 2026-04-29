@@ -34,7 +34,7 @@ internal data class OtelPlatformProviderConfig(
  */
 internal class OtelPlatformProvider(
     config: OtelPlatformProviderConfig,
-    private val featureManager: IFeatureManager,
+    private val featureManagerProvider: () -> IFeatureManager,
 ) : IOtelPlatformProvider {
     override val appPackageId: String = config.appPackageId
     override val appVersion: String = config.appVersion
@@ -63,14 +63,16 @@ internal class OtelPlatformProvider(
 
     override val sdkWrapperVersion: String? = OneSignalWrapper.sdkVersion
 
-    // Read directly from FeatureManager on every access so per-event attributes always reflect
-    // the current featureStates snapshot (including IMMEDIATE-mode flag changes). Returns an
-    // empty list when the manager throws — the ossdk.features_enabled attribute is simply
-    // omitted by OtelFieldsPerEvent in that case.
+    // Read through the supplier on every access so per-event attributes always reflect the
+    // current featureStates snapshot (including IMMEDIATE-mode flag changes). The supplier is
+    // an immutable constructor val that resolves IFeatureManager lazily — this lets the OTel
+    // pipeline come up early in init (before service bootstrap) without mutable late-bound
+    // state. Returns an empty list when the supplier or the manager throws (e.g. very early
+    // emissions before services are ready); the attribute is then omitted by OtelFieldsPerEvent.
     @Suppress("TooGenericExceptionCaught", "SwallowedException")
     override val enabledFeatureFlags: List<String>
         get() = try {
-            featureManager.enabledFeatureKeys()
+            featureManagerProvider().enabledFeatureKeys()
         } catch (t: Throwable) {
             emptyList()
         }
@@ -162,12 +164,13 @@ internal class OtelPlatformProvider(
 
 /**
  * Factory function to create AndroidOtelPlatformProvider. Reads value-config directly from
- * SharedPreferences / system services; receives [IFeatureManager] via constructor injection so
- * `enabledFeatureFlags` always reads the current `featureStates` snapshot.
+ * SharedPreferences / system services; receives a [featureManagerProvider] supplier that the
+ * provider invokes lazily on each `enabledFeatureFlags` read so the OTel pipeline can come up
+ * before service bootstrap completes.
  */
 internal fun createAndroidOtelPlatformProvider(
     context: Context,
-    featureManager: IFeatureManager,
+    featureManagerProvider: () -> IFeatureManager,
 ): OtelPlatformProvider {
     val crashStoragePath = context.cacheDir.path + java.io.File.separator +
         "onesignal" + java.io.File.separator +
@@ -181,6 +184,6 @@ internal fun createAndroidOtelPlatformProvider(
             appVersion = com.onesignal.common.AndroidUtils.getAppVersion(context) ?: "unknown",
             context = context,
         ),
-        featureManager = featureManager,
+        featureManagerProvider = featureManagerProvider,
     )
 }

@@ -25,16 +25,16 @@ class OtelLifecycleManagerTest : FunSpec({
 
     fun newManager(
         fm: IFeatureManager = featureManager,
-        platformProviderFactory: ((Context, IFeatureManager) -> OtelPlatformProvider)? = null,
+        platformProviderFactory: ((Context, () -> IFeatureManager) -> OtelPlatformProvider)? = null,
     ): OtelLifecycleManager =
         if (platformProviderFactory != null) {
             OtelLifecycleManager(
                 context = context,
-                featureManager = fm,
+                featureManagerProvider = { fm },
                 platformProviderFactory = platformProviderFactory,
             )
         } else {
-            OtelLifecycleManager(context = context, featureManager = fm)
+            OtelLifecycleManager(context = context, featureManagerProvider = { fm })
         }
 
     beforeEach {
@@ -117,22 +117,24 @@ class OtelLifecycleManagerTest : FunSpec({
         manager.onModelReplaced(configWith(isEnabled = true, logLevel = LogLevel.DEBUG), ModelChangeTags.HYDRATE)
     }
 
-    test("FeatureManager is forwarded to the platform provider via the factory") {
-        var capturedFm: IFeatureManager? = null
+    test("FeatureManager supplier is forwarded to the platform provider via the factory") {
+        var capturedSupplier: (() -> IFeatureManager)? = null
         val pp = mockk<OtelPlatformProvider>(relaxed = true)
         val fm = mockk<IFeatureManager>()
         every { fm.enabledFeatureKeys() } returns listOf("sdk_background_threading")
 
         val manager = newManager(
             fm = fm,
-            platformProviderFactory = { _, captured ->
-                capturedFm = captured
+            platformProviderFactory = { _, supplier ->
+                capturedSupplier = supplier
                 pp
             },
         )
         manager.initializeFromCachedConfig()
 
-        capturedFm shouldBe fm
+        // Supplier was passed through and resolves to the manager wired up in `newManager`.
+        capturedSupplier?.invoke() shouldBe fm
+        capturedSupplier?.invoke()?.enabledFeatureKeys() shouldBe listOf("sdk_background_threading")
     }
 })
 

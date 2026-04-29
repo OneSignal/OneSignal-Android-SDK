@@ -235,17 +235,18 @@ internal class OneSignalImp(
     }
 
     private fun initEssentials(context: Context) {
-        // Application service must be started before resolving FeatureManager (it transitively
-        // needs an Android Context to read SharedPreferences via PreferencesService).
-        ensureApplicationServiceStarted(context)
+        // OtelLifecycleManager comes up early so crash handling and remote logging can capture
+        // anything that happens during the rest of init. FeatureManager is wired in via a
+        // lazy supplier — `enabledFeatureFlags` is read per-event, so resolving the manager
+        // can be deferred until services have bootstrapped.
+        otelManager = OtelLifecycleManager(
+            context = context,
+            featureManagerProvider = { services.getService<IFeatureManager>() },
+        ).also { it.initializeFromCachedConfig() }
+
         PreferenceStoreFix.ensureNoObfuscatedPrefStore(context)
 
-        // FeatureManager is constructor-injected into OtelLifecycleManager so OTel resource
-        // attributes (ossdk.features_enabled) reflect applied flag state from the very first
-        // log emission — no late binding, no rebuild needed for IMMEDIATE-mode flag changes.
-        otelManager = OtelLifecycleManager(context, featureManager).also {
-            it.initializeFromCachedConfig()
-        }
+        ensureApplicationServiceStarted(context)
     }
 
     private fun ensureApplicationServiceStarted(context: Context) {
@@ -350,8 +351,8 @@ internal class OneSignalImp(
 
         val startupService = bootstrapServices()
 
-        // Now that the IoC container is ready, subscribe the Otel lifecycle manager to config
-        // store events so it reacts to fresh remote config.
+        // Now that the IoC container is ready, subscribe the Otel lifecycle
+        // manager to config store events so it reacts to fresh remote config.
         otelManager?.subscribeToConfigStore(services.getService<ConfigModelStore>())
 
         val result = resolveAppId(appId, configModel, preferencesService)

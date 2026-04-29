@@ -72,7 +72,7 @@ class OtelPlatformProviderTest : FunSpec({
 
     test("sdkBase returns android") {
         // Given
-        val provider = createAndroidOtelPlatformProvider(appContext!!, emptyFeatureManager())
+        val provider = createAndroidOtelPlatformProvider(appContext!!) { emptyFeatureManager() }
 
         // When
         val result = provider.sdkBase
@@ -83,7 +83,7 @@ class OtelPlatformProviderTest : FunSpec({
 
     test("sdkBaseVersion returns OneSignalUtils.sdkVersion") {
         // Given
-        val provider = createAndroidOtelPlatformProvider(appContext!!, emptyFeatureManager())
+        val provider = createAndroidOtelPlatformProvider(appContext!!) { emptyFeatureManager() }
 
         // When
         val result = provider.sdkBaseVersion
@@ -94,7 +94,7 @@ class OtelPlatformProviderTest : FunSpec({
 
     test("appPackageId returns context.packageName") {
         // Given
-        val provider = createAndroidOtelPlatformProvider(appContext!!, emptyFeatureManager())
+        val provider = createAndroidOtelPlatformProvider(appContext!!) { emptyFeatureManager() }
 
         // When
         val result = provider.appPackageId
@@ -105,7 +105,7 @@ class OtelPlatformProviderTest : FunSpec({
 
     test("appVersion returns AndroidUtils.getAppVersion") {
         // Given
-        val provider = createAndroidOtelPlatformProvider(appContext!!, emptyFeatureManager())
+        val provider = createAndroidOtelPlatformProvider(appContext!!) { emptyFeatureManager() }
 
         // When
         val result = provider.appVersion
@@ -117,7 +117,7 @@ class OtelPlatformProviderTest : FunSpec({
 
     test("deviceManufacturer returns Build.MANUFACTURER") {
         // Given
-        val provider = createAndroidOtelPlatformProvider(appContext!!, emptyFeatureManager())
+        val provider = createAndroidOtelPlatformProvider(appContext!!) { emptyFeatureManager() }
 
         // When
         val result = provider.deviceManufacturer
@@ -128,7 +128,7 @@ class OtelPlatformProviderTest : FunSpec({
 
     test("deviceModel returns Build.MODEL") {
         // Given
-        val provider = createAndroidOtelPlatformProvider(appContext!!, emptyFeatureManager())
+        val provider = createAndroidOtelPlatformProvider(appContext!!) { emptyFeatureManager() }
 
         // When
         val result = provider.deviceModel
@@ -139,7 +139,7 @@ class OtelPlatformProviderTest : FunSpec({
 
     test("osName returns Android") {
         // Given
-        val provider = createAndroidOtelPlatformProvider(appContext!!, emptyFeatureManager())
+        val provider = createAndroidOtelPlatformProvider(appContext!!) { emptyFeatureManager() }
 
         // When
         val result = provider.osName
@@ -150,7 +150,7 @@ class OtelPlatformProviderTest : FunSpec({
 
     test("osVersion returns Build.VERSION.RELEASE") {
         // Given
-        val provider = createAndroidOtelPlatformProvider(appContext!!, emptyFeatureManager())
+        val provider = createAndroidOtelPlatformProvider(appContext!!) { emptyFeatureManager() }
 
         // When
         val result = provider.osVersion
@@ -161,7 +161,7 @@ class OtelPlatformProviderTest : FunSpec({
 
     test("osBuildId returns Build.ID") {
         // Given
-        val provider = createAndroidOtelPlatformProvider(appContext!!, emptyFeatureManager())
+        val provider = createAndroidOtelPlatformProvider(appContext!!) { emptyFeatureManager() }
 
         // When
         val result = provider.osBuildId
@@ -173,7 +173,7 @@ class OtelPlatformProviderTest : FunSpec({
     test("sdkWrapper returns OneSignalWrapper.sdkType") {
         // Given
         OneSignalWrapper.sdkType = "Unity"
-        val provider = createAndroidOtelPlatformProvider(appContext!!, emptyFeatureManager())
+        val provider = createAndroidOtelPlatformProvider(appContext!!) { emptyFeatureManager() }
 
         // When
         val result = provider.sdkWrapper
@@ -185,7 +185,7 @@ class OtelPlatformProviderTest : FunSpec({
     test("sdkWrapper returns null when not set") {
         // Given
         OneSignalWrapper.sdkType = null
-        val provider = createAndroidOtelPlatformProvider(appContext!!, emptyFeatureManager())
+        val provider = createAndroidOtelPlatformProvider(appContext!!) { emptyFeatureManager() }
 
         // When
         val result = provider.sdkWrapper
@@ -197,7 +197,7 @@ class OtelPlatformProviderTest : FunSpec({
     test("sdkWrapperVersion returns OneSignalWrapper.sdkVersion") {
         // Given
         OneSignalWrapper.sdkVersion = "1.0.0"
-        val provider = createAndroidOtelPlatformProvider(appContext!!, emptyFeatureManager())
+        val provider = createAndroidOtelPlatformProvider(appContext!!) { emptyFeatureManager() }
 
         // When
         val result = provider.sdkWrapperVersion
@@ -209,7 +209,7 @@ class OtelPlatformProviderTest : FunSpec({
     test("sdkWrapperVersion returns null when not set") {
         // Given
         OneSignalWrapper.sdkVersion = null
-        val provider = createAndroidOtelPlatformProvider(appContext!!, emptyFeatureManager())
+        val provider = createAndroidOtelPlatformProvider(appContext!!) { emptyFeatureManager() }
 
         // When
         val result = provider.sdkWrapperVersion
@@ -232,7 +232,7 @@ class OtelPlatformProviderTest : FunSpec({
             .putString(PreferenceOneSignalKeys.MODEL_STORE_PREFIX + configNameSpace, configArray.toString())
             .commit()
 
-        val provider = createAndroidOtelPlatformProvider(appContext!!, emptyFeatureManager())
+        val provider = createAndroidOtelPlatformProvider(appContext!!) { emptyFeatureManager() }
 
         // When
         val result = provider.appId
@@ -243,7 +243,7 @@ class OtelPlatformProviderTest : FunSpec({
 
     test("appId returns error UUID when not available") {
         // Given
-        val provider = createAndroidOtelPlatformProvider(appContext!!, emptyFeatureManager())
+        val provider = createAndroidOtelPlatformProvider(appContext!!) { emptyFeatureManager() }
 
         // When
         val result = provider.appId
@@ -265,7 +265,7 @@ class OtelPlatformProviderTest : FunSpec({
             .putString(PreferenceOneSignalKeys.MODEL_STORE_PREFIX + identityNameSpace, identityArray.toString())
             .commit()
 
-        val provider = createAndroidOtelPlatformProvider(appContext!!, emptyFeatureManager())
+        val provider = createAndroidOtelPlatformProvider(appContext!!) { emptyFeatureManager() }
 
         // When
         val result = provider.onesignalId
@@ -276,7 +276,7 @@ class OtelPlatformProviderTest : FunSpec({
 
     test("onesignalId returns null when not available") {
         // Given
-        val provider = createAndroidOtelPlatformProvider(appContext!!, emptyFeatureManager())
+        val provider = createAndroidOtelPlatformProvider(appContext!!) { emptyFeatureManager() }
 
         // When
         val result = provider.onesignalId
@@ -297,7 +297,7 @@ class OtelPlatformProviderTest : FunSpec({
             .putString(PreferenceOneSignalKeys.MODEL_STORE_PREFIX + configNameSpace, configArray.toString())
             .commit()
 
-        val provider = createAndroidOtelPlatformProvider(appContext!!, emptyFeatureManager())
+        val provider = createAndroidOtelPlatformProvider(appContext!!) { emptyFeatureManager() }
 
         // When
         val result = provider.pushSubscriptionId
@@ -308,7 +308,7 @@ class OtelPlatformProviderTest : FunSpec({
 
     test("pushSubscriptionId returns null when not available") {
         // Given
-        val provider = createAndroidOtelPlatformProvider(appContext!!, emptyFeatureManager())
+        val provider = createAndroidOtelPlatformProvider(appContext!!) { emptyFeatureManager() }
 
         // When
         val result = provider.pushSubscriptionId
@@ -329,7 +329,7 @@ class OtelPlatformProviderTest : FunSpec({
             context = appContext,
             getIsInForeground = getIsInForeground
         )
-        val provider = OtelPlatformProvider(config, emptyFeatureManager())
+        val provider = OtelPlatformProvider(config) { emptyFeatureManager() }
 
         // When
         val result = provider.appState
@@ -348,7 +348,7 @@ class OtelPlatformProviderTest : FunSpec({
             context = appContext,
             getIsInForeground = getIsInForeground
         )
-        val provider = OtelPlatformProvider(config, emptyFeatureManager())
+        val provider = OtelPlatformProvider(config) { emptyFeatureManager() }
 
         // When
         val result = provider.appState
@@ -366,7 +366,7 @@ class OtelPlatformProviderTest : FunSpec({
             context = appContext,
             getIsInForeground = null
         )
-        val provider = OtelPlatformProvider(config, emptyFeatureManager())
+        val provider = OtelPlatformProvider(config) { emptyFeatureManager() }
 
         // When
         val result = provider.appState
@@ -384,7 +384,7 @@ class OtelPlatformProviderTest : FunSpec({
             context = null,
             getIsInForeground = null
         )
-        val provider = OtelPlatformProvider(config, emptyFeatureManager())
+        val provider = OtelPlatformProvider(config) { emptyFeatureManager() }
 
         // When
         val result = provider.appState
@@ -404,7 +404,7 @@ class OtelPlatformProviderTest : FunSpec({
             context = mockContext,
             getIsInForeground = null
         )
-        val provider = OtelPlatformProvider(config, emptyFeatureManager())
+        val provider = OtelPlatformProvider(config) { emptyFeatureManager() }
 
         // When
         val result = provider.appState
@@ -417,7 +417,7 @@ class OtelPlatformProviderTest : FunSpec({
 
     test("processUptime returns uptime in milliseconds") {
         // Given
-        val provider = createAndroidOtelPlatformProvider(appContext!!, emptyFeatureManager())
+        val provider = createAndroidOtelPlatformProvider(appContext!!) { emptyFeatureManager() }
 
         // When
         val result = provider.processUptime
@@ -431,7 +431,7 @@ class OtelPlatformProviderTest : FunSpec({
 
     test("currentThreadName returns current thread name") {
         // Given
-        val provider = createAndroidOtelPlatformProvider(appContext!!, emptyFeatureManager())
+        val provider = createAndroidOtelPlatformProvider(appContext!!) { emptyFeatureManager() }
 
         // When
         val result = provider.currentThreadName
@@ -451,7 +451,7 @@ class OtelPlatformProviderTest : FunSpec({
             appPackageId = "com.test",
             appVersion = "1.0"
         )
-        val provider = OtelPlatformProvider(config, emptyFeatureManager())
+        val provider = OtelPlatformProvider(config) { emptyFeatureManager() }
 
         // When
         val result = provider.crashStoragePath
@@ -469,7 +469,7 @@ class OtelPlatformProviderTest : FunSpec({
             appPackageId = "com.test",
             appVersion = "1.0"
         )
-        val provider = OtelPlatformProvider(config, emptyFeatureManager())
+        val provider = OtelPlatformProvider(config) { emptyFeatureManager() }
 
         // When
         val result = provider.crashStoragePath
@@ -482,7 +482,7 @@ class OtelPlatformProviderTest : FunSpec({
 
     test("createAndroidOtelPlatformProvider sets correct crashStoragePath") {
         // Given & When
-        val provider = createAndroidOtelPlatformProvider(appContext!!, emptyFeatureManager())
+        val provider = createAndroidOtelPlatformProvider(appContext!!) { emptyFeatureManager() }
 
         // Then
         provider.crashStoragePath shouldContain "onesignal"
@@ -494,7 +494,7 @@ class OtelPlatformProviderTest : FunSpec({
 
     test("minFileAgeForReadMillis returns default value") {
         // Given
-        val provider = createAndroidOtelPlatformProvider(appContext!!, emptyFeatureManager())
+        val provider = createAndroidOtelPlatformProvider(appContext!!) { emptyFeatureManager() }
 
         // When
         val result = provider.minFileAgeForReadMillis
@@ -507,7 +507,7 @@ class OtelPlatformProviderTest : FunSpec({
     // Derived from logLevel presence: empty logging_config → disabled, has log_level → enabled
 
     test("isRemoteLoggingEnabled returns false when no config exists") {
-        val provider = createAndroidOtelPlatformProvider(appContext!!, emptyFeatureManager())
+        val provider = createAndroidOtelPlatformProvider(appContext!!) { emptyFeatureManager() }
         provider.isRemoteLoggingEnabled shouldBe false
     }
 
@@ -525,7 +525,7 @@ class OtelPlatformProviderTest : FunSpec({
             .putString(PreferenceOneSignalKeys.MODEL_STORE_PREFIX + configNameSpace, configArray.toString())
             .commit()
 
-        val provider = createAndroidOtelPlatformProvider(appContext!!, emptyFeatureManager())
+        val provider = createAndroidOtelPlatformProvider(appContext!!) { emptyFeatureManager() }
         provider.isRemoteLoggingEnabled shouldBe true
     }
 
@@ -541,7 +541,7 @@ class OtelPlatformProviderTest : FunSpec({
             .putString(PreferenceOneSignalKeys.MODEL_STORE_PREFIX + configNameSpace, configArray.toString())
             .commit()
 
-        val provider = createAndroidOtelPlatformProvider(appContext!!, emptyFeatureManager())
+        val provider = createAndroidOtelPlatformProvider(appContext!!) { emptyFeatureManager() }
         provider.isRemoteLoggingEnabled shouldBe false
     }
 
@@ -559,7 +559,7 @@ class OtelPlatformProviderTest : FunSpec({
             .putString(PreferenceOneSignalKeys.MODEL_STORE_PREFIX + configNameSpace, configArray.toString())
             .commit()
 
-        val provider = createAndroidOtelPlatformProvider(appContext!!, emptyFeatureManager())
+        val provider = createAndroidOtelPlatformProvider(appContext!!) { emptyFeatureManager() }
         provider.isRemoteLoggingEnabled shouldBe false
     }
 
@@ -572,7 +572,7 @@ class OtelPlatformProviderTest : FunSpec({
             appVersion = "1.0",
             context = mockContext
         )
-        val provider = OtelPlatformProvider(config, emptyFeatureManager())
+        val provider = OtelPlatformProvider(config) { emptyFeatureManager() }
         provider.isRemoteLoggingEnabled shouldBe false
     }
 
@@ -580,7 +580,7 @@ class OtelPlatformProviderTest : FunSpec({
 
     test("remoteLogLevel returns null when no config exists (disabled)") {
         // Given
-        val provider = createAndroidOtelPlatformProvider(appContext!!, emptyFeatureManager())
+        val provider = createAndroidOtelPlatformProvider(appContext!!) { emptyFeatureManager() }
 
         // When
         val result = provider.remoteLogLevel
@@ -602,7 +602,7 @@ class OtelPlatformProviderTest : FunSpec({
             .putString(PreferenceOneSignalKeys.MODEL_STORE_PREFIX + configNameSpace, configArray.toString())
             .commit()
 
-        val provider = createAndroidOtelPlatformProvider(appContext!!, emptyFeatureManager())
+        val provider = createAndroidOtelPlatformProvider(appContext!!) { emptyFeatureManager() }
 
         // When
         val result = provider.remoteLogLevel
@@ -626,7 +626,7 @@ class OtelPlatformProviderTest : FunSpec({
             .putString(PreferenceOneSignalKeys.MODEL_STORE_PREFIX + configNameSpace, configArray.toString())
             .commit()
 
-        val provider = createAndroidOtelPlatformProvider(appContext!!, emptyFeatureManager())
+        val provider = createAndroidOtelPlatformProvider(appContext!!) { emptyFeatureManager() }
 
         // When
         val result = provider.remoteLogLevel
@@ -650,7 +650,7 @@ class OtelPlatformProviderTest : FunSpec({
             .putString(PreferenceOneSignalKeys.MODEL_STORE_PREFIX + configNameSpace, configArray.toString())
             .commit()
 
-        val provider = createAndroidOtelPlatformProvider(appContext!!, emptyFeatureManager())
+        val provider = createAndroidOtelPlatformProvider(appContext!!) { emptyFeatureManager() }
 
         // When
         val result = provider.remoteLogLevel
@@ -674,7 +674,7 @@ class OtelPlatformProviderTest : FunSpec({
             .putString(PreferenceOneSignalKeys.MODEL_STORE_PREFIX + configNameSpace, configArray.toString())
             .commit()
 
-        val provider = createAndroidOtelPlatformProvider(appContext!!, emptyFeatureManager())
+        val provider = createAndroidOtelPlatformProvider(appContext!!) { emptyFeatureManager() }
 
         // When
         val result = provider.remoteLogLevel
@@ -693,7 +693,7 @@ class OtelPlatformProviderTest : FunSpec({
             appVersion = "1.0",
             context = mockContext
         )
-        val provider = OtelPlatformProvider(config, emptyFeatureManager())
+        val provider = OtelPlatformProvider(config) { emptyFeatureManager() }
 
         // When
         val result = provider.remoteLogLevel
@@ -705,7 +705,7 @@ class OtelPlatformProviderTest : FunSpec({
     // ===== enabledFeatureFlags Tests =====
 
     test("enabledFeatureFlags returns empty list when FeatureManager has no enabled flags") {
-        val provider = createAndroidOtelPlatformProvider(appContext!!, emptyFeatureManager())
+        val provider = createAndroidOtelPlatformProvider(appContext!!) { emptyFeatureManager() }
         provider.enabledFeatureFlags shouldBe emptyList()
     }
 
@@ -713,7 +713,7 @@ class OtelPlatformProviderTest : FunSpec({
         val states = mutableListOf("sdk_background_threading")
         val fm = mockk<IFeatureManager>()
         every { fm.enabledFeatureKeys() } answers { states.toList() }
-        val provider = createAndroidOtelPlatformProvider(appContext!!, fm)
+        val provider = createAndroidOtelPlatformProvider(appContext!!) { fm }
 
         provider.enabledFeatureFlags shouldBe listOf("sdk_background_threading")
 
@@ -724,7 +724,15 @@ class OtelPlatformProviderTest : FunSpec({
     test("enabledFeatureFlags returns empty list when FeatureManager throws") {
         val fm = mockk<IFeatureManager>()
         every { fm.enabledFeatureKeys() } throws RuntimeException("boom")
-        val provider = createAndroidOtelPlatformProvider(appContext!!, fm)
+        val provider = createAndroidOtelPlatformProvider(appContext!!) { fm }
+
+        provider.enabledFeatureFlags shouldBe emptyList()
+    }
+
+    test("enabledFeatureFlags returns empty list when the supplier itself throws") {
+        val provider = createAndroidOtelPlatformProvider(appContext!!) {
+            throw RuntimeException("supplier boom")
+        }
 
         provider.enabledFeatureFlags shouldBe emptyList()
     }
@@ -743,7 +751,7 @@ class OtelPlatformProviderTest : FunSpec({
             .putString(PreferenceOneSignalKeys.MODEL_STORE_PREFIX + configNameSpace, configArray.toString())
             .commit()
 
-        val provider = createAndroidOtelPlatformProvider(appContext!!, emptyFeatureManager())
+        val provider = createAndroidOtelPlatformProvider(appContext!!) { emptyFeatureManager() }
 
         // When
         val result = provider.appIdForHeaders
@@ -754,7 +762,7 @@ class OtelPlatformProviderTest : FunSpec({
 
     test("appIdForHeaders returns empty string when appId is null") {
         // Given
-        val provider = createAndroidOtelPlatformProvider(appContext!!, emptyFeatureManager())
+        val provider = createAndroidOtelPlatformProvider(appContext!!) { emptyFeatureManager() }
 
         // When
         val result = provider.appIdForHeaders
@@ -766,7 +774,7 @@ class OtelPlatformProviderTest : FunSpec({
     // ===== apiBaseUrl Tests =====
 
     test("apiBaseUrl returns the core module base URL") {
-        val provider = createAndroidOtelPlatformProvider(appContext!!, emptyFeatureManager())
+        val provider = createAndroidOtelPlatformProvider(appContext!!) { emptyFeatureManager() }
 
         provider.apiBaseUrl shouldBe com.onesignal.core.internal.http.OneSignalService.ONESIGNAL_API_BASE_URL
     }
@@ -779,7 +787,7 @@ class OtelPlatformProviderTest : FunSpec({
             .putString(PreferenceOneSignalKeys.PREFS_OS_INSTALL_ID, "test-install-id-123")
             .commit()
 
-        val provider = createAndroidOtelPlatformProvider(appContext!!, emptyFeatureManager())
+        val provider = createAndroidOtelPlatformProvider(appContext!!) { emptyFeatureManager() }
 
         // When
         val result = runBlocking { provider.getInstallId() }
@@ -790,7 +798,7 @@ class OtelPlatformProviderTest : FunSpec({
 
     test("getInstallId returns default when not found") {
         // Given
-        val provider = createAndroidOtelPlatformProvider(appContext!!, emptyFeatureManager())
+        val provider = createAndroidOtelPlatformProvider(appContext!!) { emptyFeatureManager() }
 
         // When
         val result = runBlocking { provider.getInstallId() }
@@ -803,7 +811,7 @@ class OtelPlatformProviderTest : FunSpec({
 
     test("createAndroidOtelPlatformProvider creates provider with correct config") {
         // Given & When
-        val provider = createAndroidOtelPlatformProvider(appContext!!, emptyFeatureManager())
+        val provider = createAndroidOtelPlatformProvider(appContext!!) { emptyFeatureManager() }
 
         // Then
         provider.appPackageId shouldBe appContext!!.packageName
@@ -814,7 +822,7 @@ class OtelPlatformProviderTest : FunSpec({
     // ===== Fresh install / all-missing scenario =====
 
     test("fresh install: all lazy properties return safe defaults without crashing") {
-        val provider = createAndroidOtelPlatformProvider(appContext!!, emptyFeatureManager())
+        val provider = createAndroidOtelPlatformProvider(appContext!!) { emptyFeatureManager() }
 
         provider.appId shouldContain "e1100000-0000-4000-a000-"
         provider.onesignalId shouldBe null
@@ -828,7 +836,7 @@ class OtelPlatformProviderTest : FunSpec({
     }
 
     test("lazy properties cache the initial value and ignore later SharedPreferences changes") {
-        val provider = createAndroidOtelPlatformProvider(appContext!!, emptyFeatureManager())
+        val provider = createAndroidOtelPlatformProvider(appContext!!) { emptyFeatureManager() }
 
         provider.isRemoteLoggingEnabled shouldBe false
         provider.remoteLogLevel shouldBe null
@@ -854,7 +862,7 @@ class OtelPlatformProviderTest : FunSpec({
             context = appContext,
             getIsInForeground = { throw RuntimeException("callback boom") }
         )
-        val provider = OtelPlatformProvider(config, emptyFeatureManager())
+        val provider = OtelPlatformProvider(config) { emptyFeatureManager() }
         provider.appState shouldBe "unknown"
     }
 
@@ -866,7 +874,7 @@ class OtelPlatformProviderTest : FunSpec({
             context = appContext,
             getIsInForeground = { null }
         )
-        val provider = OtelPlatformProvider(config, emptyFeatureManager())
+        val provider = OtelPlatformProvider(config) { emptyFeatureManager() }
         provider.appState shouldBeOneOf listOf("foreground", "background", "unknown")
     }
 
@@ -878,7 +886,7 @@ class OtelPlatformProviderTest : FunSpec({
             context = null,
             getIsInForeground = null
         )
-        val provider = OtelPlatformProvider(config, emptyFeatureManager())
+        val provider = OtelPlatformProvider(config) { emptyFeatureManager() }
 
         provider.appState shouldBe "unknown"
         provider.appPackageId shouldBe "com.test"
@@ -893,7 +901,7 @@ class OtelPlatformProviderTest : FunSpec({
             .putString(PreferenceOneSignalKeys.MODEL_STORE_PREFIX + configNameSpace, "not valid json {{{")
             .commit()
 
-        val provider = createAndroidOtelPlatformProvider(appContext!!, emptyFeatureManager())
+        val provider = createAndroidOtelPlatformProvider(appContext!!) { emptyFeatureManager() }
         provider.isRemoteLoggingEnabled shouldBe false
         provider.remoteLogLevel shouldBe null
     }
@@ -903,7 +911,7 @@ class OtelPlatformProviderTest : FunSpec({
             .putString(PreferenceOneSignalKeys.MODEL_STORE_PREFIX + configNameSpace, "not valid json {{{")
             .commit()
 
-        val provider = createAndroidOtelPlatformProvider(appContext!!, emptyFeatureManager())
+        val provider = createAndroidOtelPlatformProvider(appContext!!) { emptyFeatureManager() }
         provider.appId shouldContain "e1100000-0000-4000-a000-"
     }
 
@@ -921,7 +929,7 @@ class OtelPlatformProviderTest : FunSpec({
         every { mockPackageManager.getPackageInfo(any<String>(), any<Int>()) } throws android.content.pm.PackageManager.NameNotFoundException()
 
         // When
-        val provider: OtelPlatformProvider = createAndroidOtelPlatformProvider(mockContext, emptyFeatureManager())
+        val provider: OtelPlatformProvider = createAndroidOtelPlatformProvider(mockContext) { emptyFeatureManager() }
 
         // Then
         provider.appVersion shouldBe "unknown"

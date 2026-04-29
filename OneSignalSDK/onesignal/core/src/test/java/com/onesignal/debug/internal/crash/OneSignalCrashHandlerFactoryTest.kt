@@ -38,13 +38,13 @@ class OneSignalCrashHandlerFactoryTest : FunSpec({
     }
 
     test("createCrashHandler should return IOtelCrashHandler") {
-        val handler = OneSignalCrashHandlerFactory.createCrashHandler(appContext, logger, featureManager)
+        val handler = OneSignalCrashHandlerFactory.createCrashHandler(appContext, logger) { featureManager }
 
         handler.shouldBeInstanceOf<IOtelCrashHandler>()
     }
 
     test("createCrashHandler should create handler that can be initialized") {
-        val handler = OneSignalCrashHandlerFactory.createCrashHandler(appContext, logger, featureManager)
+        val handler = OneSignalCrashHandlerFactory.createCrashHandler(appContext, logger) { featureManager }
 
         handler shouldNotBe null
         handler.initialize()
@@ -53,14 +53,14 @@ class OneSignalCrashHandlerFactoryTest : FunSpec({
     test("createCrashHandler should accept mock logger") {
         val mockLogger = mockk<IOtelLogger>(relaxed = true)
 
-        val handler = OneSignalCrashHandlerFactory.createCrashHandler(appContext, mockLogger, featureManager)
+        val handler = OneSignalCrashHandlerFactory.createCrashHandler(appContext, mockLogger) { featureManager }
 
         handler shouldNotBe null
         handler.shouldBeInstanceOf<IOtelCrashHandler>()
     }
 
     test("handler should be idempotent when initialized multiple times") {
-        val handler = OneSignalCrashHandlerFactory.createCrashHandler(appContext, logger, featureManager)
+        val handler = OneSignalCrashHandlerFactory.createCrashHandler(appContext, logger) { featureManager }
 
         handler.initialize()
         handler.initialize() // Should not throw
@@ -72,8 +72,8 @@ class OneSignalCrashHandlerFactoryTest : FunSpec({
         val context1: Context = ApplicationProvider.getApplicationContext()
         val context2: Context = ApplicationProvider.getApplicationContext()
 
-        val handler1 = OneSignalCrashHandlerFactory.createCrashHandler(context1, logger, featureManager)
-        val handler2 = OneSignalCrashHandlerFactory.createCrashHandler(context2, logger, featureManager)
+        val handler1 = OneSignalCrashHandlerFactory.createCrashHandler(context1, logger) { featureManager }
+        val handler2 = OneSignalCrashHandlerFactory.createCrashHandler(context2, logger) { featureManager }
 
         handler1 shouldNotBe null
         handler2 shouldNotBe null

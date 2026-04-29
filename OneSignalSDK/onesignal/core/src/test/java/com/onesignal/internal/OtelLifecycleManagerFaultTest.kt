@@ -59,7 +59,7 @@ class OtelLifecycleManagerFaultTest : FunSpec({
                 appVersion = "1.0",
                 context = context,
             ),
-            featureManager = mockFeatureManager,
+            featureManagerProvider = { mockFeatureManager },
         )
     }
 
@@ -69,14 +69,14 @@ class OtelLifecycleManagerFaultTest : FunSpec({
     }
 
     fun createManager(
-        crashFactory: (Context, IOtelLogger, IFeatureManager) -> IOtelCrashHandler = { _, _, _ -> mockCrashHandler },
+        crashFactory: (Context, IOtelLogger, () -> IFeatureManager) -> IOtelCrashHandler = { _, _, _ -> mockCrashHandler },
         anrFactory: (IOtelPlatformProvider, IOtelLogger, Long, Long) -> IOtelAnrDetector = { _, _, _, _ -> mockAnrDetector },
         telemetryFactory: (IOtelPlatformProvider) -> IOtelOpenTelemetryRemote = { mockTelemetry },
-        ppFactory: (Context, IFeatureManager) -> OtelPlatformProvider = { _, _ -> mockPlatformProvider },
+        ppFactory: (Context, () -> IFeatureManager) -> OtelPlatformProvider = { _, _ -> mockPlatformProvider },
     ): OtelLifecycleManager =
         OtelLifecycleManager(
             context = context,
-            featureManager = mockFeatureManager,
+            featureManagerProvider = { mockFeatureManager },
             crashHandlerFactory = crashFactory,
             anrDetectorFactory = anrFactory,
             remoteTelemetryFactory = telemetryFactory,
