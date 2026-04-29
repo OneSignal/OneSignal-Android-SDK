@@ -13,7 +13,7 @@ import com.onesignal.otel.OtelFactory
  * Callers must verify [OtelSdkSupport.isSupported] before calling [createCrashHandler].
  *
  * Uses minimal dependencies - Context, logger, and a feature manager supplier (so per-event
- * OTel attrs can include `ossdk.features_enabled`). Platform provider uses OtelIdResolver
+ * OTel attrs can include `ossdk.feature_flags`). Platform provider uses OtelIdResolver
  * internally which reads from SharedPreferences.
  */
 internal object OneSignalCrashHandlerFactory {

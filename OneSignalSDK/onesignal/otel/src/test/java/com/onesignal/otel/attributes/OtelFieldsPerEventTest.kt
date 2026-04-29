@@ -69,12 +69,12 @@ class OtelFieldsPerEventTest : FunSpec({
         uid1 shouldNotBe uid2
     }
 
-    test("getAttributes should omit ossdk.features_enabled when no feature flags are enabled") {
+    test("getAttributes should omit ossdk.feature_flags when no feature flags are enabled") {
         setupDefaultMocks(enabledFeatureFlags = emptyList())
 
         val attributes = fields.getAttributes()
 
-        attributes.keys shouldNotContain "ossdk.features_enabled"
+        attributes.keys shouldNotContain "ossdk.feature_flags"
     }
 
     test("getAttributes should encode a single enabled feature flag") {
@@ -82,7 +82,7 @@ class OtelFieldsPerEventTest : FunSpec({
 
         val attributes = fields.getAttributes()
 
-        attributes["ossdk.features_enabled"] shouldBe "sdk_background_threading"
+        attributes["ossdk.feature_flags"] shouldBe "sdk_background_threading"
     }
 
     test("getAttributes should encode multiple flags as a sorted comma-separated string") {
@@ -96,7 +96,7 @@ class OtelFieldsPerEventTest : FunSpec({
 
         val attributes = fields.getAttributes()
 
-        attributes["ossdk.features_enabled"] shouldBe
+        attributes["ossdk.feature_flags"] shouldBe
             "sdk_alpha_feature,sdk_background_threading,sdk_zeta_feature"
     }
 
@@ -110,10 +110,10 @@ class OtelFieldsPerEventTest : FunSpec({
         every { mockPlatformProvider.currentThreadName } returns "main-thread"
         every { mockPlatformProvider.enabledFeatureFlags } answers { states.toList() }
 
-        fields.getAttributes()["ossdk.features_enabled"] shouldBe "sdk_background_threading"
+        fields.getAttributes()["ossdk.feature_flags"] shouldBe "sdk_background_threading"
 
         states.add("sdk_other_flag")
-        fields.getAttributes()["ossdk.features_enabled"] shouldBe
+        fields.getAttributes()["ossdk.feature_flags"] shouldBe
             "sdk_background_threading,sdk_other_flag"
     }
 })
