@@ -31,11 +31,14 @@ interface IOtelPlatformProvider {
      * Read fresh on every access so per-event OTel attributes always reflect the current state.
      *
      * Empty when no flags are enabled or the platform source returns/throws nothing usable.
+     * Defaults to an empty list so existing platform implementations remain source/binary
+     * compatible — platforms that want to populate `ossdk.feature_flags` should override.
      *
      * The order is not guaranteed; consumers that need a deterministic encoding (e.g. for
      * stable log payloads) should sort before serializing.
      */
     val enabledFeatureFlags: List<String>
+        get() = emptyList()
 
     // Per-event attributes (dynamic, calculated per event)
     val appId: String?

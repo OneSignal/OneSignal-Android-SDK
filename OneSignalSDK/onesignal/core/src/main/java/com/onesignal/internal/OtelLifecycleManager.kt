@@ -35,9 +35,11 @@ import com.onesignal.otel.crash.IOtelAnrDetector
  * Thread safety: methods are synchronized on [lock] so that concurrent
  * calls from initEssentials (main) and the config store callback (IO) are safe.
  *
- * All factory parameters default to the real implementations, so production
- * callers can use `OtelLifecycleManager(context)`. Tests can override any
- * factory to inject mocks or throwing stubs.
+ * Production callers construct as
+ * `OtelLifecycleManager(context, featureManagerProvider = { services.getService<IFeatureManager>() })`.
+ * The supplier is invoked lazily (per-event), so it can be passed even when service bootstrap
+ * has not yet completed at construction time. All other factory parameters default to the real
+ * implementations; tests can override any of them to inject mocks or throwing stubs.
  */
 @Suppress("TooManyFunctions")
 internal class OtelLifecycleManager(
