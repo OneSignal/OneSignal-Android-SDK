@@ -219,9 +219,10 @@ internal class OperationRepo(
             } else {
                 queue.add(queueItem)
             }
-        }
-        if (addToStore) {
-            _operationModelStore.add(queueItem.operation)
+            // Inside the lock so queue.add + store.add are atomic vs. the IO-side purge.
+            if (addToStore) {
+                _operationModelStore.add(queueItem.operation)
+            }
         }
 
         waiter.wake(LoopWaiterMessage(flush, 0))
