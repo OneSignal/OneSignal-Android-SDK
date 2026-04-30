@@ -1,14 +1,13 @@
 package com.onesignal.core.internal.operations.impl
 
 import com.onesignal.debug.internal.logging.Logging
-import com.onesignal.user.internal.jwt.IdentityVerificationGates
 import com.onesignal.user.internal.jwt.JwtTokenStore
 
 /**
- * IV-specific behavior layered onto [OperationRepo]. Base-class dispatch sites are gated
- * on [IdentityVerificationGates.newCodePathsRun]; these extensions internally short-circuit
- * on [IdentityVerificationGates.ivBehaviorActive] to stay inert for Phase 3 users (new code
- * path on, IV behavior off).
+ * IV-specific behavior layered onto [OperationRepo]. Base-class dispatch sites are gated on
+ * `IdentityVerificationService.newCodePathsRun`; the caller passes `ivBehaviorActive` through so
+ * these extensions can short-circuit and stay inert for Phase 3 users (new code path on, IV
+ * behavior off).
  */
 
 /**
@@ -22,8 +21,9 @@ import com.onesignal.user.internal.jwt.JwtTokenStore
 internal fun OperationRepo.hasValidJwtIfRequired(
     jwtTokenStore: JwtTokenStore,
     op: com.onesignal.core.internal.operations.Operation,
+    ivBehaviorActive: Boolean,
 ): Boolean {
-    if (!IdentityVerificationGates.ivBehaviorActive || !op.requiresJwt) return true
+    if (!ivBehaviorActive || !op.requiresJwt) return true
     val externalId = op.externalId ?: return false
     return jwtTokenStore.getJwt(externalId) != null
 }
@@ -43,8 +43,9 @@ internal fun OperationRepo.handleFailUnauthorized(
     ops: List<OperationRepo.OperationQueueItem>,
     jwtTokenStore: JwtTokenStore,
     jwtInvalidatedHandler: ((String) -> Unit)?,
+    ivBehaviorActive: Boolean,
 ): Boolean {
-    if (!IdentityVerificationGates.ivBehaviorActive) return false
+    if (!ivBehaviorActive) return false
     val externalId = startingOp.operation.externalId ?: return false
 
     jwtTokenStore.invalidateJwt(externalId)

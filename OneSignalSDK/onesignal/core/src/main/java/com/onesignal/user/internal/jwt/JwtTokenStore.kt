@@ -12,7 +12,7 @@ import org.json.JSONObject
 /**
  * Persistent store mapping externalId -> JWT. Multi-user so ops queued under a previous user
  * can still resolve their JWT at execution time. Storage is unconditional; *usage* of JWTs is
- * gated on [IdentityVerificationGates.ivBehaviorActive].
+ * gated on `IdentityVerificationService.ivBehaviorActive`.
  */
 internal class JwtTokenStore(
     private val _prefs: IPreferencesService,

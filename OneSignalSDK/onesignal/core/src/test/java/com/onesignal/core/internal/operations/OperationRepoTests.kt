@@ -10,9 +10,9 @@ import com.onesignal.core.internal.preferences.PreferenceStores
 import com.onesignal.core.internal.time.impl.Time
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
+import com.onesignal.mocks.CoreInternalMocks
 import com.onesignal.mocks.MockHelper
 import com.onesignal.mocks.MockPreferencesService
-import com.onesignal.user.internal.jwt.IdentityVerificationGates
 import com.onesignal.user.internal.jwt.JwtRequirement
 import com.onesignal.user.internal.jwt.JwtTokenStore
 import com.onesignal.user.internal.operations.ExecutorMocks.Companion.getNewRecordState
@@ -76,6 +76,8 @@ private class Mocks {
 
     val jwtTokenStore: JwtTokenStore = JwtTokenStore(MockPreferencesService())
 
+    var identityVerificationService = CoreInternalMocks.identityVerificationService()
+
     val operationRepo: OperationRepo by lazy {
         spyk(
             OperationRepo(
@@ -85,6 +87,7 @@ private class Mocks {
                 Time(),
                 getNewRecordState(configModelStore),
                 jwtTokenStore,
+                identityVerificationService,
             ),
             recordPrivateCalls = true,
         )
@@ -111,6 +114,7 @@ class OperationRepoTests : FunSpec({
                     Time(),
                     getNewRecordState(mocks.configModelStore),
                     JwtTokenStore(MockPreferencesService()),
+                    CoreInternalMocks.identityVerificationService(),
                 ),
             )
 
@@ -1084,75 +1088,65 @@ class OperationRepoTests : FunSpec({
     }
 
     test("FAIL_UNAUTHORIZED with IV active invalidates JWT, re-queues ops, and fires handler") {
-        IdentityVerificationGates.update(
-            featureFlagOn = false,
-            jwtRequirement = JwtRequirement.REQUIRED,
-            source = "test-setup",
+        val mocks = Mocks()
+        mocks.identityVerificationService = CoreInternalMocks.identityVerificationService(
+            newCodePathsRun = true,
+            ivBehaviorActive = true,
         )
-        try {
-            val mocks = Mocks()
-            mocks.configModelStore.model.useIdentityVerification = JwtRequirement.REQUIRED
+        mocks.configModelStore.model.useIdentityVerification = JwtRequirement.REQUIRED
 
-            val op = mockOperation(externalId = "alice")
-            val opId = op.id
-            coEvery { mocks.executor.execute(any()) } returns ExecutionResponse(ExecutionResult.FAIL_UNAUTHORIZED)
+        val op = mockOperation(externalId = "alice")
+        val opId = op.id
+        coEvery { mocks.executor.execute(any()) } returns ExecutionResponse(ExecutionResult.FAIL_UNAUTHORIZED)
 
-            // Pre-seed the JWT store so invalidation is observable.
-            mocks.jwtTokenStore.putJwt("alice", "stale-token")
+        // Pre-seed the JWT store so invalidation is observable.
+        mocks.jwtTokenStore.putJwt("alice", "stale-token")
 
-            var invalidatedId: String? = null
-            mocks.operationRepo.setJwtInvalidatedHandler { invalidatedId = it }
+        var invalidatedId: String? = null
+        mocks.operationRepo.setJwtInvalidatedHandler { invalidatedId = it }
 
-            mocks.operationRepo.start()
-            // enqueueAndWait with failure should wake waiter with false.
-            val waitResult =
-                runBlocking {
-                    withTimeout(2_000) {
-                        mocks.operationRepo.enqueueAndWait(op)
-                    }
+        mocks.operationRepo.start()
+        // enqueueAndWait with failure should wake waiter with false.
+        val waitResult =
+            runBlocking {
+                withTimeout(2_000) {
+                    mocks.operationRepo.enqueueAndWait(op)
                 }
+            }
 
-            waitResult shouldBe false
-            invalidatedId shouldBe "alice"
-            mocks.jwtTokenStore.getJwt("alice") shouldBe null
-            // Op was re-queued (not dropped from store).
-            verify(exactly = 0) { mocks.operationModelStore.remove(opId) }
-        } finally {
-            IdentityVerificationGates.update(false, JwtRequirement.UNKNOWN, "test-teardown")
-        }
+        waitResult shouldBe false
+        invalidatedId shouldBe "alice"
+        mocks.jwtTokenStore.getJwt("alice") shouldBe null
+        // Op was re-queued (not dropped from store).
+        verify(exactly = 0) { mocks.operationModelStore.remove(opId) }
     }
 
     test("FAIL_UNAUTHORIZED with IV inactive falls back to default drop-on-fail") {
-        IdentityVerificationGates.update(
-            featureFlagOn = true,
-            jwtRequirement = JwtRequirement.NOT_REQUIRED,
-            source = "test-setup",
+        val mocks = Mocks()
+        mocks.identityVerificationService = CoreInternalMocks.identityVerificationService(
+            newCodePathsRun = true,
+            ivBehaviorActive = false,
         )
-        try {
-            val mocks = Mocks()
-            mocks.configModelStore.model.useIdentityVerification = JwtRequirement.NOT_REQUIRED
-            val op = mockOperation(externalId = "alice")
-            val opId = op.id
-            coEvery { mocks.executor.execute(any()) } returns ExecutionResponse(ExecutionResult.FAIL_UNAUTHORIZED)
+        mocks.configModelStore.model.useIdentityVerification = JwtRequirement.NOT_REQUIRED
+        val op = mockOperation(externalId = "alice")
+        val opId = op.id
+        coEvery { mocks.executor.execute(any()) } returns ExecutionResponse(ExecutionResult.FAIL_UNAUTHORIZED)
 
-            var handlerFired = false
-            mocks.operationRepo.setJwtInvalidatedHandler { handlerFired = true }
+        var handlerFired = false
+        mocks.operationRepo.setJwtInvalidatedHandler { handlerFired = true }
 
-            mocks.operationRepo.start()
-            val waitResult =
-                runBlocking {
-                    withTimeout(2_000) {
-                        mocks.operationRepo.enqueueAndWait(op)
-                    }
+        mocks.operationRepo.start()
+        val waitResult =
+            runBlocking {
+                withTimeout(2_000) {
+                    mocks.operationRepo.enqueueAndWait(op)
                 }
+            }
 
-            waitResult shouldBe false
-            handlerFired shouldBe false
-            // Default behavior: drop the op.
-            verify(exactly = 1) { mocks.operationModelStore.remove(opId) }
-        } finally {
-            IdentityVerificationGates.update(false, JwtRequirement.UNKNOWN, "test-teardown")
-        }
+        waitResult shouldBe false
+        handlerFired shouldBe false
+        // Default behavior: drop the op.
+        verify(exactly = 1) { mocks.operationModelStore.remove(opId) }
     }
 }) {
     companion object {
