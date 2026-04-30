@@ -82,6 +82,9 @@ internal class NotificationLifecycleService(
                 val openedResult = NotificationHelper.generateNotificationOpenedResult(data, _time)
                 extOpenedCallback.fireOnMain { it.onClick(openedResult) }
             }
+            // Clear the queue after replaying so subsequent listener additions don't refire old
+            // events to already-subscribed listeners.
+            unprocessedOpenedNotifs.clear()
         }
     }
 

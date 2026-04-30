@@ -9,6 +9,7 @@ import com.onesignal.core.internal.device.IDeviceService
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.mocks.MockHelper
+import com.onesignal.notifications.INotificationClickListener
 import com.onesignal.notifications.internal.analytics.IAnalyticsTracker
 import com.onesignal.notifications.internal.backend.INotificationBackendService
 import com.onesignal.notifications.internal.lifecycle.impl.NotificationLifecycleService
@@ -28,6 +29,7 @@ import kotlinx.coroutines.withTimeout
 import org.json.JSONArray
 import org.json.JSONObject
 import org.robolectric.Robolectric
+import org.robolectric.shadows.ShadowLooper
 
 private class Mocks {
     val context = ApplicationProvider.getApplicationContext<Context>()
@@ -115,6 +117,54 @@ class NotificationLifecycleServiceTests : FunSpec({
                 withArg { Any() },
             )
         }
+    }
+
+    test("queued click events are not refired when a second listener is added") {
+        // Given
+        val mocks = Mocks()
+        val notificationLifecycleService = mocks.notificationLifecycleService
+        val activity = mocks.activity
+
+        val firstListener =
+            mockk<INotificationClickListener>().apply {
+                every { onClick(any()) } returns Unit
+            }
+        val secondListener =
+            mockk<INotificationClickListener>().apply {
+                every { onClick(any()) } returns Unit
+            }
+
+        val payload =
+            JSONArray()
+                .put(
+                    JSONObject()
+                        .put("alert", "test message")
+                        .put(
+                            "custom",
+                            JSONObject()
+                                .put("i", "UUID1"),
+                        ),
+                )
+
+        // When: a notification is opened before any click listener is registered, it is queued.
+        notificationLifecycleService.notificationOpened(activity, payload)
+
+        // And: the first listener is added, draining the queued event.
+        notificationLifecycleService.addExternalClickListener(firstListener)
+        delay(100)
+        ShadowLooper.runUiThreadTasksIncludingDelayedTasks()
+
+        // Then: the first listener receives the queued event exactly once.
+        coVerify(timeout = 1000, exactly = 1) { firstListener.onClick(any()) }
+
+        // When: a second listener is added afterwards.
+        notificationLifecycleService.addExternalClickListener(secondListener)
+        delay(100)
+        ShadowLooper.runUiThreadTasksIncludingDelayedTasks()
+
+        // Then: the queue was cleared after the first replay, so neither listener fires again.
+        coVerify(timeout = 1000, exactly = 1) { firstListener.onClick(any()) }
+        coVerify(exactly = 0) { secondListener.onClick(any()) }
     }
 
     test("ensure notificationOpened makes backend updates in a background process") {
