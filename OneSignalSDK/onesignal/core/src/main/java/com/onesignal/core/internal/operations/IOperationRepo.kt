@@ -50,14 +50,6 @@ interface IOperationRepo {
      * (single handler — not multi-subscriber).
      */
     fun setJwtInvalidatedHandler(handler: ((externalId: String) -> Unit)?)
-
-    /**
-     * Notification from [com.onesignal.core.internal.config.impl.IdentityVerificationService]
-     * that a config HYDRATE event landed. Implementor handles the post-HYDRATE maintenance:
-     * await initialization, evict anon ops if [ivRequired], release the pre-HYDRATE deferral
-     * by force-executing.
-     */
-    fun onJwtConfigHydrated(ivRequired: Boolean)
 }
 
 // Extension function so the syntax containsInstanceOf<Operation>() can be used over

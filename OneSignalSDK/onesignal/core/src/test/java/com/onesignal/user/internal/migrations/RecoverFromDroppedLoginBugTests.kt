@@ -5,6 +5,7 @@ import com.onesignal.core.internal.operations.impl.OperationRepo
 import com.onesignal.core.internal.time.impl.Time
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
+import com.onesignal.mocks.CoreInternalMocks
 import com.onesignal.mocks.MockHelper
 import com.onesignal.mocks.MockPreferencesService
 import com.onesignal.user.internal.jwt.JwtRequirement
@@ -46,6 +47,7 @@ private class Mocks {
                 Time(),
                 ExecutorMocks.getNewRecordState(configModelStore),
                 JwtTokenStore(MockPreferencesService()),
+                CoreInternalMocks.identityVerificationService(),
             ),
         )
 

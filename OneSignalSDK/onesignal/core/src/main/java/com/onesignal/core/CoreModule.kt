@@ -71,7 +71,9 @@ internal class CoreModule : IModule {
         builder.register<FeatureFlagsRefreshService>().provides<IStartableService>()
 
         builder.register<JwtTokenStore>().provides<JwtTokenStore>()
-        builder.register<IdentityVerificationService>().provides<IStartableService>()
+        builder.register<IdentityVerificationService>()
+            .provides<IdentityVerificationService>()
+            .provides<IStartableService>()
 
         // Operations
         builder.register<OperationModelStore>().provides<OperationModelStore>()

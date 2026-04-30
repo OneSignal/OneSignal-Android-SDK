@@ -4,6 +4,7 @@ import com.onesignal.common.IDManager
 import com.onesignal.common.threading.WaiterWithValue
 import com.onesignal.common.threading.suspendifyOnIO
 import com.onesignal.core.internal.config.ConfigModelStore
+import com.onesignal.core.internal.config.impl.IdentityVerificationService
 import com.onesignal.core.internal.operations.ExecutionResult
 import com.onesignal.core.internal.operations.GroupComparisonType
 import com.onesignal.core.internal.operations.IOperationExecutor
@@ -13,7 +14,6 @@ import com.onesignal.core.internal.startup.IStartableService
 import com.onesignal.core.internal.time.ITime
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
-import com.onesignal.user.internal.jwt.IdentityVerificationGates
 import com.onesignal.user.internal.jwt.JwtRequirement
 import com.onesignal.user.internal.jwt.JwtTokenStore
 import com.onesignal.user.internal.operations.LoginUserOperation
@@ -35,6 +35,7 @@ internal class OperationRepo(
     private val _time: ITime,
     private val _newRecordState: NewRecordsState,
     private val _jwtTokenStore: JwtTokenStore,
+    private val _identityVerificationService: IdentityVerificationService,
 ) : IOperationRepo, IStartableService {
 
     @Volatile
@@ -113,6 +114,12 @@ internal class OperationRepo(
 
     override fun start() {
         paused = false
+        // Wire post-HYDRATE choreography. Constructor injection of IOperationRepo into
+        // IdentityVerificationService would create a cycle, so the service exposes a setter
+        // that we call here. Same pattern as setJwtInvalidatedHandler.
+        _identityVerificationService.setOnJwtConfigHydratedHandler { ivRequired ->
+            onJwtConfigHydrated(ivRequired)
+        }
         scope.launch {
             // load saved operations first then start processing the queue to ensure correct operation order
             loadSavedOperations()
@@ -280,9 +287,9 @@ internal class OperationRepo(
      * Post-HYDRATE maintenance: scheduled on IO so it runs *after* `loadSavedOperations`
      * populates the queue (fix for an earlier race where the purge ran against an empty
      * in-memory queue on cold start). Force-execute always fires to release the pre-HYDRATE
-     * deferral in [getNextOps].
+     * deferral in [getNextOps]. Invoked via the handler registered in [start].
      */
-    override fun onJwtConfigHydrated(ivRequired: Boolean) {
+    internal fun onJwtConfigHydrated(ivRequired: Boolean) {
         suspendifyOnIO {
             awaitInitialized()
             if (ivRequired) {
@@ -356,8 +363,14 @@ internal class OperationRepo(
                 ExecutionResult.FAIL_UNAUTHORIZED -> {
                     // Outer gate: dispatch to IV extension only on new code paths.
                     val handled =
-                        IdentityVerificationGates.newCodePathsRun &&
-                            handleFailUnauthorized(startingOp, ops, _jwtTokenStore, _jwtInvalidatedHandler)
+                        _identityVerificationService.newCodePathsRun &&
+                            handleFailUnauthorized(
+                                startingOp,
+                                ops,
+                                _jwtTokenStore,
+                                _jwtInvalidatedHandler,
+                                _identityVerificationService.ivBehaviorActive,
+                            )
                     if (!handled) {
                         // IV inactive or anon op: drop and wake waiters, matching FAIL_NORETRY.
                         Logging.warn("Operation execution failed without retry: $operations")
@@ -485,6 +498,9 @@ internal class OperationRepo(
             return null
         }
 
+        // Snapshot gate state once per pass so all queue items see the same IV view.
+        val newCodePathsRun = _identityVerificationService.newCodePathsRun
+        val ivBehaviorActive = _identityVerificationService.ivBehaviorActive
         return synchronized(queue) {
             val startingOp =
                 queue.firstOrNull {
@@ -492,7 +508,7 @@ internal class OperationRepo(
                         _newRecordState.canAccess(it.operation.applyToRecordId) &&
                         it.bucket <= bucketFilter &&
                         // Outer gate: skip IV JWT check entirely on old code path.
-                        (!IdentityVerificationGates.newCodePathsRun || hasValidJwtIfRequired(_jwtTokenStore, it.operation))
+                        (!newCodePathsRun || hasValidJwtIfRequired(_jwtTokenStore, it.operation, ivBehaviorActive))
                 }
 
             if (startingOp != null) {
