@@ -37,32 +37,6 @@ internal class DeviceRegistrationListener(
         _configModelStore.subscribe(this)
         _notificationsManager.addPermissionObserver(this)
         _subscriptionManager.subscribe(this)
-
-        // If notification permission is already granted at startup (e.g. after reinstall or
-        // app data clear), the cached push subscription can be stuck at NO_PERMISSION:
-        //   - The permission observer (onNotificationPermissionChange) won't fire because
-        //     permission did not change — NotificationsManager.setPermissionStatusAndFire
-        //     only emits when oldPermissionStatus != isEnabled.
-        //   - The config-hydration path (onModelReplaced/HYDRATE) is triggered by
-        //     ConfigModelStoreListener.fetchParams on every startup, but it runs on IO and
-        //     depends on a successful params backend call, so it leaves a window of stale
-        //     state and may not run at all when the device is offline.
-        // Eagerly retrieve the push token here to close that window, but only when the
-        // cached push subscription doesn't already reflect a healthy SUBSCRIBED state —
-        // this avoids a redundant FCM round-trip on every warm start.
-        if (_notificationsManager.permission && needsPushTokenRefresh()) {
-            retrievePushTokenAndUpdateSubscription()
-        }
-    }
-
-    private fun needsPushTokenRefresh(): Boolean {
-        val pushModel = _subscriptionManager.pushSubscriptionModel
-        // An uninitialized push subscription has an empty model.id (see UninitializedPushSubscription);
-        // a real push subscription always has an id (local UUID or server-assigned).
-        if (pushModel.id.isEmpty()) {
-            return true
-        }
-        return pushModel.status != SubscriptionStatus.SUBSCRIBED
     }
 
     override fun onModelReplaced(
