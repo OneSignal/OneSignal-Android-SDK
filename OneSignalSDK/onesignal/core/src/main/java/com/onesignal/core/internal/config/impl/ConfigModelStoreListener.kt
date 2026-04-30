@@ -83,12 +83,10 @@ internal class ConfigModelStoreListener(
                     config.fcmParams.projectId = params.fcmParams.projectId
                     config.fcmParams.appId = params.fcmParams.appId
                     config.fcmParams.apiKey = params.fcmParams.apiKey
+                    config.useIdentityVerification = JwtRequirement.fromBoolean(params.useIdentityVerification ?: false)
 
                     // these are only copied from the backend params when the backend has set them.
                     params.enterprise?.let { config.enterprise = it }
-                    params.useIdentityVerification?.let {
-                        config.useIdentityVerification = JwtRequirement.fromBoolean(it)
-                    }
                     params.firebaseAnalytics?.let { config.firebaseAnalytics = it }
                     params.restoreTTLFilter?.let { config.restoreTTLFilter = it }
                     params.clearGroupOnSummaryClick?.let { config.clearGroupOnSummaryClick = it }
