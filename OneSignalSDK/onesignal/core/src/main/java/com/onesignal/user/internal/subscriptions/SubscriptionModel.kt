@@ -92,6 +92,23 @@ class SubscriptionModel : Model() {
             setBooleanProperty(::optedIn.name, value)
         }
 
+    /**
+     * Internal-only flag (not surfaced via the public API) used to suppress backend
+     * subscription operations for this model. Set to `true` on logout under Identity
+     * Verification: the new device-scoped (anonymous) user can't authenticate without
+     * a JWT, so the SDK must not generate create-subscription ops for it. The
+     * [SubscriptionModelStoreListener] honors this flag by short-circuiting to
+     * `(enabled = false, status = UNSUBSCRIBE)` regardless of [optedIn] / [status].
+     *
+     * Defaults to `false`. On the next login, [com.onesignal.user.internal.UserSwitcher]
+     * creates a fresh model that does not carry this flag, restoring the real state.
+     */
+    var isDisabledInternally: Boolean
+        get() = getBooleanProperty(::isDisabledInternally.name) { false }
+        set(value) {
+            setBooleanProperty(::isDisabledInternally.name, value)
+        }
+
     var type: SubscriptionType
         get() = getEnumProperty(::type.name)
         set(value) {
