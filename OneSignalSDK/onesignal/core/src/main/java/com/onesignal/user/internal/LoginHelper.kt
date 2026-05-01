@@ -4,13 +4,15 @@ import com.onesignal.core.internal.config.ConfigModel
 import com.onesignal.core.internal.operations.IOperationRepo
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.user.internal.identity.IdentityModelStore
+import com.onesignal.user.internal.jwt.JwtTokenStore
 import com.onesignal.user.internal.operations.LoginUserOperation
 
-class LoginHelper(
+internal class LoginHelper(
     private val identityModelStore: IdentityModelStore,
     private val userSwitcher: UserSwitcher,
     private val operationRepo: IOperationRepo,
     private val configModel: ConfigModel,
+    private val jwtTokenStore: JwtTokenStore,
     private val lock: Any,
 ) {
     internal data class LoginEnqueueContext(
@@ -35,10 +37,19 @@ class LoginHelper(
             val currentOneSignalId = identityModelStore.model.onesignalId
 
             if (currentExternalId == externalId) {
+                // Even when no user-switch happens, an updated JWT for the same externalId
+                // should be stored so subsequent requests use the fresh token.
+                if (jwtBearerToken != null) {
+                    jwtTokenStore.putJwt(externalId, jwtBearerToken)
+                }
                 return null
             }
 
-            // TODO: Set JWT Token for all future requests.
+            // Store the JWT before the LoginUserOperation enqueues so that when the op
+            // dispatches, the JWT lookup in `hasValidJwtIfRequired` already succeeds.
+            if (jwtBearerToken != null) {
+                jwtTokenStore.putJwt(externalId, jwtBearerToken)
+            }
             userSwitcher.createAndSwitchToNewUser { identityModel, _ ->
                 identityModel.externalId = externalId
             }

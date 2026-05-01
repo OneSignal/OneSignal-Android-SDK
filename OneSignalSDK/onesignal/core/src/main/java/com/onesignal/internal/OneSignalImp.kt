@@ -2,6 +2,7 @@ package com.onesignal.internal
 
 import android.content.Context
 import com.onesignal.IOneSignal
+import com.onesignal.IUserJwtInvalidatedListener
 import com.onesignal.common.AndroidUtils
 import com.onesignal.common.DeviceUtils
 import com.onesignal.common.OneSignalUtils
@@ -35,8 +36,10 @@ import com.onesignal.user.IUserManager
 import com.onesignal.user.UserModule
 import com.onesignal.user.internal.LoginHelper
 import com.onesignal.user.internal.LogoutHelper
+import com.onesignal.user.internal.UserManager
 import com.onesignal.user.internal.UserSwitcher
 import com.onesignal.user.internal.identity.IdentityModelStore
+import com.onesignal.user.internal.jwt.JwtTokenStore
 import com.onesignal.user.internal.properties.PropertiesModelStore
 import com.onesignal.user.internal.resolveAppId
 import com.onesignal.user.internal.subscriptions.SubscriptionModelStore
@@ -142,6 +145,7 @@ internal class OneSignalImp(
     private val propertiesModelStore: PropertiesModelStore by lazy { services.getService<PropertiesModelStore>() }
     private val subscriptionModelStore: SubscriptionModelStore by lazy { services.getService<SubscriptionModelStore>() }
     private val preferencesService: IPreferencesService by lazy { services.getService<IPreferencesService>() }
+    private val jwtTokenStore: JwtTokenStore by lazy { services.getService<JwtTokenStore>() }
     private val listOfModules =
         listOf(
             "com.onesignal.notifications.NotificationsModule",
@@ -220,6 +224,7 @@ internal class OneSignalImp(
             userSwitcher = userSwitcher,
             operationRepo = operationRepo,
             configModel = configModel,
+            jwtTokenStore = jwtTokenStore,
             lock = loginLogoutLock,
         )
     }
@@ -419,6 +424,47 @@ internal class OneSignalImp(
                 }
             }.start()
         }
+    }
+
+    override fun updateUserJwt(
+        externalId: String,
+        token: String,
+    ) {
+        Logging.log(LogLevel.DEBUG, "updateUserJwt(externalId: $externalId, token: ...${token.takeLast(8)})")
+
+        if (isBackgroundThreadingEnabled) {
+            waitForInit(operationName = "updateUserJwt")
+        } else {
+            if (!isInitialized) {
+                throw IllegalStateException("Must call 'initWithContext' before 'updateUserJwt'")
+            }
+        }
+
+        jwtTokenStore.putJwt(externalId, token)
+        // Wake the queue so any deferred ops can dispatch with the fresh token.
+        operationRepo.forceExecuteOperations()
+    }
+
+    override fun addUserJwtInvalidatedListener(listener: IUserJwtInvalidatedListener) {
+        if (isBackgroundThreadingEnabled) {
+            waitForInit(operationName = "addUserJwtInvalidatedListener")
+        } else {
+            if (!isInitialized) {
+                throw IllegalStateException("Must call 'initWithContext' before 'addUserJwtInvalidatedListener'")
+            }
+        }
+        services.getService<UserManager>().addJwtInvalidatedListener(listener)
+    }
+
+    override fun removeUserJwtInvalidatedListener(listener: IUserJwtInvalidatedListener) {
+        if (isBackgroundThreadingEnabled) {
+            waitForInit(operationName = "removeUserJwtInvalidatedListener")
+        } else {
+            if (!isInitialized) {
+                throw IllegalStateException("Must call 'initWithContext' before 'removeUserJwtInvalidatedListener'")
+            }
+        }
+        services.getService<UserManager>().removeJwtInvalidatedListener(listener)
     }
 
     override fun <T> hasService(c: Class<T>): Boolean = services.hasService(c)
@@ -660,6 +706,22 @@ internal class OneSignalImp(
 
         val context = loginHelper.switchUser(externalId, jwtBearerToken) ?: return@withContext
         loginHelper.enqueueLogin(context)
+    }
+
+    override suspend fun updateUserJwtSuspend(
+        externalId: String,
+        token: String,
+    ) = withContext(runtimeIoDispatcher) {
+        Logging.log(LogLevel.DEBUG, "updateUserJwtSuspend(externalId: $externalId, token: ...${token.takeLast(8)})")
+
+        suspendUntilInit(operationName = "updateUserJwt")
+
+        if (!isInitialized) {
+            throw IllegalStateException("'initWithContext failed' before 'updateUserJwt'")
+        }
+
+        jwtTokenStore.putJwt(externalId, token)
+        operationRepo.forceExecuteOperations()
     }
 
     override suspend fun logoutSuspend() =
