@@ -3,6 +3,7 @@ package com.onesignal.user.internal.operations.impl.executors
 import com.onesignal.common.NetworkUtils
 import com.onesignal.common.exceptions.BackendException
 import com.onesignal.common.modeling.ModelChangeTags
+import com.onesignal.core.internal.config.impl.IdentityVerificationService
 import com.onesignal.core.internal.operations.ExecutionResponse
 import com.onesignal.core.internal.operations.ExecutionResult
 import com.onesignal.core.internal.operations.IOperationExecutor
@@ -11,7 +12,6 @@ import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.user.internal.backend.ISubscriptionBackendService
 import com.onesignal.user.internal.backend.IdentityConstants
 import com.onesignal.user.internal.identity.IdentityModelStore
-import com.onesignal.user.internal.jwt.IdentityVerificationGates
 import com.onesignal.user.internal.operations.LoginUserFromSubscriptionOperation
 import com.onesignal.user.internal.operations.RefreshUserOperation
 import com.onesignal.user.internal.properties.PropertiesModel
@@ -21,6 +21,7 @@ internal class LoginUserFromSubscriptionOperationExecutor(
     private val _subscriptionBackend: ISubscriptionBackendService,
     private val _identityModelStore: IdentityModelStore,
     private val _propertiesModelStore: PropertiesModelStore,
+    private val _identityVerificationService: IdentityVerificationService,
 ) : IOperationExecutor {
     override val operations: List<String>
         get() = listOf(LOGIN_USER_FROM_SUBSCRIPTION_USER)
@@ -30,7 +31,7 @@ internal class LoginUserFromSubscriptionOperationExecutor(
 
         // The getIdentityFromSubscription endpoint isn't allowed when `jwt_required == true`; the
         // v4→v5 migration path this executor exists for only applies to non-IV apps. Drop on IV.
-        if (IdentityVerificationGates.newCodePathsRun && shouldFailLoginUserFromSubscription()) {
+        if (_identityVerificationService.newCodePathsRun && shouldFailLoginUserFromSubscription(_identityVerificationService.ivBehaviorActive)) {
             Logging.warn("LoginUserFromSubscriptionOperation is not supported when identity verification is enabled. Dropping.")
             return ExecutionResponse(ExecutionResult.FAIL_NORETRY)
         }
