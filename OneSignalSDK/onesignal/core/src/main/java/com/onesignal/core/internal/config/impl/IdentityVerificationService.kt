@@ -24,7 +24,7 @@ import com.onesignal.user.internal.jwt.JwtRequirement
  * Consumers (e.g. OperationRepo) wire post-HYDRATE behavior via [setOnJwtConfigHydratedHandler];
  * the handler fires once per HYDRATE with `ivRequired = useIdentityVerification == REQUIRED`.
  */
-internal class IdentityVerificationService(
+class IdentityVerificationService(
     private val featureManager: IFeatureManager,
     private val configModelStore: ConfigModelStore,
 ) : IStartableService, ISingletonModelStoreChangeHandler<ConfigModel> {

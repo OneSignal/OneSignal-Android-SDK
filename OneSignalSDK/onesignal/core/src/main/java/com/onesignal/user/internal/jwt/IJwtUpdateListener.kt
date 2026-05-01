@@ -5,7 +5,7 @@ package com.onesignal.user.internal.jwt
  * Listeners should call [JwtTokenStore.getJwt] for the current value — event delivery
  * order is not guaranteed to match mutation order across concurrent writers.
  */
-internal interface IJwtUpdateListener {
+interface IJwtUpdateListener {
     /** Fired when a JWT was added or refreshed (`putJwt`), or when stale entries are pruned. */
     fun onJwtUpdated(externalId: String) {}
 

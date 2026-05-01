@@ -34,7 +34,29 @@ internal class InAppBackendService(
         delay(rywDelay) // Delay by the specified amount
 
         val baseUrl = "apps/$appId/subscriptions/$subscriptionId/iams"
-        return attemptFetchWithRetries(baseUrl, rywData, sessionDurationProvider)
+        return attemptFetchWithRetries(baseUrl, rywData, sessionDurationProvider, jwt = null)
+    }
+
+    override suspend fun listInAppMessagesIv(
+        appId: String,
+        aliasLabel: String,
+        aliasValue: String,
+        subscriptionId: String,
+        rywData: RywData?,
+        sessionDurationProvider: () -> Long,
+        jwt: String?,
+    ): List<InAppMessage>? {
+        val baseUrl = "apps/$appId/users/by/$aliasLabel/$aliasValue/subscriptions/$subscriptionId/iams"
+
+        // Fallback path: caller exhausted RYW-aware retries and is asking for a no-RYW fetch
+        // (e.g. after stale RYW token). Skip the RYW-token header; let the request through.
+        if (rywData == null) {
+            return fetchInAppMessagesWithoutRywToken(baseUrl, sessionDurationProvider, jwt)
+        }
+
+        val rywDelay = rywData.rywDelay ?: DEFAULT_RYW_DELAY_MS
+        delay(rywDelay)
+        return attemptFetchWithRetries(baseUrl, rywData, sessionDurationProvider, jwt)
     }
 
     override suspend fun getIAMData(
@@ -209,6 +231,7 @@ internal class InAppBackendService(
         baseUrl: String,
         rywData: RywData,
         sessionDurationProvider: () -> Long,
+        jwt: String?,
     ): List<InAppMessage>? {
         var attempts = 0
         var retryLimit: Int = 0 // retry limit is remote defined & set dynamically below
@@ -220,6 +243,7 @@ internal class InAppBackendService(
                     rywToken = rywData.rywToken,
                     sessionDuration = sessionDurationProvider(),
                     retryCount = retryCount,
+                    jwt = jwt,
                 )
             val response = _httpClient.get(baseUrl, values)
 
@@ -234,6 +258,10 @@ internal class InAppBackendService(
                 response.retryAfterSeconds?.let {
                     delay(it * 1_000L)
                 }
+            } else if (NetworkUtils.getResponseStatusType(response.statusCode) == NetworkUtils.ResponseStatusType.UNAUTHORIZED) {
+                // 401/403 — caller (InAppMessagesManager IV path) needs to surface this so it can
+                // save retry state and re-fetch once the JWT is refreshed.
+                throw BackendException(response.statusCode, response.payload, response.retryAfterSeconds)
             } else if (response.statusCode in 500..599) {
                 return null
             } else {
@@ -244,24 +272,28 @@ internal class InAppBackendService(
         } while (attempts <= retryLimit)
 
         // Final attempt without the RYW token if retries fail
-        return fetchInAppMessagesWithoutRywToken(baseUrl, sessionDurationProvider)
+        return fetchInAppMessagesWithoutRywToken(baseUrl, sessionDurationProvider, jwt)
     }
 
     private suspend fun fetchInAppMessagesWithoutRywToken(
         url: String,
         sessionDurationProvider: () -> Long,
+        jwt: String? = null,
     ): List<InAppMessage>? {
         val response =
             _httpClient.get(
                 url,
                 OptionalHeaders(
                     sessionDuration = sessionDurationProvider(),
+                    jwt = jwt,
                 ),
             )
 
         if (response.isSuccess) {
             val jsonResponse = response.payload?.let { JSONObject(it) }
             return jsonResponse?.let { hydrateInAppMessages(it) }
+        } else if (NetworkUtils.getResponseStatusType(response.statusCode) == NetworkUtils.ResponseStatusType.UNAUTHORIZED) {
+            throw BackendException(response.statusCode, response.payload, response.retryAfterSeconds)
         } else {
             return null
         }

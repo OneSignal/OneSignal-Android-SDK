@@ -27,6 +27,29 @@ internal interface IInAppBackendService {
     ): List<InAppMessage>?
 
     /**
+     * IV-aware list of in-app messages. Hits the alias-based endpoint
+     * (`apps/{appId}/users/by/{aliasLabel}/{aliasValue}/subscriptions/{subscriptionId}/iams`)
+     * and attaches a JWT bearer token when supplied. Used only when
+     * `IdentityVerificationService.newCodePathsRun` is true; Phase 1 callers continue to use
+     * [listInAppMessages].
+     *
+     * Throws [BackendException] on 401/403 so the caller can save retry state and re-fetch
+     * once the JWT is refreshed (via `IUserJwtInvalidatedListener` → `updateUserJwt`).
+     *
+     * [rywData] may be null when this is a fallback retry after the RYW-aware path exhausted
+     * its retry budget — in which case the request is sent without the RYW token.
+     */
+    suspend fun listInAppMessagesIv(
+        appId: String,
+        aliasLabel: String,
+        aliasValue: String,
+        subscriptionId: String,
+        rywData: RywData?,
+        sessionDurationProvider: () -> Long,
+        jwt: String?,
+    ): List<InAppMessage>?
+
+    /**
      * Retrieve the data for a specific In App Message.
      *
      * @param appId The ID of the application that the IAM will be retrieved from.
