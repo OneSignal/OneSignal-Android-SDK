@@ -5,7 +5,9 @@ import com.onesignal.core.internal.operations.IOperationRepo
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.mocks.MockHelper
+import com.onesignal.mocks.MockPreferencesService
 import com.onesignal.user.internal.identity.IdentityModel
+import com.onesignal.user.internal.jwt.JwtTokenStore
 import com.onesignal.user.internal.operations.LoginUserOperation
 import com.onesignal.user.internal.properties.PropertiesModel
 import io.kotest.core.spec.style.FunSpec
@@ -56,6 +58,7 @@ class LoginHelperTests : FunSpec({
                 userSwitcher = mockUserSwitcher,
                 operationRepo = mockOperationRepo,
                 configModel = mockConfigModel,
+                jwtTokenStore = JwtTokenStore(MockPreferencesService()),
                 lock = loginLock,
             )
 
@@ -109,6 +112,7 @@ class LoginHelperTests : FunSpec({
                 userSwitcher = mockUserSwitcher,
                 operationRepo = mockOperationRepo,
                 configModel = mockConfigModel,
+                jwtTokenStore = JwtTokenStore(MockPreferencesService()),
                 lock = loginLock,
             )
 
@@ -175,6 +179,7 @@ class LoginHelperTests : FunSpec({
                 userSwitcher = mockUserSwitcher,
                 operationRepo = mockOperationRepo,
                 configModel = mockConfigModel,
+                jwtTokenStore = JwtTokenStore(MockPreferencesService()),
                 lock = loginLock,
             )
 
@@ -237,6 +242,7 @@ class LoginHelperTests : FunSpec({
                 userSwitcher = mockUserSwitcher,
                 operationRepo = mockOperationRepo,
                 configModel = mockConfigModel,
+                jwtTokenStore = JwtTokenStore(MockPreferencesService()),
                 lock = loginLock,
             )
 
@@ -249,5 +255,84 @@ class LoginHelperTests : FunSpec({
         // Then - should still switch users but operation fails
         verify(exactly = 1) { mockUserSwitcher.createAndSwitchToNewUser(suppressBackendOperation = any(), modify = any()) }
         coVerify(exactly = 1) { mockOperationRepo.enqueueAndWait(any()) }
+    }
+
+    test("login with JWT stores token in JwtTokenStore before enqueueing op") {
+        // Given
+        val mockIdentityModelStore =
+            MockHelper.identityModelStore { model ->
+                model.externalId = null
+                model.onesignalId = currentOneSignalId
+            }
+        val mockUserSwitcher = mockk<UserSwitcher>(relaxed = true)
+        every {
+            mockUserSwitcher.createAndSwitchToNewUser(suppressBackendOperation = any(), modify = any())
+        } answers {
+            val modifier = arg<(IdentityModel, PropertiesModel) -> Unit>(1)
+            val newIdentity = mockk<IdentityModel>(relaxed = true)
+            val newProperties = mockk<PropertiesModel>(relaxed = true)
+            modifier(newIdentity, newProperties)
+            mockIdentityModelStore.model.onesignalId = newOneSignalId
+            mockIdentityModelStore.model.externalId = newExternalId
+        }
+        val mockOperationRepo = mockk<IOperationRepo>(relaxed = true)
+        coEvery { mockOperationRepo.enqueueAndWait(any()) } returns true
+        val mockConfigModel = mockk<ConfigModel>()
+        every { mockConfigModel.appId } returns appId
+        val jwtTokenStore = JwtTokenStore(MockPreferencesService())
+
+        val loginHelper =
+            LoginHelper(
+                identityModelStore = mockIdentityModelStore,
+                userSwitcher = mockUserSwitcher,
+                operationRepo = mockOperationRepo,
+                configModel = mockConfigModel,
+                jwtTokenStore = jwtTokenStore,
+                lock = Any(),
+            )
+
+        // When
+        runBlocking {
+            val context = loginHelper.switchUser(newExternalId, jwtBearerToken = "the-jwt")
+            if (context != null) loginHelper.enqueueLogin(context)
+        }
+
+        // Then: JWT was stored under the new externalId.
+        jwtTokenStore.getJwt(newExternalId) shouldBe "the-jwt"
+    }
+
+    test("login with same externalId + new JWT updates the stored token") {
+        // Given: already logged in as currentExternalId
+        val mockIdentityModelStore =
+            MockHelper.identityModelStore { model ->
+                model.externalId = currentExternalId
+                model.onesignalId = currentOneSignalId
+            }
+        val mockUserSwitcher = mockk<UserSwitcher>(relaxed = true)
+        val mockOperationRepo = mockk<IOperationRepo>(relaxed = true)
+        val mockConfigModel = mockk<ConfigModel>()
+        every { mockConfigModel.appId } returns appId
+        val jwtTokenStore = JwtTokenStore(MockPreferencesService())
+        jwtTokenStore.putJwt(currentExternalId, "old-jwt")
+
+        val loginHelper =
+            LoginHelper(
+                identityModelStore = mockIdentityModelStore,
+                userSwitcher = mockUserSwitcher,
+                operationRepo = mockOperationRepo,
+                configModel = mockConfigModel,
+                jwtTokenStore = jwtTokenStore,
+                lock = Any(),
+            )
+
+        // When: login with same externalId but new JWT
+        runBlocking {
+            val context = loginHelper.switchUser(currentExternalId, jwtBearerToken = "new-jwt")
+            if (context != null) loginHelper.enqueueLogin(context)
+        }
+
+        // Then: no user-switch happened, but JWT was refreshed.
+        verify(exactly = 0) { mockUserSwitcher.createAndSwitchToNewUser(suppressBackendOperation = any(), modify = any()) }
+        jwtTokenStore.getJwt(currentExternalId) shouldBe "new-jwt"
     }
 })

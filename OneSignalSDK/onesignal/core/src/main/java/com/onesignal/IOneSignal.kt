@@ -131,6 +131,35 @@ interface IOneSignal {
      */
     fun logout()
 
+    /**
+     * Update the JWT bearer token associated with [externalId]. Use this when your backend
+     * has issued a new JWT for an already-logged-in user (e.g. in response to a previous
+     * [IUserJwtInvalidatedListener.onUserJwtInvalidated] callback). Stores the JWT and
+     * wakes the operation queue so any deferred ops can dispatch with the fresh token.
+     *
+     * @param externalId The external ID the JWT belongs to.
+     * @param token The new JWT bearer token issued by your backend.
+     */
+    fun updateUserJwt(
+        externalId: String,
+        token: String,
+    )
+
+    /**
+     * Subscribe a listener for JWT-invalidated events. Fires on a background thread when
+     * the SDK detects that the stored JWT for a user is no longer valid (typically after
+     * a 401 from the OneSignal backend). Apps should respond by fetching a fresh JWT from
+     * their backend and supplying it via [updateUserJwt].
+     *
+     * Listener replay: if an invalidation has already occurred before this listener is
+     * registered, the most recent invalidation is delivered to the new listener so apps
+     * that subscribe late don't miss the signal.
+     */
+    fun addUserJwtInvalidatedListener(listener: IUserJwtInvalidatedListener)
+
+    /** Unsubscribe a listener previously registered via [addUserJwtInvalidatedListener]. */
+    fun removeUserJwtInvalidatedListener(listener: IUserJwtInvalidatedListener)
+
     // Suspend versions of property accessors and methods to avoid blocking threads
 
     /**
