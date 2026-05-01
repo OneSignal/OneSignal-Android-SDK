@@ -446,10 +446,24 @@ internal class OneSignalImp(
     }
 
     override fun addUserJwtInvalidatedListener(listener: IUserJwtInvalidatedListener) {
+        if (isBackgroundThreadingEnabled) {
+            waitForInit(operationName = "addUserJwtInvalidatedListener")
+        } else {
+            if (!isInitialized) {
+                throw IllegalStateException("Must call 'initWithContext' before 'addUserJwtInvalidatedListener'")
+            }
+        }
         services.getService<UserManager>().addJwtInvalidatedListener(listener)
     }
 
     override fun removeUserJwtInvalidatedListener(listener: IUserJwtInvalidatedListener) {
+        if (isBackgroundThreadingEnabled) {
+            waitForInit(operationName = "removeUserJwtInvalidatedListener")
+        } else {
+            if (!isInitialized) {
+                throw IllegalStateException("Must call 'initWithContext' before 'removeUserJwtInvalidatedListener'")
+            }
+        }
         services.getService<UserManager>().removeJwtInvalidatedListener(listener)
     }
 
