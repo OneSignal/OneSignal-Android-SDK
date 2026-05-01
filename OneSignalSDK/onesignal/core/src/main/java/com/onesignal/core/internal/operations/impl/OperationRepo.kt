@@ -1,5 +1,6 @@
 package com.onesignal.core.internal.operations.impl
 
+import com.onesignal.common.IDManager
 import com.onesignal.common.threading.WaiterWithValue
 import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.operations.ExecutionResult
@@ -11,6 +12,7 @@ import com.onesignal.core.internal.startup.IStartableService
 import com.onesignal.core.internal.time.ITime
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
+import com.onesignal.user.internal.operations.LoginUserOperation
 import com.onesignal.user.internal.operations.impl.states.NewRecordsState
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -31,7 +33,7 @@ internal class OperationRepo(
 ) : IOperationRepo, IStartableService {
     internal class OperationQueueItem(
         val operation: Operation,
-        val waiter: WaiterWithValue<Boolean>? = null,
+        var waiter: WaiterWithValue<Boolean>? = null, // waiter may transfer during operation de-dupe
         val bucket: Int,
         var retries: Int = 0,
     ) {
@@ -159,6 +161,41 @@ internal class OperationRepo(
             if (hasExisting) {
                 Logging.debug("OperationRepo: internalEnqueue - operation.id: ${queueItem.operation.id} already exists in the queue.")
                 return
+            }
+
+            // Dedupe LoginUserOperation by onesignalId.
+            val op = queueItem.operation
+            if (op is LoginUserOperation) {
+                val existing =
+                    queue.firstOrNull {
+                        it.operation is LoginUserOperation && it.operation.onesignalId == op.onesignalId
+                    }
+                if (existing != null) {
+                    val existingOp = existing.operation as LoginUserOperation
+                    // Preserve the anon-user conversion link if the queued op lacks it (e.g. RecoverFromDroppedLoginBug enqueued with null).
+                    // Skip local ids: merging one would flip canStartExecute to false and strand the op,
+                    // since a local id that never hit the backend will never receive an idTranslation.
+                    val incomingExistingId = op.existingOnesignalId
+                    if (incomingExistingId != null &&
+                        !IDManager.isLocalId(incomingExistingId) &&
+                        existingOp.existingOnesignalId == null
+                    ) {
+                        Logging.debug("OperationRepo: internalEnqueue - merging existingOnesignalId=$incomingExistingId into queued LoginUserOperation for onesignalId: ${op.onesignalId}.")
+                        existingOp.existingOnesignalId = incomingExistingId
+                    } else {
+                        Logging.debug("OperationRepo: internalEnqueue - LoginUserOperation for onesignalId: ${op.onesignalId} already exists in the queue.")
+                    }
+                    // Transfer the waiter so enqueueAndWait callers see the queued op's real execution result.
+                    if (queueItem.waiter != null && existing.waiter == null) {
+                        existing.waiter = queueItem.waiter
+                    } else {
+                        queueItem.waiter?.wake(true)
+                    }
+                    if (!addToStore) {
+                        _operationModelStore.remove(queueItem.operation.id)
+                    }
+                    return
+                }
             }
 
             if (index != null) {
@@ -302,9 +339,15 @@ internal class OperationRepo(
                     Logging.error("Operation execution failed with eventual retry, pausing the operation repo: $operations")
                     // keep the failed operation and pause the operation repo from executing
                     paused = true
-                    // add back all operations to the front of the queue to be re-executed.
+                    // Unblock any enqueueAndWait callers so loginSuspend doesn't hang.
+                    ops.forEach { it.waiter?.wake(false) }
+                    // Re-queue with waiter = null: the operation is preserved for retry
+                    // on next cold start, but the original waiter is detached since it
+                    // was already woken above.
                     synchronized(queue) {
-                        ops.reversed().forEach { queue.add(0, it) }
+                        ops.reversed().forEach {
+                            queue.add(0, OperationQueueItem(it.operation, waiter = null, bucket = it.bucket, retries = it.retries))
+                        }
                     }
                 }
             }
