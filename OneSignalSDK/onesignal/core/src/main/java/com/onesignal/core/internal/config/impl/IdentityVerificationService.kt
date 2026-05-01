@@ -36,8 +36,8 @@ internal class IdentityVerificationService(
     val newCodePathsRun: Boolean
         get() = featureManager.isEnabled(FeatureFlag.SDK_IDENTITY_VERIFICATION) || ivBehaviorActive
 
-    @Volatile
-    private var _onJwtConfigHydrated: ((ivRequired: Boolean) -> Unit)? = null
+    private val handlerLock = Any()
+    private var onJwtConfigHydrated: ((ivRequired: Boolean) -> Unit)? = null
 
     /**
      * Register a handler invoked once per HYDRATE of the config model. Used by OperationRepo to
@@ -45,7 +45,9 @@ internal class IdentityVerificationService(
      * Pass `null` to clear.
      */
     fun setOnJwtConfigHydratedHandler(handler: ((ivRequired: Boolean) -> Unit)?) {
-        _onJwtConfigHydrated = handler
+        synchronized(handlerLock) {
+            onJwtConfigHydrated = handler
+        }
     }
 
     override fun start() {
@@ -57,7 +59,10 @@ internal class IdentityVerificationService(
         tag: String,
     ) {
         if (tag != ModelChangeTags.HYDRATE) return
-        _onJwtConfigHydrated?.invoke(model.useIdentityVerification == JwtRequirement.REQUIRED)
+        // Snapshot the handler under the lock, then invoke outside — never hold the lock
+        // across user-supplied code.
+        val handler = synchronized(handlerLock) { onJwtConfigHydrated }
+        handler?.invoke(model.useIdentityVerification == JwtRequirement.REQUIRED)
     }
 
     override fun onModelUpdated(
