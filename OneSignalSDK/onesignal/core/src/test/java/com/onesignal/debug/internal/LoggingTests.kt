@@ -22,14 +22,30 @@ infix fun <T : Collection<String>> T.shouldHaveEachItemEndWith(expected: Array<S
 }
 
 class LoggingTests : FunSpec({
+    // Track every listener registered in a test so we can clear them in afterEach.
+    // Without this, leaked listeners survive across test classes in the same JVM and any
+    // later test that triggers Logging.warn(msg, throwable) crashes on the unmocked
+    // android.util.Log.getStackTraceString call inside callLogListeners.
+    val registered = mutableListOf<ILogListener>()
+    fun register(listener: ILogListener): ILogListener {
+        registered.add(listener)
+        Logging.addListener(listener)
+        return listener
+    }
+
     beforeAny {
         Logging.logLevel = LogLevel.NONE
+    }
+
+    afterEach {
+        registered.forEach { Logging.removeListener(it) }
+        registered.clear()
     }
 
     test("addListener") {
         // Given
         val listener = TestLogLister()
-        Logging.addListener(listener)
+        register(listener)
 
         // When
         Logging.debug("test")
@@ -41,8 +57,8 @@ class LoggingTests : FunSpec({
     test("addListener twice") {
         // Given
         val listener = TestLogLister()
-        Logging.addListener(listener)
-        Logging.addListener(listener)
+        register(listener)
+        register(listener)
 
         // When
         Logging.debug("test")
@@ -54,7 +70,7 @@ class LoggingTests : FunSpec({
     test("removeListener") {
         // Given
         val listener = TestLogLister()
-        Logging.addListener(listener)
+        register(listener)
         Logging.removeListener(listener)
 
         // When
@@ -67,7 +83,7 @@ class LoggingTests : FunSpec({
     test("removeListener twice") {
         // Given
         val listener = TestLogLister()
-        Logging.addListener(listener)
+        register(listener)
         Logging.removeListener(listener)
         Logging.removeListener(listener)
 
@@ -81,7 +97,8 @@ class LoggingTests : FunSpec({
     test("addListener nested") {
         // Given
         val nestedListener = TestLogLister()
-        Logging.addListener { Logging.addListener(nestedListener) }
+        val outerListener = ILogListener { register(nestedListener) }
+        register(outerListener)
 
         // When
         Logging.debug("test")
@@ -101,7 +118,7 @@ class LoggingTests : FunSpec({
             // Remove self from listeners
             Logging.removeListener(listener)
         }
-        Logging.addListener(listener)
+        register(listener)
 
         // When
         Logging.debug("test")
