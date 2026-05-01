@@ -5,6 +5,7 @@ import android.content.Context
 import android.os.Build
 import com.onesignal.common.OneSignalUtils
 import com.onesignal.common.OneSignalWrapper
+import com.onesignal.core.internal.features.IFeatureManager
 import com.onesignal.core.internal.http.OneSignalService
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.otel.IOtelPlatformProvider
@@ -33,6 +34,7 @@ internal data class OtelPlatformProviderConfig(
  */
 internal class OtelPlatformProvider(
     config: OtelPlatformProviderConfig,
+    private val featureManagerProvider: () -> IFeatureManager,
 ) : IOtelPlatformProvider {
     override val appPackageId: String = config.appPackageId
     override val appVersion: String = config.appVersion
@@ -60,6 +62,20 @@ internal class OtelPlatformProvider(
     override val sdkWrapper: String? = OneSignalWrapper.sdkType
 
     override val sdkWrapperVersion: String? = OneSignalWrapper.sdkVersion
+
+    // Read through the supplier on every access so per-event attributes always reflect the
+    // current featureStates snapshot (including IMMEDIATE-mode flag changes). The supplier is
+    // an immutable constructor val that resolves IFeatureManager lazily — this lets the OTel
+    // pipeline come up early in init (before service bootstrap) without mutable late-bound
+    // state. Returns an empty list when the supplier or the manager throws (e.g. very early
+    // emissions before services are ready); the attribute is then omitted by OtelFieldsPerEvent.
+    @Suppress("TooGenericExceptionCaught", "SwallowedException")
+    override val enabledFeatureFlags: List<String>
+        get() = try {
+            featureManagerProvider().enabledFeatureKeys()
+        } catch (t: Throwable) {
+            emptyList()
+        }
 
     // Per-event attributes - IDs are cached (calculated once), appState is dynamic (calculated per access)
     override val appId: String? by lazy {
@@ -147,11 +163,14 @@ internal class OtelPlatformProvider(
 }
 
 /**
- * Factory function to create AndroidOtelPlatformProvider without service dependencies.
- * Reads all values directly from SharedPreferences and system services.
+ * Factory function to create AndroidOtelPlatformProvider. Reads value-config directly from
+ * SharedPreferences / system services; receives a [featureManagerProvider] supplier that the
+ * provider invokes lazily on each `enabledFeatureFlags` read so the OTel pipeline can come up
+ * before service bootstrap completes.
  */
 internal fun createAndroidOtelPlatformProvider(
     context: Context,
+    featureManagerProvider: () -> IFeatureManager,
 ): OtelPlatformProvider {
     val crashStoragePath = context.cacheDir.path + java.io.File.separator +
         "onesignal" + java.io.File.separator +
@@ -164,6 +183,7 @@ internal fun createAndroidOtelPlatformProvider(
             appPackageId = context.packageName,
             appVersion = com.onesignal.common.AndroidUtils.getAppVersion(context) ?: "unknown",
             context = context,
-        )
+        ),
+        featureManagerProvider = featureManagerProvider,
     )
 }

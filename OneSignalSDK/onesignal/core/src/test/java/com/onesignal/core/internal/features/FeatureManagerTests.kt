@@ -144,4 +144,48 @@ class FeatureManagerTests : FunSpec({
 
         FeatureManager(configModelStore).remoteFeatureFlagMetadata() shouldBe null
     }
+
+    test("enabledFeatureKeys is empty when no flags are enabled") {
+        val initialModel = mockk<ConfigModel>()
+        stubConfigModel(initialModel)
+        val configModelStore = mockk<ConfigModelStore>()
+        every { configModelStore.model } returns initialModel
+        every { configModelStore.subscribe(any()) } just runs
+
+        val manager = FeatureManager(configModelStore)
+
+        manager.enabledFeatureKeys() shouldBe emptyList()
+    }
+
+    test("enabledFeatureKeys returns canonical key when a flag is enabled at startup") {
+        val initialModel = mockk<ConfigModel>()
+        stubConfigModel(initialModel)
+        every { initialModel.sdkRemoteFeatureFlags } returns listOf(FeatureFlag.SDK_BACKGROUND_THREADING.key)
+        val configModelStore = mockk<ConfigModelStore>()
+        every { configModelStore.model } returns initialModel
+        every { configModelStore.subscribe(any()) } just runs
+
+        val manager = FeatureManager(configModelStore)
+
+        manager.enabledFeatureKeys() shouldBe listOf(FeatureFlag.SDK_BACKGROUND_THREADING.key)
+    }
+
+    test("enabledFeatureKeys honors APP_STARTUP latching after onModelReplaced") {
+        val initialModel = mockk<ConfigModel>()
+        stubConfigModel(initialModel)
+        val configModelStore = mockk<ConfigModelStore>()
+        every { configModelStore.model } returns initialModel
+        every { configModelStore.subscribe(any()) } just runs
+        val manager = FeatureManager(configModelStore)
+
+        manager.enabledFeatureKeys() shouldBe emptyList()
+
+        // Backend later flips the flag on, but APP_STARTUP latches the value at startup.
+        val updatedModel = mockk<ConfigModel>()
+        stubConfigModel(updatedModel)
+        every { updatedModel.sdkRemoteFeatureFlags } returns listOf(FeatureFlag.SDK_BACKGROUND_THREADING.key)
+        manager.onModelReplaced(updatedModel, ModelChangeTags.HYDRATE)
+
+        manager.enabledFeatureKeys() shouldBe emptyList()
+    }
 })

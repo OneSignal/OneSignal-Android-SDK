@@ -75,4 +75,14 @@ class OtelFieldsTopLevelTest : FunSpec({
             attributes.keys shouldNotContain "ossdk.sdk_wrapper_version"
         }
     }
+
+    test("getAttributes should never include ossdk.feature_flags (now per-event)") {
+        setupDefaultMocks()
+
+        runBlocking {
+            val attributes = fields.getAttributes()
+
+            attributes.keys shouldNotContain "ossdk.feature_flags"
+        }
+    }
 })

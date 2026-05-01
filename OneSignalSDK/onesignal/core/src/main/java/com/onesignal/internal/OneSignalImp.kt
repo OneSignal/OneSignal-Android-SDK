@@ -235,7 +235,14 @@ internal class OneSignalImp(
     }
 
     private fun initEssentials(context: Context) {
-        otelManager = OtelLifecycleManager(context).also { it.initializeFromCachedConfig() }
+        // OtelLifecycleManager comes up early so crash handling and remote logging can capture
+        // anything that happens during the rest of init. FeatureManager is wired in via a
+        // lazy supplier — `enabledFeatureFlags` is read per-event, so resolving the manager
+        // can be deferred until services have bootstrapped.
+        otelManager = OtelLifecycleManager(
+            context = context,
+            featureManagerProvider = { services.getService<IFeatureManager>() },
+        ).also { it.initializeFromCachedConfig() }
 
         PreferenceStoreFix.ensureNoObfuscatedPrefStore(context)
 
