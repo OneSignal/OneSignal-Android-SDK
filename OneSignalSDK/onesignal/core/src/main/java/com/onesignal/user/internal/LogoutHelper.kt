@@ -1,15 +1,19 @@
 package com.onesignal.user.internal
 
 import com.onesignal.core.internal.config.ConfigModel
+import com.onesignal.core.internal.config.impl.IdentityVerificationService
 import com.onesignal.core.internal.operations.IOperationRepo
 import com.onesignal.user.internal.identity.IdentityModelStore
 import com.onesignal.user.internal.operations.LoginUserOperation
+import com.onesignal.user.internal.subscriptions.SubscriptionModelStore
 
-class LogoutHelper(
+internal class LogoutHelper(
     private val identityModelStore: IdentityModelStore,
     private val userSwitcher: UserSwitcher,
     private val operationRepo: IOperationRepo,
     private val configModel: ConfigModel,
+    private val subscriptionModelStore: SubscriptionModelStore,
+    private val identityVerificationService: IdentityVerificationService,
     private val lock: Any,
 ) {
     internal data class LogoutEnqueueContext(
@@ -29,10 +33,25 @@ class LogoutHelper(
                 return null
             }
 
+            // Outer gate: dispatch to IV extension only on new code paths. The extension's
+            // inner gate (ivBehaviorActive) keeps Phase 3 users on the legacy logout flow.
+            val handled =
+                identityVerificationService.newCodePathsRun &&
+                    switchUserIv(
+                        userSwitcher,
+                        subscriptionModelStore,
+                        configModel,
+                        identityVerificationService.ivBehaviorActive,
+                    )
+            if (handled) {
+                // IV-required: subscription is internally disabled and the user-switch
+                // suppressed backend op enqueue. Don't enqueue anonymous LoginUserOperation —
+                // the anonymous user cannot authenticate without a JWT.
+                return null
+            }
+
             // Create new device-scoped user (clears external ID)
             userSwitcher.createAndSwitchToNewUser()
-
-            // TODO: remove JWT Token for all future requests.
 
             return LogoutEnqueueContext(configModel.appId, identityModelStore.model.onesignalId)
         }

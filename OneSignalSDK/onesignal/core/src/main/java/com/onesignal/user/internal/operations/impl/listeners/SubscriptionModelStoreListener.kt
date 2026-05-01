@@ -63,6 +63,13 @@ internal class SubscriptionModelStoreListener(
 
     companion object {
         fun getSubscriptionEnabledAndStatus(model: SubscriptionModel): Pair<Boolean, SubscriptionStatus> {
+            // Internal-disabled subscription (e.g. the post-logout anonymous user under IV)
+            // must not generate backend ops; report as disabled+unsubscribe regardless of
+            // optedIn/status. See [SubscriptionModel.isDisabledInternally].
+            if (model.isDisabledInternally) {
+                return Pair(false, SubscriptionStatus.UNSUBSCRIBE)
+            }
+
             val status: SubscriptionStatus
             val enabled: Boolean
 
