@@ -54,7 +54,14 @@ internal class SubscriptionOperationExecutor(
         val startingOp = operations.first()
 
         return if (startingOp is CreateSubscriptionOperation) {
-            createSubscription(startingOp, operations)
+            // SDK-4388: if the subscription already exists on the backend (non-local id),
+            // POSTing to /subscriptions with that id is silently treated as a no-op and
+            // drops the merged enabled/status payload. Dispatch as an update instead.
+            if (!IDManager.isLocalId(startingOp.subscriptionId)) {
+                updateExistingSubscriptionFromCreate(startingOp, operations)
+            } else {
+                createSubscription(startingOp, operations)
+            }
         } else if (operations.any { it is DeleteSubscriptionOperation }) {
             if (operations.size > 1) {
                 throw Exception("Only supports one operation! Attempted operations:\n$operations")
@@ -73,6 +80,29 @@ internal class SubscriptionOperationExecutor(
         }
     }
 
+    private suspend fun updateExistingSubscriptionFromCreate(
+        createOperation: CreateSubscriptionOperation,
+        operations: List<Operation>,
+    ): ExecutionResponse {
+        // if there are any deletes all operations should be tossed, nothing to do.
+        if (operations.any { it is DeleteSubscriptionOperation }) {
+            return ExecutionResponse(ExecutionResult.SUCCESS)
+        }
+
+        val lastUpdateOperation = operations.lastOrNull { it is UpdateSubscriptionOperation } as UpdateSubscriptionOperation?
+        val patchOp =
+            UpdateSubscriptionOperation(
+                createOperation.appId,
+                createOperation.onesignalId,
+                createOperation.subscriptionId,
+                createOperation.type,
+                lastUpdateOperation?.enabled ?: createOperation.enabled,
+                lastUpdateOperation?.address ?: createOperation.address,
+                lastUpdateOperation?.status ?: createOperation.status,
+            )
+        return updateSubscription(patchOp, listOf(patchOp))
+    }
+
     private suspend fun createSubscription(
         createOperation: CreateSubscriptionOperation,
         operations: List<Operation>,
@@ -88,12 +118,11 @@ internal class SubscriptionOperationExecutor(
         val enabled = lastUpdateOperation?.enabled ?: createOperation.enabled
         val address = lastUpdateOperation?.address ?: createOperation.address
         val status = lastUpdateOperation?.status ?: createOperation.status
-        val subId = if (!IDManager.isLocalId(createOperation.subscriptionId)) createOperation.subscriptionId else null
 
         try {
             val subscription =
                 SubscriptionObject(
-                    id = subId,
+                    id = null,
                     convert(createOperation.type),
                     address,
                     enabled,
