@@ -5,6 +5,7 @@ import com.onesignal.common.TimeUtils
 import com.onesignal.common.exceptions.BackendException
 import com.onesignal.common.modeling.ModelChangeTags
 import com.onesignal.core.internal.config.ConfigModelStore
+import com.onesignal.core.internal.config.impl.IdentityVerificationService
 import com.onesignal.core.internal.operations.ExecutionResponse
 import com.onesignal.core.internal.operations.ExecutionResult
 import com.onesignal.core.internal.operations.IOperationExecutor
@@ -16,7 +17,6 @@ import com.onesignal.user.internal.backend.SubscriptionObjectType
 import com.onesignal.user.internal.builduser.IRebuildUserService
 import com.onesignal.user.internal.identity.IdentityModel
 import com.onesignal.user.internal.identity.IdentityModelStore
-import com.onesignal.user.internal.jwt.IdentityVerificationGates
 import com.onesignal.user.internal.jwt.JwtTokenStore
 import com.onesignal.user.internal.operations.RefreshUserOperation
 import com.onesignal.user.internal.operations.impl.states.NewRecordsState
@@ -36,6 +36,7 @@ internal class RefreshUserOperationExecutor(
     private val _buildUserService: IRebuildUserService,
     private val _newRecordState: NewRecordsState,
     private val _jwtTokenStore: JwtTokenStore,
+    private val _identityVerificationService: IdentityVerificationService,
 ) : IOperationExecutor {
     override val operations: List<String>
         get() = listOf(REFRESH_USER)
@@ -57,8 +58,8 @@ internal class RefreshUserOperationExecutor(
 
     private suspend fun getUser(op: RefreshUserOperation): ExecutionResponse {
         val params =
-            if (IdentityVerificationGates.newCodePathsRun) {
-                resolveIvBackendParams(op, op.onesignalId, _jwtTokenStore)
+            if (_identityVerificationService.newCodePathsRun) {
+                resolveIvBackendParams(op, op.onesignalId, _jwtTokenStore, _identityVerificationService.ivBehaviorActive)
             } else {
                 IvBackendParams.legacyFor(op.onesignalId)
             }

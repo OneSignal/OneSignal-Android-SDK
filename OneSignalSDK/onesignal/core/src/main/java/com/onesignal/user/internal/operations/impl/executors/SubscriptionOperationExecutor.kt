@@ -14,6 +14,7 @@ import com.onesignal.common.exceptions.BackendException
 import com.onesignal.common.modeling.ModelChangeTags
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.config.ConfigModelStore
+import com.onesignal.core.internal.config.impl.IdentityVerificationService
 import com.onesignal.core.internal.device.IDeviceService
 import com.onesignal.core.internal.operations.ExecutionResponse
 import com.onesignal.core.internal.operations.ExecutionResult
@@ -25,7 +26,6 @@ import com.onesignal.user.internal.backend.ISubscriptionBackendService
 import com.onesignal.user.internal.backend.SubscriptionObject
 import com.onesignal.user.internal.backend.SubscriptionObjectType
 import com.onesignal.user.internal.builduser.IRebuildUserService
-import com.onesignal.user.internal.jwt.IdentityVerificationGates
 import com.onesignal.user.internal.jwt.JwtTokenStore
 import com.onesignal.user.internal.operations.CreateSubscriptionOperation
 import com.onesignal.user.internal.operations.DeleteSubscriptionOperation
@@ -46,6 +46,7 @@ internal class SubscriptionOperationExecutor(
     private val _newRecordState: NewRecordsState,
     private val _consistencyManager: IConsistencyManager,
     private val _jwtTokenStore: JwtTokenStore,
+    private val _identityVerificationService: IdentityVerificationService,
 ) : IOperationExecutor {
     override val operations: List<String>
         get() = listOf(CREATE_SUBSCRIPTION, UPDATE_SUBSCRIPTION, DELETE_SUBSCRIPTION, TRANSFER_SUBSCRIPTION)
@@ -110,8 +111,8 @@ internal class SubscriptionOperationExecutor(
                 )
 
             val params =
-                if (IdentityVerificationGates.newCodePathsRun) {
-                    resolveIvBackendParams(createOperation, createOperation.onesignalId, _jwtTokenStore)
+                if (_identityVerificationService.newCodePathsRun) {
+                    resolveIvBackendParams(createOperation, createOperation.onesignalId, _jwtTokenStore, _identityVerificationService.ivBehaviorActive)
                 } else {
                     IvBackendParams.legacyFor(createOperation.onesignalId)
                 }
@@ -199,7 +200,12 @@ internal class SubscriptionOperationExecutor(
                     AndroidUtils.getAppVersion(_applicationService.appContext),
                 )
 
-            val jwt = if (IdentityVerificationGates.newCodePathsRun) resolveIvJwt(lastOperation, _jwtTokenStore) else null
+            val jwt =
+                if (_identityVerificationService.newCodePathsRun) {
+                    resolveIvJwt(lastOperation, _jwtTokenStore, _identityVerificationService.ivBehaviorActive)
+                } else {
+                    null
+                }
             val rywData = _subscriptionBackend.updateSubscription(lastOperation.appId, lastOperation.subscriptionId, subscription, jwt)
 
             if (rywData != null) {
@@ -253,8 +259,8 @@ internal class SubscriptionOperationExecutor(
     // TODO: whenever the end-user changes users, we need to add the read-your-write token here, currently no code to handle the re-fetch IAMs
     private suspend fun transferSubscription(startingOperation: TransferSubscriptionOperation): ExecutionResponse {
         val params =
-            if (IdentityVerificationGates.newCodePathsRun) {
-                resolveIvBackendParams(startingOperation, startingOperation.onesignalId, _jwtTokenStore)
+            if (_identityVerificationService.newCodePathsRun) {
+                resolveIvBackendParams(startingOperation, startingOperation.onesignalId, _jwtTokenStore, _identityVerificationService.ivBehaviorActive)
             } else {
                 IvBackendParams.legacyFor(startingOperation.onesignalId)
             }
@@ -297,7 +303,12 @@ internal class SubscriptionOperationExecutor(
     }
 
     private suspend fun deleteSubscription(op: DeleteSubscriptionOperation): ExecutionResponse {
-        val jwt = if (IdentityVerificationGates.newCodePathsRun) resolveIvJwt(op, _jwtTokenStore) else null
+        val jwt =
+            if (_identityVerificationService.newCodePathsRun) {
+                resolveIvJwt(op, _jwtTokenStore, _identityVerificationService.ivBehaviorActive)
+            } else {
+                null
+            }
         try {
             _subscriptionBackend.deleteSubscription(op.appId, op.subscriptionId, jwt)
 

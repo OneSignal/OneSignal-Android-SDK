@@ -10,6 +10,7 @@ import com.onesignal.mocks.MockHelper
 import com.onesignal.user.internal.backend.IUserBackendService
 import com.onesignal.user.internal.backend.IdentityConstants
 import com.onesignal.user.internal.builduser.IRebuildUserService
+import com.onesignal.user.internal.operations.ExecutorMocks.Companion.getIdentityVerificationService
 import com.onesignal.user.internal.operations.ExecutorMocks.Companion.getJwtTokenStore
 import com.onesignal.user.internal.operations.ExecutorMocks.Companion.getNewRecordState
 import com.onesignal.user.internal.operations.impl.executors.UpdateUserOperationExecutor
@@ -57,7 +58,7 @@ class UpdateUserOperationExecutorTests :
                     mockBuildUserService,
                     getNewRecordState(),
                     mockConsistencyManager,
-                    getJwtTokenStore(),
+                    getJwtTokenStore(), getIdentityVerificationService(),
                 )
             val operations = listOf<Operation>(SetTagOperation(appId, remoteOneSignalId, null, "tagKey1", "tagValue1"))
 
@@ -98,7 +99,7 @@ class UpdateUserOperationExecutorTests :
                     mockBuildUserService,
                     getNewRecordState(),
                     mockConsistencyManager,
-                    getJwtTokenStore(),
+                    getJwtTokenStore(), getIdentityVerificationService(),
                 )
             val operations =
                 listOf<Operation>(
@@ -161,7 +162,7 @@ class UpdateUserOperationExecutorTests :
                     mockBuildUserService,
                     getNewRecordState(),
                     mockConsistencyManager,
-                    getJwtTokenStore(),
+                    getJwtTokenStore(), getIdentityVerificationService(),
                 )
             val operations =
                 listOf<Operation>(
@@ -207,7 +208,7 @@ class UpdateUserOperationExecutorTests :
                     mockBuildUserService,
                     getNewRecordState(),
                     mockConsistencyManager,
-                    getJwtTokenStore(),
+                    getJwtTokenStore(), getIdentityVerificationService(),
                 )
             val operations =
                 listOf<Operation>(
@@ -274,7 +275,7 @@ class UpdateUserOperationExecutorTests :
                     mockBuildUserService,
                     getNewRecordState(),
                     mockConsistencyManager,
-                    getJwtTokenStore(),
+                    getJwtTokenStore(), getIdentityVerificationService(),
                 )
             val operations =
                 listOf<Operation>(
@@ -323,7 +324,7 @@ class UpdateUserOperationExecutorTests :
                     mockBuildUserService,
                     getNewRecordState(),
                     mockConsistencyManager,
-                    getJwtTokenStore(),
+                    getJwtTokenStore(), getIdentityVerificationService(),
                 )
             val operations = listOf(SetTagOperation(appId, remoteOneSignalId, null, "tagKey1", "tagValue1"))
 
@@ -357,7 +358,7 @@ class UpdateUserOperationExecutorTests :
                     mockBuildUserService,
                     newRecordState,
                     mockConsistencyManager,
-                    getJwtTokenStore(),
+                    getJwtTokenStore(), getIdentityVerificationService(),
                 )
             val operations = listOf(SetTagOperation(appId, remoteOneSignalId, null, "tagKey1", "tagValue1"))
 
@@ -388,7 +389,7 @@ class UpdateUserOperationExecutorTests :
                     mockBuildUserService,
                     getNewRecordState(),
                     mockConsistencyManager,
-                    getJwtTokenStore(),
+                    getJwtTokenStore(), getIdentityVerificationService(),
                 )
 
             val operations =

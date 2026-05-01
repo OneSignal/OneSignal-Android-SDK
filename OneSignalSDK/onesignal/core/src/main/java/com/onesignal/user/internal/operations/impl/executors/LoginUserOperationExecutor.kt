@@ -12,6 +12,7 @@ import com.onesignal.common.exceptions.BackendException
 import com.onesignal.common.modeling.ModelChangeTags
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.config.ConfigModelStore
+import com.onesignal.core.internal.config.impl.IdentityVerificationService
 import com.onesignal.core.internal.device.IDeviceService
 import com.onesignal.core.internal.language.ILanguageContext
 import com.onesignal.core.internal.operations.ExecutionResponse
@@ -24,7 +25,6 @@ import com.onesignal.user.internal.backend.IdentityConstants
 import com.onesignal.user.internal.backend.SubscriptionObject
 import com.onesignal.user.internal.backend.SubscriptionObjectType
 import com.onesignal.user.internal.identity.IdentityModelStore
-import com.onesignal.user.internal.jwt.IdentityVerificationGates
 import com.onesignal.user.internal.jwt.JwtTokenStore
 import com.onesignal.user.internal.operations.CreateSubscriptionOperation
 import com.onesignal.user.internal.operations.DeleteSubscriptionOperation
@@ -50,6 +50,7 @@ internal class LoginUserOperationExecutor(
     private val _configModelStore: ConfigModelStore,
     private val _languageContext: ILanguageContext,
     private val _jwtTokenStore: JwtTokenStore,
+    private val _identityVerificationService: IdentityVerificationService,
 ) : IOperationExecutor {
     override val operations: List<String>
         get() = listOf(LOGIN_USER)
@@ -78,7 +79,7 @@ internal class LoginUserOperationExecutor(
             return ExecutionResponse(ExecutionResult.FAIL_NORETRY)
         }
         if (loginUserOp.existingOnesignalId == null || loginUserOp.externalId == null ||
-            IdentityVerificationGates.ivBehaviorActive
+            _identityVerificationService.ivBehaviorActive
         ) {
             // When there is no existing user to attempt to associate with the externalId provided, we go right to
             // createUser.  If there is no externalId provided this is an insert, if there is this will be an
@@ -180,7 +181,12 @@ internal class LoginUserOperationExecutor(
 
         try {
             val subscriptionList = subscriptions.toList()
-            val jwt = if (IdentityVerificationGates.newCodePathsRun) resolveIvJwt(createUserOperation, _jwtTokenStore) else null
+            val jwt =
+                if (_identityVerificationService.newCodePathsRun) {
+                    resolveIvJwt(createUserOperation, _jwtTokenStore, _identityVerificationService.ivBehaviorActive)
+                } else {
+                    null
+                }
             val response =
                 _userBackend.createUser(createUserOperation.appId, identities, subscriptionList.map { it.second }, properties, jwt)
             val idTranslations = mutableMapOf<String, String>()
