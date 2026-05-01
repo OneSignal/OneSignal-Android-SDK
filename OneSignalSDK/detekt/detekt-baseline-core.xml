@@ -302,7 +302,8 @@
     <ID>ReturnCount:Model.kt$Model$protected fun getOptLongProperty( name: String, create: (() -> Long?)? = null, ): Long?</ID>
     <ID>ReturnCount:Model.kt$Model$protected inline fun &lt;reified T : Enum&lt;T>> getOptEnumProperty(name: String): T?</ID>
     <ID>ReturnCount:OperationModelStore.kt$OperationModelStore$override fun create(jsonObject: JSONObject?): Operation?</ID>
-    <ID>ReturnCount:OperationRepoIvExtensions.kt$internal fun OperationRepo.handleFailUnauthorized( startingOp: OperationRepo.OperationQueueItem, ops: List&lt;OperationRepo.OperationQueueItem>, jwtTokenStore: JwtTokenStore, jwtInvalidatedHandler: ((String) -> Unit)?, ivBehaviorActive: Boolean, ): Boolean</ID>
+    <ID>ReturnCount:OperationRepoIvExtensions.kt$internal fun OperationRepo.handleFailUnauthorized( startingOp: OperationRepo.OperationQueueItem, ops: List&lt;OperationRepo.OperationQueueItem>, jwtTokenStore: JwtTokenStore, ivBehaviorActive: Boolean, ): Boolean</ID>
+    <ID>ReturnCount:OperationRepoIvExtensions.kt$internal fun OperationRepo.hasValidJwtIfRequired( jwtTokenStore: JwtTokenStore, op: com.onesignal.core.internal.operations.Operation, ivBehaviorActive: Boolean, ): Boolean</ID>
     <ID>ReturnCount:OperationModelStore.kt$OperationModelStore$private fun isValidOperation(jsonObject: JSONObject): Boolean</ID>
     <ID>ReturnCount:OutcomeEventsController.kt$OutcomeEventsController$private suspend fun sendAndCreateOutcomeEvent( name: String, weight: Float, // Note: this is optional sessionTime: Long, influences: List&lt;Influence>, ): OutcomeEvent?</ID>
     <ID>ReturnCount:OutcomeEventsController.kt$OutcomeEventsController$private suspend fun sendUniqueOutcomeEvent( name: String, sessionInfluences: List&lt;Influence>, ): OutcomeEvent?</ID>

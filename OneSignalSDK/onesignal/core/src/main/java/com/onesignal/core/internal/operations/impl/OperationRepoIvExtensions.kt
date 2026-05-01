@@ -30,9 +30,10 @@ internal fun OperationRepo.hasValidJwtIfRequired(
 
 /**
  * Handles a [com.onesignal.core.internal.operations.ExecutionResult.FAIL_UNAUTHORIZED] response
- * when IV behavior is active. Invalidates the JWT for the failing op's externalId, re-queues the
- * ops (waiter wake with `false` so `enqueueAndWait` callers don't hang), and fires the
- * configured handler so the developer can supply a fresh JWT.
+ * when IV behavior is active. Invalidates the JWT for the failing op's externalId (which fires
+ * `IJwtUpdateListener.onJwtInvalidated` to subscribers, surfacing to the developer via the
+ * public-API layer), and re-queues the ops (waiter wake with `false` so `enqueueAndWait`
+ * callers don't hang).
  *
  * Returns `true` if IV-specific handling was applied (caller should stop processing this result),
  * or `false` when IV behavior is inactive or the op is anonymous (caller falls back to default
@@ -42,23 +43,18 @@ internal fun OperationRepo.handleFailUnauthorized(
     startingOp: OperationRepo.OperationQueueItem,
     ops: List<OperationRepo.OperationQueueItem>,
     jwtTokenStore: JwtTokenStore,
-    jwtInvalidatedHandler: ((String) -> Unit)?,
     ivBehaviorActive: Boolean,
 ): Boolean {
     if (!ivBehaviorActive) return false
     val externalId = startingOp.operation.externalId ?: return false
 
+    // Fires onJwtInvalidated to subscribers BEFORE we wake waiters — otherwise an
+    // `enqueueAndWait` caller could return before the developer-facing event propagates.
     jwtTokenStore.invalidateJwt(externalId)
     Logging.info(
         "Operation execution failed with 401 Unauthorized, JWT invalidated for user: $externalId. " +
             "Operations re-queued.",
     )
-    // Fire the handler BEFORE waking waiters — otherwise an `enqueueAndWait` caller
-    // could return before the handler has a chance to propagate to the app.
-    jwtInvalidatedHandler?.let { handler ->
-        runCatching { handler(externalId) }
-            .onFailure { ex -> Logging.warn("Failed to run JWT invalidated handler for externalId=$externalId", ex) }
-    }
     // Wake enqueueAndWait callers; re-queue with waiter = null because the original waiter
     // is already woken.
     ops.forEach { it.waiter?.wake(false) }

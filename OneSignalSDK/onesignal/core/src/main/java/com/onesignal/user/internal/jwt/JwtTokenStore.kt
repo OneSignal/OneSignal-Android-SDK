@@ -55,7 +55,12 @@ internal class JwtTokenStore(
         }
     }
 
-    /** Removes the JWT for [externalId] and notifies subscribers. */
+    /**
+     * Removes the JWT for [externalId] and notifies subscribers via
+     * [IJwtUpdateListener.onJwtInvalidated]. Surfaced to the developer as "your JWT is no
+     * longer valid; please refresh." Don't call from internal cleanup paths (logout, user
+     * switch) — use a different mechanism if you need to clear without notifying the app.
+     */
     fun invalidateJwt(externalId: String) {
         val existed: Boolean
         synchronized(tokens) {
@@ -66,7 +71,14 @@ internal class JwtTokenStore(
             }
         }
         if (existed) {
-            updates.fire { it.onJwtUpdated(externalId) }
+            // Per-subscriber try/catch so one throwing listener doesn't break others or
+            // propagate up into the operation queue (would otherwise drop the failing op).
+            updates.fire { listener ->
+                runCatching { listener.onJwtInvalidated(externalId) }
+                    .onFailure { ex ->
+                        Logging.warn("JwtTokenStore: subscriber threw on onJwtInvalidated for externalId=$externalId", ex)
+                    }
+            }
         }
     }
 

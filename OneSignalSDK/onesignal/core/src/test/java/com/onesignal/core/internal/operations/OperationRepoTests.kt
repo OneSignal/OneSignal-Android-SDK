@@ -13,6 +13,7 @@ import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.mocks.CoreInternalMocks
 import com.onesignal.mocks.MockHelper
 import com.onesignal.mocks.MockPreferencesService
+import com.onesignal.user.internal.jwt.IJwtUpdateListener
 import com.onesignal.user.internal.jwt.JwtRequirement
 import com.onesignal.user.internal.jwt.JwtTokenStore
 import com.onesignal.user.internal.operations.ExecutorMocks.Companion.getNewRecordState
@@ -1087,7 +1088,7 @@ class OperationRepoTests : FunSpec({
         verify(exactly = 1) { mocks.operationRepo.forceExecuteOperations() }
     }
 
-    test("FAIL_UNAUTHORIZED with IV active invalidates JWT, re-queues ops, and fires handler") {
+    test("FAIL_UNAUTHORIZED with IV active invalidates JWT, re-queues ops, and fires onJwtInvalidated") {
         val mocks = Mocks()
         mocks.identityVerificationService = CoreInternalMocks.identityVerificationService(
             newCodePathsRun = true,
@@ -1103,7 +1104,13 @@ class OperationRepoTests : FunSpec({
         mocks.jwtTokenStore.putJwt("alice", "stale-token")
 
         var invalidatedId: String? = null
-        mocks.operationRepo.setJwtInvalidatedHandler { invalidatedId = it }
+        mocks.jwtTokenStore.subscribe(
+            object : IJwtUpdateListener {
+                override fun onJwtInvalidated(externalId: String) {
+                    invalidatedId = externalId
+                }
+            },
+        )
 
         mocks.operationRepo.start()
         // enqueueAndWait with failure should wake waiter with false.
@@ -1121,6 +1128,43 @@ class OperationRepoTests : FunSpec({
         verify(exactly = 0) { mocks.operationModelStore.remove(opId) }
     }
 
+    test("FAIL_UNAUTHORIZED with throwing onJwtInvalidated subscriber does not drop ops") {
+        // Regression: a misbehaving subscriber must not propagate an exception up into
+        // executeOperations' catch, which would route the op through dropAndWake (op lost).
+        val mocks = Mocks()
+        mocks.identityVerificationService = CoreInternalMocks.identityVerificationService(
+            newCodePathsRun = true,
+            ivBehaviorActive = true,
+        )
+        mocks.configModelStore.model.useIdentityVerification = JwtRequirement.REQUIRED
+
+        val op = mockOperation(externalId = "alice")
+        val opId = op.id
+        coEvery { mocks.executor.execute(any()) } returns ExecutionResponse(ExecutionResult.FAIL_UNAUTHORIZED)
+        mocks.jwtTokenStore.putJwt("alice", "stale-token")
+        mocks.jwtTokenStore.subscribe(
+            object : IJwtUpdateListener {
+                override fun onJwtInvalidated(externalId: String) {
+                    throw RuntimeException("boom from subscriber")
+                }
+            },
+        )
+
+        mocks.operationRepo.start()
+        val waitResult =
+            runBlocking {
+                withTimeout(2_000) {
+                    mocks.operationRepo.enqueueAndWait(op)
+                }
+            }
+
+        waitResult shouldBe false
+        // JWT was still invalidated despite the subscriber throw.
+        mocks.jwtTokenStore.getJwt("alice") shouldBe null
+        // Op was re-queued (not dropped) — proving the throw didn't escape into executeOperations.
+        verify(exactly = 0) { mocks.operationModelStore.remove(opId) }
+    }
+
     test("FAIL_UNAUTHORIZED with IV inactive falls back to default drop-on-fail") {
         val mocks = Mocks()
         mocks.identityVerificationService = CoreInternalMocks.identityVerificationService(
@@ -1132,8 +1176,14 @@ class OperationRepoTests : FunSpec({
         val opId = op.id
         coEvery { mocks.executor.execute(any()) } returns ExecutionResponse(ExecutionResult.FAIL_UNAUTHORIZED)
 
-        var handlerFired = false
-        mocks.operationRepo.setJwtInvalidatedHandler { handlerFired = true }
+        var invalidatedFired = false
+        mocks.jwtTokenStore.subscribe(
+            object : IJwtUpdateListener {
+                override fun onJwtInvalidated(externalId: String) {
+                    invalidatedFired = true
+                }
+            },
+        )
 
         mocks.operationRepo.start()
         val waitResult =
@@ -1144,7 +1194,7 @@ class OperationRepoTests : FunSpec({
             }
 
         waitResult shouldBe false
-        handlerFired shouldBe false
+        invalidatedFired shouldBe false
         // Default behavior: drop the op.
         verify(exactly = 1) { mocks.operationModelStore.remove(opId) }
     }
