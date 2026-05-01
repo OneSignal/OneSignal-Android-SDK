@@ -13,8 +13,7 @@ import com.onesignal.user.internal.backend.ISubscriptionBackendService
 import com.onesignal.user.internal.backend.IdentityConstants
 import com.onesignal.user.internal.backend.SubscriptionObjectType
 import com.onesignal.user.internal.builduser.IRebuildUserService
-import com.onesignal.user.internal.jwt.IdentityVerificationGates
-import com.onesignal.user.internal.jwt.JwtRequirement
+import com.onesignal.user.internal.operations.ExecutorMocks.Companion.getIdentityVerificationService
 import com.onesignal.user.internal.operations.ExecutorMocks.Companion.getJwtTokenStore
 import com.onesignal.user.internal.operations.ExecutorMocks.Companion.getNewRecordState
 import com.onesignal.user.internal.operations.impl.executors.SubscriptionOperationExecutor
@@ -71,7 +70,7 @@ class SubscriptionOperationExecutorTests :
                     mockBuildUserService,
                     getNewRecordState(),
                     mockConsistencyManager,
-                    getJwtTokenStore(),
+                    getJwtTokenStore(), getIdentityVerificationService(),
                 )
 
             val operations =
@@ -133,7 +132,7 @@ class SubscriptionOperationExecutorTests :
                     mockBuildUserService,
                     getNewRecordState(),
                     mockConsistencyManager,
-                    getJwtTokenStore(),
+                    getJwtTokenStore(), getIdentityVerificationService(),
                 )
 
             val operations =
@@ -185,7 +184,7 @@ class SubscriptionOperationExecutorTests :
                     mockBuildUserService,
                     getNewRecordState(),
                     mockConsistencyManager,
-                    getJwtTokenStore(),
+                    getJwtTokenStore(), getIdentityVerificationService(),
                 )
 
             val operations =
@@ -242,7 +241,7 @@ class SubscriptionOperationExecutorTests :
                     mockBuildUserService,
                     getNewRecordState(),
                     mockConsistencyManager,
-                    getJwtTokenStore(),
+                    getJwtTokenStore(), getIdentityVerificationService(),
                 )
 
             val operations =
@@ -299,7 +298,7 @@ class SubscriptionOperationExecutorTests :
                     mockBuildUserService,
                     newRecordState,
                     mockConsistencyManager,
-                    getJwtTokenStore(),
+                    getJwtTokenStore(), getIdentityVerificationService(),
                 )
 
             val operations =
@@ -344,7 +343,7 @@ class SubscriptionOperationExecutorTests :
                     mockBuildUserService,
                     getNewRecordState(),
                     mockConsistencyManager,
-                    getJwtTokenStore(),
+                    getJwtTokenStore(), getIdentityVerificationService(),
                 )
 
             val operations =
@@ -392,7 +391,7 @@ class SubscriptionOperationExecutorTests :
                     mockBuildUserService,
                     getNewRecordState(),
                     mockConsistencyManager,
-                    getJwtTokenStore(),
+                    getJwtTokenStore(), getIdentityVerificationService(),
                 )
 
             val operations =
@@ -465,7 +464,7 @@ class SubscriptionOperationExecutorTests :
                     mockBuildUserService,
                     getNewRecordState(),
                     mockConsistencyManager,
-                    getJwtTokenStore(),
+                    getJwtTokenStore(), getIdentityVerificationService(),
                 )
 
             val operations =
@@ -529,7 +528,7 @@ class SubscriptionOperationExecutorTests :
                     mockBuildUserService,
                     getNewRecordState(),
                     mockConsistencyManager,
-                    getJwtTokenStore(),
+                    getJwtTokenStore(), getIdentityVerificationService(),
                 )
 
             val operations =
@@ -583,7 +582,7 @@ class SubscriptionOperationExecutorTests :
                     mockBuildUserService,
                     getNewRecordState(),
                     mockConsistencyManager,
-                    getJwtTokenStore(),
+                    getJwtTokenStore(), getIdentityVerificationService(),
                 )
 
             val operations =
@@ -639,7 +638,7 @@ class SubscriptionOperationExecutorTests :
                     mockBuildUserService,
                     newRecordState,
                     mockConsistencyManager,
-                    getJwtTokenStore(),
+                    getJwtTokenStore(), getIdentityVerificationService(),
                 )
 
             val operations =
@@ -683,7 +682,7 @@ class SubscriptionOperationExecutorTests :
                     mockBuildUserService,
                     getNewRecordState(),
                     mockConsistencyManager,
-                    getJwtTokenStore(),
+                    getJwtTokenStore(), getIdentityVerificationService(),
                 )
 
             val operations =
@@ -718,7 +717,7 @@ class SubscriptionOperationExecutorTests :
                     mockBuildUserService,
                     getNewRecordState(),
                     mockConsistencyManager,
-                    getJwtTokenStore(),
+                    getJwtTokenStore(), getIdentityVerificationService(),
                 )
 
             val operations =
@@ -754,7 +753,7 @@ class SubscriptionOperationExecutorTests :
                     mockBuildUserService,
                     getNewRecordState(),
                     mockConsistencyManager,
-                    getJwtTokenStore(),
+                    getJwtTokenStore(), getIdentityVerificationService(),
                 )
 
             val operations =
@@ -790,7 +789,7 @@ class SubscriptionOperationExecutorTests :
                     mockBuildUserService,
                     newRecordState,
                     mockConsistencyManager,
-                    getJwtTokenStore(),
+                    getJwtTokenStore(), getIdentityVerificationService(),
                 )
 
             val operations =
@@ -832,7 +831,7 @@ class SubscriptionOperationExecutorTests :
                     mockBuildUserService,
                     getNewRecordState(),
                     mockConsistencyManager,
-                    getJwtTokenStore(),
+                    getJwtTokenStore(), getIdentityVerificationService(),
                 )
 
             val operations =
@@ -859,109 +858,97 @@ class SubscriptionOperationExecutorTests :
 
         test("update subscription returns FAIL_UNAUTHORIZED on 401 so JWT gets invalidated under IV") {
             // Given
-            IdentityVerificationGates.update(false, JwtRequirement.REQUIRED, "test")
-            try {
-                val mockSubscriptionBackendService = mockk<ISubscriptionBackendService>()
-                coEvery { mockSubscriptionBackendService.updateSubscription(any(), any(), any(), any()) } throws
-                    BackendException(401, "UNAUTHORIZED", retryAfterSeconds = 5)
+            val mockSubscriptionBackendService = mockk<ISubscriptionBackendService>()
+            coEvery { mockSubscriptionBackendService.updateSubscription(any(), any(), any(), any()) } throws
+                BackendException(401, "UNAUTHORIZED", retryAfterSeconds = 5)
 
-                val subscriptionOperationExecutor =
-                    SubscriptionOperationExecutor(
-                        mockSubscriptionBackendService,
-                        MockHelper.deviceService(),
-                        AndroidMockHelper.applicationService(),
-                        mockk<SubscriptionModelStore>(),
-                        MockHelper.configModelStore(),
-                        mockk<IRebuildUserService>(),
-                        getNewRecordState(),
-                        mockConsistencyManager,
-                        getJwtTokenStore(),
-                    )
-                val operations =
-                    listOf<Operation>(
-                        UpdateSubscriptionOperation(
-                            appId, remoteOneSignalId, "ext-1", remoteSubscriptionId,
-                            SubscriptionType.PUSH, true, "pushToken2", SubscriptionStatus.SUBSCRIBED,
-                        ),
-                    )
+            val subscriptionOperationExecutor =
+                SubscriptionOperationExecutor(
+                    mockSubscriptionBackendService,
+                    MockHelper.deviceService(),
+                    AndroidMockHelper.applicationService(),
+                    mockk<SubscriptionModelStore>(),
+                    MockHelper.configModelStore(),
+                    mockk<IRebuildUserService>(),
+                    getNewRecordState(),
+                    mockConsistencyManager,
+                    getJwtTokenStore(),
+                    getIdentityVerificationService(newCodePathsRun = true, ivBehaviorActive = true),
+                )
+            val operations =
+                listOf<Operation>(
+                    UpdateSubscriptionOperation(
+                        appId, remoteOneSignalId, "ext-1", remoteSubscriptionId,
+                        SubscriptionType.PUSH, true, "pushToken2", SubscriptionStatus.SUBSCRIBED,
+                    ),
+                )
 
-                // When
-                val response = subscriptionOperationExecutor.execute(operations)
+            // When
+            val response = subscriptionOperationExecutor.execute(operations)
 
-                // Then — must be FAIL_UNAUTHORIZED so OperationRepo.handleFailUnauthorized fires.
-                response.result shouldBe ExecutionResult.FAIL_UNAUTHORIZED
-                response.retryAfterSeconds shouldBe 5
-            } finally {
-                IdentityVerificationGates.update(false, JwtRequirement.UNKNOWN, "test-teardown")
-            }
+            // Then — must be FAIL_UNAUTHORIZED so OperationRepo.handleFailUnauthorized fires.
+            response.result shouldBe ExecutionResult.FAIL_UNAUTHORIZED
+            response.retryAfterSeconds shouldBe 5
         }
 
         test("delete subscription returns FAIL_UNAUTHORIZED on 401 so JWT gets invalidated under IV") {
             // Given
-            IdentityVerificationGates.update(false, JwtRequirement.REQUIRED, "test")
-            try {
-                val mockSubscriptionBackendService = mockk<ISubscriptionBackendService>()
-                coEvery { mockSubscriptionBackendService.deleteSubscription(any(), any(), any()) } throws
-                    BackendException(401, "UNAUTHORIZED", retryAfterSeconds = 5)
+            val mockSubscriptionBackendService = mockk<ISubscriptionBackendService>()
+            coEvery { mockSubscriptionBackendService.deleteSubscription(any(), any(), any()) } throws
+                BackendException(401, "UNAUTHORIZED", retryAfterSeconds = 5)
 
-                val subscriptionOperationExecutor =
-                    SubscriptionOperationExecutor(
-                        mockSubscriptionBackendService,
-                        MockHelper.deviceService(),
-                        AndroidMockHelper.applicationService(),
-                        mockk<SubscriptionModelStore>(),
-                        MockHelper.configModelStore(),
-                        mockk<IRebuildUserService>(),
-                        getNewRecordState(),
-                        mockConsistencyManager,
-                        getJwtTokenStore(),
-                    )
-                val operations =
-                    listOf<Operation>(DeleteSubscriptionOperation(appId, remoteOneSignalId, "ext-1", remoteSubscriptionId))
+            val subscriptionOperationExecutor =
+                SubscriptionOperationExecutor(
+                    mockSubscriptionBackendService,
+                    MockHelper.deviceService(),
+                    AndroidMockHelper.applicationService(),
+                    mockk<SubscriptionModelStore>(),
+                    MockHelper.configModelStore(),
+                    mockk<IRebuildUserService>(),
+                    getNewRecordState(),
+                    mockConsistencyManager,
+                    getJwtTokenStore(),
+                    getIdentityVerificationService(newCodePathsRun = true, ivBehaviorActive = true),
+                )
+            val operations =
+                listOf<Operation>(DeleteSubscriptionOperation(appId, remoteOneSignalId, "ext-1", remoteSubscriptionId))
 
-                // When
-                val response = subscriptionOperationExecutor.execute(operations)
+            // When
+            val response = subscriptionOperationExecutor.execute(operations)
 
-                // Then
-                response.result shouldBe ExecutionResult.FAIL_UNAUTHORIZED
-                response.retryAfterSeconds shouldBe 5
-            } finally {
-                IdentityVerificationGates.update(false, JwtRequirement.UNKNOWN, "test-teardown")
-            }
+            // Then
+            response.result shouldBe ExecutionResult.FAIL_UNAUTHORIZED
+            response.retryAfterSeconds shouldBe 5
         }
 
         test("transfer subscription returns FAIL_UNAUTHORIZED on 401 so JWT gets invalidated under IV") {
             // Given
-            IdentityVerificationGates.update(false, JwtRequirement.REQUIRED, "test")
-            try {
-                val mockSubscriptionBackendService = mockk<ISubscriptionBackendService>()
-                coEvery {
-                    mockSubscriptionBackendService.transferSubscription(any(), any(), any(), any(), any())
-                } throws BackendException(403, "FORBIDDEN", retryAfterSeconds = 5)
+            val mockSubscriptionBackendService = mockk<ISubscriptionBackendService>()
+            coEvery {
+                mockSubscriptionBackendService.transferSubscription(any(), any(), any(), any(), any())
+            } throws BackendException(403, "FORBIDDEN", retryAfterSeconds = 5)
 
-                val subscriptionOperationExecutor =
-                    SubscriptionOperationExecutor(
-                        mockSubscriptionBackendService,
-                        MockHelper.deviceService(),
-                        AndroidMockHelper.applicationService(),
-                        mockk<SubscriptionModelStore>(),
-                        MockHelper.configModelStore(),
-                        mockk<IRebuildUserService>(),
-                        getNewRecordState(),
-                        mockConsistencyManager,
-                        getJwtTokenStore(),
-                    )
-                val operations =
-                    listOf<Operation>(TransferSubscriptionOperation(appId, remoteOneSignalId, "ext-1", remoteSubscriptionId))
+            val subscriptionOperationExecutor =
+                SubscriptionOperationExecutor(
+                    mockSubscriptionBackendService,
+                    MockHelper.deviceService(),
+                    AndroidMockHelper.applicationService(),
+                    mockk<SubscriptionModelStore>(),
+                    MockHelper.configModelStore(),
+                    mockk<IRebuildUserService>(),
+                    getNewRecordState(),
+                    mockConsistencyManager,
+                    getJwtTokenStore(),
+                    getIdentityVerificationService(newCodePathsRun = true, ivBehaviorActive = true),
+                )
+            val operations =
+                listOf<Operation>(TransferSubscriptionOperation(appId, remoteOneSignalId, "ext-1", remoteSubscriptionId))
 
-                // When
-                val response = subscriptionOperationExecutor.execute(operations)
+            // When
+            val response = subscriptionOperationExecutor.execute(operations)
 
-                // Then
-                response.result shouldBe ExecutionResult.FAIL_UNAUTHORIZED
-                response.retryAfterSeconds shouldBe 5
-            } finally {
-                IdentityVerificationGates.update(false, JwtRequirement.UNKNOWN, "test-teardown")
-            }
+            // Then
+            response.result shouldBe ExecutionResult.FAIL_UNAUTHORIZED
+            response.retryAfterSeconds shouldBe 5
         }
     })

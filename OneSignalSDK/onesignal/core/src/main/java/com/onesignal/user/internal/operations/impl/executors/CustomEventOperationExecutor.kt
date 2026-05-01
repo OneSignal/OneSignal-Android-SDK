@@ -6,6 +6,7 @@ import com.onesignal.common.NetworkUtils
 import com.onesignal.common.OneSignalUtils
 import com.onesignal.common.exceptions.BackendException
 import com.onesignal.core.internal.application.IApplicationService
+import com.onesignal.core.internal.config.impl.IdentityVerificationService
 import com.onesignal.core.internal.device.IDeviceService
 import com.onesignal.core.internal.operations.ExecutionResponse
 import com.onesignal.core.internal.operations.ExecutionResult
@@ -13,7 +14,6 @@ import com.onesignal.core.internal.operations.IOperationExecutor
 import com.onesignal.core.internal.operations.Operation
 import com.onesignal.user.internal.customEvents.ICustomEventBackendService
 import com.onesignal.user.internal.customEvents.impl.CustomEventMetadata
-import com.onesignal.user.internal.jwt.IdentityVerificationGates
 import com.onesignal.user.internal.jwt.JwtTokenStore
 import com.onesignal.user.internal.operations.TrackCustomEventOperation
 
@@ -22,6 +22,7 @@ internal class CustomEventOperationExecutor(
     private val applicationService: IApplicationService,
     private val deviceService: IDeviceService,
     private val jwtTokenStore: JwtTokenStore,
+    private val identityVerificationService: IdentityVerificationService,
 ) : IOperationExecutor {
     override val operations: List<String>
         get() = listOf(CUSTOM_EVENT)
@@ -43,7 +44,12 @@ internal class CustomEventOperationExecutor(
         try {
             when (operation) {
                 is TrackCustomEventOperation -> {
-                    val jwt = if (IdentityVerificationGates.newCodePathsRun) resolveIvJwt(operation, jwtTokenStore) else null
+                    val jwt =
+                        if (identityVerificationService.newCodePathsRun) {
+                            resolveIvJwt(operation, jwtTokenStore, identityVerificationService.ivBehaviorActive)
+                        } else {
+                            null
+                        }
                     customEventBackendService.sendCustomEvent(
                         operation.appId,
                         operation.onesignalId,

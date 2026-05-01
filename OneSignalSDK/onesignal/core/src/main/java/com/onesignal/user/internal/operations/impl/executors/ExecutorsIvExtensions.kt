@@ -3,15 +3,16 @@ package com.onesignal.user.internal.operations.impl.executors
 import com.onesignal.core.internal.operations.Operation
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.user.internal.backend.IdentityConstants
-import com.onesignal.user.internal.jwt.IdentityVerificationGates
 import com.onesignal.user.internal.jwt.JwtTokenStore
 
 /**
  * IV-specific parameter resolution for operation executors. Base-class call sites dispatch via
- * `if (IdentityVerificationGates.newCodePathsRun) resolveIvBackendParams(...) else IvBackendParams.legacyFor(...)`;
- * the inner [IdentityVerificationGates.ivBehaviorActive] check keeps Phase 3 users (new code path
- * on, IV behavior off) on legacy alias/jwt values so they exercise the dispatch without any
- * behavioral change.
+ * `if (newCodePathsRun) resolveIvBackendParams(...) else IvBackendParams.legacyFor(...)`;
+ * the inner `ivBehaviorActive` check keeps Phase 3 users (new code path on, IV behavior off)
+ * on legacy alias/jwt values so they exercise the dispatch without any behavioral change.
+ *
+ * `ivBehaviorActive` is passed in by the executor (read from the injected
+ * `IdentityVerificationService`) — extension functions are not classes and cannot inject.
  */
 
 /** Alias + JWT triplet passed into backend calls. */
@@ -28,7 +29,7 @@ internal data class IvBackendParams(
 
 /**
  * Resolves alias + JWT for a backend call. Intended to be called only when
- * [IdentityVerificationGates.newCodePathsRun] is true; base-class dispatch handles the outer gate.
+ * `newCodePathsRun` is true; base-class dispatch handles the outer gate.
  *
  * - IV behavior inactive (Phase 3) → legacy values; no alias switch, no JWT attach.
  * - IV behavior active + op has externalId → `external_id` alias + JWT from [JwtTokenStore].
@@ -42,8 +43,9 @@ internal fun resolveIvBackendParams(
     op: Operation,
     onesignalId: String,
     jwtTokenStore: JwtTokenStore,
+    ivBehaviorActive: Boolean,
 ): IvBackendParams {
-    if (!IdentityVerificationGates.ivBehaviorActive) return IvBackendParams.legacyFor(onesignalId)
+    if (!ivBehaviorActive) return IvBackendParams.legacyFor(onesignalId)
     val externalId = op.externalId
     if (externalId == null) {
         Logging.error("IV active but op has null externalId; falling back to onesignal_id")
@@ -59,8 +61,9 @@ internal fun resolveIvBackendParams(
 internal fun resolveIvJwt(
     op: Operation,
     jwtTokenStore: JwtTokenStore,
+    ivBehaviorActive: Boolean,
 ): String? {
-    if (!IdentityVerificationGates.ivBehaviorActive) return null
+    if (!ivBehaviorActive) return null
     val externalId = op.externalId ?: return null
     return jwtTokenStore.getJwt(externalId)
 }
@@ -68,7 +71,7 @@ internal fun resolveIvJwt(
 /**
  * LoginUserFromSubscription path is blocked under IV — the backend endpoint the v4→v5 upgrade path
  * relies on is not allowed when `jwt_required == true`. Returns `true` when the executor should
- * short-circuit to `FAIL_NORETRY`. Called only when [IdentityVerificationGates.newCodePathsRun]
- * is true; Phase 3 users (behavior inactive) fall through and use the legacy migration path.
+ * short-circuit to `FAIL_NORETRY`. Called only when `newCodePathsRun` is true; Phase 3 users
+ * (behavior inactive) fall through and use the legacy migration path.
  */
-internal fun shouldFailLoginUserFromSubscription(): Boolean = IdentityVerificationGates.ivBehaviorActive
+internal fun shouldFailLoginUserFromSubscription(ivBehaviorActive: Boolean): Boolean = ivBehaviorActive

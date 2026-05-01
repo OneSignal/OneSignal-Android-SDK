@@ -6,6 +6,7 @@ import com.onesignal.common.consistency.enums.IamFetchRywTokenKey
 import com.onesignal.common.consistency.models.IConsistencyManager
 import com.onesignal.common.exceptions.BackendException
 import com.onesignal.common.modeling.ModelChangeTags
+import com.onesignal.core.internal.config.impl.IdentityVerificationService
 import com.onesignal.core.internal.operations.ExecutionResponse
 import com.onesignal.core.internal.operations.ExecutionResult
 import com.onesignal.core.internal.operations.IOperationExecutor
@@ -18,7 +19,6 @@ import com.onesignal.user.internal.backend.PropertiesObject
 import com.onesignal.user.internal.backend.PurchaseObject
 import com.onesignal.user.internal.builduser.IRebuildUserService
 import com.onesignal.user.internal.identity.IdentityModelStore
-import com.onesignal.user.internal.jwt.IdentityVerificationGates
 import com.onesignal.user.internal.jwt.JwtTokenStore
 import com.onesignal.user.internal.operations.DeleteTagOperation
 import com.onesignal.user.internal.operations.SetPropertyOperation
@@ -37,6 +37,7 @@ internal class UpdateUserOperationExecutor(
     private val _newRecordState: NewRecordsState,
     private val _consistencyManager: IConsistencyManager,
     private val _jwtTokenStore: JwtTokenStore,
+    private val _identityVerificationService: IdentityVerificationService,
 ) : IOperationExecutor {
     override val operations: List<String>
         get() = listOf(SET_TAG, DELETE_TAG, SET_PROPERTY, TRACK_SESSION_START, TRACK_SESSION_END, TRACK_PURCHASE)
@@ -143,8 +144,8 @@ internal class UpdateUserOperationExecutor(
             // pulling externalId from `operations.first()` is safe and represents the batch.
             val firstOp = operations.first()
             val params =
-                if (IdentityVerificationGates.newCodePathsRun) {
-                    resolveIvBackendParams(firstOp, onesignalId, _jwtTokenStore)
+                if (_identityVerificationService.newCodePathsRun) {
+                    resolveIvBackendParams(firstOp, onesignalId, _jwtTokenStore, _identityVerificationService.ivBehaviorActive)
                 } else {
                     IvBackendParams.legacyFor(onesignalId)
                 }
