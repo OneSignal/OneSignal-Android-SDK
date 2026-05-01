@@ -56,16 +56,18 @@ internal open class UserManager(
     private val jwtInvalidatedNotifier = EventProducer<IUserJwtInvalidatedListener>()
 
     /**
-     * Most recent invalidation event, replayed to listeners that subscribe after the fact.
-     * Cleared on logout (via [clearLastJwtInvalidated]) so a stale event from a previous
-     * user doesn't fire for an unrelated session.
+     * Buffers a fired invalidation when no listeners are subscribed yet (e.g. SDK init / cold-start
+     * 401 before app code wires up its listener). Consumed-on-first-subscribe by the next
+     * [addJwtInvalidatedListener] call. Cleared automatically when the IdentityModel is replaced
+     * (login or logout) so a stale event doesn't leak across users.
      */
-    @Volatile
-    private var lastJwtInvalidatedExternalId: String? = null
+    private val jwtInvalidatedLock = Any()
+    private var pendingJwtInvalidatedExternalId: String? = null
 
     /**
      * Async dispatch of [IUserJwtInvalidatedListener] callbacks so HYDRATE / op-repo paths
      * that synchronously trigger invalidation don't run app code on the SDK's internal thread.
+     * Replay (synchronous, on the calling thread) bypasses this scope.
      */
     private val jwtInvalidatedDispatchScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
@@ -91,17 +93,22 @@ internal open class UserManager(
 
     /**
      * Subscribe a developer-facing listener for JWT-invalidated events. If an invalidation
-     * has already fired before this listener subscribed, the most recent event is replayed
-     * so apps that subscribe late don't miss the signal.
+     * has already fired before any listener was subscribed (e.g. early-startup 401), the
+     * buffered event is delivered to this listener synchronously and consumed — subsequent
+     * subscribers do not receive that same event.
      */
     fun addJwtInvalidatedListener(listener: IUserJwtInvalidatedListener) {
-        jwtInvalidatedNotifier.subscribe(listener)
-        val replayId = lastJwtInvalidatedExternalId
-        if (replayId != null) {
-            jwtInvalidatedDispatchScope.launch {
-                runCatching { listener.onUserJwtInvalidated(UserJwtInvalidatedEvent(replayId)) }
-                    .onFailure { Logging.warn("UserManager: replayed jwt-invalidated listener threw: ${it.message}") }
-            }
+        val pendingExternalId: String?
+        synchronized(jwtInvalidatedLock) {
+            jwtInvalidatedNotifier.subscribe(listener)
+            pendingExternalId = pendingJwtInvalidatedExternalId
+            pendingJwtInvalidatedExternalId = null
+        }
+        // Deliver the replay outside the lock so a slow listener doesn't block other
+        // subscribe/unsubscribe/fire calls. Replay runs on the caller's thread (sync).
+        pendingExternalId?.let {
+            runCatching { listener.onUserJwtInvalidated(UserJwtInvalidatedEvent(it)) }
+                .onFailure { ex -> Logging.warn("UserManager: replayed jwt-invalidated listener threw: ${ex.message}") }
         }
     }
 
@@ -111,23 +118,22 @@ internal open class UserManager(
 
     /**
      * Fire [IUserJwtInvalidatedListener.onUserJwtInvalidated] to all subscribed listeners on
-     * a background dispatcher. Caches the event for late-subscribing listeners (replay).
+     * a background dispatcher. If no listener is currently subscribed, buffer the externalId
+     * to be delivered to the next listener that subscribes (consume-on-first-subscribe).
      */
     fun fireJwtInvalidated(externalId: String) {
-        lastJwtInvalidatedExternalId = externalId
-        jwtInvalidatedDispatchScope.launch {
-            runCatching {
-                jwtInvalidatedNotifier.fire { listener ->
-                    runCatching { listener.onUserJwtInvalidated(UserJwtInvalidatedEvent(externalId)) }
-                        .onFailure { Logging.warn("UserManager: jwt-invalidated listener threw: ${it.message}") }
+        synchronized(jwtInvalidatedLock) {
+            if (jwtInvalidatedNotifier.hasSubscribers) {
+                jwtInvalidatedDispatchScope.launch {
+                    jwtInvalidatedNotifier.fire { listener ->
+                        runCatching { listener.onUserJwtInvalidated(UserJwtInvalidatedEvent(externalId)) }
+                            .onFailure { ex -> Logging.warn("UserManager: jwt-invalidated listener threw: ${ex.message}") }
+                    }
                 }
-            }.onFailure { Logging.warn("Failed to deliver JWT invalidated event for externalId=$externalId: ${it.message}") }
+            } else {
+                pendingJwtInvalidatedExternalId = externalId
+            }
         }
-    }
-
-    /** Clear the replay cache. Called on logout so stale events don't fire for the next user. */
-    fun clearLastJwtInvalidated() {
-        lastJwtInvalidatedExternalId = null
     }
 
     // IJwtUpdateListener — JwtTokenStore -> developer-facing event bridge.
@@ -336,7 +342,13 @@ internal open class UserManager(
     override fun onModelReplaced(
         model: IdentityModel,
         tag: String,
-    ) { }
+    ) {
+        // IdentityModel replacement = login or logout switch. Clear any buffered invalidation
+        // so the next user's listener doesn't replay the previous user's stale event.
+        synchronized(jwtInvalidatedLock) {
+            pendingJwtInvalidatedExternalId = null
+        }
+    }
 
     override fun onModelUpdated(
         args: ModelChangedArgs,

@@ -255,4 +255,16 @@ interface IOneSignal {
      * Logout the current user (suspend version).
      */
     suspend fun logoutSuspend()
+
+    /**
+     * Update the JWT bearer token associated with [externalId] (suspend version). Suspends
+     * until SDK initialization is complete, then stores the JWT and wakes the operation queue.
+     *
+     * @param externalId The external ID the JWT belongs to.
+     * @param token The new JWT bearer token issued by your backend.
+     */
+    suspend fun updateUserJwtSuspend(
+        externalId: String,
+        token: String,
+    )
 }

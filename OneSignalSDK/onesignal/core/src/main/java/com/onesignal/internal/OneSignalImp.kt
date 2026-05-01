@@ -413,10 +413,6 @@ internal class OneSignalImp(
             }
         }
 
-        // Clear the replay cache so a stale jwt-invalidated event from the previous user
-        // doesn't fire for a listener registered after logout switches us to a new user.
-        services.getServiceOrNull<UserManager>()?.clearLastJwtInvalidated()
-
         val context = logoutHelper.switchUser() ?: return
 
         if (isBackgroundThreadingEnabled) {
@@ -450,16 +446,10 @@ internal class OneSignalImp(
     }
 
     override fun addUserJwtInvalidatedListener(listener: IUserJwtInvalidatedListener) {
-        if (!isInitialized) {
-            throw IllegalStateException("Must call 'initWithContext' before 'addUserJwtInvalidatedListener'")
-        }
         services.getService<UserManager>().addJwtInvalidatedListener(listener)
     }
 
     override fun removeUserJwtInvalidatedListener(listener: IUserJwtInvalidatedListener) {
-        if (!isInitialized) {
-            throw IllegalStateException("Must call 'initWithContext' before 'removeUserJwtInvalidatedListener'")
-        }
         services.getService<UserManager>().removeJwtInvalidatedListener(listener)
     }
 
@@ -704,6 +694,22 @@ internal class OneSignalImp(
         loginHelper.enqueueLogin(context)
     }
 
+    override suspend fun updateUserJwtSuspend(
+        externalId: String,
+        token: String,
+    ) = withContext(runtimeIoDispatcher) {
+        Logging.log(LogLevel.DEBUG, "updateUserJwtSuspend(externalId: $externalId, token: ...${token.takeLast(8)})")
+
+        suspendUntilInit(operationName = "updateUserJwt")
+
+        if (!isInitialized) {
+            throw IllegalStateException("'initWithContext failed' before 'updateUserJwt'")
+        }
+
+        jwtTokenStore.putJwt(externalId, token)
+        operationRepo.forceExecuteOperations()
+    }
+
     override suspend fun logoutSuspend() =
         withContext(runtimeIoDispatcher) {
             Logging.log(LogLevel.DEBUG, "logoutSuspend()")
@@ -713,8 +719,6 @@ internal class OneSignalImp(
             if (!isInitialized) {
                 throw IllegalStateException("'initWithContext failed' before 'logout'")
             }
-
-            services.getServiceOrNull<UserManager>()?.clearLastJwtInvalidated()
 
             val context = logoutHelper.switchUser() ?: return@withContext
             logoutHelper.enqueueLogout(context)
