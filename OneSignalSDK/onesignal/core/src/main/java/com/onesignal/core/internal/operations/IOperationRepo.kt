@@ -42,14 +42,6 @@ interface IOperationRepo {
     suspend fun awaitInitialized()
 
     fun forceExecuteOperations()
-
-    /**
-     * Registers a handler invoked with the externalId of the user whose op just hit a
-     * FAIL_UNAUTHORIZED response. Set once by the public-API layer so it can forward to
-     * developer-facing [com.onesignal.user.internal.jwt.IUserJwtInvalidatedListener]s
-     * (single handler — not multi-subscriber).
-     */
-    fun setJwtInvalidatedHandler(handler: ((externalId: String) -> Unit)?)
 }
 
 // Extension function so the syntax containsInstanceOf<Operation>() can be used over

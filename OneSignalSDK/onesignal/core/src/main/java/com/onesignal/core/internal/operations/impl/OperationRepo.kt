@@ -38,9 +38,6 @@ internal class OperationRepo(
     private val _identityVerificationService: IdentityVerificationService,
 ) : IOperationRepo, IStartableService {
 
-    @Volatile
-    private var _jwtInvalidatedHandler: ((String) -> Unit)? = null
-
     internal class OperationQueueItem(
         val operation: Operation,
         var waiter: WaiterWithValue<Boolean>? = null, // waiter may transfer during operation de-dupe
@@ -116,7 +113,7 @@ internal class OperationRepo(
         paused = false
         // Wire post-HYDRATE choreography. Constructor injection of IOperationRepo into
         // IdentityVerificationService would create a cycle, so the service exposes a setter
-        // that we call here. Same pattern as setJwtInvalidatedHandler.
+        // that we call here.
         _identityVerificationService.setOnJwtConfigHydratedHandler { ivRequired ->
             onJwtConfigHydrated(ivRequired)
         }
@@ -264,10 +261,6 @@ internal class OperationRepo(
         waiter.wake(LoopWaiterMessage(false))
     }
 
-    override fun setJwtInvalidatedHandler(handler: ((externalId: String) -> Unit)?) {
-        _jwtInvalidatedHandler = handler
-    }
-
     /**
      * Drops queued operations whose externalId is null. Called by the IV-aware HYDRATE
      * choreography in [OperationRepoIvExtensions] when `jwt_required` becomes REQUIRED
@@ -371,7 +364,6 @@ internal class OperationRepo(
                                 startingOp,
                                 ops,
                                 _jwtTokenStore,
-                                _jwtInvalidatedHandler,
                                 _identityVerificationService.ivBehaviorActive,
                             )
                     if (!handled) {
