@@ -35,7 +35,7 @@ class CustomEventBackendServiceTests : FunSpec({
     test("track event") {
         // Given
         val spyHttpClient = mockk<IHttpClient>()
-        coEvery { spyHttpClient.post(any(), any()) } returns HttpResponse(202, "")
+        coEvery { spyHttpClient.post(any(), any(), any()) } returns HttpResponse(202, "")
         val customEventBackendService = CustomEventBackendService(spyHttpClient)
 
         // When
@@ -80,6 +80,7 @@ class CustomEventBackendServiceTests : FunSpec({
                     payload.getJSONObject("os_sdk").toString() shouldBeEqual metadata.toJSONObject().toString()
                     payload.getString("proKey1") shouldBeEqual "proVal1"
                 },
+                any(),
             )
         }
     }

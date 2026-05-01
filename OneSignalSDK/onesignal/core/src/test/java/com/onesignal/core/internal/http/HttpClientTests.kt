@@ -255,4 +255,48 @@ class HttpClientTests : FunSpec({
         response2 shouldBe null
         response3 shouldNotBe null
     }
+
+    test("Authorization header is set when OptionalHeaders.jwt is provided") {
+        // Given
+        val mocks = Mocks()
+
+        // When
+        mocks.httpClient.get("URL", OptionalHeaders(jwt = "abc.def.ghi"))
+        mocks.httpClient.post("URL", JSONObject(), OptionalHeaders(jwt = "abc.def.ghi"))
+
+        // Then
+        for (connection in mocks.factory.connections) {
+            connection.getRequestProperty("Authorization") shouldBe "Bearer abc.def.ghi"
+        }
+    }
+
+    test("Authorization header is NOT set when OptionalHeaders.jwt is null") {
+        // Given
+        val mocks = Mocks()
+
+        // When
+        mocks.httpClient.get("URL", OptionalHeaders(jwt = null))
+        mocks.httpClient.post("URL", JSONObject())
+
+        // Then
+        for (connection in mocks.factory.connections) {
+            connection.getRequestProperty("Authorization") shouldBe null
+        }
+    }
+
+    test("POST + JWT does not throw (headers must be set before body write)") {
+        // Given: MockHttpURLConnection now throws IllegalStateException if setRequestProperty is
+        // called after connect()/getOutputStream()/getResponseCode (matching real Android behavior).
+        // This test fails if the HttpClient regresses to setting Authorization after the body write.
+        val mocks = Mocks()
+        mocks.response.status = 200
+        mocks.response.responseBody = "{}"
+
+        // When
+        val response = mocks.httpClient.post("URL", JSONObject().put("k", "v"), OptionalHeaders(jwt = "the-jwt"))
+
+        // Then: the request completed without the mock throwing, and the header actually stuck.
+        response.throwable shouldBe null
+        mocks.factory.connections.last().getRequestProperty("Authorization") shouldBe "Bearer the-jwt"
+    }
 })

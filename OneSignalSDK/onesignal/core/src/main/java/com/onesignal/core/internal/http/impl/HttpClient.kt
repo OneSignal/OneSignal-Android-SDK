@@ -159,17 +159,10 @@ internal class HttpClient(
                         con.doOutput = true
                     }
 
-                    logHTTPSent(con.requestMethod, con.url, jsonBody, con.requestProperties)
-
-                    if (jsonBody != null) {
-                        val strJsonBody = JSONUtils.toUnescapedEUIDString(jsonBody)
-                        val sendBytes = strJsonBody.toByteArray(charset("UTF-8"))
-                        con.setFixedLengthStreamingMode(sendBytes.size)
-                        val outputStream = con.outputStream
-                        outputStream.write(sendBytes)
-                    }
-
-                    // H E A D E R S
+                    // H E A D E R S — must be set before any body write below. `getOutputStream()`
+                    // (and `setFixedLengthStreamingMode`) commit the request line + headers to the
+                    // wire; `setRequestProperty` after that point either throws IllegalStateException
+                    // or is silently dropped, depending on the HttpURLConnection implementation.
 
                     if (headers?.cacheKey != null) {
                         val eTag =
@@ -193,6 +186,20 @@ internal class HttpClient(
 
                     if (headers?.sessionDuration != null) {
                         con.setRequestProperty("OneSignal-Session-Duration", headers.sessionDuration.toString())
+                    }
+
+                    if (headers?.jwt != null) {
+                        con.setRequestProperty("Authorization", "Bearer ${headers.jwt}")
+                    }
+
+                    logHTTPSent(con.requestMethod, con.url, jsonBody, con.requestProperties)
+
+                    if (jsonBody != null) {
+                        val strJsonBody = JSONUtils.toUnescapedEUIDString(jsonBody)
+                        val sendBytes = strJsonBody.toByteArray(charset("UTF-8"))
+                        con.setFixedLengthStreamingMode(sendBytes.size)
+                        val outputStream = con.outputStream
+                        outputStream.write(sendBytes)
                     }
 
                     // Network request is made from getResponseCode()
@@ -325,7 +332,11 @@ internal class HttpClient(
         jsonBody: JSONObject?,
         headers: Map<String, List<String>>,
     ) {
-        val headersStr = headers.entries.joinToString()
+        // Redact Authorization so JWTs never reach logs even if this call moves below the header block.
+        val headersStr =
+            headers.entries.joinToString {
+                if (it.key.equals("Authorization", ignoreCase = true)) "${it.key}=[REDACTED]" else it.toString()
+            }
         val methodStr = method ?: "GET"
         val bodyStr = if (jsonBody != null) JSONUtils.toUnescapedEUIDString(jsonBody) else null
         Logging.debug("HttpClient: Request Sent = $methodStr $url - Body: $bodyStr - Headers: $headersStr")
