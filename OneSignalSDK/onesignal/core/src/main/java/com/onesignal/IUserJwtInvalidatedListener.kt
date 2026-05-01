@@ -6,7 +6,11 @@ package com.onesignal
  * detected that the JWT for a user is no longer valid (typically a 401 from
  * the OneSignal backend on a request signed with that JWT).
  *
- * Callbacks are delivered on a background thread.
+ * Threading: regular fire delivery happens on a background dispatcher. Replay
+ * delivery (when an invalidation occurred before any listener was subscribed)
+ * happens synchronously on the thread that calls
+ * [IOneSignal.addUserJwtInvalidatedListener]. Implementations should not assume
+ * a specific thread.
  */
 fun interface IUserJwtInvalidatedListener {
     /**
