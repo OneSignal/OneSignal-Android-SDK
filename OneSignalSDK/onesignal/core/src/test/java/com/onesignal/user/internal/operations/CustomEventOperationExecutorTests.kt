@@ -3,6 +3,7 @@ package com.onesignal.user.internal.operations
 import android.content.Context
 import android.os.Build
 import com.onesignal.common.OneSignalUtils
+import com.onesignal.common.exceptions.BackendException
 import com.onesignal.core.internal.device.IDeviceService
 import com.onesignal.core.internal.operations.ExecutionResponse
 import com.onesignal.core.internal.operations.ExecutionResult
@@ -65,5 +66,37 @@ class CustomEventOperationExecutorTests : FunSpec({
                 null,
             )
         }
+    }
+
+    test("track event returns FAIL_UNAUTHORIZED on 401 so JWT gets invalidated under IV") {
+        // Given
+        val mockCustomEventBackendService = mockk<ICustomEventBackendService>()
+        coEvery { mockCustomEventBackendService.sendCustomEvent(any(), any(), any(), any(), any(), any(), any(), any()) } throws
+            BackendException(401, "UNAUTHORIZED", retryAfterSeconds = 5)
+
+        val mockApplicationService = MockHelper.applicationService()
+        every { mockApplicationService.appContext } returns mockk<Context>(relaxed = true)
+        val mockDeviceService = MockHelper.deviceService()
+        every { mockDeviceService.deviceType } returns IDeviceService.DeviceType.Android
+
+        val customEventOperationExecutor =
+            CustomEventOperationExecutor(
+                mockCustomEventBackendService,
+                mockApplicationService,
+                mockDeviceService,
+                getJwtTokenStore(),
+                getIdentityVerificationService(newCodePathsRun = true, ivBehaviorActive = true),
+            )
+        val operations =
+            listOf<Operation>(
+                TrackCustomEventOperation("appId", "onesignalId", "ext-1", 1, "event-name", JSONObject().toString()),
+            )
+
+        // When
+        val response = customEventOperationExecutor.execute(operations)
+
+        // Then — must be FAIL_UNAUTHORIZED so OperationRepo.handleFailUnauthorized fires.
+        response.result shouldBe ExecutionResult.FAIL_UNAUTHORIZED
+        response.retryAfterSeconds shouldBe 5
     }
 })
