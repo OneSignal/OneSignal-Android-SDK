@@ -242,8 +242,10 @@ internal class OperationRepo(
             }
 
             val ops = getNextOps(executeBucket)
-            val queueSnapshotForLogging = synchronized(queue) { queue.toList() }
-            Logging.debug("processQueueForever:ops:\n$ops\nqueue(${queueSnapshotForLogging.size}):\n$queueSnapshotForLogging")
+            if (Logging.atLogLevel(LogLevel.DEBUG)) {
+                val queueSnapshotForLogging = synchronized(queue) { queue.toList() }
+                Logging.debug("processQueueForever:ops:\n$ops\nqueue(${queueSnapshotForLogging.size}):\n$queueSnapshotForLogging")
+            }
 
             if (ops != null) {
                 executeOperations(ops)
@@ -375,17 +377,14 @@ internal class OperationRepo(
                     if (!handled) {
                         // IV inactive or anon op: drop and wake waiters, matching FAIL_NORETRY.
                         Logging.warn("Operation execution failed without retry: $operations")
-                        ops.forEach { _operationModelStore.remove(it.operation.id) }
-                        ops.forEach { it.waiter?.wake(false) }
+                        dropAndWake(ops)
                     }
                 }
                 ExecutionResult.FAIL_NORETRY,
                 ExecutionResult.FAIL_CONFLICT,
                 -> {
                     Logging.warn("Operation execution failed without retry: $operations")
-                    // on failure we remove the operation from the store and wake any waiters
-                    ops.forEach { _operationModelStore.remove(it.operation.id) }
-                    ops.forEach { it.waiter?.wake(false) }
+                    dropAndWake(ops)
                 }
                 ExecutionResult.SUCCESS_STARTING_ONLY -> {
                     // remove the starting operation from the store and wake any waiters, then
@@ -445,11 +444,14 @@ internal class OperationRepo(
             }
         } catch (e: Throwable) {
             Logging.log(LogLevel.ERROR, "Error attempting to execute operation: $ops", e)
-
-            // on failure we remove the operation from the store and wake any waiters
-            ops.forEach { _operationModelStore.remove(it.operation.id) }
-            ops.forEach { it.waiter?.wake(false) }
+            dropAndWake(ops)
         }
+    }
+
+    /** Drop ops from the persistent store and wake any waiters with `false` (failure). */
+    private fun dropAndWake(ops: List<OperationQueueItem>) {
+        ops.forEach { _operationModelStore.remove(it.operation.id) }
+        ops.forEach { it.waiter?.wake(false) }
     }
 
     /**
