@@ -84,4 +84,11 @@ class CreateUserResponse(
      * The subscriptions for the user.
      */
     val subscriptions: List<SubscriptionObject>,
+    /**
+     * Read-your-write data for IAM fetch consistency, when the backend supplies it.
+     * Populated under Identity Verification so [com.onesignal.inAppMessages] can await
+     * the user record's propagation before fetching IAMs. `null` for non-IV apps and
+     * older backends that don't include `ryw_token` in the response.
+     */
+    val rywData: com.onesignal.common.consistency.RywData? = null,
 )

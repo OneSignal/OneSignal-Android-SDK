@@ -17,6 +17,7 @@ import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.application.impl.ApplicationService
 import com.onesignal.core.internal.config.ConfigModel
 import com.onesignal.core.internal.config.ConfigModelStore
+import com.onesignal.core.internal.config.impl.IdentityVerificationService
 import com.onesignal.core.internal.features.FeatureFlag
 import com.onesignal.core.internal.features.IFeatureManager
 import com.onesignal.core.internal.operations.IOperationRepo
@@ -235,6 +236,8 @@ internal class OneSignalImp(
             userSwitcher = userSwitcher,
             operationRepo = operationRepo,
             configModel = configModel,
+            subscriptionModelStore = subscriptionModelStore,
+            identityVerificationService = services.getService<IdentityVerificationService>(),
             lock = loginLogoutLock,
         )
     }

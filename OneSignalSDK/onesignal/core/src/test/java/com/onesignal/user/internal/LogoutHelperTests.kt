@@ -49,6 +49,11 @@ class LogoutHelperTests : FunSpec({
                 userSwitcher = mockUserSwitcher,
                 operationRepo = mockOperationRepo,
                 configModel = mockConfigModel,
+                subscriptionModelStore = mockk(relaxed = true),
+                identityVerificationService = mockk(relaxed = true) {
+                    every { newCodePathsRun } returns false
+                    every { ivBehaviorActive } returns false
+                },
                 lock = logoutLock,
             )
 
@@ -80,6 +85,11 @@ class LogoutHelperTests : FunSpec({
                 userSwitcher = mockUserSwitcher,
                 operationRepo = mockOperationRepo,
                 configModel = mockConfigModel,
+                subscriptionModelStore = mockk(relaxed = true),
+                identityVerificationService = mockk(relaxed = true) {
+                    every { newCodePathsRun } returns false
+                    every { ivBehaviorActive } returns false
+                },
                 lock = logoutLock,
             )
 
@@ -120,6 +130,11 @@ class LogoutHelperTests : FunSpec({
                 userSwitcher = mockUserSwitcher,
                 operationRepo = mockOperationRepo,
                 configModel = mockConfigModel,
+                subscriptionModelStore = mockk(relaxed = true),
+                identityVerificationService = mockk(relaxed = true) {
+                    every { newCodePathsRun } returns false
+                    every { ivBehaviorActive } returns false
+                },
                 lock = logoutLock,
             )
 
@@ -153,6 +168,11 @@ class LogoutHelperTests : FunSpec({
                 userSwitcher = mockUserSwitcher,
                 operationRepo = mockOperationRepo,
                 configModel = mockConfigModel,
+                subscriptionModelStore = mockk(relaxed = true),
+                identityVerificationService = mockk(relaxed = true) {
+                    every { newCodePathsRun } returns false
+                    every { ivBehaviorActive } returns false
+                },
                 lock = logoutLock,
             )
 

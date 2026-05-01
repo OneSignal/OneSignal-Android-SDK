@@ -10,7 +10,7 @@ import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.debug.internal.logging.Logging
 import kotlinx.serialization.json.JsonObject
 
-internal interface IFeatureManager {
+interface IFeatureManager {
     fun isEnabled(feature: FeatureFlag): Boolean
 
     /**

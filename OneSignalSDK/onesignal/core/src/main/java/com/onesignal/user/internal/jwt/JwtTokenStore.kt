@@ -14,7 +14,7 @@ import org.json.JSONObject
  * can still resolve their JWT at execution time. Storage is unconditional; *usage* of JWTs is
  * gated on `IdentityVerificationService.ivBehaviorActive`.
  */
-internal class JwtTokenStore(
+class JwtTokenStore(
     private val _prefs: IPreferencesService,
 ) : IEventNotifier<IJwtUpdateListener> {
     private val tokens: MutableMap<String, String> = mutableMapOf()
