@@ -2,6 +2,8 @@ package com.onesignal.user.internal
 
 import com.onesignal.core.internal.language.ILanguageContext
 import com.onesignal.mocks.MockHelper
+import com.onesignal.mocks.MockPreferencesService
+import com.onesignal.user.internal.jwt.JwtTokenStore
 import com.onesignal.user.internal.subscriptions.ISubscriptionManager
 import com.onesignal.user.internal.subscriptions.SubscriptionList
 import io.kotest.assertions.throwables.shouldNotThrow
@@ -28,7 +30,7 @@ class UserManagerTests : FunSpec({
         every { languageContext.language = capture(languageSlot) } answers { }
 
         val userManager =
-            UserManager(mockSubscriptionManager, MockHelper.identityModelStore(), MockHelper.propertiesModelStore(), MockHelper.customEventController(), languageContext)
+            UserManager(mockSubscriptionManager, MockHelper.identityModelStore(), MockHelper.propertiesModelStore(), MockHelper.customEventController(), languageContext, JwtTokenStore(MockPreferencesService()))
 
         // When
         userManager.setLanguage("new-language")
@@ -46,7 +48,7 @@ class UserManagerTests : FunSpec({
             }
 
         val userManager =
-            UserManager(mockSubscriptionManager, identityModelStore, MockHelper.propertiesModelStore(), MockHelper.customEventController(), MockHelper.languageContext())
+            UserManager(mockSubscriptionManager, identityModelStore, MockHelper.propertiesModelStore(), MockHelper.customEventController(), MockHelper.languageContext(), JwtTokenStore(MockPreferencesService()))
 
         // When
         val externalId = userManager.externalId
@@ -65,7 +67,7 @@ class UserManagerTests : FunSpec({
             }
 
         val userManager =
-            UserManager(mockSubscriptionManager, identityModelStore, MockHelper.propertiesModelStore(), MockHelper.customEventController(), MockHelper.languageContext())
+            UserManager(mockSubscriptionManager, identityModelStore, MockHelper.propertiesModelStore(), MockHelper.customEventController(), MockHelper.languageContext(), JwtTokenStore(MockPreferencesService()))
 
         // When
         val alias1 = userManager.aliases["my-alias-key1"]
@@ -104,7 +106,7 @@ class UserManagerTests : FunSpec({
             }
 
         val userManager =
-            UserManager(mockSubscriptionManager, MockHelper.identityModelStore(), propertiesModelStore, MockHelper.customEventController(), MockHelper.languageContext())
+            UserManager(mockSubscriptionManager, MockHelper.identityModelStore(), propertiesModelStore, MockHelper.customEventController(), MockHelper.languageContext(), JwtTokenStore(MockPreferencesService()))
 
         // When
         val tag1 = propertiesModelStore.model.tags["my-tag-key1"]
@@ -143,7 +145,7 @@ class UserManagerTests : FunSpec({
                 it.tags["my-tag-key1"] = "my-tag-value1"
             }
 
-        val userManager = UserManager(mockSubscriptionManager, MockHelper.identityModelStore(), propertiesModelStore, MockHelper.customEventController(), MockHelper.languageContext())
+        val userManager = UserManager(mockSubscriptionManager, MockHelper.identityModelStore(), propertiesModelStore, MockHelper.customEventController(), MockHelper.languageContext(), JwtTokenStore(MockPreferencesService()))
 
         // When
         val tagSnapshot1 = userManager.getTags()
@@ -177,6 +179,7 @@ class UserManagerTests : FunSpec({
                 MockHelper.propertiesModelStore(),
                 MockHelper.customEventController(),
                 MockHelper.languageContext(),
+                JwtTokenStore(MockPreferencesService()),
             )
 
         // When
@@ -195,12 +198,120 @@ class UserManagerTests : FunSpec({
         verify(exactly = 1) { mockSubscriptionManager.removeSmsSubscription("+15558675309") }
     }
 
+    test("JwtTokenStore.invalidateJwt fires registered IUserJwtInvalidatedListener") {
+        // Given: real JwtTokenStore with one stored JWT, UserManager subscribed in init.
+        val jwtTokenStore = JwtTokenStore(MockPreferencesService())
+        jwtTokenStore.putJwt("alice", "stale-token")
+        val userManager =
+            UserManager(
+                mockk<ISubscriptionManager>(),
+                MockHelper.identityModelStore(),
+                MockHelper.propertiesModelStore(),
+                MockHelper.customEventController(),
+                MockHelper.languageContext(),
+                jwtTokenStore,
+            )
+
+        var firedExternalId: String? = null
+        val waiter = com.onesignal.common.threading.Waiter()
+        userManager.addJwtInvalidatedListener { event ->
+            firedExternalId = event.externalId
+            waiter.wake()
+        }
+
+        // When
+        jwtTokenStore.invalidateJwt("alice")
+        waiter.waitForWake()
+
+        // Then
+        firedExternalId shouldBe "alice"
+    }
+
+    test("listener replay: subscribers added after fire receive the most recent event") {
+        // Given
+        val jwtTokenStore = JwtTokenStore(MockPreferencesService())
+        val userManager =
+            UserManager(
+                mockk<ISubscriptionManager>(),
+                MockHelper.identityModelStore(),
+                MockHelper.propertiesModelStore(),
+                MockHelper.customEventController(),
+                MockHelper.languageContext(),
+                jwtTokenStore,
+            )
+        // Fire an invalidation BEFORE any listener is registered.
+        userManager.fireJwtInvalidated("alice")
+
+        var lateExternalId: String? = null
+        val waiter = com.onesignal.common.threading.Waiter()
+
+        // When: listener subscribes after the fire.
+        userManager.addJwtInvalidatedListener { event ->
+            lateExternalId = event.externalId
+            waiter.wake()
+        }
+        waiter.waitForWake()
+
+        // Then: late subscriber receives the cached event.
+        lateExternalId shouldBe "alice"
+    }
+
+    test("clearLastJwtInvalidated stops replay for new subscribers") {
+        val jwtTokenStore = JwtTokenStore(MockPreferencesService())
+        val userManager =
+            UserManager(
+                mockk<ISubscriptionManager>(),
+                MockHelper.identityModelStore(),
+                MockHelper.propertiesModelStore(),
+                MockHelper.customEventController(),
+                MockHelper.languageContext(),
+                jwtTokenStore,
+            )
+        userManager.fireJwtInvalidated("alice")
+
+        // When: cache cleared (e.g. on logout)
+        userManager.clearLastJwtInvalidated()
+
+        var lateFired = false
+        userManager.addJwtInvalidatedListener { lateFired = true }
+
+        // Give async dispatcher a chance to run if it would have.
+        Thread.sleep(50)
+
+        // Then: no replay fired.
+        lateFired shouldBe false
+    }
+
+    test("removeJwtInvalidatedListener stops further notifications") {
+        val jwtTokenStore = JwtTokenStore(MockPreferencesService())
+        jwtTokenStore.putJwt("alice", "token")
+        val userManager =
+            UserManager(
+                mockk<ISubscriptionManager>(),
+                MockHelper.identityModelStore(),
+                MockHelper.propertiesModelStore(),
+                MockHelper.customEventController(),
+                MockHelper.languageContext(),
+                jwtTokenStore,
+            )
+
+        var fireCount = 0
+        val listener = com.onesignal.IUserJwtInvalidatedListener { _ -> fireCount++ }
+        userManager.addJwtInvalidatedListener(listener)
+        userManager.removeJwtInvalidatedListener(listener)
+
+        jwtTokenStore.invalidateJwt("alice")
+        Thread.sleep(50)
+
+        fireCount shouldBe 0
+    }
+
     test("custom event controller sends various types of properties") {
         // Given
         val customEventController = MockHelper.customEventController()
 
         val userManager =
-            UserManager(mockk<ISubscriptionManager>(), MockHelper.identityModelStore(), MockHelper.propertiesModelStore(), customEventController, MockHelper.languageContext())
+            UserManager(mockk<ISubscriptionManager>(), MockHelper.identityModelStore(), MockHelper.propertiesModelStore(), customEventController, MockHelper.languageContext(), JwtTokenStore(MockPreferencesService()))
 
         val eventName = "eventName"
         val properties =
