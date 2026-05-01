@@ -3,7 +3,7 @@ package com.onesignal.core.internal.features
 /**
  * Controls when remote config changes for a feature are applied.
  */
-internal enum class FeatureActivationMode {
+enum class FeatureActivationMode {
     /**
      * Apply config changes immediately during the current app run.
      */
@@ -20,7 +20,7 @@ internal enum class FeatureActivationMode {
  *
  * [key] values are **lowercase** strings as returned from remote config / Turbine `features` arrays.
  */
-internal enum class FeatureFlag(
+enum class FeatureFlag(
     val key: String,
     val activationMode: FeatureActivationMode
 ) {

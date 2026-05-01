@@ -89,6 +89,15 @@ private class Mocks {
         coEvery { getRywDataFromAwaitableCondition(any<IamFetchReadyCondition>()) } returns rywDeferred
     }
 
+    val jwtTokenStore = mockk<com.onesignal.user.internal.jwt.JwtTokenStore>(relaxed = true) {
+        every { getJwt(any()) } returns null
+    }
+
+    val identityVerificationService = mockk<com.onesignal.core.internal.config.impl.IdentityVerificationService>(relaxed = true) {
+        every { newCodePathsRun } returns false
+        every { ivBehaviorActive } returns false
+    }
+
     val subscriptionManager = mockk<ISubscriptionManager>(relaxed = true) {
         every { subscriptions } returns mockk {
             every { push } returns pushSubscription
@@ -187,6 +196,8 @@ private class Mocks {
         languageContext,
         time,
         consistencyManager,
+        jwtTokenStore,
+        identityVerificationService,
     )
 }
 

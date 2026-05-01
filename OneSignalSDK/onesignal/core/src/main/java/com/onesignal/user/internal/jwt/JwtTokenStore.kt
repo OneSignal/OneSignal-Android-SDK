@@ -22,7 +22,7 @@ import org.json.JSONObject
  *    ([addUserJwtInvalidatedListener]). Pure pub/sub: only listeners subscribed at the time
  *    of [invalidateJwt] receive the event. Matches iOS — no buffering for late subscribers.
  */
-internal class JwtTokenStore(
+class JwtTokenStore(
     private val _prefs: IPreferencesService,
 ) {
     private val tokens: MutableMap<String, String> = mutableMapOf()

@@ -18,6 +18,7 @@ import com.onesignal.core.internal.application.IApplicationLifecycleHandler
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.config.ConfigModel
 import com.onesignal.core.internal.config.ConfigModelStore
+import com.onesignal.core.internal.config.impl.IdentityVerificationService
 import com.onesignal.core.internal.language.ILanguageContext
 import com.onesignal.core.internal.startup.IStartableService
 import com.onesignal.core.internal.time.ITime
@@ -48,6 +49,8 @@ import com.onesignal.user.IUserManager
 import com.onesignal.user.internal.backend.IdentityConstants
 import com.onesignal.user.internal.identity.IdentityModel
 import com.onesignal.user.internal.identity.IdentityModelStore
+import com.onesignal.user.internal.jwt.IJwtUpdateListener
+import com.onesignal.user.internal.jwt.JwtTokenStore
 import com.onesignal.user.internal.subscriptions.ISubscriptionChangedHandler
 import com.onesignal.user.internal.subscriptions.ISubscriptionManager
 import com.onesignal.user.internal.subscriptions.SubscriptionModel
@@ -76,6 +79,8 @@ internal class InAppMessagesManager(
     private val _languageContext: ILanguageContext,
     private val _time: ITime,
     private val _consistencyManager: IConsistencyManager,
+    private val _jwtTokenStore: JwtTokenStore,
+    private val _identityVerificationService: IdentityVerificationService,
 ) : IInAppMessagesManager,
     IStartableService,
     ISubscriptionChangedHandler,
@@ -83,7 +88,8 @@ internal class InAppMessagesManager(
     IInAppLifecycleEventHandler,
     ITriggerHandler,
     ISessionLifecycleHandler,
-    IApplicationLifecycleHandler {
+    IApplicationLifecycleHandler,
+    IJwtUpdateListener {
     private val lifecycleCallback = EventProducer<IInAppMessageLifecycleListener>()
     private val messageClickCallback = EventProducer<IInAppMessageClickListener>()
 
@@ -114,7 +120,16 @@ internal class InAppMessagesManager(
     private val redisplayedInAppMessages: MutableList<InAppMessage> = mutableListOf()
 
     private val fetchIAMMutex = Mutex()
+    @Volatile
     private var lastTimeFetchedIAMs: Long? = null
+
+    // Pending JWT-retry state under IV. When the IAM fetch returns 401/403 we save
+    // the externalId we were trying to fetch for + the rywData; on the next JwtTokenStore
+    // update for the same externalId, IAMs are re-fetched. Cleared on user-switch.
+    @Volatile
+    private var pendingJwtRetryExternalId: String? = null
+    @Volatile
+    private var pendingJwtRetryRywData: RywData? = null
 
     // Tracks whether the first IAM fetch has completed since this cold start
     private var hasCompletedFirstFetch: Boolean = false
@@ -127,7 +142,12 @@ internal class InAppMessagesManager(
             override fun onModelReplaced(
                 model: IdentityModel,
                 tag: String,
-            ) { }
+            ) {
+                // User-switch (login or logout): drop any pending JWT retry — the externalId
+                // we were waiting on isn't the current user anymore.
+                pendingJwtRetryExternalId = null
+                pendingJwtRetryRywData = null
+            }
 
             override fun onModelUpdated(
                 args: ModelChangedArgs,
@@ -190,6 +210,10 @@ internal class InAppMessagesManager(
         _sessionService.subscribe(this)
         _applicationService.addApplicationLifecycleHandler(this)
         _identityModelStore.subscribe(identityModelChangeHandler)
+        // Subscribe to JwtTokenStore so a JWT refresh (developer responding to a previous 401)
+        // can drive a deferred IAM re-fetch under IV. Subscription is ungated; the listener
+        // body checks for a pending retry, which is only set on the IV fetch path.
+        _jwtTokenStore.subscribe(this)
 
         suspendifyOnIO {
             _repository.cleanCachedInAppMessages()
@@ -310,7 +334,12 @@ internal class InAppMessagesManager(
 
         // lambda so that it is updated on each potential retry
         val sessionDurationProvider = { _time.currentTimeMillis - _sessionService.startTime }
-        val newMessages = _backend.listInAppMessages(appId, subscriptionId, rywData, sessionDurationProvider)
+        val newMessages =
+            if (_identityVerificationService.newCodePathsRun) {
+                fetchIvOrSaveRetry(appId, subscriptionId, rywData, sessionDurationProvider)
+            } else {
+                _backend.listInAppMessages(appId, subscriptionId, rywData, sessionDurationProvider)
+            }
 
         if (newMessages != null) {
             this.messages = newMessages as MutableList<InAppMessage>
@@ -336,6 +365,66 @@ internal class InAppMessagesManager(
 
             evaluateInAppMessages()
         }
+    }
+
+    /**
+     * IV-aware IAM fetch. Resolves alias + JWT based on `ivBehaviorActive`, calls the
+     * alias-based backend endpoint, and on 401/403 saves retry state so [onJwtUpdated]
+     * can re-fetch once the developer supplies a refreshed JWT.
+     *
+     * Phase 3 path (newCodePathsRun=true, ivBehaviorActive=false): uses onesignal_id alias
+     * with no JWT — exercises the new endpoint structurally without IV-specific behavior.
+     */
+    private suspend fun fetchIvOrSaveRetry(
+        appId: String,
+        subscriptionId: String,
+        rywData: RywData,
+        sessionDurationProvider: () -> Long,
+    ): List<InAppMessage>? {
+        val ivBehaviorActive = _identityVerificationService.ivBehaviorActive
+        val externalId = _identityModelStore.model.externalId
+        val onesignalId = _identityModelStore.model.onesignalId
+
+        val (aliasLabel, aliasValue, jwt) =
+            if (ivBehaviorActive && externalId != null) {
+                Triple(IdentityConstants.EXTERNAL_ID, externalId, _jwtTokenStore.getJwt(externalId))
+            } else {
+                Triple(IdentityConstants.ONESIGNAL_ID, onesignalId, null)
+            }
+
+        return try {
+            _backend.listInAppMessagesIv(appId, aliasLabel, aliasValue, subscriptionId, rywData, sessionDurationProvider, jwt)
+        } catch (ex: BackendException) {
+            // 401/403 from the IV-aware fetch — save retry state so [onJwtUpdated]
+            // can re-fetch when the developer supplies a fresh JWT.
+            if (ivBehaviorActive && externalId != null) {
+                pendingJwtRetryExternalId = externalId
+                pendingJwtRetryRywData = rywData
+                Logging.info("InAppMessagesManager: IAM fetch returned ${ex.statusCode}, awaiting JWT refresh for $externalId")
+                // Reset the rate-limiter so the retry isn't throttled.
+                lastTimeFetchedIAMs = null
+            } else {
+                Logging.warn("InAppMessagesManager: IAM fetch returned ${ex.statusCode}: ${ex.response}")
+            }
+            null
+        }
+    }
+
+    // IJwtUpdateListener — fires when JwtTokenStore.putJwt or invalidateJwt runs for an externalId.
+    override fun onJwtUpdated(externalId: String) {
+        val pending = pendingJwtRetryExternalId
+        val pendingRyw = pendingJwtRetryRywData
+        if (pending == null || pending != externalId || pendingRyw == null) return
+        // Clear before retry so concurrent fires don't re-enter.
+        pendingJwtRetryExternalId = null
+        pendingJwtRetryRywData = null
+        Logging.info("InAppMessagesManager: JWT refreshed for $externalId, retrying IAM fetch")
+        suspendifyOnIO { fetchMessages(pendingRyw) }
+    }
+
+    override fun onJwtInvalidated(externalId: String) {
+        // No-op: the developer-facing invalidation is handled by UserManager. We only care
+        // about the JWT-update side (onJwtUpdated) to drive the deferred retry.
     }
 
     /**
