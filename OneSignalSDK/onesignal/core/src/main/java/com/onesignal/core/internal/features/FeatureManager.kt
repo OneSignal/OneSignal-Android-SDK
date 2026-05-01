@@ -8,7 +8,6 @@ import com.onesignal.core.internal.backend.impl.FeatureFlagsJsonParser
 import com.onesignal.core.internal.config.ConfigModel
 import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.debug.internal.logging.Logging
-import com.onesignal.user.internal.jwt.IdentityVerificationGates
 import kotlinx.serialization.json.JsonObject
 
 internal interface IFeatureManager {
@@ -146,12 +145,9 @@ internal class FeatureManager(
                     source = "FeatureManager:${feature.activationMode}"
                 )
 
-            FeatureFlag.SDK_IDENTITY_VERIFICATION ->
-                IdentityVerificationGates.update(
-                    featureFlagOn = enabled,
-                    jwtRequirement = configModelStore.model.useIdentityVerification,
-                    source = "FeatureManager:${feature.activationMode}"
-                )
+            // SDK_IDENTITY_VERIFICATION has no side effect: IdentityVerificationService
+            // reads featureStates directly via isEnabled() at gate-check time.
+            FeatureFlag.SDK_IDENTITY_VERIFICATION -> {}
         }
     }
 

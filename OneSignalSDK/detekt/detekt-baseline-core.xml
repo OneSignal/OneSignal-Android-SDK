@@ -63,6 +63,8 @@
     <ID>ConstructorParameterNaming:NewRecordsState.kt$NewRecordsState$private val _time: ITime</ID>
     <ID>ConstructorParameterNaming:OSDatabase.kt$OSDatabase$private val _outcomeTableProvider: OutcomeTableProvider</ID>
     <ID>ConstructorParameterNaming:OperationRepo.kt$OperationRepo$private val _configModelStore: ConfigModelStore</ID>
+    <ID>ConstructorParameterNaming:OperationRepo.kt$OperationRepo$private val _identityVerificationService: IdentityVerificationService</ID>
+    <ID>ConstructorParameterNaming:OperationRepo.kt$OperationRepo$private val _jwtTokenStore: JwtTokenStore</ID>
     <ID>ConstructorParameterNaming:OperationRepo.kt$OperationRepo$private val _newRecordState: NewRecordsState</ID>
     <ID>ConstructorParameterNaming:OperationRepo.kt$OperationRepo$private val _operationModelStore: OperationModelStore</ID>
     <ID>ConstructorParameterNaming:OperationRepo.kt$OperationRepo$private val _time: ITime</ID>
@@ -82,6 +84,7 @@
     <ID>ConstructorParameterNaming:PreferencesService.kt$PreferencesService$private val _applicationService: IApplicationService</ID>
     <ID>ConstructorParameterNaming:PreferencesService.kt$PreferencesService$private val _time: ITime</ID>
     <ID>ConstructorParameterNaming:PropertiesModelStoreListener.kt$PropertiesModelStoreListener$private val _configModelStore: ConfigModelStore</ID>
+    <ID>ConstructorParameterNaming:PropertiesModelStoreListener.kt$PropertiesModelStoreListener$private val _identityModelStore: IdentityModelStore</ID>
     <ID>ConstructorParameterNaming:RebuildUserService.kt$RebuildUserService$private val _configModelStore: ConfigModelStore</ID>
     <ID>ConstructorParameterNaming:RebuildUserService.kt$RebuildUserService$private val _identityModelStore: IdentityModelStore</ID>
     <ID>ConstructorParameterNaming:RebuildUserService.kt$RebuildUserService$private val _propertiesModelStore: PropertiesModelStore</ID>
@@ -161,7 +164,6 @@
     <ID>ForbiddenComment:IUserBackendService.kt$IUserBackendService$// TODO: Change to send only the push subscription, optimally</ID>
     <ID>ForbiddenComment:LoginHelper.kt$LoginHelper$// TODO: Set JWT Token for all future requests.</ID>
     <ID>ForbiddenComment:LogoutHelper.kt$LogoutHelper$// TODO: remove JWT Token for all future requests.</ID>
-    <ID>ForbiddenComment:OperationRepo.kt$OperationRepo$// TODO: Need to provide callback for app to reset JWT. For now, fail with no retry.</ID>
     <ID>ForbiddenComment:ParamsBackendService.kt$ParamsBackendService$// TODO: New</ID>
     <ID>ForbiddenComment:PermissionsActivity.kt$PermissionsActivity$// TODO after we remove IAM from being an activity window we may be able to remove this handler</ID>
     <ID>ForbiddenComment:PermissionsActivity.kt$PermissionsActivity$// TODO improve this method</ID>
@@ -194,6 +196,7 @@
     <ID>LongMethod:TrackGooglePurchase.kt$TrackGooglePurchase$private fun queryBoughtItems()</ID>
     <ID>LongMethod:TrackGooglePurchase.kt$TrackGooglePurchase$private fun sendPurchases( skusToAdd: ArrayList&lt;String>, newPurchaseTokens: ArrayList&lt;String>, )</ID>
     <ID>LongMethod:UpdateUserOperationExecutor.kt$UpdateUserOperationExecutor$override suspend fun execute(operations: List&lt;Operation>): ExecutionResponse</ID>
+    <ID>LongParameterList:CreateSubscriptionOperation.kt$CreateSubscriptionOperation$(appId: String, onesignalId: String, externalId: String?, subscriptionId: String, type: SubscriptionType, enabled: Boolean, address: String, status: SubscriptionStatus)</ID>
     <ID>LongParameterList:ICustomEventBackendService.kt$ICustomEventBackendService$( appId: String, onesignalId: String, externalId: String?, timestamp: Long, eventName: String, eventProperties: String?, metadata: CustomEventMetadata, )</ID>
     <ID>LongParameterList:IDatabase.kt$IDatabase$( table: String, columns: Array&lt;String>? = null, whereClause: String? = null, whereArgs: Array&lt;String>? = null, groupBy: String? = null, having: String? = null, orderBy: String? = null, limit: String? = null, action: (ICursor) -> Unit, )</ID>
     <ID>LongParameterList:IOutcomeEventsBackendService.kt$IOutcomeEventsBackendService$( appId: String, userId: String, subscriptionId: String, deviceType: String, direct: Boolean?, event: OutcomeEvent, )</ID>
@@ -203,6 +206,7 @@
     <ID>LongParameterList:OutcomeEventsController.kt$OutcomeEventsController$( private val _session: ISessionService, private val _influenceManager: IInfluenceManager, private val _outcomeEventsCache: IOutcomeEventsRepository, private val _outcomeEventsPreferences: IOutcomeEventsPreferences, private val _outcomeEventsBackend: IOutcomeEventsBackendService, private val _configModelStore: ConfigModelStore, private val _identityModelStore: IdentityModelStore, private val _subscriptionManager: ISubscriptionManager, private val _deviceService: IDeviceService, private val _time: ITime, )</ID>
     <ID>LongParameterList:SubscriptionObject.kt$SubscriptionObject$( val id: String? = null, val type: SubscriptionObjectType? = null, val token: String? = null, val enabled: Boolean? = null, val notificationTypes: Int? = null, val sdk: String? = null, val deviceModel: String? = null, val deviceOS: String? = null, val rooted: Boolean? = null, val netType: Int? = null, val carrier: String? = null, val appVersion: String? = null, )</ID>
     <ID>LongParameterList:SubscriptionOperationExecutor.kt$SubscriptionOperationExecutor$( private val _subscriptionBackend: ISubscriptionBackendService, private val _deviceService: IDeviceService, private val _applicationService: IApplicationService, private val _subscriptionModelStore: SubscriptionModelStore, private val _configModelStore: ConfigModelStore, private val _buildUserService: IRebuildUserService, private val _newRecordState: NewRecordsState, private val _consistencyManager: IConsistencyManager, )</ID>
+    <ID>LongParameterList:UpdateSubscriptionOperation.kt$UpdateSubscriptionOperation$(appId: String, onesignalId: String, externalId: String?, subscriptionId: String, type: SubscriptionType, enabled: Boolean, address: String, status: SubscriptionStatus)</ID>
     <ID>LongParameterList:UserSwitcher.kt$UserSwitcher$( private val preferencesService: IPreferencesService, private val operationRepo: IOperationRepo, private val services: ServiceProvider, private val idManager: IDManager = IDManager, private val identityModelStore: IdentityModelStore, private val propertiesModelStore: PropertiesModelStore, private val subscriptionModelStore: SubscriptionModelStore, private val configModel: ConfigModel, private val oneSignalUtils: OneSignalUtils = OneSignalUtils, private val carrierName: String? = null, private val deviceOS: String? = null, private val androidUtils: AndroidUtils = AndroidUtils, private val appContextProvider: () -> Context, )</ID>
     <ID>LoopWithTooManyJumpStatements:ModelStore.kt$ModelStore$for (index in jsonArray.length() - 1 downTo 0) { val newModel = create(jsonArray.getJSONObject(index)) ?: continue /* * NOTE: Migration fix for bug introduced in 5.1.12 * The following check is intended for the operation model store. * When the call to this method moved out of the operation model store's initializer, * duplicate operations could be cached. * See https://github.com/OneSignal/OneSignal-Android-SDK/pull/2099 */ val hasExisting = models.any { it.id == newModel.id } if (hasExisting) { Logging.debug("ModelStore&lt;$name>: load - operation.id: ${newModel.id} already exists in the store.") continue } models.add(0, newModel) // listen for changes to this model newModel.subscribe(this) }</ID>
     <ID>MagicNumber:ApplicationService.kt$ApplicationService$50</ID>
@@ -285,6 +289,7 @@
     <ID>ReturnCount:BackgroundManager.kt$BackgroundManager$override fun cancelRunBackgroundServices(): Boolean</ID>
     <ID>ReturnCount:OneSignalImp.kt$OneSignalImp$private fun internalInit( context: Context, appId: String?, ): Boolean</ID>
     <ID>ReturnCount:ConfigModel.kt$ConfigModel$override fun createModelForProperty( property: String, jsonObject: JSONObject, ): Model?</ID>
+    <ID>ReturnCount:FeatureFlagsBackendService.kt$FeatureFlagsBackendService$override suspend fun fetchRemoteFeatureFlags(appId: String): RemoteFeatureFlagsFetchOutcome</ID>
     <ID>ReturnCount:HttpClient.kt$HttpClient$private suspend fun makeRequest( url: String, method: String?, jsonBody: JSONObject?, timeout: Int, headers: OptionalHeaders?, ): HttpResponse</ID>
     <ID>ReturnCount:IdentityOperationExecutor.kt$IdentityOperationExecutor$override suspend fun execute(operations: List&lt;Operation>): ExecutionResponse</ID>
     <ID>ReturnCount:JSONUtils.kt$JSONUtils$fun compareJSONArrays( jsonArray1: JSONArray?, jsonArray2: JSONArray?, ): Boolean</ID>
@@ -297,6 +302,7 @@
     <ID>ReturnCount:Model.kt$Model$protected fun getOptLongProperty( name: String, create: (() -> Long?)? = null, ): Long?</ID>
     <ID>ReturnCount:Model.kt$Model$protected inline fun &lt;reified T : Enum&lt;T>> getOptEnumProperty(name: String): T?</ID>
     <ID>ReturnCount:OperationModelStore.kt$OperationModelStore$override fun create(jsonObject: JSONObject?): Operation?</ID>
+    <ID>ReturnCount:OperationRepoIvExtensions.kt$internal fun OperationRepo.handleFailUnauthorized( startingOp: OperationRepo.OperationQueueItem, ops: List&lt;OperationRepo.OperationQueueItem>, jwtTokenStore: JwtTokenStore, jwtInvalidatedHandler: ((String) -> Unit)?, ivBehaviorActive: Boolean, ): Boolean</ID>
     <ID>ReturnCount:OperationModelStore.kt$OperationModelStore$private fun isValidOperation(jsonObject: JSONObject): Boolean</ID>
     <ID>ReturnCount:OutcomeEventsController.kt$OutcomeEventsController$private suspend fun sendAndCreateOutcomeEvent( name: String, weight: Float, // Note: this is optional sessionTime: Long, influences: List&lt;Influence>, ): OutcomeEvent?</ID>
     <ID>ReturnCount:OutcomeEventsController.kt$OutcomeEventsController$private suspend fun sendUniqueOutcomeEvent( name: String, sessionInfluences: List&lt;Influence>, ): OutcomeEvent?</ID>
