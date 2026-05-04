@@ -331,8 +331,10 @@ class LoginHelperTests : FunSpec({
             if (context != null) loginHelper.enqueueLogin(context)
         }
 
-        // Then: no user-switch happened, but JWT was refreshed.
+        // Then: no user-switch happened, JWT was refreshed, and the queue was woken so any
+        // ops deferred by hasValidJwtIfRequired dispatch immediately.
         verify(exactly = 0) { mockUserSwitcher.createAndSwitchToNewUser(suppressBackendOperation = any(), modify = any()) }
         jwtTokenStore.getJwt(currentExternalId) shouldBe "new-jwt"
+        verify(exactly = 1) { mockOperationRepo.forceExecuteOperations() }
     }
 })
