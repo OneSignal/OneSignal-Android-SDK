@@ -26,7 +26,8 @@ class StartupServiceTests : FunSpec({
         backgroundThreadingEnabled: Boolean = true,
     ): ServiceProvider {
         val featureManager = mockk<IFeatureManager>()
-        every { featureManager.isEnabled(FeatureFlag.SDK_050800_BACKGROUND_THREADING) } returns backgroundThreadingEnabled
+        every { featureManager.isEnabled(FeatureFlag.SDK_BACKGROUND_THREADING) } returns backgroundThreadingEnabled
+        every { featureManager.remoteFeatureFlagMetadata() } returns null
 
         val serviceBuilder = ServiceBuilder()
         serviceBuilder.register(featureManager).provides<IFeatureManager>()

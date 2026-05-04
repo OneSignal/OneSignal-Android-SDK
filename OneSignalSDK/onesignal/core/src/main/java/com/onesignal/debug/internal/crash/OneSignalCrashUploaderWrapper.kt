@@ -37,10 +37,11 @@ internal class OneSignalCrashUploaderWrapper(
     private val featureManager: IFeatureManager,
 ) : IStartableService {
     private val uploader: OtelCrashUploader by lazy {
-        // Create Android-specific platform provider (injects Android values)
+        // Create Android-specific platform provider (injects Android values + a FeatureManager
+        // supplier that resolves to the constructor-injected manager on each access).
         val platformProvider = createAndroidOtelPlatformProvider(
-            applicationService.appContext
-        )
+            applicationService.appContext,
+        ) { featureManager }
         // Create Android-specific logger (delegates to Android Logging)
         val logger = AndroidOtelLogger()
         // Create platform-agnostic uploader using factory
@@ -50,7 +51,7 @@ internal class OneSignalCrashUploaderWrapper(
     @Suppress("TooGenericExceptionCaught")
     override fun start() {
         if (!OtelSdkSupport.isSupported) return
-        if (featureManager.isEnabled(FeatureFlag.SDK_050800_BACKGROUND_THREADING)) {
+        if (featureManager.isEnabled(FeatureFlag.SDK_BACKGROUND_THREADING)) {
             OneSignalDispatchers.launchOnIO {
                 try {
                     uploader.start()

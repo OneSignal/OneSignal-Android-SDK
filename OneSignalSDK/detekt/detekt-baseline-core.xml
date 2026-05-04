@@ -179,6 +179,7 @@
     <ID>LongMethod:LoginUserOperationExecutor.kt$LoginUserOperationExecutor$private suspend fun createUser( createUserOperation: LoginUserOperation, operations: List&lt;Operation>, ): ExecutionResponse</ID>
     <ID>LongMethod:LoginUserOperationExecutor.kt$LoginUserOperationExecutor$private suspend fun loginUser( loginUserOp: LoginUserOperation, operations: List&lt;Operation>, ): ExecutionResponse</ID>
     <ID>LongMethod:OperationRepo.kt$OperationRepo$internal suspend fun executeOperations(ops: List&lt;OperationQueueItem>)</ID>
+    <ID>LongMethod:OperationRepo.kt$OperationRepo$private fun internalEnqueue( queueItem: OperationQueueItem, flush: Boolean, addToStore: Boolean, index: Int? = null, )</ID>
     <ID>LongMethod:OutcomeEventsController.kt$OutcomeEventsController$private suspend fun sendAndCreateOutcomeEvent( name: String, weight: Float, // Note: this is optional sessionTime: Long, influences: List&lt;Influence>, ): OutcomeEvent?</ID>
     <ID>LongMethod:OutcomeEventsController.kt$OutcomeEventsController$private suspend fun sendUniqueOutcomeEvent( name: String, sessionInfluences: List&lt;Influence>, ): OutcomeEvent?</ID>
     <ID>LongMethod:OutcomeEventsRepository.kt$OutcomeEventsRepository$override suspend fun getAllEventsToSend(): List&lt;OutcomeEventParams></ID>
@@ -609,6 +610,9 @@
     <ID>UnusedPrivateMember:OperationRepo.kt$OperationRepo$private val _time: ITime</ID>
     <ID>UseCheckOrError:OneSignalImp.kt$OneSignalImp$throw IllegalStateException("'initWithContext failed' before 'login'")</ID>
     <ID>UseCheckOrError:OneSignalImp.kt$OneSignalImp$throw IllegalStateException("'initWithContext failed' before 'logout'")</ID>
+    <ID>UseCheckOrError:OneSignalImp.kt$OneSignalImp$throw IllegalStateException("Must call 'initWithContext' before 'login'")</ID>
+    <ID>UseCheckOrError:OneSignalImp.kt$OneSignalImp$throw IllegalStateException("Must call 'initWithContext' before 'logout'")</ID>
+    <ID>UseCheckOrError:OneSignalImp.kt$OneSignalImp$throw IllegalStateException("Must call 'initWithContext' before use")</ID>
     <ID>UseCheckOrError:OneSignalImp.kt$OneSignalImp$throw initFailureException ?: IllegalStateException("Initialization failed. Cannot proceed.")</ID>
   </CurrentIssues>
 </SmellBaseline>

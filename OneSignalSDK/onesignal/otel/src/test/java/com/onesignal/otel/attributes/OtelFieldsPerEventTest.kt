@@ -20,7 +20,8 @@ class OtelFieldsPerEventTest : FunSpec({
         pushSubscriptionId: String? = "test-subscription-id",
         appState: String = "foreground",
         processUptime: Long = 100,
-        threadName: String = "main-thread"
+        threadName: String = "main-thread",
+        enabledFeatureFlags: List<String> = emptyList()
     ) {
         every { mockPlatformProvider.appId } returns appId
         every { mockPlatformProvider.onesignalId } returns onesignalId
@@ -28,6 +29,7 @@ class OtelFieldsPerEventTest : FunSpec({
         every { mockPlatformProvider.appState } returns appState
         every { mockPlatformProvider.processUptime } returns processUptime
         every { mockPlatformProvider.currentThreadName } returns threadName
+        every { mockPlatformProvider.enabledFeatureFlags } returns enabledFeatureFlags
     }
 
     beforeEach { clearMocks(mockPlatformProvider) }
@@ -65,5 +67,53 @@ class OtelFieldsPerEventTest : FunSpec({
         val uid2 = fields.getAttributes()["log.record.uid"]
 
         uid1 shouldNotBe uid2
+    }
+
+    test("getAttributes should omit ossdk.feature_flags when no feature flags are enabled") {
+        setupDefaultMocks(enabledFeatureFlags = emptyList())
+
+        val attributes = fields.getAttributes()
+
+        attributes.keys shouldNotContain "ossdk.feature_flags"
+    }
+
+    test("getAttributes should encode a single enabled feature flag") {
+        setupDefaultMocks(enabledFeatureFlags = listOf("sdk_background_threading"))
+
+        val attributes = fields.getAttributes()
+
+        attributes["ossdk.feature_flags"] shouldBe "sdk_background_threading"
+    }
+
+    test("getAttributes should encode multiple flags as a sorted comma-separated string") {
+        setupDefaultMocks(
+            enabledFeatureFlags = listOf(
+                "sdk_zeta_feature",
+                "sdk_background_threading",
+                "sdk_alpha_feature",
+            )
+        )
+
+        val attributes = fields.getAttributes()
+
+        attributes["ossdk.feature_flags"] shouldBe
+            "sdk_alpha_feature,sdk_background_threading,sdk_zeta_feature"
+    }
+
+    test("getAttributes should re-read enabledFeatureFlags on every call (per-event)") {
+        val states = mutableListOf("sdk_background_threading")
+        every { mockPlatformProvider.appId } returns "test-app-id"
+        every { mockPlatformProvider.onesignalId } returns "test-onesignal-id"
+        every { mockPlatformProvider.pushSubscriptionId } returns "test-subscription-id"
+        every { mockPlatformProvider.appState } returns "foreground"
+        every { mockPlatformProvider.processUptime } returns 100
+        every { mockPlatformProvider.currentThreadName } returns "main-thread"
+        every { mockPlatformProvider.enabledFeatureFlags } answers { states.toList() }
+
+        fields.getAttributes()["ossdk.feature_flags"] shouldBe "sdk_background_threading"
+
+        states.add("sdk_other_flag")
+        fields.getAttributes()["ossdk.feature_flags"] shouldBe
+            "sdk_background_threading,sdk_other_flag"
     }
 })

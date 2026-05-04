@@ -6,6 +6,7 @@ import com.onesignal.common.modeling.ModelChangeTags
 import com.onesignal.common.modeling.ModelChangedArgs
 import com.onesignal.core.internal.config.ConfigModel
 import com.onesignal.core.internal.config.ConfigModelStore
+import com.onesignal.core.internal.features.IFeatureManager
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.crash.AnrConstants
 import com.onesignal.debug.internal.crash.OneSignalCrashHandlerFactory
@@ -34,27 +35,30 @@ import com.onesignal.otel.crash.IOtelAnrDetector
  * Thread safety: methods are synchronized on [lock] so that concurrent
  * calls from initEssentials (main) and the config store callback (IO) are safe.
  *
- * All factory parameters default to the real implementations, so production
- * callers can use `OtelLifecycleManager(context)`. Tests can override any
- * factory to inject mocks or throwing stubs.
+ * Production callers construct as
+ * `OtelLifecycleManager(context, featureManagerProvider = { services.getService<IFeatureManager>() })`.
+ * The supplier is invoked lazily (per-event), so it can be passed even when service bootstrap
+ * has not yet completed at construction time. All other factory parameters default to the real
+ * implementations; tests can override any of them to inject mocks or throwing stubs.
  */
 @Suppress("TooManyFunctions")
 internal class OtelLifecycleManager(
     private val context: Context,
-    private val crashHandlerFactory: (Context, IOtelLogger) -> IOtelCrashHandler =
-        { ctx, log -> OneSignalCrashHandlerFactory.createCrashHandler(ctx, log) },
+    private val featureManagerProvider: () -> IFeatureManager,
+    private val crashHandlerFactory: (Context, IOtelLogger, () -> IFeatureManager) -> IOtelCrashHandler =
+        { ctx, log, fm -> OneSignalCrashHandlerFactory.createCrashHandler(ctx, log, fm) },
     private val anrDetectorFactory: (IOtelPlatformProvider, IOtelLogger, Long, Long) -> IOtelAnrDetector =
         { pp, log, threshold, interval -> createAnrDetector(pp, log, threshold, interval) },
     private val remoteTelemetryFactory: (IOtelPlatformProvider) -> IOtelOpenTelemetryRemote =
         { pp -> OtelFactory.createRemoteTelemetry(pp) },
-    private val platformProviderFactory: (Context) -> OtelPlatformProvider =
-        { ctx -> createAndroidOtelPlatformProvider(ctx) },
+    private val platformProviderFactory: (Context, () -> IFeatureManager) -> OtelPlatformProvider =
+        { ctx, fm -> createAndroidOtelPlatformProvider(ctx, fm) },
     private val loggerFactory: () -> IOtelLogger = { AndroidOtelLogger() },
 ) : ISingletonModelStoreChangeHandler<ConfigModel> {
     private val lock = Any()
 
     private val platformProvider: OtelPlatformProvider by lazy {
-        platformProviderFactory(context)
+        platformProviderFactory(context, featureManagerProvider)
     }
 
     private val logger: IOtelLogger by lazy { loggerFactory() }
@@ -207,7 +211,7 @@ internal class OtelLifecycleManager(
 
     private fun startCrashHandler() {
         if (crashHandler != null) return
-        val handler = crashHandlerFactory(context, logger)
+        val handler = crashHandlerFactory(context, logger, featureManagerProvider)
         handler.initialize()
         crashHandler = handler
         Logging.info("OneSignal: Crash handler initialized — logs at: ${platformProvider.crashStoragePath}")

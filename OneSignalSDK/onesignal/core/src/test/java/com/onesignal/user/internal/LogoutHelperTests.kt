@@ -53,7 +53,8 @@ class LogoutHelperTests : FunSpec({
             )
 
         // When
-        logoutHelper.logout()
+        val context = logoutHelper.switchUser()
+        if (context != null) logoutHelper.enqueueLogout(context)
 
         // Then - should return early without any operations
         verify(exactly = 0) { mockUserSwitcher.createAndSwitchToNewUser() }
@@ -83,7 +84,8 @@ class LogoutHelperTests : FunSpec({
             )
 
         // When
-        logoutHelper.logout()
+        val context = logoutHelper.switchUser()
+        if (context != null) logoutHelper.enqueueLogout(context)
 
         // Then - should create new user and enqueue login operation for device-scoped user
         verify(exactly = 1) { mockUserSwitcher.createAndSwitchToNewUser() }
@@ -122,7 +124,8 @@ class LogoutHelperTests : FunSpec({
             )
 
         // When
-        logoutHelper.logout()
+        val context = logoutHelper.switchUser()
+        if (context != null) logoutHelper.enqueueLogout(context)
 
         // Then - operations should happen in the correct order
         verifyOrder {
@@ -157,7 +160,8 @@ class LogoutHelperTests : FunSpec({
         val threads =
             (1..10).map {
                 Thread {
-                    logoutHelper.logout()
+                    val context = logoutHelper.switchUser()
+                    if (context != null) logoutHelper.enqueueLogout(context)
                 }
             }
 

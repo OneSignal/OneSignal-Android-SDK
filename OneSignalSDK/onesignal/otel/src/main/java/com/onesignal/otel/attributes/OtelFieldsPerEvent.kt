@@ -26,6 +26,16 @@ internal class OtelFieldsPerEvent(
         attributes["process.uptime"] = platformProvider.processUptime.toString()
         attributes["thread.name"] = platformProvider.currentThreadName
 
+        // Encode the currently-enabled feature flag keys as a single sorted, comma-separated
+        // string. Read fresh on every emission so each record reflects the FeatureManager view
+        // at the moment the log was written — no SDK rebuild required for IMMEDIATE-mode flag
+        // changes. Easily queryable in Google Cloud Logs Explorer via the `:` (contains)
+        // operator; omitted entirely when no flags are enabled to keep payloads compact.
+        val enabledFlags = platformProvider.enabledFeatureFlags
+        if (enabledFlags.isNotEmpty()) {
+            attributes["ossdk.feature_flags"] = enabledFlags.sorted().joinToString(",")
+        }
+
         return attributes.toUnmodifiableMap()
     }
 

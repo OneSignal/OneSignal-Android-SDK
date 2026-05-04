@@ -181,7 +181,7 @@ internal class OneSignalImp(
             }
 
             return try {
-                featureManager.isEnabled(FeatureFlag.SDK_050800_BACKGROUND_THREADING)
+                featureManager.isEnabled(FeatureFlag.SDK_BACKGROUND_THREADING)
             } catch (t: Throwable) {
                 Logging.warn("OneSignal: Failed to resolve BACKGROUND_THREADING feature, defaulting to legacy mode.", t)
                 false
@@ -236,7 +236,14 @@ internal class OneSignalImp(
     }
 
     private fun initEssentials(context: Context) {
-        otelManager = OtelLifecycleManager(context).also { it.initializeFromCachedConfig() }
+        // OtelLifecycleManager comes up early so crash handling and remote logging can capture
+        // anything that happens during the rest of init. FeatureManager is wired in via a
+        // lazy supplier — `enabledFeatureFlags` is read per-event, so resolving the manager
+        // can be deferred until services have bootstrapped.
+        otelManager = OtelLifecycleManager(
+            context = context,
+            featureManagerProvider = { services.getService<IFeatureManager>() },
+        ).also { it.initializeFromCachedConfig() }
 
         PreferenceStoreFix.ensureNoObfuscatedPrefStore(context)
 
@@ -375,12 +382,18 @@ internal class OneSignalImp(
 
         if (isBackgroundThreadingEnabled) {
             waitForInit(operationName = "login")
-            suspendifyOnIO { loginHelper.login(externalId, jwtBearerToken) }
         } else {
             requireInitForOperation("login")
+        }
+
+        val context = loginHelper.switchUser(externalId, jwtBearerToken) ?: return
+
+        if (isBackgroundThreadingEnabled) {
+            suspendifyOnIO { loginHelper.enqueueLogin(context) }
+        } else {
             Thread {
                 runBlocking(runtimeIoDispatcher) {
-                    loginHelper.login(externalId, jwtBearerToken)
+                    loginHelper.enqueueLogin(context)
                 }
             }.start()
         }
@@ -391,12 +404,18 @@ internal class OneSignalImp(
 
         if (isBackgroundThreadingEnabled) {
             waitForInit(operationName = "logout")
-            suspendifyOnIO { logoutHelper.logout() }
         } else {
             requireInitForOperation("logout")
+        }
+
+        val context = logoutHelper.switchUser() ?: return
+
+        if (isBackgroundThreadingEnabled) {
+            suspendifyOnIO { logoutHelper.enqueueLogout(context) }
+        } else {
             Thread {
                 runBlocking(runtimeIoDispatcher) {
-                    logoutHelper.logout()
+                    logoutHelper.enqueueLogout(context)
                 }
             }.start()
         }
@@ -656,7 +675,8 @@ internal class OneSignalImp(
             throw IllegalStateException("'initWithContext failed' before 'login'")
         }
 
-        loginHelper.login(externalId, jwtBearerToken)
+        val context = loginHelper.switchUser(externalId, jwtBearerToken) ?: return@withContext
+        loginHelper.enqueueLogin(context)
     }
 
     override suspend fun logoutSuspend() =
@@ -669,6 +689,7 @@ internal class OneSignalImp(
                 throw IllegalStateException("'initWithContext failed' before 'logout'")
             }
 
-            logoutHelper.logout()
+            val context = logoutHelper.switchUser() ?: return@withContext
+            logoutHelper.enqueueLogout(context)
         }
 }

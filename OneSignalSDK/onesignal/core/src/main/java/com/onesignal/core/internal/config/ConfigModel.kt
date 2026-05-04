@@ -291,13 +291,27 @@ class ConfigModel : Model() {
         }
 
     /**
-     * Remote feature switches controlled by backend.
-     * Presence of a feature name indicates enabled.
+     * Feature ids from the Turbine SDK feature-flags HTTP endpoint
+     * ([com.onesignal.core.internal.backend.IFeatureFlagsBackendService]), updated while the app is
+     * foreground. [com.onesignal.core.internal.features.FeatureManager] unions these with any local
+     * test overrides when evaluating [com.onesignal.core.internal.features.FeatureFlag] entries.
      */
-    var features: List<String>
-        get() = getListProperty(::features.name) { emptyList() }
+    var sdkRemoteFeatureFlags: List<String>
+        get() = getListProperty(::sdkRemoteFeatureFlags.name) { emptyList() }
         set(value) {
-            setListProperty(::features.name, value)
+            setListProperty(::sdkRemoteFeatureFlags.name, value)
+        }
+
+    /**
+     * Compacted JSON object: canonical flag id → metadata object, from the same Turbine response
+     * as [sdkRemoteFeatureFlags]. Persisted so metadata survives process death and is available
+     * to [com.onesignal.core.internal.features.IFeatureManager.remoteFeatureFlagMetadata] without
+     * a new network fetch on the next launch.
+     */
+    var sdkRemoteFeatureFlagMetadata: String?
+        get() = getOptStringProperty(::sdkRemoteFeatureFlagMetadata.name)
+        set(value) {
+            setOptStringProperty(::sdkRemoteFeatureFlagMetadata.name, value)
         }
 
     /**
@@ -344,7 +358,7 @@ class ConfigModel : Model() {
         property: String,
         jsonArray: JSONArray,
     ): List<*>? {
-        if (property == ::features.name) {
+        if (property == ::sdkRemoteFeatureFlags.name) {
             return buildList {
                 for (i in 0 until jsonArray.length()) {
                     val featureName = jsonArray.optString(i, "")

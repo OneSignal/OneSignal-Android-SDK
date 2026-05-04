@@ -29,6 +29,7 @@ import io.mockk.runs
 import io.mockk.slot
 import io.mockk.spyk
 import io.mockk.verify
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -100,8 +101,8 @@ class OperationRepoTests : FunSpec({
                 ),
             )
 
-        val cachedOperation = LoginUserOperation()
-        val newOperation = LoginUserOperation()
+        val cachedOperation = LoginUserOperation("appId", "cached-onesignal-id", null, null)
+        val newOperation = LoginUserOperation("appId", "new-onesignal-id", null, null)
         val jsonArray = JSONArray()
 
         // cache the operation
@@ -140,6 +141,98 @@ class OperationRepoTests : FunSpec({
         backgroundThread.join()
         operationRepo.queue.size shouldBe 2
         operationRepo.queue.first().operation shouldBe cachedOperation
+    }
+
+    test("enqueue dedupes LoginUserOperation for same onesignalId and merges existingOnesignalId") {
+        // Reproduces the RecoverFromDroppedLoginBug race: a recovery login op
+        // (existingOnesignalId=null) is already queued; an incoming enqueueLogin
+        // op for the same user carries the anon UUID needed for conversion.
+        // Dedup must merge the incoming existingOnesignalId into the queued op
+        // and transfer the waiter so the caller receives the real result.
+        val mocks = Mocks()
+        val operationRepo = mocks.operationRepo
+
+        val queuedOp = LoginUserOperation("appId", "local-new", "alice", null)
+        queuedOp.id = UUID.randomUUID().toString()
+        synchronized(operationRepo.queue) {
+            operationRepo.queue.add(OperationQueueItem(queuedOp, bucket = 0))
+        }
+
+        val incomingOp = LoginUserOperation("appId", "local-new", "alice", "anon-uuid")
+
+        // When — enqueue the incoming op (simulates enqueueLogin landing after recovery)
+        operationRepo.enqueue(incomingOp)
+        mocks.waitForInternalEnqueue()
+
+        // Then — queue has only the original op, with merged existingOnesignalId
+        operationRepo.queue.size shouldBe 1
+        val merged = operationRepo.queue.first().operation as LoginUserOperation
+        merged.onesignalId shouldBe "local-new"
+        merged.existingOnesignalId shouldBe "anon-uuid"
+    }
+
+    test("enqueue dedupe does not merge a local existingOnesignalId onto the queued op") {
+        // Regression: when upgrading from 5.0.0-5.1.7, an anon user's backend-create
+        // may have been dropped, so its onesignalId is still "local-". If
+        // RecoverFromDroppedLoginBug wins the race (queued op has existingOnesignalId=null,
+        // canStartExecute=true), we must NOT overwrite it with the incoming op's local
+        // existingOnesignalId — doing so flips canStartExecute to false and strands the op
+        // forever (the local id will never receive an idTranslation).
+        val mocks = Mocks()
+        val operationRepo = mocks.operationRepo
+
+        val queuedOp = LoginUserOperation("appId", "local-new", "alice", null)
+        queuedOp.id = UUID.randomUUID().toString()
+        synchronized(operationRepo.queue) {
+            operationRepo.queue.add(OperationQueueItem(queuedOp, bucket = 0))
+        }
+
+        val incomingOp = LoginUserOperation("appId", "local-new", "alice", "local-anon")
+
+        // When
+        operationRepo.enqueue(incomingOp)
+        mocks.waitForInternalEnqueue()
+
+        // Then — queue still has one op, existingOnesignalId stays null (canStartExecute stays true)
+        operationRepo.queue.size shouldBe 1
+        val survivor = operationRepo.queue.first().operation as LoginUserOperation
+        survivor.existingOnesignalId shouldBe null
+        survivor.canStartExecute shouldBe true
+    }
+
+    test("enqueue dedupe wakes both queued and incoming enqueueAndWait callers on SUCCESS") {
+        // A LoginUserOperation is queued via enqueueAndWait while the loop is not yet
+        // started, so it sits in the queue with its waiter attached. A second
+        // enqueueAndWait arrives for the same onesignalId. Dedupe wakes the incoming
+        // caller immediately with true; the queued op's waiter wakes with the real
+        // execution result when SUCCESS lands.
+        val mocks = Mocks()
+        val opRepo = mocks.operationRepo
+        val executeOperationsCall = mockExecuteOperations(opRepo)
+
+        val queuedOp = LoginUserOperation("appId", "alice", "ext", "anon-uuid")
+        val incomingOp = LoginUserOperation("appId", "alice", "ext", "anon-uuid")
+
+        // When — first enqueueAndWait runs (loop not started, op stays in queue).
+        // UNDISPATCHED so enqueueAndWait reaches its scope.launch + suspend before
+        // we send the incoming op below; otherwise the scope's single thread would
+        // see the incoming op's internalEnqueue first and dedupe direction reverses.
+        val queuedDone = WaiterWithValue<Boolean>()
+        launch(start = CoroutineStart.UNDISPATCHED) {
+            queuedDone.wake(opRepo.enqueueAndWait(queuedOp))
+        }
+        mocks.waitForInternalEnqueue()
+
+        // Incoming dedupes against the queued op and is woken immediately
+        val incomingResult = withTimeout(1_000) { opRepo.enqueueAndWait(incomingOp) }
+        // Run the loop; mocked executor SUCCESS wakes the queued op's waiter
+        opRepo.start()
+        executeOperationsCall.waitForWake()
+        val queuedResult = withTimeout(1_000) { queuedDone.waitForWake() }
+
+        // Then
+        incomingResult shouldBe true
+        queuedResult shouldBe true
     }
 
     test("containsInstanceOf") {

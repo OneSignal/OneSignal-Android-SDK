@@ -1,5 +1,7 @@
 package com.onesignal.user.internal.subscriptions
 
+import com.onesignal.common.PIIHasher
+import com.onesignal.user.internal.Subscription
 import com.onesignal.user.subscriptions.IEmailSubscription
 import com.onesignal.user.subscriptions.IPushSubscription
 import com.onesignal.user.subscriptions.ISmsSubscription
@@ -30,15 +32,27 @@ class SubscriptionList(val collection: List<ISubscription>, private val _fallbac
 
     /**
      * Retrieve the Email subscription with the matching email, if there is one.
+     * Compares against the underlying model address (raw or hashed) so lookups
+     * work both before and after server hydration.
      */
     fun getByEmail(email: String): IEmailSubscription? {
-        return emails.firstOrNull { it.email == email }
+        val hashed = PIIHasher.hash(email)
+        return emails.firstOrNull {
+            val address = (it as Subscription).model.address
+            address == email || address == hashed
+        }
     }
 
     /**
      * Retrieve the SMS subscription with the matching SMS number, if there is one.
+     * Compares against the underlying model address (raw or hashed) so lookups
+     * work both before and after server hydration.
      */
     fun getBySMS(sms: String): ISmsSubscription? {
-        return smss.firstOrNull { it.number == sms }
+        val hashed = PIIHasher.hash(sms)
+        return smss.firstOrNull {
+            val address = (it as Subscription).model.address
+            address == sms || address == hashed
+        }
     }
 }

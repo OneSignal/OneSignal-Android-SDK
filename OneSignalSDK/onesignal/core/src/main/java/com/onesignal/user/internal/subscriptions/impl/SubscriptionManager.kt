@@ -5,6 +5,7 @@ import com.onesignal.common.AndroidUtils
 import com.onesignal.common.DeviceUtils
 import com.onesignal.common.IDManager
 import com.onesignal.common.OneSignalUtils
+import com.onesignal.common.PIIHasher
 import com.onesignal.common.events.EventProducer
 import com.onesignal.common.modeling.IModelStoreChangeHandler
 import com.onesignal.common.modeling.ModelChangedArgs
@@ -93,7 +94,11 @@ internal class SubscriptionManager(
     }
 
     override fun removeEmailSubscription(email: String) {
-        val subscriptionToRem = subscriptions.emails.firstOrNull { it is EmailSubscription && it.email == email }
+        val hashedEmail = PIIHasher.hash(email)
+        val subscriptionToRem =
+            subscriptions.emails.firstOrNull {
+                it is EmailSubscription && (it.model.address == email || it.model.address == hashedEmail)
+            }
 
         if (subscriptionToRem != null) {
             removeSubscriptionFromModels(subscriptionToRem)
@@ -101,7 +106,11 @@ internal class SubscriptionManager(
     }
 
     override fun removeSmsSubscription(sms: String) {
-        val subscriptionToRem = subscriptions.smss.firstOrNull { it is SmsSubscription && it.number == sms }
+        val hashedSms = PIIHasher.hash(sms)
+        val subscriptionToRem =
+            subscriptions.smss.firstOrNull {
+                it is SmsSubscription && (it.model.address == sms || it.model.address == hashedSms)
+            }
 
         if (subscriptionToRem != null) {
             removeSubscriptionFromModels(subscriptionToRem)
@@ -113,7 +122,8 @@ internal class SubscriptionManager(
         address: String,
         status: SubscriptionStatus? = null,
     ) {
-        Logging.log(LogLevel.DEBUG, "SubscriptionManager.addSubscription(type: $type, address: $address)")
+        val logAddress = if (type != SubscriptionType.PUSH) PIIHasher.hash(address) else address
+        Logging.log(LogLevel.DEBUG, "SubscriptionManager.addSubscription(type: $type, address: $logAddress)")
 
         val subscriptionModel = SubscriptionModel()
         subscriptionModel.id = IDManager.createLocalId()

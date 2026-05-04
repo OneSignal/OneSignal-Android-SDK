@@ -1,6 +1,7 @@
 plugins {
     id 'com.android.library'
     id 'kotlin-android'
+    id 'org.jetbrains.kotlin.plugin.serialization'
     id 'com.diffplug.spotless'
     id 'com.vanniktech.maven.publish'
     id 'io.gitlab.arturbosch.detekt'
@@ -73,6 +74,7 @@ dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion"
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutinesVersion"
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:$coroutinesVersion"
+    implementation "org.jetbrains.kotlinx:kotlinx-serialization-json:$kotlinxSerializationJsonVersion"
 
     // AndroidX Lifecycle and Activity
     implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:$lifecycleVersion"
