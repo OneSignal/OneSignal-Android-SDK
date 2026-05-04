@@ -108,7 +108,7 @@ internal open class UserManager(
         // subscribe/unsubscribe/fire calls. Replay runs on the caller's thread (sync).
         pendingExternalId?.let {
             runCatching { listener.onUserJwtInvalidated(UserJwtInvalidatedEvent(it)) }
-                .onFailure { ex -> Logging.warn("UserManager: replayed jwt-invalidated listener threw: ${ex.message}") }
+                .onFailure { ex -> Logging.warn("UserManager: replayed jwt-invalidated listener threw", ex) }
         }
     }
 
@@ -127,7 +127,7 @@ internal open class UserManager(
                 jwtInvalidatedDispatchScope.launch {
                     jwtInvalidatedNotifier.fire { listener ->
                         runCatching { listener.onUserJwtInvalidated(UserJwtInvalidatedEvent(externalId)) }
-                            .onFailure { ex -> Logging.warn("UserManager: jwt-invalidated listener threw: ${ex.message}") }
+                            .onFailure { ex -> Logging.warn("UserManager: jwt-invalidated listener threw", ex) }
                     }
                 }
             } else {

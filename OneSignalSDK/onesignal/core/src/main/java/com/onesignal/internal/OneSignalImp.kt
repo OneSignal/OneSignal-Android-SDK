@@ -386,7 +386,7 @@ internal class OneSignalImp(
         externalId: String,
         jwtBearerToken: String?,
     ) {
-        Logging.log(LogLevel.DEBUG, "Calling deprecated login(externalId: $externalId, jwtBearerToken: $jwtBearerToken)")
+        Logging.log(LogLevel.DEBUG, "Calling deprecated login(externalId: $externalId, jwtBearerToken: ...${jwtBearerToken?.takeLast(8)})")
 
         if (isBackgroundThreadingEnabled) {
             waitForInit(operationName = "login")
@@ -703,7 +703,7 @@ internal class OneSignalImp(
         externalId: String,
         jwtBearerToken: String?,
     ) = withContext(runtimeIoDispatcher) {
-        Logging.log(LogLevel.DEBUG, "login(externalId: $externalId, jwtBearerToken: $jwtBearerToken)")
+        Logging.log(LogLevel.DEBUG, "login(externalId: $externalId, jwtBearerToken: ...${jwtBearerToken?.takeLast(8)})")
 
         suspendUntilInit(operationName = "login")
 
