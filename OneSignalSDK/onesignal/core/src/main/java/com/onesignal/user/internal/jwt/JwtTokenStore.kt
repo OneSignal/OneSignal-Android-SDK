@@ -76,7 +76,7 @@ internal class JwtTokenStore(
             updates.fire { listener ->
                 runCatching { listener.onJwtInvalidated(externalId) }
                     .onFailure { ex ->
-                        Logging.warn("JwtTokenStore: subscriber threw on onJwtInvalidated for externalId=$externalId: ${ex.message}")
+                        Logging.warn("JwtTokenStore: subscriber threw on onJwtInvalidated for externalId=$externalId", ex)
                     }
             }
         }

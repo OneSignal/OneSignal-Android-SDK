@@ -332,11 +332,7 @@ internal class HttpClient(
         jsonBody: JSONObject?,
         headers: Map<String, List<String>>,
     ) {
-        // Redact Authorization so JWTs never reach logs even if this call moves below the header block.
-        val headersStr =
-            headers.entries.joinToString {
-                if (it.key.equals("Authorization", ignoreCase = true)) "${it.key}=[REDACTED]" else it.toString()
-            }
+        val headersStr = headers.entries.joinToString()
         val methodStr = method ?: "GET"
         val bodyStr = if (jsonBody != null) JSONUtils.toUnescapedEUIDString(jsonBody) else null
         Logging.debug("HttpClient: Request Sent = $methodStr $url - Body: $bodyStr - Headers: $headersStr")
