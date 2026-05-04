@@ -282,6 +282,11 @@ class NotificationGenerationProcessorTests : FunSpec({
     test("processNotificationData allows the will display callback to prevent default behavior twice") {
         // Given
         val mocks = Mocks()
+        // Bump the callback timeout from the suite default (10ms). Top-level launchOnIO falls
+        // through to GlobalScope.launch(Dispatchers.IO) (it's not stubbed by IOMockHelper),
+        // and on slow CI runners the IO scheduler can take longer than 10ms to dispatch the
+        // callback, causing withTimeout to cancel before discard is ever set.
+        every { mocks.notificationGenerationProcessor getProperty "EXTERNAL_CALLBACKS_TIMEOUT" } answers { 1_000L }
         coEvery { mocks.notificationDisplayer.displayNotification(any()) } returns true
         coEvery { mocks.notificationLifecycleService.externalRemoteNotificationReceived(any()) } just runs
         coEvery { mocks.notificationLifecycleService.externalNotificationWillShowInForeground(any()) } coAnswers {
@@ -306,6 +311,7 @@ class NotificationGenerationProcessorTests : FunSpec({
     test("processNotificationData allows the received event callback to prevent default behavior twice") {
         // Given
         val mocks = Mocks()
+        every { mocks.notificationGenerationProcessor getProperty "EXTERNAL_CALLBACKS_TIMEOUT" } answers { 1_000L }
         coEvery { mocks.notificationDisplayer.displayNotification(any()) } returns true
         coEvery { mocks.notificationLifecycleService.externalRemoteNotificationReceived(any()) } coAnswers {
             val receivedEvent = firstArg<INotificationReceivedEvent>()
