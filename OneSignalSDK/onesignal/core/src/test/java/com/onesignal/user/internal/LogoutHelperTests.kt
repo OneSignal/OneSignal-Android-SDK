@@ -196,16 +196,16 @@ class LogoutHelperTests : FunSpec({
         verify(atLeast = 1) { mockOperationRepo.enqueue(any()) }
     }
 
-    test("switchUserIv switches user before marking new push sub as internally disabled") {
+    test("switchUserIv marks current push sub as internally disabled before switching users") {
         // Given - IV active, push sub model in store
         val pushSubId = "push-sub-id"
-        val newPushSubModel =
+        val pushSubModel =
             SubscriptionModel().apply {
                 id = pushSubId
                 type = SubscriptionType.PUSH
             }
         val mockSubscriptionModelStore = mockk<SubscriptionModelStore>(relaxed = true)
-        every { mockSubscriptionModelStore.get(pushSubId) } returns newPushSubModel
+        every { mockSubscriptionModelStore.get(pushSubId) } returns pushSubModel
         val mockUserSwitcher = mockk<UserSwitcher>(relaxed = true)
         val mockConfigModel = mockk<ConfigModel>()
         every { mockConfigModel.pushSubscriptionId } returns pushSubId
@@ -216,16 +216,17 @@ class LogoutHelperTests : FunSpec({
         // Then
         handled shouldBe true
 
-        // Order: user-switch must happen BEFORE the flag is set on the new push sub.
-        // Setting the flag on the OLD model first would fire an UpdateSubscriptionOperation
-        // against the OLD user with their valid JWT and unsubscribe them server-side.
+        // Order: flag must be set on the OLD push sub BEFORE the user-switch — setting it
+        // with the default NORMAL tag fires an UpdateSubscriptionOperation against the OLD
+        // user with their still-valid JWT, telling the backend that this device's push
+        // subscription is unsubscribing as the user logs out.
         verifyOrder {
-            mockUserSwitcher.createAndSwitchToNewUser(suppressBackendOperation = true)
             mockSubscriptionModelStore.get(pushSubId)
+            mockUserSwitcher.createAndSwitchToNewUser(suppressBackendOperation = true)
         }
 
         // The flag is set on the model (verified via the underlying property).
-        newPushSubModel.isDisabledInternally shouldBe true
+        pushSubModel.isDisabledInternally shouldBe true
     }
 
     test("switchUserIv returns false when IV behavior is inactive") {
