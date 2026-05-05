@@ -135,6 +135,8 @@ internal class OperationRepo(
         operation: Operation,
         flush: Boolean,
     ) {
+        if (shouldSuppressAnonymousOp(operation)) return
+
         Logging.log(LogLevel.DEBUG, "OperationRepo.enqueue(operation: $operation, flush: $flush)")
 
         operation.id = UUID.randomUUID().toString()
@@ -147,6 +149,8 @@ internal class OperationRepo(
         operation: Operation,
         flush: Boolean,
     ): Boolean {
+        if (shouldSuppressAnonymousOp(operation)) return false
+
         Logging.log(LogLevel.DEBUG, "OperationRepo.enqueueAndWait(operation: $operation, force: $flush)")
 
         operation.id = UUID.randomUUID().toString()
@@ -155,6 +159,26 @@ internal class OperationRepo(
             internalEnqueue(OperationQueueItem(operation, waiter, bucket = enqueueIntoBucket), flush, true)
         }
         return waiter.waitForWake()
+    }
+
+    /**
+     * Drop anonymous (externalId == null) operations at enqueue time when IV is required —
+     * they cannot be authenticated and would otherwise sit in the queue forever, blocked by
+     * `hasValidJwtIfRequired`. LoginUserOperation is exempt because it's enqueued
+     * intentionally during logout and purged later by [removeOperationsWithoutExternalId]
+     * if needed. Outer-gated on `newCodePathsRun` so Phase 1 customers stay byte-for-byte
+     * on the legacy enqueue path.
+     */
+    private fun shouldSuppressAnonymousOp(op: Operation): Boolean {
+        if (!_identityVerificationService.newCodePathsRun) return false
+        if (op is LoginUserOperation) return false
+        val suppress =
+            _configModelStore.model.useIdentityVerification == JwtRequirement.REQUIRED &&
+                op.externalId == null
+        if (suppress) {
+            Logging.debug("OperationRepo: suppressing anonymous op under IV-required: $op")
+        }
+        return suppress
     }
 
     /**
