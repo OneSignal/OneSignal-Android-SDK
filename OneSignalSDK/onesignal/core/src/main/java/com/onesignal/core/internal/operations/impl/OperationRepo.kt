@@ -272,6 +272,18 @@ internal class OperationRepo(
                 val anonymous = queue.filter { it.operation.externalId == null }
                 anonymous.forEach { it.waiter?.wake(false) }
                 queue.removeAll(anonymous)
+                // IV=ON never transfers anonymous state; clear existingOnesignalId so the
+                // executor takes the createUser (upsert) path. The merge-anon-into-identified
+                // path can't dispatch under IV — anon user creation requires a JWT-less call
+                // the backend rejects — and a stale local-id existingOnesignalId would leave
+                // canStartExecute=false forever, deadlocking the queue.
+                queue.forEach { item ->
+                    val op = item.operation
+                    if (op is LoginUserOperation && op.existingOnesignalId != null) {
+                        Logging.debug("OperationRepo: cleared existingOnesignalId on LoginUserOperation (was ${op.existingOnesignalId})")
+                        op.existingOnesignalId = null
+                    }
+                }
                 Logging.debug("OperationRepo: removeOperationsWithoutExternalId removed ${anonymous.size} of ${anonymous.size + queue.size} operations")
                 anonymous.map { it.operation.id }
             }
