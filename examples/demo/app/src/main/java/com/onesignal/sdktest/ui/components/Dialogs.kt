@@ -341,18 +341,60 @@ fun MultiSelectRemoveDialog(
 }
 
 /**
- * Dialog for login/switch user.
+ * Dialog for login/switch user with optional JWT token.
  */
 @Composable
 fun LoginDialog(
     onDismiss: () -> Unit,
-    onConfirm: (String) -> Unit
+    onConfirm: (String, String?) -> Unit
 ) {
-    SingleInputDialog(
-        title = "Login User",
-        label = "External User Id",
-        onDismiss = onDismiss,
-        onConfirm = onConfirm
+    var externalId by remember { mutableStateOf("") }
+    var jwtToken by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+        title = {
+            Text("Login User", style = MaterialTheme.typography.titleMedium)
+        },
+        text = {
+            Column {
+                OutlinedTextField(
+                    value = externalId,
+                    onValueChange = { externalId = it },
+                    label = { Text("External User Id") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    shape = TextFieldShape,
+                    colors = dialogTextFieldColors()
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = jwtToken,
+                    onValueChange = { jwtToken = it },
+                    label = { Text("JWT Token (optional)") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    shape = TextFieldShape,
+                    colors = dialogTextFieldColors()
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { onConfirm(externalId, jwtToken.ifBlank { null }) },
+                enabled = externalId.isNotBlank()
+            ) {
+                Text("Login")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        },
+        shape = RoundedCornerShape(16.dp)
     )
 }
 
