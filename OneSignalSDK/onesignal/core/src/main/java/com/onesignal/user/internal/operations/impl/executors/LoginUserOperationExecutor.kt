@@ -2,14 +2,14 @@ package com.onesignal.user.internal.operations.impl.executors
 
 import android.os.Build
 import com.onesignal.common.AndroidUtils
-import com.onesignal.common.consistency.enums.IamFetchRywTokenKey
-import com.onesignal.common.consistency.models.IConsistencyManager
 import com.onesignal.common.DeviceUtils
 import com.onesignal.common.IDManager
 import com.onesignal.common.NetworkUtils
 import com.onesignal.common.OneSignalUtils
 import com.onesignal.common.RootToolsInternalMethods
 import com.onesignal.common.TimeUtils
+import com.onesignal.common.consistency.enums.IamFetchRywTokenKey
+import com.onesignal.common.consistency.models.IConsistencyManager
 import com.onesignal.common.exceptions.BackendException
 import com.onesignal.common.modeling.ModelChangeTags
 import com.onesignal.core.internal.application.IApplicationService

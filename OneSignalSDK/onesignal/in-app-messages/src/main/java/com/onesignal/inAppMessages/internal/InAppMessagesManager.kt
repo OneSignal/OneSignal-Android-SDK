@@ -120,6 +120,7 @@ internal class InAppMessagesManager(
     private val redisplayedInAppMessages: MutableList<InAppMessage> = mutableListOf()
 
     private val fetchIAMMutex = Mutex()
+
     @Volatile
     private var lastTimeFetchedIAMs: Long? = null
 
@@ -128,6 +129,7 @@ internal class InAppMessagesManager(
     // update for the same externalId, IAMs are re-fetched. Cleared on user-switch.
     @Volatile
     private var pendingJwtRetryExternalId: String? = null
+
     @Volatile
     private var pendingJwtRetryRywData: RywData? = null
 
@@ -213,7 +215,7 @@ internal class InAppMessagesManager(
         // Subscribe to JwtTokenStore so a JWT refresh (developer responding to a previous 401)
         // can drive a deferred IAM re-fetch under IV. Subscription is ungated; the listener
         // body checks for a pending retry, which is only set on the IV fetch path.
-        _jwtTokenStore.subscribe(this)
+        _jwtTokenStore.addInternalUpdateListener(this)
 
         suspendifyOnIO {
             _repository.cleanCachedInAppMessages()
@@ -420,11 +422,6 @@ internal class InAppMessagesManager(
         pendingJwtRetryRywData = null
         Logging.info("InAppMessagesManager: JWT refreshed for $externalId, retrying IAM fetch")
         suspendifyOnIO { fetchMessages(pendingRyw) }
-    }
-
-    override fun onJwtInvalidated(externalId: String) {
-        // No-op: the developer-facing invalidation is handled by UserManager. We only care
-        // about the JWT-update side (onJwtUpdated) to drive the deferred retry.
     }
 
     /**
