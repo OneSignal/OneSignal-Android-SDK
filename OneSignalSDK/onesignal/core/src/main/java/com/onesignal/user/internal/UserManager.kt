@@ -25,11 +25,8 @@ import com.onesignal.user.internal.subscriptions.SubscriptionList
 import com.onesignal.user.state.IUserStateObserver
 import com.onesignal.user.state.UserChangedState
 import com.onesignal.user.state.UserState
+import com.onesignal.common.threading.OneSignalDispatchers
 import com.onesignal.user.subscriptions.IPushSubscription
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.launch
 
 internal open class UserManager(
     private val _subscriptionManager: ISubscriptionManager,
@@ -55,22 +52,6 @@ internal open class UserManager(
 
     private val jwtInvalidatedNotifier = EventProducer<IUserJwtInvalidatedListener>()
 
-    /**
-     * Buffers a fired invalidation when no listeners are subscribed yet (e.g. SDK init / cold-start
-     * 401 before app code wires up its listener). Consumed-on-first-subscribe by the next
-     * [addJwtInvalidatedListener] call. Cleared automatically when the IdentityModel is replaced
-     * (login or logout) so a stale event doesn't leak across users.
-     */
-    private val jwtInvalidatedLock = Any()
-    private var pendingJwtInvalidatedExternalId: String? = null
-
-    /**
-     * Async dispatch of [IUserJwtInvalidatedListener] callbacks so HYDRATE / op-repo paths
-     * that synchronously trigger invalidation don't run app code on the SDK's internal thread.
-     * Replay (synchronous, on the calling thread) bypasses this scope.
-     */
-    private val jwtInvalidatedDispatchScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-
     override val pushSubscription: IPushSubscription
         get() = _subscriptionManager.subscriptions.push
 
@@ -91,25 +72,8 @@ internal open class UserManager(
         _jwtTokenStore.subscribe(this)
     }
 
-    /**
-     * Subscribe a developer-facing listener for JWT-invalidated events. If an invalidation
-     * has already fired before any listener was subscribed (e.g. early-startup 401), the
-     * buffered event is delivered to this listener synchronously and consumed — subsequent
-     * subscribers do not receive that same event.
-     */
     fun addJwtInvalidatedListener(listener: IUserJwtInvalidatedListener) {
-        val pendingExternalId: String?
-        synchronized(jwtInvalidatedLock) {
-            jwtInvalidatedNotifier.subscribe(listener)
-            pendingExternalId = pendingJwtInvalidatedExternalId
-            pendingJwtInvalidatedExternalId = null
-        }
-        // Deliver the replay outside the lock so a slow listener doesn't block other
-        // subscribe/unsubscribe/fire calls. Replay runs on the caller's thread (sync).
-        pendingExternalId?.let {
-            runCatching { listener.onUserJwtInvalidated(UserJwtInvalidatedEvent(it)) }
-                .onFailure { ex -> Logging.warn("UserManager: replayed jwt-invalidated listener threw", ex) }
-        }
+        jwtInvalidatedNotifier.subscribe(listener)
     }
 
     fun removeJwtInvalidatedListener(listener: IUserJwtInvalidatedListener) {
@@ -117,21 +81,16 @@ internal open class UserManager(
     }
 
     /**
-     * Fire [IUserJwtInvalidatedListener.onUserJwtInvalidated] to all subscribed listeners on
-     * a background dispatcher. If no listener is currently subscribed, buffer the externalId
-     * to be delivered to the next listener that subscribes (consume-on-first-subscribe).
+     * Fire [IUserJwtInvalidatedListener.onUserJwtInvalidated] to all currently-subscribed
+     * listeners on a background dispatcher (so HYDRATE / op-repo paths that synchronously
+     * trigger invalidation don't run app code on the SDK's internal thread). Pure pub/sub —
+     * matches iOS: late subscribers don't get a replay of earlier events.
      */
     fun fireJwtInvalidated(externalId: String) {
-        synchronized(jwtInvalidatedLock) {
-            if (jwtInvalidatedNotifier.hasSubscribers) {
-                jwtInvalidatedDispatchScope.launch {
-                    jwtInvalidatedNotifier.fire { listener ->
-                        runCatching { listener.onUserJwtInvalidated(UserJwtInvalidatedEvent(externalId)) }
-                            .onFailure { ex -> Logging.warn("UserManager: jwt-invalidated listener threw", ex) }
-                    }
-                }
-            } else {
-                pendingJwtInvalidatedExternalId = externalId
+        OneSignalDispatchers.launchOnDefault {
+            jwtInvalidatedNotifier.fire { listener ->
+                runCatching { listener.onUserJwtInvalidated(UserJwtInvalidatedEvent(externalId)) }
+                    .onFailure { ex -> Logging.warn("UserManager: jwt-invalidated listener threw", ex) }
             }
         }
     }
@@ -342,13 +301,7 @@ internal open class UserManager(
     override fun onModelReplaced(
         model: IdentityModel,
         tag: String,
-    ) {
-        // IdentityModel replacement = login or logout switch. Clear any buffered invalidation
-        // so the next user's listener doesn't replay the previous user's stale event.
-        synchronized(jwtInvalidatedLock) {
-            pendingJwtInvalidatedExternalId = null
-        }
-    }
+    ) { }
 
     override fun onModelUpdated(
         args: ModelChangedArgs,

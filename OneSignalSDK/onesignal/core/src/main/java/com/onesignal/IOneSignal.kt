@@ -151,9 +151,8 @@ interface IOneSignal {
      * a 401 from the OneSignal backend). Apps should respond by fetching a fresh JWT from
      * their backend and supplying it via [updateUserJwt].
      *
-     * Listener replay: if an invalidation has already occurred before this listener is
-     * registered, the most recent invalidation is delivered to the new listener so apps
-     * that subscribe late don't miss the signal.
+     * Pure pub/sub: only listeners subscribed at the time of the invalidation receive the
+     * event. Subscribe early (e.g. in `Application.onCreate`) to avoid missing events.
      */
     fun addUserJwtInvalidatedListener(listener: IUserJwtInvalidatedListener)
 

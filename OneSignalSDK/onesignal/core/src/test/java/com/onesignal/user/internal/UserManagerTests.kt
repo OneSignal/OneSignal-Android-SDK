@@ -227,54 +227,9 @@ class UserManagerTests : FunSpec({
         firedExternalId shouldBe "alice"
     }
 
-    test("listener replay: first subscriber after a no-listener fire receives the buffered event") {
-        // Given
-        val jwtTokenStore = JwtTokenStore(MockPreferencesService())
-        val userManager =
-            UserManager(
-                mockk<ISubscriptionManager>(),
-                MockHelper.identityModelStore(),
-                MockHelper.propertiesModelStore(),
-                MockHelper.customEventController(),
-                MockHelper.languageContext(),
-                jwtTokenStore,
-            )
-        // Fire BEFORE any listener is registered → buffered.
-        userManager.fireJwtInvalidated("alice")
-
-        // When: listener subscribes after the fire.
-        var lateExternalId: String? = null
-        userManager.addJwtInvalidatedListener { event -> lateExternalId = event.externalId }
-
-        // Then: replay delivers synchronously on subscribe.
-        lateExternalId shouldBe "alice"
-    }
-
-    test("buffered event is consumed by the first subscriber; second subscriber gets nothing") {
-        val jwtTokenStore = JwtTokenStore(MockPreferencesService())
-        val userManager =
-            UserManager(
-                mockk<ISubscriptionManager>(),
-                MockHelper.identityModelStore(),
-                MockHelper.propertiesModelStore(),
-                MockHelper.customEventController(),
-                MockHelper.languageContext(),
-                jwtTokenStore,
-            )
-        userManager.fireJwtInvalidated("alice")
-
-        // First subscriber consumes the buffered event.
-        var firstFired: String? = null
-        userManager.addJwtInvalidatedListener { event -> firstFired = event.externalId }
-        firstFired shouldBe "alice"
-
-        // Second subscriber must NOT receive a replay (buffer was already consumed).
-        var secondFired = false
-        userManager.addJwtInvalidatedListener { secondFired = true }
-        secondFired shouldBe false
-    }
-
-    test("fire when subscribers exist does NOT buffer for late subscribers") {
+    test("late subscriber does not receive earlier events — pure pub/sub, no replay") {
+        // Matches iOS: only listeners subscribed at the time of the fire receive the event.
+        // No buffering of earlier invalidations for late subscribers.
         val jwtTokenStore = JwtTokenStore(MockPreferencesService())
         val userManager =
             UserManager(
@@ -286,39 +241,14 @@ class UserManagerTests : FunSpec({
                 jwtTokenStore,
             )
 
-        // Existing subscriber at the time of fire.
-        userManager.addJwtInvalidatedListener { /* no-op */ }
+        // Fire before any listener is registered.
         userManager.fireJwtInvalidated("alice")
         Thread.sleep(50) // allow async fire to dispatch
 
-        // Late subscriber must NOT receive a replay (event was not buffered, since
-        // there was already a listener at fire time).
+        // Late subscriber must not receive the earlier event.
         var lateFired = false
         userManager.addJwtInvalidatedListener { lateFired = true }
-        lateFired shouldBe false
-    }
-
-    test("onModelReplaced clears any buffered invalidation event (login/logout switch)") {
-        val identityModelStore = MockHelper.identityModelStore()
-        val jwtTokenStore = JwtTokenStore(MockPreferencesService())
-        val userManager =
-            UserManager(
-                mockk<ISubscriptionManager>(),
-                identityModelStore,
-                MockHelper.propertiesModelStore(),
-                MockHelper.customEventController(),
-                MockHelper.languageContext(),
-                jwtTokenStore,
-            )
-        userManager.fireJwtInvalidated("alice")
-
-        // Simulate a user-switch: IdentityModelStore replaces the model and notifies
-        // subscribers (UserManager subscribes itself in init).
-        userManager.onModelReplaced(identityModelStore.model, "")
-
-        // Late subscriber must NOT receive the (now-cleared) buffered event.
-        var lateFired = false
-        userManager.addJwtInvalidatedListener { lateFired = true }
+        Thread.sleep(50)
         lateFired shouldBe false
     }
 
