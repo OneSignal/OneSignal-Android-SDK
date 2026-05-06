@@ -1,7 +1,5 @@
 package com.onesignal.user.internal
 
-import com.onesignal.IUserJwtInvalidatedListener
-import com.onesignal.UserJwtInvalidatedEvent
 import com.onesignal.common.IDManager
 import com.onesignal.common.JSONUtils
 import com.onesignal.common.OneSignalUtils
@@ -16,8 +14,6 @@ import com.onesignal.user.internal.backend.IdentityConstants
 import com.onesignal.user.internal.customEvents.ICustomEventController
 import com.onesignal.user.internal.identity.IdentityModel
 import com.onesignal.user.internal.identity.IdentityModelStore
-import com.onesignal.user.internal.jwt.IJwtUpdateListener
-import com.onesignal.user.internal.jwt.JwtTokenStore
 import com.onesignal.user.internal.properties.PropertiesModel
 import com.onesignal.user.internal.properties.PropertiesModelStore
 import com.onesignal.user.internal.subscriptions.ISubscriptionManager
@@ -25,7 +21,6 @@ import com.onesignal.user.internal.subscriptions.SubscriptionList
 import com.onesignal.user.state.IUserStateObserver
 import com.onesignal.user.state.UserChangedState
 import com.onesignal.user.state.UserState
-import com.onesignal.common.threading.OneSignalDispatchers
 import com.onesignal.user.subscriptions.IPushSubscription
 
 internal open class UserManager(
@@ -34,8 +29,7 @@ internal open class UserManager(
     private val _propertiesModelStore: PropertiesModelStore,
     private val _customEventController: ICustomEventController,
     private val _languageContext: ILanguageContext,
-    private val _jwtTokenStore: JwtTokenStore,
-) : IUserManager, ISingletonModelStoreChangeHandler<IdentityModel>, IJwtUpdateListener {
+) : IUserManager, ISingletonModelStoreChangeHandler<IdentityModel> {
     override val onesignalId: String
         get() = if (IDManager.isLocalId(_identityModel.onesignalId)) "" else _identityModel.onesignalId
 
@@ -49,8 +43,6 @@ internal open class UserManager(
         get() = _subscriptionManager.subscriptions
 
     val changeHandlersNotifier = EventProducer<IUserStateObserver>()
-
-    private val jwtInvalidatedNotifier = EventProducer<IUserJwtInvalidatedListener>()
 
     override val pushSubscription: IPushSubscription
         get() = _subscriptionManager.subscriptions.push
@@ -67,37 +59,6 @@ internal open class UserManager(
 
     init {
         _identityModelStore.subscribe(this)
-        // Subscribe to JwtTokenStore so 401-driven invalidations from JwtTokenStore.invalidateJwt
-        // surface to developer-facing IUserJwtInvalidatedListener subscribers.
-        _jwtTokenStore.subscribe(this)
-    }
-
-    fun addJwtInvalidatedListener(listener: IUserJwtInvalidatedListener) {
-        jwtInvalidatedNotifier.subscribe(listener)
-    }
-
-    fun removeJwtInvalidatedListener(listener: IUserJwtInvalidatedListener) {
-        jwtInvalidatedNotifier.unsubscribe(listener)
-    }
-
-    /**
-     * Fire [IUserJwtInvalidatedListener.onUserJwtInvalidated] to all currently-subscribed
-     * listeners on a background dispatcher (so HYDRATE / op-repo paths that synchronously
-     * trigger invalidation don't run app code on the SDK's internal thread). Pure pub/sub —
-     * matches iOS: late subscribers don't get a replay of earlier events.
-     */
-    fun fireJwtInvalidated(externalId: String) {
-        OneSignalDispatchers.launchOnDefault {
-            jwtInvalidatedNotifier.fire { listener ->
-                runCatching { listener.onUserJwtInvalidated(UserJwtInvalidatedEvent(externalId)) }
-                    .onFailure { ex -> Logging.warn("UserManager: jwt-invalidated listener threw", ex) }
-            }
-        }
-    }
-
-    // IJwtUpdateListener — JwtTokenStore -> developer-facing event bridge.
-    override fun onJwtInvalidated(externalId: String) {
-        fireJwtInvalidated(externalId)
     }
 
     override fun addAlias(

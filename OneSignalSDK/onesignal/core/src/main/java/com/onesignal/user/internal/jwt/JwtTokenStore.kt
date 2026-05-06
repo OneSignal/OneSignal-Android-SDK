@@ -1,7 +1,9 @@
 package com.onesignal.user.internal.jwt
 
+import com.onesignal.IUserJwtInvalidatedListener
+import com.onesignal.UserJwtInvalidatedEvent
 import com.onesignal.common.events.EventProducer
-import com.onesignal.common.events.IEventNotifier
+import com.onesignal.common.threading.OneSignalDispatchers
 import com.onesignal.core.internal.preferences.IPreferencesService
 import com.onesignal.core.internal.preferences.PreferenceOneSignalKeys
 import com.onesignal.core.internal.preferences.PreferenceStores
@@ -13,20 +15,30 @@ import org.json.JSONObject
  * Persistent store mapping externalId -> JWT. Multi-user so ops queued under a previous user
  * can still resolve their JWT at execution time. Storage is unconditional; *usage* of JWTs is
  * gated on `IdentityVerificationService.ivBehaviorActive`.
+ *
+ * Notifies two distinct audiences on JWT changes:
+ *  - SDK-internal subscribers via [IJwtUpdateListener] ([addInternalUpdateListener]).
+ *  - Developer-facing subscribers via [IUserJwtInvalidatedListener]
+ *    ([addUserJwtInvalidatedListener]). Pure pub/sub: only listeners subscribed at the time
+ *    of [invalidateJwt] receive the event. Matches iOS — no buffering for late subscribers.
  */
 internal class JwtTokenStore(
     private val _prefs: IPreferencesService,
-) : IEventNotifier<IJwtUpdateListener> {
+) {
     private val tokens: MutableMap<String, String> = mutableMapOf()
     private var isLoaded: Boolean = false
-    private val updates = EventProducer<IJwtUpdateListener>()
+    private val internalUpdateListeners = EventProducer<IJwtUpdateListener>()
+    private val publicInvalidatedListeners = EventProducer<IUserJwtInvalidatedListener>()
 
-    override val hasSubscribers: Boolean
-        get() = updates.hasSubscribers
+    fun addInternalUpdateListener(listener: IJwtUpdateListener) = internalUpdateListeners.subscribe(listener)
 
-    override fun subscribe(handler: IJwtUpdateListener) = updates.subscribe(handler)
+    fun removeInternalUpdateListener(listener: IJwtUpdateListener) = internalUpdateListeners.unsubscribe(listener)
 
-    override fun unsubscribe(handler: IJwtUpdateListener) = updates.unsubscribe(handler)
+    fun addUserJwtInvalidatedListener(listener: IUserJwtInvalidatedListener) =
+        publicInvalidatedListeners.subscribe(listener)
+
+    fun removeUserJwtInvalidatedListener(listener: IUserJwtInvalidatedListener) =
+        publicInvalidatedListeners.unsubscribe(listener)
 
     fun getJwt(externalId: String): String? {
         synchronized(tokens) {
@@ -51,13 +63,13 @@ internal class JwtTokenStore(
             }
         }
         if (changed) {
-            updates.fire { it.onJwtUpdated(externalId) }
+            internalUpdateListeners.fire { it.onJwtUpdated(externalId) }
         }
     }
 
     /**
-     * Removes the JWT for [externalId] and notifies subscribers via
-     * [IJwtUpdateListener.onJwtInvalidated]. Surfaced to the developer as "your JWT is no
+     * Removes the JWT for [externalId] and notifies developer-facing subscribers via
+     * [IUserJwtInvalidatedListener]. Surfaced to the developer as "your JWT is no
      * longer valid; please refresh." Don't call from internal cleanup paths (logout, user
      * switch) — use a different mechanism if you need to clear without notifying the app.
      */
@@ -71,13 +83,17 @@ internal class JwtTokenStore(
             }
         }
         if (existed) {
+            // Dispatch developer-facing event on a background thread so the SDK's internal
+            // thread (op-repo / HYDRATE paths) doesn't run app code synchronously.
             // Per-subscriber try/catch so one throwing listener doesn't break others or
             // propagate up into the operation queue (would otherwise drop the failing op).
-            updates.fire { listener ->
-                runCatching { listener.onJwtInvalidated(externalId) }
-                    .onFailure { ex ->
-                        Logging.warn("JwtTokenStore: subscriber threw on onJwtInvalidated for externalId=$externalId", ex)
-                    }
+            OneSignalDispatchers.launchOnDefault {
+                publicInvalidatedListeners.fire { listener ->
+                    runCatching { listener.onUserJwtInvalidated(UserJwtInvalidatedEvent(externalId)) }
+                        .onFailure { ex ->
+                            Logging.warn("JwtTokenStore: IUserJwtInvalidatedListener threw for externalId=$externalId", ex)
+                        }
+                }
             }
         }
     }
@@ -95,7 +111,7 @@ internal class JwtTokenStore(
             }
         }
         for (externalId in removed) {
-            updates.fire { it.onJwtUpdated(externalId) }
+            internalUpdateListeners.fire { it.onJwtUpdated(externalId) }
         }
     }
 

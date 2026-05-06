@@ -30,9 +30,8 @@ internal fun OperationRepo.hasValidJwtIfRequired(
 
 /**
  * Handles a [com.onesignal.core.internal.operations.ExecutionResult.FAIL_UNAUTHORIZED] response
- * when IV behavior is active. Invalidates the JWT for the failing op's externalId (which fires
- * `IJwtUpdateListener.onJwtInvalidated` to subscribers, surfacing to the developer via the
- * public-API layer), and re-queues the ops (waiter wake with `false` so `enqueueAndWait`
+ * when IV behavior is active. Invalidates the JWT for the failing op's externalId
+ * and re-queues the ops (waiter wake with `false` so `enqueueAndWait`
  * callers don't hang).
  *
  * Returns `true` if IV-specific handling was applied (caller should stop processing this result),
@@ -48,8 +47,10 @@ internal fun OperationRepo.handleFailUnauthorized(
     if (!ivBehaviorActive) return false
     val externalId = startingOp.operation.externalId ?: return false
 
-    // Fires onJwtInvalidated to subscribers BEFORE we wake waiters — otherwise an
-    // `enqueueAndWait` caller could return before the developer-facing event propagates.
+    // Schedules an async fire of onUserJwtInvalidated to subscribers via
+    // OneSignalDispatchers.launchOnDefault — the developer-facing listener invocation is
+    // NOT ordered with respect to the waiter.wake below; awaiting `enqueueAndWait` callers
+    // may resume before, after, or concurrent with the listener.
     jwtTokenStore.invalidateJwt(externalId)
     Logging.info(
         "Operation execution failed with 401 Unauthorized, JWT invalidated for user: $externalId. " +

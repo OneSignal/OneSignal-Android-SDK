@@ -36,7 +36,6 @@ import com.onesignal.user.IUserManager
 import com.onesignal.user.UserModule
 import com.onesignal.user.internal.LoginHelper
 import com.onesignal.user.internal.LogoutHelper
-import com.onesignal.user.internal.UserManager
 import com.onesignal.user.internal.UserSwitcher
 import com.onesignal.user.internal.identity.IdentityModelStore
 import com.onesignal.user.internal.jwt.JwtTokenStore
@@ -460,7 +459,7 @@ internal class OneSignalImp(
                 throw IllegalStateException("Must call 'initWithContext' before 'addUserJwtInvalidatedListener'")
             }
         }
-        services.getService<UserManager>().addJwtInvalidatedListener(listener)
+        jwtTokenStore.addUserJwtInvalidatedListener(listener)
     }
 
     override fun removeUserJwtInvalidatedListener(listener: IUserJwtInvalidatedListener) {
@@ -471,7 +470,7 @@ internal class OneSignalImp(
                 throw IllegalStateException("Must call 'initWithContext' before 'removeUserJwtInvalidatedListener'")
             }
         }
-        services.getService<UserManager>().removeJwtInvalidatedListener(listener)
+        jwtTokenStore.removeUserJwtInvalidatedListener(listener)
     }
 
     override fun <T> hasService(c: Class<T>): Boolean = services.hasService(c)
