@@ -637,14 +637,24 @@ internal class OneSignalImp(
 
         // Use IO dispatcher for initialization to prevent ANRs and optimize for I/O operations
         return withContext(runtimeIoDispatcher) {
-            // do not do this again if already initialized or init is in progress
+            val shouldRunInit: Boolean
             synchronized(initLock) {
-                if (initState.isSDKAccessible()) {
-                    Logging.log(LogLevel.DEBUG, "initWithContext: SDK already initialized or in progress")
-                    return@withContext true
+                shouldRunInit = !initState.isSDKAccessible()
+                if (shouldRunInit) {
+                    initState = InitState.IN_PROGRESS
                 }
+            }
 
-                initState = InitState.IN_PROGRESS
+            if (!shouldRunInit) {
+                // Another caller has already started (or completed) init. Honor this method's
+                // contract by suspending until initialization is *fully* completed -- not just
+                // kicked off. This closes a race where re-entrant suspend callers (e.g. the
+                // SyncJobService entry point under SDK_BACKGROUND_THREADING) would otherwise
+                // proceed to use IBackgroundService implementations like SessionService whose
+                // bootstrap() had not yet run, NPE'ing on still-null model fields.
+                Logging.log(LogLevel.DEBUG, "initWithContext: init already in progress or completed, awaiting completion")
+                suspendCompletion.await()
+                return@withContext initState == InitState.SUCCESS
             }
 
             val result = internalInit(context, appId)

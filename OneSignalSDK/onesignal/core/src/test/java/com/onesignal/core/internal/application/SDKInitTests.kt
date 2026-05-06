@@ -18,8 +18,11 @@ import io.kotest.matchers.shouldNotBe
 import io.mockk.every
 import io.mockk.mockkObject
 import io.mockk.unmockkObject
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.runBlocking
 import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 
 @RobolectricTest
 class SDKInitTests : FunSpec({
@@ -487,6 +490,77 @@ class SDKInitTests : FunSpec({
 
         // Should throw immediately because isInitialized is false
         exception.message shouldBe "Must call 'initWithContext' before 'logout'"
+    }
+
+    // Regression test for the SessionService NPE under SDK_BACKGROUND_THREADING.
+    //
+    // Background: when init is in flight, internalInit() has not yet called bootstrapServices(),
+    // which means IBootstrapService implementations like SessionService have null model fields.
+    // SyncJobService re-enters via initWithContextSuspend(context, null) and then immediately
+    // calls runBackgroundServices(); if initWithContextSuspend returns true while init is still
+    // in progress (the old behavior), the loop hits SessionService.endSession() → NPE.
+    //
+    // The fix: initWithContextSuspend must suspend until init is *fully* completed, not just
+    // kicked off. This test verifies that contract by checking that os.isInitialized is true
+    // at the moment the re-entrant suspend call returns.
+    test("initWithContextSuspend with in-flight init waits for completion before returning") {
+        val context = getApplicationContext<Context>()
+        val trigger = CountDownLatch(1)
+        // started signals when the first caller has entered internalInit() and reached the
+        // blocking SharedPreferences access -- by which point initState is IN_PROGRESS.
+        val started = CountDownLatch(1)
+        val blockingCtx = object : ContextWrapper(context) {
+            override fun getSharedPreferences(name: String, mode: Int): SharedPreferences {
+                started.countDown()
+                trigger.await()
+                return super.getSharedPreferences(name, mode)
+            }
+        }
+        val os = OneSignalImp()
+
+        runBlocking {
+            // First caller: stalls inside internalInit() once it tries to read prefs.
+            val firstInit = async(Dispatchers.IO) {
+                os.initWithContextSuspend(blockingCtx, "appId")
+            }
+
+            // Deterministically wait until firstInit has entered the prefs-blocking region.
+            // After this point, initState is guaranteed to be IN_PROGRESS.
+            started.await(5, TimeUnit.SECONDS) shouldBe true
+            os.isInitialized shouldBe false
+            firstInit.isCompleted shouldBe false
+
+            // Second caller: under the OLD behavior the synchronized(initLock) block sees
+            // state == IN_PROGRESS and returns `true` *while* internalInit() (running on the
+            // first caller) has not yet reached `initState = InitState.SUCCESS`. Under the
+            // fix, this call must suspend until the first caller fully completes init -- so
+            // that os.isInitialized is guaranteed `true` at the moment we return.
+            //
+            // We capture isInitialized at exactly the moment initWithContextSuspend returns
+            // for the second caller. Old code: false (bug). New code: true (fix).
+            val secondInit = async(Dispatchers.IO) {
+                val result = os.initWithContextSuspend(context, "appId")
+                val initializedAtReturn = os.isInitialized
+                Pair(result, initializedAtReturn)
+            }
+
+            // Sanity: the second caller has not pre-empted the test by returning before
+            // we unblock the first caller (timing depends on lazy ServiceProvider locks).
+            Thread.sleep(200)
+
+            // Unblock the first caller so internalInit() can complete (state -> SUCCESS).
+            trigger.countDown()
+
+            firstInit.await() shouldBe true
+            val (secondResult, initializedAtReturn) = secondInit.await()
+            secondResult shouldBe true
+            // KEY assertion: os must be fully initialized at the moment the re-entrant
+            // suspend init returns. Old code violated this by returning early while state
+            // was still IN_PROGRESS, which is what allowed SyncJobService to reach
+            // runBackgroundServices() before bootstrap() had run.
+            initializedAtReturn shouldBe true
+            os.isInitialized shouldBe true
+        }
     }
 })
 
