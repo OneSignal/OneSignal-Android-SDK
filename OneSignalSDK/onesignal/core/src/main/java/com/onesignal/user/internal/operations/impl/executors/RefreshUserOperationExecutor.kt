@@ -207,7 +207,6 @@ internal class RefreshUserOperationExecutor(
      * Caller has already verified that [serverSubscription.id] matches the cached
      * `pushSubscriptionId`, so this method only inspects the local model + server flags.
      */
-    @Suppress("ReturnCount")
     private fun buildPushSelfHealOperationForStuckSubscription(
         op: RefreshUserOperation,
         serverSubscription: SubscriptionObject,
@@ -220,27 +219,28 @@ internal class RefreshUserOperationExecutor(
 
         val (localEnabled, localStatus) = SubscriptionModelStoreListener.getSubscriptionEnabledAndStatus(cachedPushSubscriptionModel)
         val serverEnabled = (serverSubscription.enabled == true) && ((serverSubscription.notificationTypes ?: 0) > 0)
-        if (!localEnabled || serverEnabled) {
-            return null
+        val divergent = localEnabled && !serverEnabled
+
+        return if (divergent) {
+            Logging.info(
+                "RefreshUserOperationExecutor: push subscription $pushSubscriptionId diverged from server " +
+                    "(server enabled=${serverSubscription.enabled} notificationTypes=${serverSubscription.notificationTypes}; " +
+                    "local opted-in and SUBSCRIBED). Enqueuing follow-up update-subscription op to re-assert local " +
+                    "truth via PATCH /subscriptions/{id}. See SDK-4388 / SDK-4474.",
+            )
+            UpdateSubscriptionOperation(
+                op.appId,
+                op.onesignalId,
+                _identityModelStore.model.externalId,
+                pushSubscriptionId,
+                cachedPushSubscriptionModel.type,
+                localEnabled,
+                cachedPushSubscriptionModel.address,
+                localStatus,
+            )
+        } else {
+            null
         }
-
-        Logging.info(
-            "RefreshUserOperationExecutor: push subscription $pushSubscriptionId diverged from server " +
-                "(server enabled=${serverSubscription.enabled} notificationTypes=${serverSubscription.notificationTypes}; " +
-                "local opted-in and SUBSCRIBED). Enqueuing follow-up update-subscription op to re-assert local " +
-                "truth via PATCH /subscriptions/{id}. See SDK-4388 / SDK-4474.",
-        )
-
-        return UpdateSubscriptionOperation(
-            op.appId,
-            op.onesignalId,
-            _identityModelStore.model.externalId,
-            pushSubscriptionId,
-            cachedPushSubscriptionModel.type,
-            localEnabled,
-            cachedPushSubscriptionModel.address,
-            localStatus,
-        )
     }
 
     companion object {
