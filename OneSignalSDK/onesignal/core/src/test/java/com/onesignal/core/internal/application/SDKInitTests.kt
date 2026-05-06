@@ -7,7 +7,9 @@ import androidx.test.core.app.ApplicationProvider.getApplicationContext
 import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
 import com.onesignal.common.AndroidUtils
 import com.onesignal.core.internal.preferences.PreferenceOneSignalKeys.PREFS_LEGACY_APP_ID
+import com.onesignal.debug.ILogListener
 import com.onesignal.debug.LogLevel
+import com.onesignal.debug.OneSignalLogEvent
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.internal.OneSignalImp
 import io.kotest.assertions.throwables.shouldThrow
@@ -520,6 +522,60 @@ class SDKInitTests : FunSpec({
             ex.message shouldBe "OneSignal initWithContext failed."
             ex.suppressed.any { it === cause } shouldBe true
         } finally {
+            unmockkObject(AndroidUtils)
+        }
+    }
+
+    test("legacy mode logs guidance when accessor on main thread blocks during in-progress init") {
+        // Given: pre-#2605, legacy mode threw if the SDK wasn't ready; the blocking happened
+        // inside initWithContext itself (synchronous runBlocking). Now that init dispatches
+        // asynchronously, the first accessor on the main thread can block instead. Total ANR
+        // risk is roughly equivalent — just shifted in time — but it's no longer obviously
+        // located in initWithContext, so we log a warning that points callers to the suspend API.
+        val trigger = CountDownLatch(1)
+        val context = getApplicationContext<Context>()
+        val blockingPrefContext = BlockingPrefsContext(context, trigger)
+        val os = OneSignalImp()
+        val warnings = mutableListOf<String>()
+        val listener =
+            ILogListener { event: OneSignalLogEvent ->
+                if (event.level == LogLevel.WARN) warnings.add(event.entry)
+            }
+
+        mockkObject(AndroidUtils)
+        every { AndroidUtils.isAndroidUserUnlocked(any()) } returns true
+        every { AndroidUtils.isRunningOnMainThread() } returns true
+
+        os.debug.addLogListener(listener)
+        try {
+            // When: init kicks off but stalls inside internalInit on shared-prefs access.
+            os.initWithContext(blockingPrefContext, "appId")
+            os.isInitialized shouldBe false
+
+            // Trigger the would-block accessor from a background thread (so the test thread
+            // doesn't actually hang on runBlocking) — the warning logged from inside
+            // warnIfBlockingOnMainThread is what we're verifying.
+            val accessorThread =
+                Thread {
+                    runCatching { os.user.onesignalId }
+                }
+            accessorThread.start()
+            accessorThread.join(500)
+
+            // The accessor is blocked waiting for init; release prefs so it can complete.
+            trigger.countDown()
+            accessorThread.join(2_000)
+            accessorThread.isAlive shouldBe false
+
+            // Then: a warning must have been emitted with actionable guidance.
+            val match = warnings.firstOrNull { it.contains("OneSignal initialization is still in progress") }
+            match shouldNotBe null
+            (match!!.contains("main thread")) shouldBe true
+            (match.contains("suspend API")) shouldBe true
+        } finally {
+            os.debug.removeLogListener(listener)
+            // Ensure any waiter is released even if assertions failed early.
+            if (trigger.count > 0) trigger.countDown()
             unmockkObject(AndroidUtils)
         }
     }

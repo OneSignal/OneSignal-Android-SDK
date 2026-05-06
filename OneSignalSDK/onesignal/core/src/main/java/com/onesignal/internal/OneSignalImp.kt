@@ -458,12 +458,49 @@ internal class OneSignalImp(
         when (initState) {
             InitState.NOT_STARTED ->
                 throw IllegalStateException("Must call 'initWithContext' before '$operationName'")
-            InitState.IN_PROGRESS -> waitForInit(operationName = operationName)
+            InitState.IN_PROGRESS -> {
+                warnIfBlockingOnMainThread(operationName)
+                waitForInit(operationName = operationName)
+            }
             InitState.FAILED ->
                 throw initFailureException
                     ?: IllegalStateException("Initialization failed before '$operationName'")
             InitState.SUCCESS -> {}
         }
+    }
+
+    /**
+     * Make the legacy-mode (FF-off) main-thread blocking behavior explicit. Pre-#2605 there was
+     * no IN_PROGRESS window observable from accessors — [initWithContext] ran [internalInit]
+     * synchronously via `runBlocking`, so any blocking happened inside `initWithContext` itself.
+     * Now that init dispatches asynchronously, the first accessor on the main thread can block on
+     * [runBlocking] inside [waitForInit]/[waitAndReturn] until init completes. Total ANR risk is
+     * roughly equivalent to pre-#2605, just shifted in time, but the block is no longer obviously
+     * located in `initWithContext` — so we log a warning that points callers to the suspend API
+     * or a background thread when they care about UI responsiveness.
+     *
+     * FF-on mode already accepts the ANR-vs-throw trade-off (see [waitUntilInitInternal]); the
+     * warning here is only useful as a behavior-change signal for legacy mode.
+     */
+    @Suppress("TooGenericExceptionCaught")
+    private fun warnIfBlockingOnMainThread(operationName: String?) {
+        if (isBackgroundThreadingEnabled) return
+        val onMain =
+            try {
+                AndroidUtils.isRunningOnMainThread()
+            } catch (e: RuntimeException) {
+                // Looper.getMainLooper() may be unavailable in test environments — skip the warning.
+                return
+            }
+        if (!onMain) return
+        val target = operationName?.let { "'$it'" } ?: "this OneSignal API"
+        Logging.warn(
+            "Calling $target on the main thread while OneSignal initialization is still in progress. " +
+                "This will block the UI thread until init completes (ANR risk on slow devices). " +
+                "Prefer calling from a background thread, or use the suspend API " +
+                "(OneSignal.initWithContextSuspend, OneSignal.getUser(), OneSignal.loginSuspend(), etc.) " +
+                "from a coroutine.",
+        )
     }
 
     /**
@@ -581,7 +618,10 @@ internal class OneSignalImp(
         }
         return when (initState) {
             InitState.SUCCESS -> getter()
-            InitState.IN_PROGRESS -> waitAndReturn(getter)
+            InitState.IN_PROGRESS -> {
+                warnIfBlockingOnMainThread(operationName = null)
+                waitAndReturn(getter)
+            }
             InitState.FAILED -> throw initFailureException
                 ?: IllegalStateException("Initialization failed. Cannot proceed.")
             InitState.NOT_STARTED -> throw IllegalStateException("Must call 'initWithContext' before use")
