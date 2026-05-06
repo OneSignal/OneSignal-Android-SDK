@@ -461,6 +461,69 @@ class SDKInitTests : FunSpec({
         os.user.externalId shouldBe ""
     }
 
+    test("initWithContext recovers when ensureApplicationServiceStarted throws synchronously") {
+        // Given: a context whose applicationContext is NOT an Application instance.
+        // ApplicationService.start does `context.applicationContext as Application`, which
+        // will throw ClassCastException — simulates restricted hosts (Robolectric custom
+        // application factories, instrumentation context wrappers, multi-process content
+        // provider init order). Without recovery, initState would be left at IN_PROGRESS
+        // forever and accessors would deadlock on suspendCompletion.await().
+        val baseContext = getApplicationContext<Context>()
+        val brokenContext =
+            object : ContextWrapper(baseContext) {
+                override fun getApplicationContext(): Context = ContextWrapper(baseContext)
+            }
+        val os = OneSignalImp()
+
+        // When: synchronous failure during the bootstrap step.
+        shouldThrow<ClassCastException> {
+            os.initWithContext(brokenContext, "appId")
+        }
+
+        // Then: SDK transitions to FAILED, accessor throws with the cast as suppressed cause.
+        val ex =
+            shouldThrow<IllegalStateException> {
+                os.user.onesignalId
+            }
+        ex.message shouldBe "OneSignal initWithContext failed."
+        ex.suppressed.any { it is ClassCastException } shouldBe true
+
+        // And: a retry with a working context succeeds (FAILED is not "accessible",
+        // so the retry legitimately re-enters init).
+        os.initWithContext(baseContext, "appId") shouldBe true
+        waitForInitialization(os)
+    }
+
+    test("initWithContext recovers when async internalInit throws unexpectedly") {
+        // Given: AndroidUtils.isAndroidUserUnlocked throws unexpectedly inside the async init,
+        // simulating any unexpected runtime exception during initialization (a service throwing
+        // during bootstrap, a dependency failing to resolve, etc.). suspendifyOnIO swallows
+        // exceptions internally, so without the catch in internalInit the deferred would never
+        // complete and accessors would deadlock on suspendCompletion.await().
+        val context = getApplicationContext<Context>()
+        val os = OneSignalImp()
+        val cause = RuntimeException("simulated init crash")
+
+        mockkObject(AndroidUtils)
+        every { AndroidUtils.isAndroidUserUnlocked(any()) } throws cause
+
+        try {
+            // When: public initWithContext returns true (the throw happens asynchronously).
+            os.initWithContext(context, "appId") shouldBe true
+
+            // Then: the async catch transitions to FAILED and completes the deferred, so
+            // accessors throw promptly instead of blocking forever.
+            val ex =
+                shouldThrow<IllegalStateException> {
+                    os.user.onesignalId
+                }
+            ex.message shouldBe "OneSignal initWithContext failed."
+            ex.suppressed.any { it === cause } shouldBe true
+        } finally {
+            unmockkObject(AndroidUtils)
+        }
+    }
+
     test("login should throw exception when initWithContext is never called") {
         // Given
         val oneSignalImp = OneSignalImp()

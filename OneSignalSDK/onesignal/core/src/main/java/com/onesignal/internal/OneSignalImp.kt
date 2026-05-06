@@ -310,14 +310,26 @@ internal class OneSignalImp(
 
         initFailureException = IllegalStateException("OneSignal initWithContext failed.")
 
-        // FeatureManager depends on ConfigModelStore/PreferencesService which requires appContext.
-        // Ensure app context is available before evaluating feature gates.
-        ensureApplicationServiceStarted(context)
+        // Once initState is published as IN_PROGRESS, init MUST reach a terminal state — otherwise
+        // waiters of suspendCompletion (accessors via getServiceWithFeatureGate, login/logout via
+        // requireInitForOperation) would block forever, and subsequent initWithContext calls would
+        // short-circuit because IN_PROGRESS counts as "accessible". Catch synchronous failures
+        // (e.g. ApplicationService.start's `applicationContext as Application` cast failing in
+        // restricted hosts) and transition to FAILED before rethrowing so the caller can recover.
+        try {
+            // FeatureManager depends on ConfigModelStore/PreferencesService which requires appContext.
+            // Ensure app context is available before evaluating feature gates.
+            ensureApplicationServiceStarted(context)
 
-        // Always dispatch init asynchronously so this method never blocks the caller.
-        // Callers that need to wait (accessors, login, logout) will block via suspendCompletion.
-        suspendifyOnIO {
-            internalInit(context, appId)
+            // Always dispatch init asynchronously so this method never blocks the caller.
+            // Callers that need to wait (accessors, login, logout) will block via suspendCompletion.
+            suspendifyOnIO {
+                internalInit(context, appId)
+            }
+        } catch (e: Exception) {
+            initFailureException?.addSuppressed(e)
+            completeInit(InitState.FAILED)
+            throw e
         }
         return true
     }
@@ -330,48 +342,57 @@ internal class OneSignalImp(
         return initWithContextSuspend(context, null)
     }
 
+    @Suppress("TooGenericExceptionCaught")
     private fun internalInit(
         context: Context,
         appId: String?,
     ): Boolean {
-        // Check whether current Android user is accessible.
-        // Return early if it is inaccessible, as we are unable to complete initialization without access
-        // to device storage like SharedPreferences.
-        if (!AndroidUtils.isAndroidUserUnlocked(context)) {
-            Logging.warn("initWithContext called when device storage is locked, no user data is accessible!")
-            initState = InitState.FAILED
-            notifyInitComplete()
-            return false
+        try {
+            // Check whether current Android user is accessible.
+            // Return early if it is inaccessible, as we are unable to complete initialization without access
+            // to device storage like SharedPreferences.
+            if (!AndroidUtils.isAndroidUserUnlocked(context)) {
+                Logging.warn("initWithContext called when device storage is locked, no user data is accessible!")
+                completeInit(InitState.FAILED)
+                return false
+            }
+
+            initEssentials(context)
+
+            val startupService = bootstrapServices()
+
+            // Now that the IoC container is ready, subscribe the Otel lifecycle
+            // manager to config store events so it reacts to fresh remote config.
+            otelManager?.subscribeToConfigStore(services.getService<ConfigModelStore>())
+
+            val result = resolveAppId(appId, configModel, preferencesService)
+            if (result.failed) {
+                val message = "suspendInitInternal: no appId provided or found in local storage. Please pass a valid appId to initWithContext()."
+                val exception = IllegalStateException(message)
+                // attach the real crash cause to the init failure exception that will be throw shortly after
+                initFailureException?.addSuppressed(exception)
+                Logging.warn(message)
+                completeInit(InitState.FAILED)
+                return false
+            }
+            configModel.appId = result.appId!! // safe because failed is false
+            val forceCreateUser = result.forceCreateUser
+
+            updateConfig()
+            userSwitcher.initUser(forceCreateUser)
+            startupService.scheduleStart()
+            completeInit(InitState.SUCCESS)
+            return true
+        } catch (e: Exception) {
+            // Defense-in-depth: suspendifyOnIO swallows exceptions internally, so any unhandled
+            // throw from a step above (a service throwing during bootstrap, a dependency failing
+            // to resolve, etc.) would otherwise leave suspendCompletion uncompleted and the SDK
+            // wedged in IN_PROGRESS forever — accessors would deadlock on suspendCompletion.await().
+            Logging.error("Unexpected exception during OneSignal initialization", e)
+            initFailureException?.addSuppressed(e)
+            completeInit(InitState.FAILED)
+            throw e
         }
-
-        initEssentials(context)
-
-        val startupService = bootstrapServices()
-
-        // Now that the IoC container is ready, subscribe the Otel lifecycle
-        // manager to config store events so it reacts to fresh remote config.
-        otelManager?.subscribeToConfigStore(services.getService<ConfigModelStore>())
-
-        val result = resolveAppId(appId, configModel, preferencesService)
-        if (result.failed) {
-            val message = "suspendInitInternal: no appId provided or found in local storage. Please pass a valid appId to initWithContext()."
-            val exception = IllegalStateException(message)
-            // attach the real crash cause to the init failure exception that will be throw shortly after
-            initFailureException?.addSuppressed(exception)
-            Logging.warn(message)
-            initState = InitState.FAILED
-            notifyInitComplete()
-            return false
-        }
-        configModel.appId = result.appId!! // safe because failed is false
-        val forceCreateUser = result.forceCreateUser
-
-        updateConfig()
-        userSwitcher.initUser(forceCreateUser)
-        startupService.scheduleStart()
-        initState = InitState.SUCCESS
-        notifyInitComplete()
-        return true
     }
 
     override fun login(
@@ -459,10 +480,23 @@ internal class OneSignalImp(
     }
 
     /**
-     * Notifies both blocking and suspend callers that initialization is complete
+     * Atomically transitions [initState] to a terminal state (SUCCESS or FAILED)
+     * and completes [suspendCompletion] so any waiters unblock.
+     *
+     * Both the state write and the completion run under [initLock]. This closes a
+     * race where another caller could observe the terminal state in between the two
+     * writes, call `initWithContext` to flip back to IN_PROGRESS, and replace
+     * [suspendCompletion] with a fresh deferred — at which point this thread's
+     * completion would prematurely unblock waiters of the *second* init.
      */
-    private fun notifyInitComplete() {
-        suspendCompletion.complete(Unit)
+    private fun completeInit(terminalState: InitState) {
+        require(terminalState == InitState.SUCCESS || terminalState == InitState.FAILED) {
+            "completeInit requires a terminal state, got $terminalState"
+        }
+        synchronized(initLock) {
+            initState = terminalState
+            suspendCompletion.complete(Unit)
+        }
     }
 
     /**
