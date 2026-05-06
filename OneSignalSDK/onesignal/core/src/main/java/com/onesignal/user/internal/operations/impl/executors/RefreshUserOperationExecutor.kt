@@ -224,7 +224,7 @@ internal class RefreshUserOperationExecutor(
             return null
         }
 
-        Logging.warn(
+        Logging.info(
             "RefreshUserOperationExecutor: push subscription $pushSubscriptionId diverged from server " +
                 "(server enabled=${serverSubscription.enabled} notificationTypes=${serverSubscription.notificationTypes}; " +
                 "local opted-in and SUBSCRIBED). Enqueuing follow-up update-subscription op to re-assert local " +
