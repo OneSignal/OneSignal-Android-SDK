@@ -61,8 +61,10 @@ class RefreshUserOperationExecutorTests : FunSpec({
                 mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId, "aliasLabel1" to "aliasValue1"),
                 PropertiesObject(country = remoteCountry, language = remoteLanguage, timezoneId = remoteTimeZone, tags = remoteTags),
                 listOf(
-                    SubscriptionObject(existingSubscriptionId1, SubscriptionObjectType.ANDROID_PUSH, enabled = true, token = "on-backend-push-token"),
-                    SubscriptionObject(remoteSubscriptionId1, SubscriptionObjectType.ANDROID_PUSH, enabled = true, token = "pushToken2"),
+                    // notificationTypes = 1 keeps server-side view healthy so the SDK-4474
+                    // self-heal divergence check is a no-op for this happy-path test.
+                    SubscriptionObject(existingSubscriptionId1, SubscriptionObjectType.ANDROID_PUSH, enabled = true, notificationTypes = 1, token = "on-backend-push-token"),
+                    SubscriptionObject(remoteSubscriptionId1, SubscriptionObjectType.ANDROID_PUSH, enabled = true, notificationTypes = 1, token = "pushToken2"),
                     SubscriptionObject(remoteSubscriptionId2, SubscriptionObjectType.EMAIL, token = "name@company.com"),
                 ),
             )

@@ -13,12 +13,15 @@ import com.onesignal.core.internal.operations.Operation
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.user.internal.backend.IUserBackendService
+import com.onesignal.user.internal.backend.SubscriptionObject
 import com.onesignal.user.internal.backend.SubscriptionObjectType
 import com.onesignal.user.internal.builduser.IRebuildUserService
 import com.onesignal.user.internal.identity.IdentityModel
 import com.onesignal.user.internal.identity.IdentityModelStore
 import com.onesignal.user.internal.jwt.JwtTokenStore
 import com.onesignal.user.internal.operations.RefreshUserOperation
+import com.onesignal.user.internal.operations.UpdateSubscriptionOperation
+import com.onesignal.user.internal.operations.impl.listeners.SubscriptionModelStoreListener
 import com.onesignal.user.internal.operations.impl.states.NewRecordsState
 import com.onesignal.user.internal.properties.PropertiesModel
 import com.onesignal.user.internal.properties.PropertiesModelStore
@@ -98,7 +101,13 @@ internal class RefreshUserOperationExecutor(
             // No longer hydrate timezone from remote, set locally
             propertiesModel.timezone = TimeUtils.getTimeZoneId()
 
+            // Retrieve the push subscription ID from the backend configuration model store. Used
+            // both for re-attaching the locally-cached push model below and for the SDK-4474
+            // self-heal divergence check inside the loop.
+            val pushSubscriptionIdFromConfig = _configModelStore.model.pushSubscriptionId
+
             val subscriptionModels = mutableListOf<SubscriptionModel>()
+            var pushSelfHealOperation: UpdateSubscriptionOperation? = null
             for (subscription in response.subscriptions) {
                 val subscriptionModel = SubscriptionModel()
                 subscriptionModel.id = subscription.id!!
@@ -126,10 +135,22 @@ internal class RefreshUserOperationExecutor(
                 // so we don't want to cache these subscriptions from the backend.
                 if (subscriptionModel.type != SubscriptionType.PUSH) {
                     subscriptionModels.add(subscriptionModel)
+                } else if (subscription.id == pushSubscriptionIdFromConfig && pushSelfHealOperation == null) {
+                    // SDK-4474 self-heal for SDK-4388 victims. The buggy
+                    // SubscriptionOperationExecutor in older SDK builds dispatched the merged
+                    // create-subscription + update-subscription(SUBSCRIBED) batch as a POST
+                    // /subscriptions carrying the already-existing server-side id; the server
+                    // responded 200 {} (no-op) and the local op queue was emptied, leaving the
+                    // server stuck at enabled:false / notification_types:0. Once that user
+                    // upgrades to a fixed SDK build, nothing in the queue triggers the fix path.
+                    //
+                    // Detect the divergence here (every session start runs RefreshUser) and
+                    // re-assert local truth via PATCH. "Device is the source of truth" is the
+                    // existing policy for push; this just enforces it across the wire when the
+                    // server has drifted out of sync.
+                    pushSelfHealOperation = buildPushSelfHealOperationOrNull(op, subscription, pushSubscriptionIdFromConfig)
                 }
             }
-            // Retrieve the push subscription ID from the backend configuration model store
-            val pushSubscriptionIdFromConfig = _configModelStore.model.pushSubscriptionId
 
             if (pushSubscriptionIdFromConfig != null) {
                 // Retrieve the push subscription model from the model store
@@ -145,7 +166,10 @@ internal class RefreshUserOperationExecutor(
             _propertiesModelStore.replace(propertiesModel, ModelChangeTags.HYDRATE)
             _subscriptionsModelStore.replaceAll(subscriptionModels, ModelChangeTags.HYDRATE)
 
-            return ExecutionResponse(ExecutionResult.SUCCESS)
+            return ExecutionResponse(
+                ExecutionResult.SUCCESS,
+                operations = pushSelfHealOperation?.let { listOf<Operation>(it) },
+            )
         } catch (ex: BackendException) {
             val responseType = NetworkUtils.getResponseStatusType(ex.statusCode)
 
@@ -173,6 +197,50 @@ internal class RefreshUserOperationExecutor(
                     ExecutionResponse(ExecutionResult.FAIL_NORETRY)
             }
         }
+    }
+
+    /**
+     * SDK-4474 self-heal builder. Returns an [UpdateSubscriptionOperation] iff the cached
+     * push subscription model resolves to enabled-and-opted-in but the server response
+     * recorded the same id as disabled. Returns null otherwise (no divergence — no-op).
+     *
+     * Caller has already verified that [serverSubscription.id] matches the cached
+     * `pushSubscriptionId`, so this method only inspects the local model + server flags.
+     */
+    @Suppress("ReturnCount")
+    private fun buildPushSelfHealOperationOrNull(
+        op: RefreshUserOperation,
+        serverSubscription: SubscriptionObject,
+        pushSubscriptionId: String,
+    ): UpdateSubscriptionOperation? {
+        val cachedPushSubscriptionModel = _subscriptionsModelStore.get(pushSubscriptionId)
+        if (cachedPushSubscriptionModel == null || cachedPushSubscriptionModel.type != SubscriptionType.PUSH) {
+            return null
+        }
+
+        val (localEnabled, localStatus) = SubscriptionModelStoreListener.getSubscriptionEnabledAndStatus(cachedPushSubscriptionModel)
+        val serverEnabled = (serverSubscription.enabled == true) && ((serverSubscription.notificationTypes ?: 0) > 0)
+        if (!localEnabled || serverEnabled) {
+            return null
+        }
+
+        Logging.warn(
+            "RefreshUserOperationExecutor: push subscription $pushSubscriptionId diverged from server " +
+                "(server enabled=${serverSubscription.enabled} notificationTypes=${serverSubscription.notificationTypes}; " +
+                "local opted-in and SUBSCRIBED). Enqueuing follow-up update-subscription op to re-assert local " +
+                "truth via PATCH /subscriptions/{id}. See SDK-4388 / SDK-4474.",
+        )
+
+        return UpdateSubscriptionOperation(
+            op.appId,
+            op.onesignalId,
+            _identityModelStore.model.externalId,
+            pushSubscriptionId,
+            cachedPushSubscriptionModel.type,
+            localEnabled,
+            cachedPushSubscriptionModel.address,
+            localStatus,
+        )
     }
 
     companion object {
