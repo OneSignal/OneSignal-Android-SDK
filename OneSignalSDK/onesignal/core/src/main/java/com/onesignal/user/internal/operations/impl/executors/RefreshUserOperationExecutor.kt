@@ -57,12 +57,7 @@ internal class RefreshUserOperationExecutor(
     }
 
     private suspend fun getUser(op: RefreshUserOperation): ExecutionResponse {
-        val params =
-            if (_identityVerificationService.newCodePathsRun) {
-                resolveIvBackendParams(op, op.onesignalId, _jwtTokenStore, _identityVerificationService.ivBehaviorActive)
-            } else {
-                IvBackendParams.legacyFor(op.onesignalId)
-            }
+        val params = resolveBackendParams(op, op.onesignalId, _jwtTokenStore, _identityVerificationService)
         try {
             val response =
                 _userBackend.getUser(

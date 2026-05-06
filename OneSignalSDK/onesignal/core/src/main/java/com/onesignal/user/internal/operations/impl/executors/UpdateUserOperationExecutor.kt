@@ -143,12 +143,7 @@ internal class UpdateUserOperationExecutor(
             // Grouped update ops all belong to the same user (queue grouping is per-user), so
             // pulling externalId from `operations.first()` is safe and represents the batch.
             val firstOp = operations.first()
-            val params =
-                if (_identityVerificationService.newCodePathsRun) {
-                    resolveIvBackendParams(firstOp, onesignalId, _jwtTokenStore, _identityVerificationService.ivBehaviorActive)
-                } else {
-                    IvBackendParams.legacyFor(onesignalId)
-                }
+            val params = resolveBackendParams(firstOp, onesignalId, _jwtTokenStore, _identityVerificationService)
             try {
                 val rywData =
                     _userBackend.updateUser(

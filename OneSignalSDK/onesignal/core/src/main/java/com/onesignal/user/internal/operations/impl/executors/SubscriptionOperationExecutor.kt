@@ -110,12 +110,7 @@ internal class SubscriptionOperationExecutor(
                     AndroidUtils.getAppVersion(_applicationService.appContext),
                 )
 
-            val params =
-                if (_identityVerificationService.newCodePathsRun) {
-                    resolveIvBackendParams(createOperation, createOperation.onesignalId, _jwtTokenStore, _identityVerificationService.ivBehaviorActive)
-                } else {
-                    IvBackendParams.legacyFor(createOperation.onesignalId)
-                }
+            val params = resolveBackendParams(createOperation, createOperation.onesignalId, _jwtTokenStore, _identityVerificationService)
             val result =
                 _subscriptionBackend.createSubscription(
                     createOperation.appId,
@@ -200,12 +195,7 @@ internal class SubscriptionOperationExecutor(
                     AndroidUtils.getAppVersion(_applicationService.appContext),
                 )
 
-            val jwt =
-                if (_identityVerificationService.newCodePathsRun) {
-                    resolveIvJwt(lastOperation, _jwtTokenStore, _identityVerificationService.ivBehaviorActive)
-                } else {
-                    null
-                }
+            val jwt = resolveJwt(lastOperation, _jwtTokenStore, _identityVerificationService)
             val rywData = _subscriptionBackend.updateSubscription(lastOperation.appId, lastOperation.subscriptionId, subscription, jwt)
 
             if (rywData != null) {
@@ -258,12 +248,7 @@ internal class SubscriptionOperationExecutor(
 
     // TODO: whenever the end-user changes users, we need to add the read-your-write token here, currently no code to handle the re-fetch IAMs
     private suspend fun transferSubscription(startingOperation: TransferSubscriptionOperation): ExecutionResponse {
-        val params =
-            if (_identityVerificationService.newCodePathsRun) {
-                resolveIvBackendParams(startingOperation, startingOperation.onesignalId, _jwtTokenStore, _identityVerificationService.ivBehaviorActive)
-            } else {
-                IvBackendParams.legacyFor(startingOperation.onesignalId)
-            }
+        val params = resolveBackendParams(startingOperation, startingOperation.onesignalId, _jwtTokenStore, _identityVerificationService)
         try {
             _subscriptionBackend.transferSubscription(
                 startingOperation.appId,
@@ -303,12 +288,7 @@ internal class SubscriptionOperationExecutor(
     }
 
     private suspend fun deleteSubscription(op: DeleteSubscriptionOperation): ExecutionResponse {
-        val jwt =
-            if (_identityVerificationService.newCodePathsRun) {
-                resolveIvJwt(op, _jwtTokenStore, _identityVerificationService.ivBehaviorActive)
-            } else {
-                null
-            }
+        val jwt = resolveJwt(op, _jwtTokenStore, _identityVerificationService)
         try {
             _subscriptionBackend.deleteSubscription(op.appId, op.subscriptionId, jwt)
 

@@ -181,12 +181,7 @@ internal class LoginUserOperationExecutor(
 
         try {
             val subscriptionList = subscriptions.toList()
-            val jwt =
-                if (_identityVerificationService.newCodePathsRun) {
-                    resolveIvJwt(createUserOperation, _jwtTokenStore, _identityVerificationService.ivBehaviorActive)
-                } else {
-                    null
-                }
+            val jwt = resolveJwt(createUserOperation, _jwtTokenStore, _identityVerificationService)
             val response =
                 _userBackend.createUser(createUserOperation.appId, identities, subscriptionList.map { it.second }, properties, jwt)
             val idTranslations = mutableMapOf<String, String>()

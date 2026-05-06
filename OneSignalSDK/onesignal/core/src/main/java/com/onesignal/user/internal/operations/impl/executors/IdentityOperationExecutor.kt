@@ -47,12 +47,7 @@ internal class IdentityOperationExecutor(
         val lastOperation = operations.last()
 
         if (lastOperation is SetAliasOperation) {
-            val params =
-                if (_identityVerificationService.newCodePathsRun) {
-                    resolveIvBackendParams(lastOperation, lastOperation.onesignalId, _jwtTokenStore, _identityVerificationService.ivBehaviorActive)
-                } else {
-                    IvBackendParams.legacyFor(lastOperation.onesignalId)
-                }
+            val params = resolveBackendParams(lastOperation, lastOperation.onesignalId, _jwtTokenStore, _identityVerificationService)
             try {
                 _identityBackend.setAlias(
                     lastOperation.appId,
@@ -97,12 +92,7 @@ internal class IdentityOperationExecutor(
                 }
             }
         } else if (lastOperation is DeleteAliasOperation) {
-            val params =
-                if (_identityVerificationService.newCodePathsRun) {
-                    resolveIvBackendParams(lastOperation, lastOperation.onesignalId, _jwtTokenStore, _identityVerificationService.ivBehaviorActive)
-                } else {
-                    IvBackendParams.legacyFor(lastOperation.onesignalId)
-                }
+            val params = resolveBackendParams(lastOperation, lastOperation.onesignalId, _jwtTokenStore, _identityVerificationService)
             try {
                 _identityBackend.deleteAlias(
                     lastOperation.appId,

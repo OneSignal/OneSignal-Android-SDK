@@ -1,5 +1,6 @@
 package com.onesignal.user.internal.operations.impl.executors
 
+import com.onesignal.core.internal.config.impl.IdentityVerificationService
 import com.onesignal.core.internal.operations.Operation
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.user.internal.backend.IdentityConstants
@@ -28,8 +29,28 @@ internal data class IvBackendParams(
 }
 
 /**
+ * Combined outer + inner gate for executors that just want "the right alias/JWT for this op."
+ * Replaces the call-site `if (newCodePathsRun) resolveIvBackendParams(...) else legacyFor(...)`
+ * boilerplate. Phase 1 (newCodePathsRun=false) skips the new code path entirely and returns
+ * legacy values directly, preserving the rollout-safety property that Phase 1 traffic does not
+ * exercise the IV resolution code.
+ */
+internal fun resolveBackendParams(
+    op: Operation,
+    onesignalId: String,
+    jwtTokenStore: JwtTokenStore,
+    identityVerificationService: IdentityVerificationService,
+): IvBackendParams =
+    if (identityVerificationService.newCodePathsRun) {
+        resolveIvBackendParams(op, onesignalId, jwtTokenStore, identityVerificationService.ivBehaviorActive)
+    } else {
+        IvBackendParams.legacyFor(onesignalId)
+    }
+
+/**
  * Resolves alias + JWT for a backend call. Intended to be called only when
- * `newCodePathsRun` is true; base-class dispatch handles the outer gate.
+ * `newCodePathsRun` is true; base-class dispatch handles the outer gate. Most executors should
+ * call [resolveBackendParams] which encapsulates the outer gate.
  *
  * - IV behavior inactive (Phase 3) → legacy values; no alias switch, no JWT attach.
  * - IV behavior active + op has externalId → `external_id` alias + JWT from [JwtTokenStore].
@@ -55,8 +76,27 @@ internal fun resolveIvBackendParams(
 }
 
 /**
+ * Combined outer + inner gate for executors that need only a JWT (no alias switch). Replaces
+ * the call-site `if (newCodePathsRun) resolveIvJwt(...) else null` boilerplate. Phase 1
+ * (newCodePathsRun=false) skips the new code path entirely and returns null directly,
+ * preserving the rollout-safety property that Phase 1 traffic does not exercise IV resolution.
+ */
+internal fun resolveJwt(
+    op: Operation,
+    jwtTokenStore: JwtTokenStore,
+    identityVerificationService: IdentityVerificationService,
+): String? =
+    if (identityVerificationService.newCodePathsRun) {
+        resolveIvJwt(op, jwtTokenStore, identityVerificationService.ivBehaviorActive)
+    } else {
+        null
+    }
+
+/**
  * Resolves a JWT-only parameter (used by endpoints that don't take alias label/value, e.g.
  * subscription update/delete, custom events). Same inner gating as [resolveIvBackendParams].
+ * Intended to be called only when `newCodePathsRun` is true; most executors should call
+ * [resolveJwt] which encapsulates the outer gate.
  */
 internal fun resolveIvJwt(
     op: Operation,

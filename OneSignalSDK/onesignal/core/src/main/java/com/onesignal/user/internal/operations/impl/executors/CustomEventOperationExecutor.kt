@@ -44,12 +44,7 @@ internal class CustomEventOperationExecutor(
         try {
             when (operation) {
                 is TrackCustomEventOperation -> {
-                    val jwt =
-                        if (identityVerificationService.newCodePathsRun) {
-                            resolveIvJwt(operation, jwtTokenStore, identityVerificationService.ivBehaviorActive)
-                        } else {
-                            null
-                        }
+                    val jwt = resolveJwt(operation, jwtTokenStore, identityVerificationService)
                     customEventBackendService.sendCustomEvent(
                         operation.appId,
                         operation.onesignalId,
