@@ -148,7 +148,7 @@ internal class RefreshUserOperationExecutor(
                     // re-assert local truth via PATCH. "Device is the source of truth" is the
                     // existing policy for push; this just enforces it across the wire when the
                     // server has drifted out of sync.
-                    pushSelfHealOperation = buildPushSelfHealOperationOrNull(op, subscription, pushSubscriptionIdFromConfig)
+                    pushSelfHealOperation = buildPushSelfHealOperationForStuckSubscription(op, subscription, pushSubscriptionIdFromConfig)
                 }
             }
 
@@ -208,7 +208,7 @@ internal class RefreshUserOperationExecutor(
      * `pushSubscriptionId`, so this method only inspects the local model + server flags.
      */
     @Suppress("ReturnCount")
-    private fun buildPushSelfHealOperationOrNull(
+    private fun buildPushSelfHealOperationForStuckSubscription(
         op: RefreshUserOperation,
         serverSubscription: SubscriptionObject,
         pushSubscriptionId: String,
