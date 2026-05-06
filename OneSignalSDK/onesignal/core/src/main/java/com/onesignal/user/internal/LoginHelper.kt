@@ -40,8 +40,10 @@ internal class LoginHelper(
                 // Same-user refresh path (e.g. login(sameId, freshJwt) after a 401). Store the
                 // fresh token and wake the queue so any ops deferred by `hasValidJwtIfRequired`
                 // dispatch immediately — symmetric with `updateUserJwt`. putJwt no-ops on null.
-                jwtTokenStore.putJwt(externalId, jwtBearerToken)
-                operationRepo.forceExecuteOperations()
+                if (jwtBearerToken != null) {
+                    jwtTokenStore.putJwt(externalId, jwtBearerToken)
+                    operationRepo.forceExecuteOperations()
+                }
                 return null
             }
 
