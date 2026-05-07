@@ -103,7 +103,7 @@ class JwtTokenStoreTests : FunSpec({
     test("subscribers are notified when a new JWT is put") {
         val store = JwtTokenStore(MockPreferencesService())
         val calls = mutableListOf<String>()
-        store.subscribe(
+        store.addInternalUpdateListener(
             object : IJwtUpdateListener {
                 override fun onJwtUpdated(externalId: String) {
                     calls.add(externalId)
@@ -120,7 +120,7 @@ class JwtTokenStoreTests : FunSpec({
         val store = JwtTokenStore(MockPreferencesService())
         store.putJwt("alice", "token-a")
         val calls = mutableListOf<String>()
-        store.subscribe(
+        store.addInternalUpdateListener(
             object : IJwtUpdateListener {
                 override fun onJwtUpdated(externalId: String) {
                     calls.add(externalId)
@@ -133,67 +133,48 @@ class JwtTokenStoreTests : FunSpec({
         calls.isEmpty() shouldBe true
     }
 
-    test("subscribers are notified on invalidation via onJwtInvalidated") {
+    test("invalidateJwt does NOT fire onJwtUpdated to internal listeners") {
         val store = JwtTokenStore(MockPreferencesService())
         store.putJwt("alice", "token-a")
-        val invalidatedCalls = mutableListOf<String>()
         val updatedCalls = mutableListOf<String>()
-        store.subscribe(
+        store.addInternalUpdateListener(
             object : IJwtUpdateListener {
                 override fun onJwtUpdated(externalId: String) {
                     updatedCalls.add(externalId)
                 }
-                override fun onJwtInvalidated(externalId: String) {
-                    invalidatedCalls.add(externalId)
-                }
             },
         )
 
+        // putJwt above already fired onJwtUpdated once; invalidateJwt should not add another.
+        updatedCalls.size shouldBe 0
         store.invalidateJwt("alice")
-
-        invalidatedCalls shouldBe listOf("alice")
-        // putJwt fired onJwtUpdated above; invalidateJwt should not fire onJwtUpdated.
-        updatedCalls.isEmpty() shouldBe true
+        updatedCalls.size shouldBe 0
     }
 
-    test("subscribers are NOT notified when invalidating a non-existent token") {
+    test("IUserJwtInvalidatedListener is NOT notified when invalidating a non-existent token") {
         val store = JwtTokenStore(MockPreferencesService())
         val invalidatedCalls = mutableListOf<String>()
-        store.subscribe(
-            object : IJwtUpdateListener {
-                override fun onJwtInvalidated(externalId: String) {
-                    invalidatedCalls.add(externalId)
-                }
-            },
-        )
+        store.addUserJwtInvalidatedListener { event -> invalidatedCalls.add(event.externalId) }
 
         store.invalidateJwt("alice")
+        Thread.sleep(50) // allow async dispatch (no-op here, but defensive)
 
         invalidatedCalls.isEmpty() shouldBe true
     }
 
-    test("throwing subscriber on onJwtInvalidated is isolated: no escape, other subscribers still fire") {
+    test("throwing IUserJwtInvalidatedListener subscriber is isolated; other subscribers still fire") {
         val store = JwtTokenStore(MockPreferencesService())
         store.putJwt("alice", "token-a")
         val laterCalls = mutableListOf<String>()
-        // First subscriber throws; second must still fire; invalidateJwt must not propagate.
-        store.subscribe(
-            object : IJwtUpdateListener {
-                override fun onJwtInvalidated(externalId: String) {
-                    throw RuntimeException("boom")
-                }
-            },
-        )
-        store.subscribe(
-            object : IJwtUpdateListener {
-                override fun onJwtInvalidated(externalId: String) {
-                    laterCalls.add(externalId)
-                }
-            },
-        )
+        val waiter = com.onesignal.common.threading.Waiter()
+        store.addUserJwtInvalidatedListener { _ -> throw RuntimeException("boom") }
+        store.addUserJwtInvalidatedListener { event ->
+            laterCalls.add(event.externalId)
+            waiter.wake()
+        }
 
-        // Should not throw out of invalidateJwt.
         store.invalidateJwt("alice")
+        waiter.waitForWake()
 
         laterCalls shouldBe listOf("alice")
         store.getJwt("alice") shouldBe null
@@ -205,7 +186,7 @@ class JwtTokenStoreTests : FunSpec({
         store.putJwt("bob", "token-b")
         store.putJwt("chris", "token-c")
         val calls = mutableListOf<String>()
-        store.subscribe(
+        store.addInternalUpdateListener(
             object : IJwtUpdateListener {
                 override fun onJwtUpdated(externalId: String) {
                     calls.add(externalId)
@@ -228,8 +209,8 @@ class JwtTokenStoreTests : FunSpec({
                     calls.add(externalId)
                 }
             }
-        store.subscribe(listener)
-        store.unsubscribe(listener)
+        store.addInternalUpdateListener(listener)
+        store.removeInternalUpdateListener(listener)
 
         store.putJwt("alice", "token-a")
 
@@ -260,5 +241,53 @@ class JwtTokenStoreTests : FunSpec({
         // Can still store new tokens after a malformed load
         store.putJwt("alice", "token-a")
         store.getJwt("alice") shouldBe "token-a"
+    }
+
+    test("invalidateJwt fires registered IUserJwtInvalidatedListener with the externalId") {
+        val store = JwtTokenStore(MockPreferencesService())
+        store.putJwt("alice", "stale-token")
+
+        var firedExternalId: String? = null
+        val waiter = com.onesignal.common.threading.Waiter()
+        store.addUserJwtInvalidatedListener { event ->
+            firedExternalId = event.externalId
+            waiter.wake()
+        }
+
+        store.invalidateJwt("alice")
+        waiter.waitForWake()
+
+        firedExternalId shouldBe "alice"
+    }
+
+    test("late IUserJwtInvalidatedListener subscriber does not receive earlier events (pure pub/sub)") {
+        // Matches iOS: only listeners subscribed at the time of the fire receive the event.
+        val store = JwtTokenStore(MockPreferencesService())
+        store.putJwt("alice", "stale-token")
+
+        // Fire before any developer listener is registered.
+        store.invalidateJwt("alice")
+        Thread.sleep(50) // allow async dispatch
+
+        // Late subscriber must not receive the earlier event.
+        var lateFired = false
+        store.addUserJwtInvalidatedListener { lateFired = true }
+        Thread.sleep(50)
+        lateFired shouldBe false
+    }
+
+    test("removeUserJwtInvalidatedListener stops further notifications") {
+        val store = JwtTokenStore(MockPreferencesService())
+        store.putJwt("alice", "token")
+
+        var fireCount = 0
+        val listener = com.onesignal.IUserJwtInvalidatedListener { _ -> fireCount++ }
+        store.addUserJwtInvalidatedListener(listener)
+        store.removeUserJwtInvalidatedListener(listener)
+
+        store.invalidateJwt("alice")
+        Thread.sleep(50)
+
+        fireCount shouldBe 0
     }
 })

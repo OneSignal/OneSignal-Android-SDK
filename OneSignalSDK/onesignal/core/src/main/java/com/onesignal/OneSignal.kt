@@ -343,6 +343,39 @@ object OneSignal {
     @JvmStatic
     fun logout() = oneSignal.logout()
 
+    /**
+     * Update the JWT bearer token associated with [externalId]. Use this when your backend
+     * has issued a new JWT for an already-logged-in user (e.g. in response to a previous
+     * [IUserJwtInvalidatedListener.onUserJwtInvalidated] callback). Stores the JWT and
+     * wakes the operation queue so any deferred ops can dispatch with the fresh token.
+     *
+     * @param externalId The external ID the JWT belongs to.
+     * @param token The new JWT bearer token issued by your backend.
+     */
+    @JvmStatic
+    fun updateUserJwt(
+        externalId: String,
+        token: String,
+    ) = oneSignal.updateUserJwt(externalId, token)
+
+    /**
+     * Subscribe a listener for JWT-invalidated events. Fires on a background thread when
+     * the SDK detects that the stored JWT for a user is no longer valid (typically after
+     * a 401 from the OneSignal backend). Apps should respond by fetching a fresh JWT from
+     * their backend and supplying it via [updateUserJwt].
+     *
+     * Pure pub/sub: only listeners subscribed at the time of the invalidation receive the
+     * event. Subscribe early (e.g. in `Application.onCreate`) to avoid missing events.
+     */
+    @JvmStatic
+    fun addUserJwtInvalidatedListener(listener: IUserJwtInvalidatedListener) =
+        oneSignal.addUserJwtInvalidatedListener(listener)
+
+    /** Unsubscribe a listener previously registered via [addUserJwtInvalidatedListener]. */
+    @JvmStatic
+    fun removeUserJwtInvalidatedListener(listener: IUserJwtInvalidatedListener) =
+        oneSignal.removeUserJwtInvalidatedListener(listener)
+
     private val oneSignal: IOneSignal by lazy {
         OneSignalImp()
     }
@@ -403,6 +436,21 @@ object OneSignal {
     @JvmStatic
     suspend fun logoutSuspend() {
         oneSignal.logoutSuspend()
+    }
+
+    /**
+     * Update the JWT bearer token associated with [externalId] without blocking the calling
+     * thread. Suspend-safe version of [updateUserJwt].
+     *
+     * @param externalId The external ID the JWT belongs to.
+     * @param token The new JWT bearer token issued by your backend.
+     */
+    @JvmStatic
+    suspend fun updateUserJwtSuspend(
+        externalId: String,
+        token: String,
+    ) {
+        oneSignal.updateUserJwtSuspend(externalId, token)
     }
 
     /**
