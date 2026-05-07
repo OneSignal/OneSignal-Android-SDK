@@ -749,11 +749,9 @@ internal class OneSignalImp(
     ) = withContext(runtimeIoDispatcher) {
         Logging.log(LogLevel.DEBUG, "login(externalId: $externalId, jwtBearerToken: $jwtBearerToken)")
 
+        // suspendUntilInit throws on NOT_STARTED / FAILED (preserving initFailureException as the
+        // cause), and only returns once initState == SUCCESS — so no post-check is needed here.
         suspendUntilInit(operationName = "login")
-
-        if (!isInitialized) {
-            throw IllegalStateException("'initWithContext failed' before 'login'")
-        }
 
         val context = loginHelper.switchUser(externalId, jwtBearerToken) ?: return@withContext
         loginHelper.enqueueLogin(context)
@@ -764,10 +762,6 @@ internal class OneSignalImp(
             Logging.log(LogLevel.DEBUG, "logoutSuspend()")
 
             suspendUntilInit(operationName = "logout")
-
-            if (!isInitialized) {
-                throw IllegalStateException("'initWithContext failed' before 'logout'")
-            }
 
             val context = logoutHelper.switchUser() ?: return@withContext
             logoutHelper.enqueueLogout(context)

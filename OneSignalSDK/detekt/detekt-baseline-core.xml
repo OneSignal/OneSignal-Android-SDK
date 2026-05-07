@@ -609,8 +609,6 @@
     <ID>UnusedPrivateMember:LoginHelper.kt$LoginHelper$jwtBearerToken: String? = null</ID>
     <ID>UnusedPrivateMember:OSDatabase.kt$OSDatabase.Companion$private const val FLOAT_TYPE = " FLOAT"</ID>
     <ID>UnusedPrivateMember:OperationRepo.kt$OperationRepo$private val _time: ITime</ID>
-    <ID>UseCheckOrError:OneSignalImp.kt$OneSignalImp$throw IllegalStateException("'initWithContext failed' before 'login'")</ID>
-    <ID>UseCheckOrError:OneSignalImp.kt$OneSignalImp$throw IllegalStateException("'initWithContext failed' before 'logout'")</ID>
     <ID>UseCheckOrError:OneSignalImp.kt$OneSignalImp$throw IllegalStateException("Must call 'initWithContext' before '$operationName'")</ID>
     <ID>UseCheckOrError:OneSignalImp.kt$OneSignalImp$throw IllegalStateException("Must call 'initWithContext' before use")</ID>
     <ID>UseCheckOrError:OneSignalImp.kt$OneSignalImp$throw initFailureException ?: IllegalStateException("Initialization failed before '$operationName'")</ID>
