@@ -133,37 +133,70 @@ class JwtTokenStoreTests : FunSpec({
         calls.isEmpty() shouldBe true
     }
 
-    test("subscribers are notified on invalidation") {
+    test("subscribers are notified on invalidation via onJwtInvalidated") {
         val store = JwtTokenStore(MockPreferencesService())
         store.putJwt("alice", "token-a")
-        val calls = mutableListOf<String>()
+        val invalidatedCalls = mutableListOf<String>()
+        val updatedCalls = mutableListOf<String>()
         store.subscribe(
             object : IJwtUpdateListener {
                 override fun onJwtUpdated(externalId: String) {
-                    calls.add(externalId)
+                    updatedCalls.add(externalId)
+                }
+                override fun onJwtInvalidated(externalId: String) {
+                    invalidatedCalls.add(externalId)
                 }
             },
         )
 
         store.invalidateJwt("alice")
 
-        calls shouldBe listOf("alice")
+        invalidatedCalls shouldBe listOf("alice")
+        // putJwt fired onJwtUpdated above; invalidateJwt should not fire onJwtUpdated.
+        updatedCalls.isEmpty() shouldBe true
     }
 
     test("subscribers are NOT notified when invalidating a non-existent token") {
         val store = JwtTokenStore(MockPreferencesService())
-        val calls = mutableListOf<String>()
+        val invalidatedCalls = mutableListOf<String>()
         store.subscribe(
             object : IJwtUpdateListener {
-                override fun onJwtUpdated(externalId: String) {
-                    calls.add(externalId)
+                override fun onJwtInvalidated(externalId: String) {
+                    invalidatedCalls.add(externalId)
                 }
             },
         )
 
         store.invalidateJwt("alice")
 
-        calls.isEmpty() shouldBe true
+        invalidatedCalls.isEmpty() shouldBe true
+    }
+
+    test("throwing subscriber on onJwtInvalidated is isolated: no escape, other subscribers still fire") {
+        val store = JwtTokenStore(MockPreferencesService())
+        store.putJwt("alice", "token-a")
+        val laterCalls = mutableListOf<String>()
+        // First subscriber throws; second must still fire; invalidateJwt must not propagate.
+        store.subscribe(
+            object : IJwtUpdateListener {
+                override fun onJwtInvalidated(externalId: String) {
+                    throw RuntimeException("boom")
+                }
+            },
+        )
+        store.subscribe(
+            object : IJwtUpdateListener {
+                override fun onJwtInvalidated(externalId: String) {
+                    laterCalls.add(externalId)
+                }
+            },
+        )
+
+        // Should not throw out of invalidateJwt.
+        store.invalidateJwt("alice")
+
+        laterCalls shouldBe listOf("alice")
+        store.getJwt("alice") shouldBe null
     }
 
     test("pruneToExternalIds fires for each removed externalId") {
