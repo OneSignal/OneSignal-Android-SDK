@@ -21,6 +21,7 @@ import io.mockk.unmockkObject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeoutOrNull
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
@@ -559,6 +560,114 @@ class SDKInitTests : FunSpec({
             // was still IN_PROGRESS, which is what allowed SyncJobService to reach
             // runBackgroundServices() before bootstrap() had run.
             initializedAtReturn shouldBe true
+            os.isInitialized shouldBe true
+        }
+    }
+
+    // Regression test for review-flagged Defect 1 (stale latch on retry-after-FAILED).
+    //
+    // Background: `suspendCompletion` was a single-shot `val CompletableDeferred<Unit>`. Once
+    // any init terminates (even FAILED), the deferred stays permanently complete -- so a
+    // re-entrant suspend caller arriving DURING a subsequent retry would `await()` on the
+    // already-completed deferred, return instantly, and read transient state (likely
+    // IN_PROGRESS -> false), silently dropping JobService work.
+    //
+    // The fix resets `suspendCompletion` whenever the synchronized(initLock) block flips state
+    // into IN_PROGRESS, and await sites local-capture the deferred under the lock.
+    test("initWithContextSuspend resets latch on retry-after-FAILED") {
+        val context = getApplicationContext<Context>()
+        val os = OneSignalImp()
+
+        runBlocking {
+            // 1. Force a deterministic FAILED first init via the user-locked branch
+            //    (matches the pattern used by other tests in this file).
+            mockkObject(AndroidUtils)
+            every { AndroidUtils.isAndroidUserUnlocked(any()) } returns false
+            val firstInit = os.initWithContextSuspend(context, "appId")
+            firstInit shouldBe false
+            os.isInitialized shouldBe false
+            // At this point the (pre-fix) single-shot `suspendCompletion` is permanently complete.
+            unmockkObject(AndroidUtils)
+
+            // 2. Stall a fresh retry via BlockingPrefsContext so initState sits at IN_PROGRESS.
+            val started = CountDownLatch(1)
+            val trigger = CountDownLatch(1)
+            val blockingCtx = object : ContextWrapper(context) {
+                override fun getSharedPreferences(name: String, mode: Int): SharedPreferences {
+                    started.countDown()
+                    trigger.await()
+                    return super.getSharedPreferences(name, mode)
+                }
+            }
+
+            val secondInit = async(Dispatchers.IO) { os.initWithContextSuspend(blockingCtx, "appId") }
+            started.await(5, TimeUnit.SECONDS) shouldBe true
+            os.isInitialized shouldBe false
+            secondInit.isCompleted shouldBe false
+
+            // 3. Re-entrant caller. With Defect 1, it would wake immediately on the
+            //    FAILED-generation latch (still permanently complete) and return based on
+            //    transient state. With the fix, it waits on the *new* generation's latch.
+            val thirdInit = async(Dispatchers.IO) {
+                val r = os.initWithContextSuspend(context, "appId")
+                val initializedAtReturn = os.isInitialized
+                Pair(r, initializedAtReturn)
+            }
+
+            Thread.sleep(300)
+            thirdInit.isCompleted shouldBe false // would be true with the stale-latch bug
+
+            // 4. Release the second init; both new callers complete with state == SUCCESS.
+            trigger.countDown()
+
+            secondInit.await() shouldBe true
+            val (thirdResult, thirdInitializedAtReturn) = thirdInit.await()
+            thirdResult shouldBe true
+            thirdInitializedAtReturn shouldBe true
+            os.isInitialized shouldBe true
+        }
+    }
+
+    // Regression test for review-flagged Defect 2 (indefinite hang if internalInit throws).
+    //
+    // Background: `internalInit` had no try/catch wrapping its body. An unchecked throw from
+    // initEssentials/bootstrapServices/etc. would leave initState=IN_PROGRESS forever and
+    // `suspendCompletion` uncompleted -- causing every re-entrant suspend caller (e.g.
+    // SyncJobService) to hang on `await()` indefinitely, holding its budget slot until the
+    // OS killed the worker.
+    //
+    // The fix wraps internalInit's body in try/catch, ensuring a terminal state and
+    // `notifyInitComplete()` on any throw.
+    test("initWithContextSuspend reaches terminal state when internalInit throws") {
+        val context = getApplicationContext<Context>()
+        val os = OneSignalImp()
+
+        // Make the very first call inside internalInit throw (mirrors the user-locked test
+        // pattern, but with a throw instead of a `false` return). This is the cheapest way to
+        // simulate "any unchecked exception during bootstrap" without coupling to specific
+        // bootstrap internals.
+        mockkObject(AndroidUtils)
+        every { AndroidUtils.isAndroidUserUnlocked(any()) } throws RuntimeException("simulated bootstrap failure")
+
+        runBlocking {
+            // Without the fix: the throw propagates out of internalInit, escapes withContext,
+            // and either fails the test outright or leaves the SDK in a deadlocked
+            // IN_PROGRESS state with `suspendCompletion` never completed.
+            // With the fix: the catch block sets FAILED + notifyInitComplete + returns false.
+            val firstResult = withTimeoutOrNull(5_000) {
+                os.initWithContextSuspend(context, "appId")
+            }
+            firstResult shouldBe false
+            os.isInitialized shouldBe false
+
+            unmockkObject(AndroidUtils)
+
+            // State is FAILED so a retry is allowed and (per Defect 1 fix) gets a fresh latch.
+            // This also doubles as a smoke test that we didn't leak IN_PROGRESS.
+            val retry = withTimeoutOrNull(5_000) {
+                os.initWithContextSuspend(context, "appId")
+            }
+            retry shouldBe true
             os.isInitialized shouldBe true
         }
     }
