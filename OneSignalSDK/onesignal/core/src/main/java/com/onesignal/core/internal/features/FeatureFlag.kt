@@ -25,12 +25,16 @@ internal enum class FeatureFlag(
     val activationMode: FeatureActivationMode
 ) {
     // Threading mode is selected once per app startup to avoid mixed-mode behavior mid-session.
-    //
     // Remote key (lowercase) must match backend / Turbine flag id.
-    //
     SDK_BACKGROUND_THREADING(
         "sdk_background_threading",
         FeatureActivationMode.APP_STARTUP
+    ),
+
+    /** JWT signing of SDK requests. IMMEDIATE so a kill-switch doesn't need a cold start. */
+    SDK_IDENTITY_VERIFICATION(
+        "sdk_identity_verification",
+        FeatureActivationMode.IMMEDIATE
     ),
     ;
 

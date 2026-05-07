@@ -42,6 +42,7 @@
     <ID>ConstructorParameterNaming:InfluenceManager.kt$InfluenceManager$private val _configModelStore: ConfigModelStore</ID>
     <ID>ConstructorParameterNaming:InfluenceManager.kt$InfluenceManager$private val _sessionService: ISessionService</ID>
     <ID>ConstructorParameterNaming:InstallIdService.kt$InstallIdService$private val _prefs: IPreferencesService</ID>
+    <ID>ConstructorParameterNaming:JwtTokenStore.kt$JwtTokenStore$private val _prefs: IPreferencesService</ID>
     <ID>ConstructorParameterNaming:LanguageContext.kt$LanguageContext$private val _propertiesModelStore: PropertiesModelStore</ID>
     <ID>ConstructorParameterNaming:LoginUserFromSubscriptionOperationExecutor.kt$LoginUserFromSubscriptionOperationExecutor$private val _identityModelStore: IdentityModelStore</ID>
     <ID>ConstructorParameterNaming:LoginUserFromSubscriptionOperationExecutor.kt$LoginUserFromSubscriptionOperationExecutor$private val _propertiesModelStore: PropertiesModelStore</ID>

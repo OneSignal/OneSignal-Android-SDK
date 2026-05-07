@@ -252,7 +252,7 @@ class DeviceRegistrationListenerTests : FunSpec({
                 permission = true,
                 pushModel = uninitializedPushModel(),
                 pushTokenResponse =
-                    PushTokenResponse(NEW_TOKEN, SubscriptionStatus.SUBSCRIBED),
+                PushTokenResponse(NEW_TOKEN, SubscriptionStatus.SUBSCRIBED),
             )
         // Permission flips off between gate evaluation and the IO callback.
         every { harness.notificationsManager.permission } returns true andThen false

@@ -10,6 +10,7 @@ import com.onesignal.core.internal.config.ConfigModel
 import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.startup.IStartableService
 import com.onesignal.debug.internal.logging.Logging
+import com.onesignal.user.internal.jwt.JwtRequirement
 import com.onesignal.user.internal.subscriptions.ISubscriptionManager
 import kotlinx.coroutines.delay
 import java.net.HttpURLConnection
@@ -85,7 +86,9 @@ internal class ConfigModelStoreListener(
 
                     // these are only copied from the backend params when the backend has set them.
                     params.enterprise?.let { config.enterprise = it }
-                    params.useIdentityVerification?.let { config.useIdentityVerification = it }
+                    params.useIdentityVerification?.let {
+                        config.useIdentityVerification = JwtRequirement.fromBoolean(it)
+                    }
                     params.firebaseAnalytics?.let { config.firebaseAnalytics = it }
                     params.restoreTTLFilter?.let { config.restoreTTLFilter = it }
                     params.clearGroupOnSummaryClick?.let { config.clearGroupOnSummaryClick = it }

@@ -45,6 +45,7 @@ import com.onesignal.location.ILocationManager
 import com.onesignal.location.internal.MisconfiguredLocationManager
 import com.onesignal.notifications.INotificationsManager
 import com.onesignal.notifications.internal.MisconfiguredNotificationsManager
+import com.onesignal.user.internal.jwt.JwtTokenStore
 
 internal class CoreModule : IModule {
     override fun register(builder: ServiceBuilder) {
@@ -67,6 +68,8 @@ internal class CoreModule : IModule {
         builder.register<FeatureFlagsBackendService>().provides<IFeatureFlagsBackendService>()
         builder.register<ConfigModelStoreListener>().provides<IStartableService>()
         builder.register<FeatureFlagsRefreshService>().provides<IStartableService>()
+
+        builder.register<JwtTokenStore>().provides<JwtTokenStore>()
 
         // Operations
         builder.register<OperationModelStore>().provides<OperationModelStore>()
