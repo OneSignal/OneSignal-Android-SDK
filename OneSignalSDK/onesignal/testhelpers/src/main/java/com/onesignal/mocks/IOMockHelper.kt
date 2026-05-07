@@ -99,7 +99,17 @@ object IOMockHelper : BeforeSpecListener, AfterSpecListener, BeforeTestListener,
                 try {
                     block()
                 } catch (e: Exception) {
-                    // Log but don't throw - let the test handle exceptions
+                    // Surface to stderr so swallowed test-side exceptions are at least visible in
+                    // build output. We deliberately don't completeExceptionally(ioWaiter, e) here:
+                    // some tests exercise async paths that legitimately throw and only assert via
+                    // mocks/state, so propagating through awaitIO() would change failure semantics
+                    // for the whole suite. If a test expects success, its own assertions / mockk
+                    // verifies will catch the missing side-effect; the stderr line gives the
+                    // diagnostic crumb to find the cause quickly.
+                    System.err.println(
+                        "IOMockHelper.trackAsyncWork swallowed ${e::class.simpleName}: " +
+                            e.stackTraceToString(),
+                    )
                 } finally {
                     // When each block finishes, decrement; if all done, complete waiter
                     if (pendingIo.decrementAndGet() == 0) {
