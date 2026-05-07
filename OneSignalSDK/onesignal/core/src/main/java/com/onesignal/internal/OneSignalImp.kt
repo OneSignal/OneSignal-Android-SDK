@@ -304,11 +304,15 @@ internal class OneSignalImp(
                 return true
             }
 
+            // Publish state and its associated metadata atomically: assigning initFailureException
+            // outside the lock left a window where a concurrent thread could observe IN_PROGRESS
+            // with initFailureException still null/stale (no readers actually hit that window today
+            // because every reader is gated on suspendCompletion.await() or initState == FAILED,
+            // but the invariant is cheaper to maintain than re-derive on each review).
+            initFailureException = IllegalStateException("OneSignal initWithContext failed.")
             initState = InitState.IN_PROGRESS
             suspendCompletion = CompletableDeferred()
         }
-
-        initFailureException = IllegalStateException("OneSignal initWithContext failed.")
 
         // Once initState is published as IN_PROGRESS, init MUST reach a terminal state — otherwise
         // waiters of suspendCompletion (accessors via getServiceWithFeatureGate, login/logout via
