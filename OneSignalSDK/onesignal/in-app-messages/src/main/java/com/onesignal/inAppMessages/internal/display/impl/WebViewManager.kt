@@ -175,19 +175,45 @@ internal class WebViewManager(
         activity: Activity,
         jsonObject: JSONObject,
     ): Int {
-        return try {
-            val pageHeight = jsonObject.getJSONObject("rect").getInt("height")
-            var pxHeight = ViewUtils.dpToPx(pageHeight)
-            Logging.debug("getPageHeightData:pxHeight: $pxHeight")
-            val maxPxHeight = getWebViewMaxSizeY(activity)
-            if (pxHeight > maxPxHeight) {
-                pxHeight = maxPxHeight
-                Logging.debug("getPageHeightData:pxHeight is over screen max: $maxPxHeight")
-            }
-            pxHeight
-        } catch (e: JSONException) {
-            Logging.error("pageRectToViewHeight could not get page height", e)
-            -1
+        // SDK-4494: avoid throw-then-catch on `rect` being absent. The IAM HTML's
+        // `getPageMetaData()` can legitimately return a payload without `rect` for
+        // benign/recoverable reasons (e.g. JS not yet defined when the activity
+        // rotates, custom IAM template, partial metadata). The previous
+        // `getJSONObject("rect")` raised `JSONException` which we caught and logged
+        // at ERROR with a full stack trace, flooding OTel/Datadog with non-actionable
+        // alerts. Use `optJSONObject` and `optInt` so missing fields are a structured
+        // null/sentinel instead, and downgrade the log to a single WARN line.
+        val rect = jsonObject.optJSONObject("rect")
+        val pageHeight = rect?.optInt("height", -1) ?: -1
+        if (pageHeight < 0) {
+            Logging.warn(
+                "pageRectToViewHeight could not get page height (missing/invalid 'rect.height'); " +
+                    "snippet=${bodySnippet(jsonObject.toString())}",
+            )
+            return -1
+        }
+        var pxHeight = ViewUtils.dpToPx(pageHeight)
+        Logging.debug("getPageHeightData:pxHeight: $pxHeight")
+        val maxPxHeight = getWebViewMaxSizeY(activity)
+        if (pxHeight > maxPxHeight) {
+            pxHeight = maxPxHeight
+            Logging.debug("getPageHeightData:pxHeight is over screen max: $maxPxHeight")
+        }
+        return pxHeight
+    }
+
+    /**
+     * Trim [body] to a short, single-line snippet safe for logcat / OTel. See
+     * SDK-4494 - we only want enough context to debug shape mismatches without
+     * dumping the full WebView payload into log pipelines.
+     */
+    private fun bodySnippet(body: String?): String {
+        if (body.isNullOrEmpty()) return "<empty>"
+        val flattened = body.replace('\n', ' ').replace('\r', ' ')
+        return if (flattened.length <= LOG_BODY_SNIPPET_MAX_CHARS) {
+            flattened
+        } else {
+            flattened.take(LOG_BODY_SNIPPET_MAX_CHARS) + "…"
         }
     }
 
@@ -233,6 +259,19 @@ internal class WebViewManager(
         }
 
         webView!!.evaluateJavascript(GET_PAGE_META_DATA_JS_FUNCTION) { value ->
+            // SDK-4494: `evaluateJavascript` returns the JSON-encoded result of the
+            // expression. When the JS function is undefined or returns `undefined`
+            // (e.g. WebView not fully loaded yet) the callback receives the literal
+            // string "null", which `JSONObject(...)` rejects. Bail out early instead
+            // of throwing+catching, and route any remaining surprise through Logging
+            // (was previously `e.printStackTrace()`, which bypassed our log pipeline).
+            if (value.isNullOrBlank() || value == "null") {
+                Logging.warn(
+                    "calculateHeightAndShowWebViewAfterNewActivity: empty/null page metadata " +
+                        "from WebView; skipping height update",
+                )
+                return@evaluateJavascript
+            }
             try {
                 val pagePxHeight = pageRectToViewHeight(activity, JSONObject(value))
 
@@ -240,7 +279,11 @@ internal class WebViewManager(
                     showMessageView(pagePxHeight)
                 }
             } catch (e: JSONException) {
-                e.printStackTrace()
+                Logging.warn(
+                    "calculateHeightAndShowWebViewAfterNewActivity: could not parse page metadata; " +
+                        "snippet=${bodySnippet(value)}",
+                    e,
+                )
             }
         }
     }
@@ -463,6 +506,12 @@ internal class WebViewManager(
 
     companion object {
         private val MARGIN_PX_SIZE = ViewUtils.dpToPx(24)
+
+        // SDK-4494: cap the body snippet included in WARN logs so a malformed/large
+        // WebView payload can't blow up the OTel log entry. Same pattern as
+        // FeatureFlagsBackendService.
+        private const val LOG_BODY_SNIPPET_MAX_CHARS = 200
+
         const val JS_OBJ_NAME = "OSAndroid"
         const val GET_PAGE_META_DATA_JS_FUNCTION = "getPageMetaData()"
         const val SET_SAFE_AREA_INSETS_JS_FUNCTION = "setSafeAreaInsets(%s)"
