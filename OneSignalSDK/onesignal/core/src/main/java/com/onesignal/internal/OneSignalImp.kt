@@ -291,7 +291,7 @@ internal class OneSignalImp(
         return startupService
     }
 
-    @Suppress("ReturnCount")
+    @Suppress("ReturnCount", "TooGenericExceptionCaught")
     override fun initWithContext(
         context: Context,
         appId: String,
@@ -342,7 +342,7 @@ internal class OneSignalImp(
         return initWithContextSuspend(context, null)
     }
 
-    @Suppress("TooGenericExceptionCaught")
+    @Suppress("TooGenericExceptionCaught", "ReturnCount")
     private fun internalInit(
         context: Context,
         appId: String?,
@@ -454,6 +454,7 @@ internal class OneSignalImp(
      * Ensures initialization is complete before proceeding with an operation.
      * Blocks if init is in progress; throws immediately if not started or failed.
      */
+    @Suppress("UseCheckOrError")
     private fun requireInitForOperation(operationName: String) {
         when (initState) {
             InitState.NOT_STARTED ->
@@ -482,7 +483,7 @@ internal class OneSignalImp(
      * FF-on mode already accepts the ANR-vs-throw trade-off (see [waitUntilInitInternal]); the
      * warning here is only useful as a behavior-change signal for legacy mode.
      */
-    @Suppress("TooGenericExceptionCaught")
+    @Suppress("TooGenericExceptionCaught", "ReturnCount")
     private fun warnIfBlockingOnMainThread(operationName: String?) {
         if (isBackgroundThreadingEnabled) return
         val onMain =
@@ -490,6 +491,7 @@ internal class OneSignalImp(
                 AndroidUtils.isRunningOnMainThread()
             } catch (e: RuntimeException) {
                 // Looper.getMainLooper() may be unavailable in test environments — skip the warning.
+                Logging.debug("Could not determine main-thread status; skipping ANR-risk warning: ${e.message}")
                 return
             }
         if (!onMain) return
