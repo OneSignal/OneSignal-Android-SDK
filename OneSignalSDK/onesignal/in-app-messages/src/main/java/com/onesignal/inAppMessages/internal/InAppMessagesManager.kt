@@ -394,14 +394,18 @@ internal class InAppMessagesManager(
                 Triple(IdentityConstants.ONESIGNAL_ID, onesignalId, null)
             }
 
+        // Set pending state before the call so a mid-flight onJwtUpdated finds it; clear on success.
+        if (ivBehaviorActive && externalId != null) {
+            pendingJwtRetryExternalId = externalId
+            pendingJwtRetryRywData = rywData
+        }
         return try {
-            _backend.listInAppMessagesIv(appId, aliasLabel, aliasValue, subscriptionId, rywData, sessionDurationProvider, jwt)
+            val result = _backend.listInAppMessagesIv(appId, aliasLabel, aliasValue, subscriptionId, rywData, sessionDurationProvider, jwt)
+            pendingJwtRetryExternalId = null
+            pendingJwtRetryRywData = null
+            result
         } catch (ex: BackendException) {
-            // 401/403 from the IV-aware fetch — save retry state so [onJwtUpdated]
-            // can re-fetch when the developer supplies a fresh JWT.
             if (ivBehaviorActive && externalId != null) {
-                pendingJwtRetryExternalId = externalId
-                pendingJwtRetryRywData = rywData
                 Logging.info("InAppMessagesManager: IAM fetch returned ${ex.statusCode}, awaiting JWT refresh for $externalId")
                 // Reset the rate-limiter so the retry isn't throttled.
                 lastTimeFetchedIAMs = null

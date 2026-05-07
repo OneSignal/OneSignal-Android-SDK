@@ -146,6 +146,7 @@ internal class OneSignalImp(
     private val subscriptionModelStore: SubscriptionModelStore by lazy { services.getService<SubscriptionModelStore>() }
     private val preferencesService: IPreferencesService by lazy { services.getService<IPreferencesService>() }
     private val jwtTokenStore: JwtTokenStore by lazy { services.getService<JwtTokenStore>() }
+    private val identityVerificationService: IdentityVerificationService by lazy { services.getService<IdentityVerificationService>() }
     private val listOfModules =
         listOf(
             "com.onesignal.notifications.NotificationsModule",
@@ -236,7 +237,7 @@ internal class OneSignalImp(
             operationRepo = operationRepo,
             configModel = configModel,
             subscriptionModelStore = subscriptionModelStore,
-            identityVerificationService = services.getService<IdentityVerificationService>(),
+            identityVerificationService = identityVerificationService,
             lock = loginLogoutLock,
         )
     }
