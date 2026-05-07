@@ -7,6 +7,7 @@ import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.mocks.MockHelper
 import com.onesignal.mocks.MockPreferencesService
 import com.onesignal.user.internal.identity.IdentityModel
+import com.onesignal.user.internal.jwt.JwtRequirement
 import com.onesignal.user.internal.jwt.JwtTokenStore
 import com.onesignal.user.internal.operations.LoginUserOperation
 import com.onesignal.user.internal.properties.PropertiesModel
@@ -50,6 +51,7 @@ class LoginHelperTests : FunSpec({
         val mockOperationRepo = mockk<IOperationRepo>(relaxed = true)
         val mockConfigModel = mockk<ConfigModel>()
         every { mockConfigModel.appId } returns appId
+        every { mockConfigModel.useIdentityVerification } returns JwtRequirement.NOT_REQUIRED
         val loginLock = Any()
 
         val loginHelper =
@@ -91,6 +93,7 @@ class LoginHelperTests : FunSpec({
         val mockOperationRepo = mockk<IOperationRepo>()
         val mockConfigModel = mockk<ConfigModel>()
         every { mockConfigModel.appId } returns appId
+        every { mockConfigModel.useIdentityVerification } returns JwtRequirement.NOT_REQUIRED
         val loginLock = Any()
 
         val userSwitcherSlot = slot<(IdentityModel, PropertiesModel) -> Unit>()
@@ -158,6 +161,7 @@ class LoginHelperTests : FunSpec({
         val mockOperationRepo = mockk<IOperationRepo>()
         val mockConfigModel = mockk<ConfigModel>()
         every { mockConfigModel.appId } returns appId
+        every { mockConfigModel.useIdentityVerification } returns JwtRequirement.NOT_REQUIRED
         val loginLock = Any()
 
         val userSwitcherSlot = slot<(IdentityModel, PropertiesModel) -> Unit>()
@@ -202,6 +206,68 @@ class LoginHelperTests : FunSpec({
         }
     }
 
+    test("login under IV-required does NOT carry existingOnesignalId from anonymous user") {
+        // Given - anonymous user, IV is REQUIRED. The anon user was never created server-side
+        // (no JWT), so its onesignalId would be permanently local. Carrying it as
+        // existingOnesignalId on the new LoginUserOperation would deadlock canStartExecute.
+        val mockIdentityModelStore =
+            MockHelper.identityModelStore { model ->
+                model.externalId = null
+                model.onesignalId = currentOneSignalId
+            }
+
+        val newIdentityModel =
+            IdentityModel().apply {
+                externalId = newExternalId
+                onesignalId = newOneSignalId
+            }
+
+        val mockUserSwitcher = mockk<UserSwitcher>()
+        val mockOperationRepo = mockk<IOperationRepo>()
+        val mockConfigModel = mockk<ConfigModel>()
+        every { mockConfigModel.appId } returns appId
+        every { mockConfigModel.useIdentityVerification } returns JwtRequirement.REQUIRED
+
+        val userSwitcherSlot = slot<(IdentityModel, PropertiesModel) -> Unit>()
+        every {
+            mockUserSwitcher.createAndSwitchToNewUser(
+                suppressBackendOperation = any(),
+                modify = capture(userSwitcherSlot),
+            )
+        } answers {
+            userSwitcherSlot.captured(newIdentityModel, PropertiesModel())
+            every { mockIdentityModelStore.model } returns newIdentityModel
+        }
+
+        coEvery { mockOperationRepo.enqueueAndWait(any()) } returns true
+
+        val loginHelper =
+            LoginHelper(
+                identityModelStore = mockIdentityModelStore,
+                userSwitcher = mockUserSwitcher,
+                operationRepo = mockOperationRepo,
+                configModel = mockConfigModel,
+                jwtTokenStore = JwtTokenStore(MockPreferencesService()),
+                lock = Any(),
+            )
+
+        // When
+        runBlocking {
+            val context = loginHelper.switchUser(newExternalId, jwtBearerToken = "fresh-jwt")
+            if (context != null) loginHelper.enqueueLogin(context)
+        }
+
+        // Then — under IV, the executor must take the createUser (upsert) path; no merge link.
+        coVerify(exactly = 1) {
+            mockOperationRepo.enqueueAndWait(
+                withArg<LoginUserOperation> { operation ->
+                    operation.externalId shouldBe newExternalId
+                    operation.existingOnesignalId shouldBe null
+                },
+            )
+        }
+    }
+
     test("login logs error when operation fails") {
         // Given
         val mockIdentityModelStore =
@@ -220,6 +286,7 @@ class LoginHelperTests : FunSpec({
         val mockOperationRepo = mockk<IOperationRepo>()
         val mockConfigModel = mockk<ConfigModel>()
         every { mockConfigModel.appId } returns appId
+        every { mockConfigModel.useIdentityVerification } returns JwtRequirement.NOT_REQUIRED
         val loginLock = Any()
 
         val userSwitcherSlot = slot<(IdentityModel, PropertiesModel) -> Unit>()
@@ -279,6 +346,7 @@ class LoginHelperTests : FunSpec({
         coEvery { mockOperationRepo.enqueueAndWait(any()) } returns true
         val mockConfigModel = mockk<ConfigModel>()
         every { mockConfigModel.appId } returns appId
+        every { mockConfigModel.useIdentityVerification } returns JwtRequirement.NOT_REQUIRED
         val jwtTokenStore = JwtTokenStore(MockPreferencesService())
 
         val loginHelper =
@@ -312,6 +380,7 @@ class LoginHelperTests : FunSpec({
         val mockOperationRepo = mockk<IOperationRepo>(relaxed = true)
         val mockConfigModel = mockk<ConfigModel>()
         every { mockConfigModel.appId } returns appId
+        every { mockConfigModel.useIdentityVerification } returns JwtRequirement.NOT_REQUIRED
         val jwtTokenStore = JwtTokenStore(MockPreferencesService())
         jwtTokenStore.putJwt(currentExternalId, "old-jwt")
 

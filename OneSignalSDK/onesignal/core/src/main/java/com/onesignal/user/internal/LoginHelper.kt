@@ -4,6 +4,7 @@ import com.onesignal.core.internal.config.ConfigModel
 import com.onesignal.core.internal.operations.IOperationRepo
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.user.internal.identity.IdentityModelStore
+import com.onesignal.user.internal.jwt.JwtRequirement
 import com.onesignal.user.internal.jwt.JwtTokenStore
 import com.onesignal.user.internal.operations.LoginUserOperation
 
@@ -56,8 +57,18 @@ internal class LoginHelper(
             }
 
             val newOneSignalId = identityModelStore.model.onesignalId
+            // Under IV-required, the merge-anon-into-identified path can't dispatch — the
+            // anon user was never created server-side (no JWT) so the local-id reference
+            // would deadlock LoginUserOperation.canStartExecute. Skip the link entirely so
+            // the executor takes the createUser (upsert) path.
             val existingOneSignalId =
-                if (currentExternalId == null) currentOneSignalId else null
+                if (configModel.useIdentityVerification == JwtRequirement.REQUIRED) {
+                    null
+                } else if (currentExternalId == null) {
+                    currentOneSignalId
+                } else {
+                    null
+                }
 
             return LoginEnqueueContext(configModel.appId, newOneSignalId, externalId, existingOneSignalId)
         }

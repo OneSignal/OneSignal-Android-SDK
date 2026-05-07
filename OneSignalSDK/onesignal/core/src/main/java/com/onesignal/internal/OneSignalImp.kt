@@ -17,6 +17,7 @@ import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.application.impl.ApplicationService
 import com.onesignal.core.internal.config.ConfigModel
 import com.onesignal.core.internal.config.ConfigModelStore
+import com.onesignal.core.internal.config.impl.IdentityVerificationService
 import com.onesignal.core.internal.features.FeatureFlag
 import com.onesignal.core.internal.features.IFeatureManager
 import com.onesignal.core.internal.operations.IOperationRepo
@@ -145,6 +146,7 @@ internal class OneSignalImp(
     private val subscriptionModelStore: SubscriptionModelStore by lazy { services.getService<SubscriptionModelStore>() }
     private val preferencesService: IPreferencesService by lazy { services.getService<IPreferencesService>() }
     private val jwtTokenStore: JwtTokenStore by lazy { services.getService<JwtTokenStore>() }
+    private val identityVerificationService: IdentityVerificationService by lazy { services.getService<IdentityVerificationService>() }
     private val listOfModules =
         listOf(
             "com.onesignal.notifications.NotificationsModule",
@@ -234,6 +236,8 @@ internal class OneSignalImp(
             userSwitcher = userSwitcher,
             operationRepo = operationRepo,
             configModel = configModel,
+            subscriptionModelStore = subscriptionModelStore,
+            identityVerificationService = identityVerificationService,
             lock = loginLogoutLock,
         )
     }

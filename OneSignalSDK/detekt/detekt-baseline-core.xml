@@ -52,6 +52,7 @@
     <ID>ConstructorParameterNaming:LoginUserFromSubscriptionOperationExecutor.kt$LoginUserFromSubscriptionOperationExecutor$private val _subscriptionBackend: ISubscriptionBackendService</ID>
     <ID>ConstructorParameterNaming:LoginUserOperationExecutor.kt$LoginUserOperationExecutor$private val _application: IApplicationService</ID>
     <ID>ConstructorParameterNaming:LoginUserOperationExecutor.kt$LoginUserOperationExecutor$private val _configModelStore: ConfigModelStore</ID>
+    <ID>ConstructorParameterNaming:LoginUserOperationExecutor.kt$LoginUserOperationExecutor$private val _consistencyManager: IConsistencyManager</ID>
     <ID>ConstructorParameterNaming:LoginUserOperationExecutor.kt$LoginUserOperationExecutor$private val _deviceService: IDeviceService</ID>
     <ID>ConstructorParameterNaming:LoginUserOperationExecutor.kt$LoginUserOperationExecutor$private val _identityModelStore: IdentityModelStore</ID>
     <ID>ConstructorParameterNaming:LoginUserOperationExecutor.kt$LoginUserOperationExecutor$private val _identityOperationExecutor: IdentityOperationExecutor</ID>
@@ -155,7 +156,6 @@
     <ID>ConstructorParameterNaming:UserBackendService.kt$UserBackendService$private val _httpClient: IHttpClient</ID>
     <ID>ConstructorParameterNaming:UserManager.kt$UserManager$private val _customEventController: ICustomEventController</ID>
     <ID>ConstructorParameterNaming:UserManager.kt$UserManager$private val _identityModelStore: IdentityModelStore</ID>
-    <ID>ConstructorParameterNaming:UserManager.kt$UserManager$private val _jwtTokenStore: JwtTokenStore</ID>
     <ID>ConstructorParameterNaming:UserManager.kt$UserManager$private val _languageContext: ILanguageContext</ID>
     <ID>ConstructorParameterNaming:UserManager.kt$UserManager$private val _propertiesModelStore: PropertiesModelStore</ID>
     <ID>ConstructorParameterNaming:UserManager.kt$UserManager$private val _subscriptionManager: ISubscriptionManager</ID>
@@ -174,7 +174,6 @@
     <ID>ForbiddenComment:HttpClient.kt$HttpClient$// TODO: SHOULD RETURN OK INSTEAD OF NOT_MODIFIED TO MAKE TRANSPARENT?</ID>
     <ID>ForbiddenComment:IPreferencesService.kt$PreferenceOneSignalKeys$* (String) The serialized IAMs TODO: This isn't currently used, determine if actually needed for cold start IAM fetch delay</ID>
     <ID>ForbiddenComment:IUserBackendService.kt$IUserBackendService$// TODO: Change to send only the push subscription, optimally</ID>
-    <ID>ForbiddenComment:LogoutHelper.kt$LogoutHelper$// TODO: remove JWT Token for all future requests.</ID>
     <ID>ForbiddenComment:ParamsBackendService.kt$ParamsBackendService$// TODO: New</ID>
     <ID>ForbiddenComment:PermissionsActivity.kt$PermissionsActivity$// TODO after we remove IAM from being an activity window we may be able to remove this handler</ID>
     <ID>ForbiddenComment:PermissionsActivity.kt$PermissionsActivity$// TODO improve this method</ID>
@@ -213,7 +212,7 @@
     <ID>LongParameterList:IDatabase.kt$IDatabase$( table: String, columns: Array&lt;String>? = null, whereClause: String? = null, whereArgs: Array&lt;String>? = null, groupBy: String? = null, having: String? = null, orderBy: String? = null, limit: String? = null, action: (ICursor) -> Unit, )</ID>
     <ID>LongParameterList:IOutcomeEventsBackendService.kt$IOutcomeEventsBackendService$( appId: String, userId: String, subscriptionId: String, deviceType: String, direct: Boolean?, event: OutcomeEvent, )</ID>
     <ID>LongParameterList:IUserBackendService.kt$IUserBackendService$( appId: String, aliasLabel: String, aliasValue: String, properties: PropertiesObject, refreshDeviceMetadata: Boolean, propertyiesDelta: PropertiesDeltasObject, jwt: String? = null, )</ID>
-    <ID>LongParameterList:LoginUserOperationExecutor.kt$LoginUserOperationExecutor$( private val _identityOperationExecutor: IdentityOperationExecutor, private val _application: IApplicationService, private val _deviceService: IDeviceService, private val _userBackend: IUserBackendService, private val _identityModelStore: IdentityModelStore, private val _propertiesModelStore: PropertiesModelStore, private val _subscriptionsModelStore: SubscriptionModelStore, private val _configModelStore: ConfigModelStore, private val _languageContext: ILanguageContext, private val _jwtTokenStore: JwtTokenStore, private val _identityVerificationService: IdentityVerificationService, )</ID>
+    <ID>LongParameterList:LoginUserOperationExecutor.kt$LoginUserOperationExecutor$( private val _identityOperationExecutor: IdentityOperationExecutor, private val _application: IApplicationService, private val _deviceService: IDeviceService, private val _userBackend: IUserBackendService, private val _identityModelStore: IdentityModelStore, private val _propertiesModelStore: PropertiesModelStore, private val _subscriptionsModelStore: SubscriptionModelStore, private val _configModelStore: ConfigModelStore, private val _languageContext: ILanguageContext, private val _jwtTokenStore: JwtTokenStore, private val _identityVerificationService: IdentityVerificationService, private val _consistencyManager: IConsistencyManager, )</ID>
     <ID>LongParameterList:OutcomeEventsController.kt$OutcomeEventsController$( private val _session: ISessionService, private val _influenceManager: IInfluenceManager, private val _outcomeEventsCache: IOutcomeEventsRepository, private val _outcomeEventsPreferences: IOutcomeEventsPreferences, private val _outcomeEventsBackend: IOutcomeEventsBackendService, private val _configModelStore: ConfigModelStore, private val _identityModelStore: IdentityModelStore, private val _subscriptionManager: ISubscriptionManager, private val _deviceService: IDeviceService, private val _time: ITime, )</ID>
     <ID>LongParameterList:RefreshUserOperationExecutor.kt$RefreshUserOperationExecutor$( private val _userBackend: IUserBackendService, private val _identityModelStore: IdentityModelStore, private val _propertiesModelStore: PropertiesModelStore, private val _subscriptionsModelStore: SubscriptionModelStore, private val _configModelStore: ConfigModelStore, private val _buildUserService: IRebuildUserService, private val _newRecordState: NewRecordsState, private val _jwtTokenStore: JwtTokenStore, private val _identityVerificationService: IdentityVerificationService, )</ID>
     <ID>LongParameterList:SubscriptionObject.kt$SubscriptionObject$( val id: String? = null, val type: SubscriptionObjectType? = null, val token: String? = null, val enabled: Boolean? = null, val notificationTypes: Int? = null, val sdk: String? = null, val deviceModel: String? = null, val deviceOS: String? = null, val rooted: Boolean? = null, val netType: Int? = null, val carrier: String? = null, val appVersion: String? = null, )</ID>
@@ -311,6 +310,7 @@
     <ID>ReturnCount:JSONUtils.kt$JSONUtils$fun compareJSONArrays( jsonArray1: JSONArray?, jsonArray2: JSONArray?, ): Boolean</ID>
     <ID>ReturnCount:LoginUserFromSubscriptionOperationExecutor.kt$LoginUserFromSubscriptionOperationExecutor$private suspend fun loginUser(loginUserOp: LoginUserFromSubscriptionOperation): ExecutionResponse</ID>
     <ID>ReturnCount:LoginUserOperationExecutor.kt$LoginUserOperationExecutor$private suspend fun loginUser( loginUserOp: LoginUserOperation, operations: List&lt;Operation>, ): ExecutionResponse</ID>
+    <ID>ReturnCount:LogoutHelper.kt$LogoutHelper$internal fun switchUser(): LogoutEnqueueContext?</ID>
     <ID>ReturnCount:Model.kt$Model$protected fun getOptBigDecimalProperty( name: String, create: (() -> BigDecimal?)? = null, ): BigDecimal?</ID>
     <ID>ReturnCount:Model.kt$Model$protected fun getOptDoubleProperty( name: String, create: (() -> Double?)? = null, ): Double?</ID>
     <ID>ReturnCount:Model.kt$Model$protected fun getOptFloatProperty( name: String, create: (() -> Float?)? = null, ): Float?</ID>
@@ -320,6 +320,7 @@
     <ID>ReturnCount:OneSignalImp.kt$OneSignalImp$private fun internalInit( context: Context, appId: String?, ): Boolean</ID>
     <ID>ReturnCount:OperationModelStore.kt$OperationModelStore$override fun create(jsonObject: JSONObject?): Operation?</ID>
     <ID>ReturnCount:OperationModelStore.kt$OperationModelStore$private fun isValidOperation(jsonObject: JSONObject): Boolean</ID>
+    <ID>ReturnCount:OperationRepo.kt$OperationRepo$private fun shouldSuppressAnonymousOp(op: Operation): Boolean</ID>
     <ID>ReturnCount:OperationRepoIvExtensions.kt$internal fun OperationRepo.handleFailUnauthorized( startingOp: OperationRepo.OperationQueueItem, ops: List&lt;OperationRepo.OperationQueueItem>, jwtTokenStore: JwtTokenStore, ivBehaviorActive: Boolean, ): Boolean</ID>
     <ID>ReturnCount:OperationRepoIvExtensions.kt$internal fun OperationRepo.hasValidJwtIfRequired( jwtTokenStore: JwtTokenStore, op: com.onesignal.core.internal.operations.Operation, ivBehaviorActive: Boolean, ): Boolean</ID>
     <ID>ReturnCount:OutcomeEventsController.kt$OutcomeEventsController$private suspend fun sendAndCreateOutcomeEvent( name: String, weight: Float, // Note: this is optional sessionTime: Long, influences: List&lt;Influence>, ): OutcomeEvent?</ID>
@@ -413,7 +414,7 @@
     <ID>TooManyFunctions:OutcomeEventsController.kt$OutcomeEventsController : IOutcomeEventsControllerIStartableServiceISessionLifecycleHandler</ID>
     <ID>TooManyFunctions:PreferencesService.kt$PreferencesService : IPreferencesServiceIStartableService</ID>
     <ID>TooManyFunctions:SubscriptionManager.kt$SubscriptionManager : ISubscriptionManagerIModelStoreChangeHandlerISessionLifecycleHandler</ID>
-    <ID>TooManyFunctions:UserManager.kt$UserManager : IUserManagerISingletonModelStoreChangeHandlerIJwtUpdateListener</ID>
+    <ID>TooManyFunctions:UserManager.kt$UserManager : IUserManagerISingletonModelStoreChangeHandler</ID>
     <ID>UndocumentedPublicClass:AlertDialogPrepromptForAndroidSettings.kt$AlertDialogPrepromptForAndroidSettings$Callback</ID>
     <ID>UndocumentedPublicClass:AndroidUtils.kt$AndroidUtils</ID>
     <ID>UndocumentedPublicClass:AndroidUtils.kt$AndroidUtils$SchemaType</ID>
@@ -458,7 +459,6 @@
     <ID>UndocumentedPublicClass:JSONConverter.kt$JSONConverter</ID>
     <ID>UndocumentedPublicClass:JSONUtils.kt$JSONUtils</ID>
     <ID>UndocumentedPublicClass:Logging.kt$Logging</ID>
-    <ID>UndocumentedPublicClass:LogoutHelper.kt$LogoutHelper</ID>
     <ID>UndocumentedPublicClass:MigrationRecovery.kt$MigrationRecovery : IMigrationRecovery</ID>
     <ID>UndocumentedPublicClass:NetworkUtils.kt$NetworkUtils</ID>
     <ID>UndocumentedPublicClass:NetworkUtils.kt$NetworkUtils$ResponseStatusType</ID>

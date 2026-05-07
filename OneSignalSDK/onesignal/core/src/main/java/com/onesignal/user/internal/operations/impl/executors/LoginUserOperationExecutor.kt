@@ -8,6 +8,8 @@ import com.onesignal.common.NetworkUtils
 import com.onesignal.common.OneSignalUtils
 import com.onesignal.common.RootToolsInternalMethods
 import com.onesignal.common.TimeUtils
+import com.onesignal.common.consistency.enums.IamFetchRywTokenKey
+import com.onesignal.common.consistency.models.IConsistencyManager
 import com.onesignal.common.exceptions.BackendException
 import com.onesignal.common.modeling.ModelChangeTags
 import com.onesignal.core.internal.application.IApplicationService
@@ -51,6 +53,7 @@ internal class LoginUserOperationExecutor(
     private val _languageContext: ILanguageContext,
     private val _jwtTokenStore: JwtTokenStore,
     private val _identityVerificationService: IdentityVerificationService,
+    private val _consistencyManager: IConsistencyManager,
 ) : IOperationExecutor {
     override val operations: List<String>
         get() = listOf(LOGIN_USER)
@@ -233,6 +236,16 @@ internal class LoginUserOperationExecutor(
 
                 // Remove the processed backend subscription
                 backendSubscriptions.remove(backendSubscription)
+            }
+
+            // Forward the create-user RYW data to ConsistencyManager so InAppMessagesManager
+            // can fetch IAMs once the user record has propagated. Gated on newCodePathsRun:
+            // Phase 1 users don't await RYW (legacy IAM fetch path), so storing it would be
+            // a no-op anyway. Backend only sends rywData under IV.
+            if (_identityVerificationService.newCodePathsRun) {
+                response.rywData?.let { rywData ->
+                    _consistencyManager.setRywData(backendOneSignalId, IamFetchRywTokenKey.USER, rywData)
+                }
             }
 
             val wasPossiblyAnUpsert = identities.isNotEmpty()

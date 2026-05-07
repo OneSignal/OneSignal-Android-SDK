@@ -6,7 +6,7 @@ package com.onesignal.user.internal.jwt
  * developer-facing 401-invalidation event is delivered separately via
  * [com.onesignal.IUserJwtInvalidatedListener] (see [JwtTokenStore.addUserJwtInvalidatedListener]).
  */
-internal interface IJwtUpdateListener {
+interface IJwtUpdateListener {
     /** Fired when a JWT was added or refreshed (`putJwt`), or when stale entries are pruned. */
     fun onJwtUpdated(externalId: String)
 }

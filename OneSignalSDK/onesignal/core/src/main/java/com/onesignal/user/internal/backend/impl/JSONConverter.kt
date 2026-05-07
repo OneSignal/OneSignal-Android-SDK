@@ -1,5 +1,6 @@
 package com.onesignal.user.internal.backend.impl
 
+import com.onesignal.common.consistency.RywData
 import com.onesignal.common.expandJSONArray
 import com.onesignal.common.putJSONArray
 import com.onesignal.common.putMap
@@ -8,6 +9,7 @@ import com.onesignal.common.safeBool
 import com.onesignal.common.safeDouble
 import com.onesignal.common.safeInt
 import com.onesignal.common.safeJSONObject
+import com.onesignal.common.safeLong
 import com.onesignal.common.safeString
 import com.onesignal.common.toMap
 import com.onesignal.user.internal.backend.CreateUserResponse
@@ -55,7 +57,12 @@ object JSONConverter {
                 return@expandJSONArray null
             }
 
-        return CreateUserResponse(respIdentities, respProperties, respSubscriptions)
+        // Backend may include `ryw_token` (and optional `ryw_delay`) under Identity Verification
+        // so InAppMessagesManager can gate IAM fetch on read-your-write consistency.
+        val rywToken = jsonObject.safeString("ryw_token")
+        val rywData = rywToken?.let { RywData(it, jsonObject.safeLong("ryw_delay")) }
+
+        return CreateUserResponse(respIdentities, respProperties, respSubscriptions, rywData)
     }
 
     fun convertToJSON(properties: PropertiesObject): JSONObject {
