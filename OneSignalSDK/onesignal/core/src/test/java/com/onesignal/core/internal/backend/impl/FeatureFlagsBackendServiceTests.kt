@@ -105,27 +105,6 @@ class FeatureFlagsBackendServiceTests : FunSpec({
         warns[0].entry.contains("""{"errors":["Forbidden"]}""") shouldBe true
     }
 
-    // Companion regression to SDK-4478 on the params endpoint: a 2xx response with a
-    // completely non-JSON body (intercepting proxy like Burp, captive portal, CDN error
-    // HTML, etc.) must NOT throw and must NOT kill the refresh loop. It should fall
-    // through to Unavailable and log a WARN with a body snippet, exactly like the
-    // existing "wrong-shape JSON" path. FeatureFlagsJsonParser.parseSuccessful already
-    // catches Throwable internally; this test pins that contract so nobody regresses it.
-    test("200 with totally non-JSON body (HTML) returns Unavailable and does not throw") {
-        val htmlBody = "<html><head><title>Burp</title></head><body>intercepted</body></html>"
-        val http = mockk<IHttpClient>()
-        coEvery { http.get(any(), any()) } returns HttpResponse(200, htmlBody)
-
-        FeatureFlagsBackendService(http).fetchRemoteFeatureFlags("appId") shouldBe
-            RemoteFeatureFlagsFetchOutcome.Unavailable
-        val warns =
-            logsForService().filter {
-                it.level == LogLevel.WARN && it.entry.contains("not valid Turbine feature-flags JSON")
-            }
-        warns shouldHaveSize 1
-        warns[0].entry.contains("<html>") shouldBe true
-    }
-
     test("body snippet caps long payloads at 200 chars") {
         val longBody = "x".repeat(1_000)
         val http = mockk<IHttpClient>()

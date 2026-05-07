@@ -17,7 +17,6 @@ import com.onesignal.core.internal.http.IHttpClient
 import com.onesignal.core.internal.http.impl.OptionalHeaders
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
-import org.json.JSONException
 import org.json.JSONObject
 
 internal class ParamsBackendService(
@@ -40,23 +39,7 @@ internal class ParamsBackendService(
             throw BackendException(response.statusCode, response.payload, response.retryAfterSeconds)
         }
 
-        // A 2xx response with a non-JSON body (e.g. an intercepting proxy / captive portal /
-        // CDN error page returning HTML) used to surface as an uncaught JSONException on the
-        // IO dispatcher and silently kill the params refresh loop. Convert it into a
-        // BackendException so the caller's existing retry/backoff path handles it like any
-        // other transient backend failure.
-        val payload = response.payload
-        val responseJson =
-            try {
-                JSONObject(payload ?: "")
-            } catch (ex: JSONException) {
-                Logging.warn(
-                    "ParamsBackendService.fetchParams: malformed (non-JSON) response payload, will retry. " +
-                        "status=${response.statusCode}",
-                    ex,
-                )
-                throw BackendException(response.statusCode, payload, response.retryAfterSeconds)
-            }
+        val responseJson = JSONObject(response.payload!!)
 
         // Process outcomes params
         var influenceParams: InfluenceParamsObject? = null
