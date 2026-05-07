@@ -296,7 +296,7 @@ internal class OneSignalImp(
         context: Context,
         appId: String,
     ): Boolean {
-        Logging.log(LogLevel.DEBUG, "initWithContext(context: $context, appId: $appId)")
+        Logging.log(LogLevel.DEBUG, "Calling deprecated initWithContext(context: $context, appId: $appId)")
 
         synchronized(initLock) {
             if (initState.isSDKAccessible()) {
