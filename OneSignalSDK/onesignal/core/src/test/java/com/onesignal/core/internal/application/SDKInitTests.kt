@@ -513,7 +513,9 @@ class SDKInitTests : FunSpec({
         val blockingCtx = object : ContextWrapper(context) {
             override fun getSharedPreferences(name: String, mode: Int): SharedPreferences {
                 started.countDown()
-                trigger.await()
+                // Bounded await -- if the test logic ever fails to release `trigger`, the
+                // IO worker exits cleanly instead of blocking forever and deadlocking the suite.
+                trigger.await(30, TimeUnit.SECONDS)
                 return super.getSharedPreferences(name, mode)
             }
         }
@@ -595,7 +597,9 @@ class SDKInitTests : FunSpec({
             val blockingCtx = object : ContextWrapper(context) {
                 override fun getSharedPreferences(name: String, mode: Int): SharedPreferences {
                     started.countDown()
-                    trigger.await()
+                    // Bounded await -- if the test logic ever fails to release `trigger`, the
+                    // IO worker exits cleanly instead of blocking forever and deadlocking the suite.
+                    trigger.await(30, TimeUnit.SECONDS)
                     return super.getSharedPreferences(name, mode)
                 }
             }

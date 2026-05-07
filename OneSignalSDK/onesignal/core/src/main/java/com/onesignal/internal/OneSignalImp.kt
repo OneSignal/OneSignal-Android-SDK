@@ -669,9 +669,6 @@ internal class OneSignalImp(
     ): Boolean {
         Logging.log(LogLevel.DEBUG, "initWithContext(context: $context, appId: $appId)")
 
-        // This ensures the stack trace points to the caller that triggered init, not the async worker thread.
-        initFailureException = IllegalStateException("OneSignal initWithContext failed.")
-
         // Use IO dispatcher for initialization to prevent ANRs and optimize for I/O operations
         return withContext(runtimeIoDispatcher) {
             val shouldRunInit: Boolean
@@ -688,6 +685,10 @@ internal class OneSignalImp(
                     initState = InitState.IN_PROGRESS
                     // Fresh latch for this init attempt.
                     suspendCompletion = CompletableDeferred()
+                    // Only the call that actually starts init owns the failure-attribution exception.
+                    // Re-entrant callers must not overwrite it -- otherwise the failure stack trace
+                    // would point at the SyncJobService coroutine instead of the original initiator.
+                    initFailureException = IllegalStateException("OneSignal initWithContext failed.")
                 }
             }
 

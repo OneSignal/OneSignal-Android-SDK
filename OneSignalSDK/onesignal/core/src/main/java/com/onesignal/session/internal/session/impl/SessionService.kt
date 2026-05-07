@@ -35,7 +35,10 @@ internal class SessionService(
     private val _time: ITime,
 ) : ISessionService, IBootstrapService, IStartableService, IBackgroundService, IApplicationLifecycleHandler {
     override val startTime: Long
-        get() = session?.startTime ?: 0L
+        // Pre-bootstrap default returns "now" so call sites computing `_time.currentTimeMillis - startTime`
+        // (e.g. IAM session-duration / SESSION_TIME triggers) see ~0ms elapsed instead of ~58 years
+        // (which is what `0L` / Jan 1970 would produce).
+        get() = session?.startTime ?: _time.currentTimeMillis
 
     /**
      * Run in the background when the session would time out, only if a session is currently active.
