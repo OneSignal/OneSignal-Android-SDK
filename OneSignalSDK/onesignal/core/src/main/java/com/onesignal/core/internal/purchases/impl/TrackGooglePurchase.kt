@@ -240,6 +240,7 @@ internal class TrackGooglePurchase(
                         TrackPurchaseOperation(
                             _configModelStore.model.appId,
                             _identityModelStore.model.onesignalId,
+                            _identityModelStore.model.externalId,
                             newAsExisting,
                             BigDecimal(0),
                             purchasesToReport,

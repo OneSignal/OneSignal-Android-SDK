@@ -16,6 +16,23 @@ abstract class Operation(name: String) : Model() {
             setStringProperty(::name.name, value)
         }
 
+    /**
+     * externalId of the user this operation was enqueued for. Captured at construction
+     * time so the op stays bound to its original user even if the current user changes
+     * before the op executes. Null for anonymous users.
+     */
+    var externalId: String?
+        get() = getOptStringProperty(::externalId.name)
+        internal set(value) { // `internal` so subclass constructors can assign at construction time
+            setOptStringProperty(::externalId.name, value)
+        }
+
+    /**
+     * Whether this operation requires a valid JWT when Identity Verification is active.
+     * Subclasses may override to `false` for endpoints that don't require auth.
+     */
+    open val requiresJwt: Boolean get() = true
+
     init {
         this.name = name
     }

@@ -220,6 +220,7 @@ internal class SubscriptionOperationExecutor(
                             CreateSubscriptionOperation(
                                 lastOperation.appId,
                                 lastOperation.onesignalId,
+                                lastOperation.externalId,
                                 lastOperation.subscriptionId,
                                 lastOperation.type,
                                 lastOperation.enabled,

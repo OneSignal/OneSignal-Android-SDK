@@ -31,15 +31,6 @@ class TrackCustomEventOperation() : Operation(CustomEventOperationExecutor.CUSTO
         }
 
     /**
-     * The optional external ID of current logged-in user. Must be unique for the [appId].
-     */
-    var externalId: String?
-        get() = getOptStringProperty(::externalId.name)
-        private set(value) {
-            setOptStringProperty(::externalId.name, value)
-        }
-
-    /**
      * The timestamp when the custom event was created.
      */
     var timeStamp: Long

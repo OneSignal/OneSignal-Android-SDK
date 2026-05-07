@@ -44,9 +44,10 @@ class DeleteTagOperation() : Operation(UpdateUserOperationExecutor.DELETE_TAG) {
     override val canStartExecute: Boolean get() = !IDManager.isLocalId(onesignalId)
     override val applyToRecordId: String get() = onesignalId
 
-    constructor(appId: String, onesignalId: String, key: String) : this() {
+    constructor(appId: String, onesignalId: String, externalId: String?, key: String) : this() {
         this.appId = appId
         this.onesignalId = onesignalId
+        this.externalId = externalId
         this.key = key
     }
 

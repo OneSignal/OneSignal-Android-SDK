@@ -173,6 +173,7 @@ class UserSwitcher(
             LoginUserFromSubscriptionOperation(
                 configModel.appId,
                 identityModelStore.model.onesignalId,
+                identityModelStore.model.externalId,
                 legacyPlayerId,
             ),
         )
