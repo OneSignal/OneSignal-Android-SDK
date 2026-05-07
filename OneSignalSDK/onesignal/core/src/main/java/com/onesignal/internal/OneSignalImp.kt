@@ -304,38 +304,45 @@ internal class OneSignalImp(
                 return true
             }
 
-            // Publish state and its associated metadata atomically: assigning initFailureException
-            // outside the lock left a window where a concurrent thread could observe IN_PROGRESS
-            // with initFailureException still null/stale (no readers actually hit that window today
-            // because every reader is gated on suspendCompletion.await() or initState == FAILED,
-            // but the invariant is cheaper to maintain than re-derive on each review).
+            // Publish state and its associated metadata atomically.
             initFailureException = IllegalStateException("OneSignal initWithContext failed.")
             initState = InitState.IN_PROGRESS
             suspendCompletion = CompletableDeferred()
         }
 
-        // Once initState is published as IN_PROGRESS, init MUST reach a terminal state — otherwise
-        // waiters of suspendCompletion (accessors via getServiceWithFeatureGate, login/logout via
-        // requireInitForOperation) would block forever, and subsequent initWithContext calls would
-        // short-circuit because IN_PROGRESS counts as "accessible". Catch synchronous failures
-        // (e.g. ApplicationService.start's `applicationContext as Application` cast failing in
-        // restricted hosts) and transition to FAILED before rethrowing so the caller can recover.
+        // Tight try/catch around the only step that can throw synchronously *before* the
+        // dispatch (or runBlocking). ApplicationService.start does
+        // `context.applicationContext as Application`, which can ClassCastException in
+        // restricted hosts (Robolectric custom application factories, instrumentation context
+        // wrappers, multi-process content provider init order). If we don't transition to
+        // FAILED here, IN_PROGRESS would never be retired — every subsequent
+        // [initWithContext] would short-circuit (IN_PROGRESS counts as "accessible") and every
+        // accessor would deadlock on suspendCompletion.await(). Failures *inside*
+        // [internalInit] are owned by its own try/catch.
         try {
-            // FeatureManager depends on ConfigModelStore/PreferencesService which requires appContext.
-            // Ensure app context is available before evaluating feature gates.
             ensureApplicationServiceStarted(context)
-
-            // Always dispatch init asynchronously so this method never blocks the caller.
-            // Callers that need to wait (accessors, login, logout) will block via suspendCompletion.
-            suspendifyOnIO {
-                internalInit(context, appId)
-            }
         } catch (e: Exception) {
             initFailureException?.addSuppressed(e)
             completeInit(InitState.FAILED)
             throw e
         }
-        return true
+
+        if (isBackgroundThreadingEnabled) {
+            // FF-on: dispatch init asynchronously so this method never blocks the caller.
+            // Callers that need to wait (accessors, login, logout) will block via suspendCompletion.
+            suspendifyOnIO {
+                internalInit(context, appId)
+            }
+            return true
+        }
+
+        // FF-off: legacy behavior. Block the caller thread until initialization completes.
+        // [internalInit] owns its own terminal-state cleanup on failure and rethrows, so any
+        // exception propagates to the caller through runBlocking unchanged — matching the
+        // pre-#2605 contract on main exactly.
+        return runBlocking(runtimeIoDispatcher) {
+            internalInit(context, appId)
+        }
     }
 
     /**
@@ -475,17 +482,16 @@ internal class OneSignalImp(
     }
 
     /**
-     * Make the legacy-mode (FF-off) main-thread blocking behavior explicit. Pre-#2605 there was
-     * no IN_PROGRESS window observable from accessors — [initWithContext] ran [internalInit]
-     * synchronously via `runBlocking`, so any blocking happened inside `initWithContext` itself.
-     * Now that init dispatches asynchronously, the first accessor on the main thread can block on
-     * [runBlocking] inside [waitForInit]/[waitAndReturn] until init completes. Total ANR risk is
-     * roughly equivalent to pre-#2605, just shifted in time, but the block is no longer obviously
-     * located in `initWithContext` — so we log a warning that points callers to the suspend API
-     * or a background thread when they care about UI responsiveness.
+     * Surfaces the narrow race in legacy (FF-off) mode where [initWithContext] is running on a
+     * background thread (so it's still IN_PROGRESS) and a *concurrent* call on the main thread
+     * — an accessor via [getServiceWithFeatureGate], or [login]/[logout] via
+     * [requireInitForOperation] — falls into the IN_PROGRESS branch and blocks on
+     * [runBlocking] inside [waitForInit] / [waitAndReturn]. The common case (init called from
+     * the main thread) doesn't hit this path because [initWithContext] itself blocks the caller
+     * via `runBlocking`, so by the time any accessor runs init is already SUCCESS or FAILED.
      *
      * FF-on mode already accepts the ANR-vs-throw trade-off (see [waitUntilInitInternal]); the
-     * warning here is only useful as a behavior-change signal for legacy mode.
+     * warning is short-circuited there.
      */
     @Suppress("TooGenericExceptionCaught", "ReturnCount")
     private fun warnIfBlockingOnMainThread(operationName: String?) {

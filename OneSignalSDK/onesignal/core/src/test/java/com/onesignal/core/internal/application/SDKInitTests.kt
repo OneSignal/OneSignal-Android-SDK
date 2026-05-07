@@ -6,6 +6,7 @@ import android.content.SharedPreferences
 import androidx.test.core.app.ApplicationProvider.getApplicationContext
 import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
 import com.onesignal.common.AndroidUtils
+import com.onesignal.common.threading.ThreadingMode
 import com.onesignal.core.internal.preferences.PreferenceOneSignalKeys.PREFS_LEGACY_APP_ID
 import com.onesignal.debug.ILogListener
 import com.onesignal.debug.LogLevel
@@ -43,9 +44,24 @@ class SDKInitTests : FunSpec({
 
     beforeAny {
         Logging.logLevel = LogLevel.NONE
+        // FF-off (legacy mode) is the default; tests in this file exercise that contract.
+        // FF-on coverage of [initWithContext] (async dispatch via [suspendifyOnIO]) lives
+        // upstream of this PR and isn't repeated here — exercising it cleanly requires more
+        // setup than is in scope: OneSignalImp reads the FF via `featureManager.isEnabled(...)`,
+        // backed by `featureStates`, which is itself populated from
+        // `configModelStore.model.sdkRemoteFeatureFlags`. To flip the FF on we'd have to plant
+        // the cached ConfigModel JSON in SharedPreferences before [OneSignalImp] is constructed,
+        // and that conflicts with [BlockingPrefsContext] (used for the does-not-block /
+        // recovery shapes) because the FF check itself reads prefs synchronously through the
+        // lazy chain. The FF-on path is exercised in production usage; the regression we
+        // protect against here is the FF-off blocking contract pinned below.
+        ThreadingMode.useBackgroundThreading = false
     }
 
     afterAny {
+        // Reset FF state so a test setting it to true can't leak into the next test.
+        ThreadingMode.useBackgroundThreading = false
+
         val context = getApplicationContext<Context>()
         val prefs = context.getSharedPreferences("OneSignal", Context.MODE_PRIVATE)
         prefs.edit()
@@ -186,32 +202,35 @@ class SDKInitTests : FunSpec({
         os.isInitialized shouldBe true
     }
 
-    test("initWithContext with appId does not block") {
-        // Given
-        // block SharedPreference before calling init
+    test("initWithContext blocks caller until init completes when SDK_BACKGROUND_THREADING is off") {
+        // FF-off contract (matches main pre-#2605): initWithContext runs internalInit on the
+        // caller thread via runBlocking and only returns once init reaches a terminal state.
+        // Pinned so future restructures don't silently flip legacy callers to the async shape
+        // without an explicit FF flip.
+        ThreadingMode.useBackgroundThreading shouldBe false // belt-and-suspenders w/ beforeAny
+
         val trigger = CountDownLatch(1)
         val context = getApplicationContext<Context>()
         val blockingPrefContext = BlockingPrefsContext(context, trigger)
         val os = OneSignalImp()
 
-        // When
-        val accessorThread =
+        val initThread =
             Thread {
                 os.initWithContext(blockingPrefContext, "appId")
             }
+        initThread.start()
+        initThread.join(500)
 
-        accessorThread.start()
-        accessorThread.join(500)
+        // initWithContext is parked inside runBlocking { internalInit } waiting on
+        // BlockingPrefsContext.unblockTrigger.await() — proves the legacy synchronous path is
+        // active.
+        initThread.isAlive shouldBe true
+        os.isInitialized shouldBe false
 
-        // Then
-        // should complete even SharedPreferences is unavailable (non-blocking)
-        accessorThread.isAlive shouldBe false
-
-        // Release the SharedPreferences lock so internalInit can complete
         trigger.countDown()
-
-        // Wait for initialization to complete (internalInit runs asynchronously)
-        waitForInitialization(os, maxAttempts = 50)
+        initThread.join(2_000)
+        initThread.isAlive shouldBe false
+        os.isInitialized shouldBe true
     }
 
     test("accessors will be blocked if call too early after initWithContext with appId") {
@@ -496,42 +515,15 @@ class SDKInitTests : FunSpec({
         waitForInitialization(os)
     }
 
-    test("initWithContext recovers when async internalInit throws unexpectedly") {
-        // Given: AndroidUtils.isAndroidUserUnlocked throws unexpectedly inside the async init,
-        // simulating any unexpected runtime exception during initialization (a service throwing
-        // during bootstrap, a dependency failing to resolve, etc.). suspendifyOnIO swallows
-        // exceptions internally, so without the catch in internalInit the deferred would never
-        // complete and accessors would deadlock on suspendCompletion.await().
-        val context = getApplicationContext<Context>()
-        val os = OneSignalImp()
-        val cause = RuntimeException("simulated init crash")
-
-        mockkObject(AndroidUtils)
-        every { AndroidUtils.isAndroidUserUnlocked(any()) } throws cause
-
-        try {
-            // When: public initWithContext returns true (the throw happens asynchronously).
-            os.initWithContext(context, "appId") shouldBe true
-
-            // Then: the async catch transitions to FAILED and completes the deferred, so
-            // accessors throw promptly instead of blocking forever.
-            val ex =
-                shouldThrow<IllegalStateException> {
-                    os.user.onesignalId
-                }
-            ex.message shouldBe "OneSignal initWithContext failed."
-            ex.suppressed.any { it === cause } shouldBe true
-        } finally {
-            unmockkObject(AndroidUtils)
-        }
-    }
-
     test("legacy mode logs guidance when accessor on main thread blocks during in-progress init") {
-        // Given: pre-#2605, legacy mode threw if the SDK wasn't ready; the blocking happened
-        // inside initWithContext itself (synchronous runBlocking). Now that init dispatches
-        // asynchronously, the first accessor on the main thread can block instead. Total ANR
-        // risk is roughly equivalent — just shifted in time — but it's no longer obviously
-        // located in initWithContext, so we log a warning that points callers to the suspend API.
+        // Given (FF-off): initWithContext on a background thread is parked inside
+        // runBlocking { internalInit } waiting on shared-prefs access. A *concurrent* call on
+        // the main thread (mocked) — accessor or login/logout — falls into the IN_PROGRESS
+        // branch of getServiceWithFeatureGate / requireInitForOperation and would block on
+        // runBlocking { suspendCompletion.await() }. Before that block, warnIfBlockingOnMainThread
+        // logs a warning so the ANR-risk shape is visible. The common case (init + accessor on
+        // the same thread) doesn't hit this — initWithContext blocks the caller, so by the time
+        // any accessor runs init is already SUCCESS or FAILED.
         val trigger = CountDownLatch(1)
         val context = getApplicationContext<Context>()
         val blockingPrefContext = BlockingPrefsContext(context, trigger)
@@ -548,23 +540,32 @@ class SDKInitTests : FunSpec({
 
         os.debug.addLogListener(listener)
         try {
-            // When: init kicks off but stalls inside internalInit on shared-prefs access.
-            os.initWithContext(blockingPrefContext, "appId")
+            // initWithContext runs on a background thread under FF-off so it doesn't block this
+            // test thread; it parks inside runBlocking on BlockingPrefsContext.unblockTrigger.
+            val initThread =
+                Thread {
+                    os.initWithContext(blockingPrefContext, "appId")
+                }
+            initThread.start()
+            // Give the init thread time to enter runBlocking and stall on the prefs read.
+            Thread.sleep(100)
             os.isInitialized shouldBe false
 
-            // Trigger the would-block accessor from a background thread (so the test thread
-            // doesn't actually hang on runBlocking) — the warning logged from inside
-            // warnIfBlockingOnMainThread is what we're verifying.
+            // Concurrent accessor on a "main" thread (isRunningOnMainThread mocked to true) hits
+            // the IN_PROGRESS branch and the warning fires.
             val accessorThread =
                 Thread {
                     runCatching { os.user.onesignalId }
                 }
             accessorThread.start()
-            accessorThread.join(500)
+            // Let warnIfBlockingOnMainThread log before we tear down.
+            Thread.sleep(100)
 
-            // The accessor is blocked waiting for init; release prefs so it can complete.
+            // Release prefs so init + accessor unwind cleanly.
             trigger.countDown()
+            initThread.join(2_000)
             accessorThread.join(2_000)
+            initThread.isAlive shouldBe false
             accessorThread.isAlive shouldBe false
 
             // Then: a warning must have been emitted with actionable guidance.
