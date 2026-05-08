@@ -17,6 +17,10 @@ class FeatureManagerTests : FunSpec({
         ThreadingMode.useBackgroundThreading = false
     }
 
+    afterEach {
+        ThreadingMode.useBackgroundThreading = false
+    }
+
     fun stubConfigModel(model: ConfigModel) {
         every { model.sdkRemoteFeatureFlags } returns emptyList()
         every { model.sdkRemoteFeatureFlagMetadata } returns null

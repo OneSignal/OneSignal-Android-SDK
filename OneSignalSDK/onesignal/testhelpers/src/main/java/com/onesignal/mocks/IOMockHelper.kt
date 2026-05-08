@@ -2,6 +2,7 @@ package com.onesignal.mocks
 
 import com.onesignal.common.threading.OneSignalDispatchers
 import com.onesignal.common.threading.suspendifyOnIO
+import com.onesignal.common.threading.suspendifyOnMain
 import io.kotest.core.listeners.AfterSpecListener
 import io.kotest.core.listeners.BeforeSpecListener
 import io.kotest.core.listeners.BeforeTestListener
@@ -30,7 +31,8 @@ import java.util.concurrent.atomic.AtomicInteger
  * (e.g., delay(50)) to wait for async work to finish.
  *
  * This helper avoids that by:
- *  - Mocking `suspendifyOnIO`, `launchOnIO`, and `launchOnDefault` so their blocks run immediately
+ *  - Mocking `suspendifyOnIO`, `suspendifyOnMain`, and `OneSignalDispatchers.launchOnIO` /
+ *    `launchOnDefault` so their blocks run immediately
  *  - Completing a `CompletableDeferred` when the async block finishes
  *  - Providing `awaitIO()` so tests can explicitly wait for all async work without sleeps
  *
@@ -97,7 +99,17 @@ object IOMockHelper : BeforeSpecListener, AfterSpecListener, BeforeTestListener,
                 try {
                     block()
                 } catch (e: Exception) {
-                    // Log but don't throw - let the test handle exceptions
+                    // Surface to stderr so swallowed test-side exceptions are at least visible in
+                    // build output. We deliberately don't completeExceptionally(ioWaiter, e) here:
+                    // some tests exercise async paths that legitimately throw and only assert via
+                    // mocks/state, so propagating through awaitIO() would change failure semantics
+                    // for the whole suite. If a test expects success, its own assertions / mockk
+                    // verifies will catch the missing side-effect; the stderr line gives the
+                    // diagnostic crumb to find the cause quickly.
+                    System.err.println(
+                        "IOMockHelper.trackAsyncWork swallowed ${e::class.simpleName}: " +
+                            e.stackTraceToString(),
+                    )
                 } finally {
                     // When each block finishes, decrement; if all done, complete waiter
                     if (pendingIo.decrementAndGet() == 0) {
@@ -110,6 +122,11 @@ object IOMockHelper : BeforeSpecListener, AfterSpecListener, BeforeTestListener,
         }
 
         every { suspendifyOnIO(any<suspend () -> Unit>()) } answers {
+            val block = firstArg<suspend () -> Unit>()
+            trackAsyncWork(block)
+        }
+
+        every { suspendifyOnMain(any<suspend () -> Unit>()) } answers {
             val block = firstArg<suspend () -> Unit>()
             trackAsyncWork(block)
         }

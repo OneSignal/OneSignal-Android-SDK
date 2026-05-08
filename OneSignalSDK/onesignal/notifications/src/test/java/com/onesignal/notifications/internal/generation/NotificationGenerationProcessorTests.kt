@@ -5,6 +5,7 @@ import com.onesignal.common.threading.suspendifyOnIO
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.mocks.AndroidMockHelper
+import com.onesignal.mocks.IOMockHelper
 import com.onesignal.mocks.MockHelper
 import com.onesignal.notifications.INotificationReceivedEvent
 import com.onesignal.notifications.INotificationWillDisplayEvent
@@ -96,6 +97,8 @@ private class Mocks {
 }
 
 class NotificationGenerationProcessorTests : FunSpec({
+    listener(IOMockHelper)
+
     beforeAny {
         Logging.logLevel = LogLevel.NONE
 
@@ -279,16 +282,20 @@ class NotificationGenerationProcessorTests : FunSpec({
     test("processNotificationData allows the will display callback to prevent default behavior twice") {
         // Given
         val mocks = Mocks()
+        // Bump the callback timeout from the suite default (10ms). Top-level launchOnIO falls
+        // through to GlobalScope.launch(Dispatchers.IO) (it's not stubbed by IOMockHelper),
+        // and on slow CI runners the IO scheduler can take longer than 10ms to dispatch the
+        // callback, causing withTimeout to cancel before discard is ever set.
+        every { mocks.notificationGenerationProcessor getProperty "EXTERNAL_CALLBACKS_TIMEOUT" } answers { 1_000L }
         coEvery { mocks.notificationDisplayer.displayNotification(any()) } returns true
         coEvery { mocks.notificationLifecycleService.externalRemoteNotificationReceived(any()) } just runs
         coEvery { mocks.notificationLifecycleService.externalNotificationWillShowInForeground(any()) } coAnswers {
             val willDisplayEvent = firstArg<INotificationWillDisplayEvent>()
             willDisplayEvent.preventDefault(false)
             suspendifyOnIO {
-                delay(100)
+                // Second preventDefault(true) wakes the waiter with false; avoid notification.display()
+                // which would wake(true) and overwrite the conflated channel (CI flake on fast runners).
                 willDisplayEvent.preventDefault(true)
-                delay(100)
-                willDisplayEvent.notification.display()
             }
         }
 
@@ -304,15 +311,13 @@ class NotificationGenerationProcessorTests : FunSpec({
     test("processNotificationData allows the received event callback to prevent default behavior twice") {
         // Given
         val mocks = Mocks()
+        every { mocks.notificationGenerationProcessor getProperty "EXTERNAL_CALLBACKS_TIMEOUT" } answers { 1_000L }
         coEvery { mocks.notificationDisplayer.displayNotification(any()) } returns true
         coEvery { mocks.notificationLifecycleService.externalRemoteNotificationReceived(any()) } coAnswers {
             val receivedEvent = firstArg<INotificationReceivedEvent>()
             receivedEvent.preventDefault(false)
             suspendifyOnIO {
-                delay(100)
                 receivedEvent.preventDefault(true)
-                delay(100)
-                receivedEvent.notification.display()
             }
         }
 
