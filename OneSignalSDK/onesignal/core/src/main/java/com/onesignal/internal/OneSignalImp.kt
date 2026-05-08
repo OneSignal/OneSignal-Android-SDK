@@ -50,6 +50,9 @@ internal class OneSignalImp(
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) : IOneSignal, IServiceProvider {
 
+    // Reset every time the synchronized(initLock) block flips state to IN_PROGRESS so that
+    // a retry-after-FAILED gets a fresh latch instead of an already-completed one. Mutated only
+    // under initLock; reads outside that lock must local-capture before suspending on it.
     @Volatile
     private var suspendCompletion = CompletableDeferred<Unit>()
 
@@ -307,6 +310,8 @@ internal class OneSignalImp(
             // Publish state and its associated metadata atomically.
             initFailureException = IllegalStateException("OneSignal initWithContext failed.")
             initState = InitState.IN_PROGRESS
+            // Fresh latch for this init attempt -- prevents retry-after-FAILED waiters from
+            // observing the prior init's already-completed deferred.
             suspendCompletion = CompletableDeferred()
         }
 
@@ -337,9 +342,13 @@ internal class OneSignalImp(
         }
 
         // FF-off: legacy behavior. Block the caller thread until initialization completes.
-        // [internalInit] owns its own terminal-state cleanup on failure and rethrows, so any
-        // exception propagates to the caller through runBlocking unchanged — matching the
-        // pre-#2605 contract on main exactly.
+        // [internalInit] owns its own terminal-state cleanup on failure (catches, transitions
+        // to FAILED via [completeInit], returns `false` with the cause attached to
+        // `initFailureException.suppressed`) so the caller gets `false` returned through
+        // `runBlocking` and a subsequent accessor surfaces the failure cause via
+        // [waitUntilInitInternal]. The synchronous-bootstrap throw above (the only path that
+        // can throw out of `initWithContext`) is preserved by the `try { ensureApplicationServiceStarted }`
+        // catch — same shape pre-#2605 callers got from runBlocking propagation.
         return runBlocking(runtimeIoDispatcher) {
             internalInit(context, appId)
         }
@@ -353,7 +362,12 @@ internal class OneSignalImp(
         return initWithContextSuspend(context, null)
     }
 
-    @Suppress("TooGenericExceptionCaught", "ReturnCount")
+    // ReturnCount: 4 returns vs detekt's limit of 2. The function intentionally has
+    // multiple early-return failure paths (user-locked, missing appId, exception). The
+    // existing detekt baseline entry was for the unannotated signature; once we added
+    // @Suppress(TooGenericExceptionCaught) the baseline ID no longer matched, so we
+    // suppress ReturnCount inline rather than churning the baseline.
+    @Suppress("ReturnCount", "TooGenericExceptionCaught")
     private fun internalInit(
         context: Context,
         appId: String?,
@@ -395,14 +409,22 @@ internal class OneSignalImp(
             completeInit(InitState.SUCCESS)
             return true
         } catch (e: Exception) {
-            // Defense-in-depth: suspendifyOnIO swallows exceptions internally, so any unhandled
-            // throw from a step above (a service throwing during bootstrap, a dependency failing
-            // to resolve, etc.) would otherwise leave suspendCompletion uncompleted and the SDK
-            // wedged in IN_PROGRESS forever — accessors would deadlock on suspendCompletion.await().
-            Logging.error("Unexpected exception during OneSignal initialization", e)
+            // Any unchecked throw from initEssentials / bootstrapServices / subscribeToConfigStore /
+            // updateConfig / userSwitcher.initUser / startupService.scheduleStart would otherwise
+            // leave initState at IN_PROGRESS forever and `suspendCompletion` uncompleted —
+            // accessors and re-entrant suspend callers (e.g. SyncJobService) would deadlock on
+            // `await()`. Reach a terminal state via [completeInit] (atomic state+completion) and
+            // return `false`. The throw is captured on `initFailureException.addSuppressed(...)`
+            // so a subsequent accessor surfaces it to the caller. We deliberately don't rethrow
+            // here: the FF-on `suspendifyOnIO { ... }` arm would swallow it anyway, the FF-off
+            // `runBlocking { ... }` arm would propagate it, and the [initWithContextSuspend]
+            // path would propagate it — three different observable behaviors for the same kind
+            // of failure. `return false` gives one consistent shape; callers can query
+            // `initFailureException` (or just the returned `Boolean`) to react.
+            Logging.error("OneSignal: internalInit threw unexpectedly; marking init FAILED", e)
             initFailureException?.addSuppressed(e)
             completeInit(InitState.FAILED)
-            throw e
+            return false
         }
     }
 
@@ -566,7 +588,16 @@ internal class OneSignalImp(
      * @param operationName Optional operation name to include in error messages (e.g., "login", "logout")
      */
     private suspend fun waitUntilInitInternal(operationName: String? = null) {
-        when (initState) {
+        // Local-capture state + deferred under initLock so we await on the same generation
+        // we observed (a concurrent retry-after-FAILED can replace `suspendCompletion`).
+        val observedState: InitState
+        val completionToAwait: CompletableDeferred<Unit>?
+        synchronized(initLock) {
+            observedState = initState
+            completionToAwait = if (observedState == InitState.IN_PROGRESS) suspendCompletion else null
+        }
+
+        when (observedState) {
             InitState.NOT_STARTED -> {
                 val message = if (operationName != null) {
                     "Must call 'initWithContext' before '$operationName'"
@@ -588,7 +619,7 @@ internal class OneSignalImp(
                 // This is intentional per PR #2412: "ANR is the lesser of two evils and the app can recover,
                 // where an uncaught throw it can not." To avoid ANRs, call SDK methods from background threads
                 // or use the suspend API from coroutines.
-                suspendCompletion.await()
+                completionToAwait!!.await()
 
                 // Log how long initialization took
                 val elapsed = System.currentTimeMillis() - startTime
@@ -728,20 +759,39 @@ internal class OneSignalImp(
     ): Boolean {
         Logging.log(LogLevel.DEBUG, "initWithContext(context: $context, appId: $appId)")
 
-        // This ensures the stack trace points to the caller that triggered init, not the async worker thread.
-        initFailureException = IllegalStateException("OneSignal initWithContext failed.")
-
         // Use IO dispatcher for initialization to prevent ANRs and optimize for I/O operations
         return withContext(runtimeIoDispatcher) {
-            // do not do this again if already initialized or init is in progress
+            val shouldRunInit: Boolean
+            // Local-capture under the lock so that even if a concurrent retry-after-FAILED
+            // resets `suspendCompletion`, we await on the same generation we observed.
+            val completionToAwait: CompletableDeferred<Unit>?
             synchronized(initLock) {
                 if (initState.isSDKAccessible()) {
-                    Logging.log(LogLevel.DEBUG, "initWithContext: SDK already initialized or in progress")
-                    return@withContext true
+                    shouldRunInit = false
+                    completionToAwait = suspendCompletion
+                } else {
+                    shouldRunInit = true
+                    completionToAwait = null
+                    initState = InitState.IN_PROGRESS
+                    // Fresh latch for this init attempt.
+                    suspendCompletion = CompletableDeferred()
+                    // Only the call that actually starts init owns the failure-attribution exception.
+                    // Re-entrant callers must not overwrite it -- otherwise the failure stack trace
+                    // would point at the SyncJobService coroutine instead of the original initiator.
+                    initFailureException = IllegalStateException("OneSignal initWithContext failed.")
                 }
+            }
 
-                initState = InitState.IN_PROGRESS
-                suspendCompletion = CompletableDeferred()
+            if (!shouldRunInit) {
+                // Another caller has already started (or completed) init. Honor this method's
+                // contract by suspending until initialization is *fully* completed -- not just
+                // kicked off. This closes a race where re-entrant suspend callers (e.g. the
+                // SyncJobService entry point under SDK_BACKGROUND_THREADING) would otherwise
+                // proceed to use IBackgroundService implementations like SessionService whose
+                // bootstrap() had not yet run, NPE'ing on still-null model fields.
+                Logging.log(LogLevel.DEBUG, "initWithContext: init already in progress or completed, awaiting completion")
+                completionToAwait!!.await()
+                return@withContext initState == InitState.SUCCESS
             }
 
             val result = internalInit(context, appId)
