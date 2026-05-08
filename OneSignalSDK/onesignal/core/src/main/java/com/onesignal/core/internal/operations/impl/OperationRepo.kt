@@ -2,7 +2,9 @@ package com.onesignal.core.internal.operations.impl
 
 import com.onesignal.common.IDManager
 import com.onesignal.common.threading.WaiterWithValue
+import com.onesignal.common.threading.suspendifyOnIO
 import com.onesignal.core.internal.config.ConfigModelStore
+import com.onesignal.core.internal.config.impl.IdentityVerificationService
 import com.onesignal.core.internal.operations.ExecutionResult
 import com.onesignal.core.internal.operations.GroupComparisonType
 import com.onesignal.core.internal.operations.IOperationExecutor
@@ -12,6 +14,8 @@ import com.onesignal.core.internal.startup.IStartableService
 import com.onesignal.core.internal.time.ITime
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
+import com.onesignal.user.internal.jwt.JwtRequirement
+import com.onesignal.user.internal.jwt.JwtTokenStore
 import com.onesignal.user.internal.operations.LoginUserOperation
 import com.onesignal.user.internal.operations.impl.states.NewRecordsState
 import kotlinx.coroutines.CompletableDeferred
@@ -30,7 +34,10 @@ internal class OperationRepo(
     private val _configModelStore: ConfigModelStore,
     private val _time: ITime,
     private val _newRecordState: NewRecordsState,
+    private val _jwtTokenStore: JwtTokenStore,
+    private val _identityVerificationService: IdentityVerificationService,
 ) : IOperationRepo, IStartableService {
+
     internal class OperationQueueItem(
         val operation: Operation,
         var waiter: WaiterWithValue<Boolean>? = null, // waiter may transfer during operation de-dupe
@@ -104,6 +111,12 @@ internal class OperationRepo(
 
     override fun start() {
         paused = false
+        // Wire post-HYDRATE choreography. Constructor injection of IOperationRepo into
+        // IdentityVerificationService would create a cycle, so the service exposes a setter
+        // that we call here.
+        _identityVerificationService.setOnJwtConfigHydratedHandler { ivRequired ->
+            onJwtConfigHydrated(ivRequired)
+        }
         scope.launch {
             // load saved operations first then start processing the queue to ensure correct operation order
             loadSavedOperations()
@@ -122,6 +135,8 @@ internal class OperationRepo(
         operation: Operation,
         flush: Boolean,
     ) {
+        if (shouldSuppressAnonymousOp(operation)) return
+
         Logging.log(LogLevel.DEBUG, "OperationRepo.enqueue(operation: $operation, flush: $flush)")
 
         operation.id = UUID.randomUUID().toString()
@@ -134,6 +149,8 @@ internal class OperationRepo(
         operation: Operation,
         flush: Boolean,
     ): Boolean {
+        if (shouldSuppressAnonymousOp(operation)) return false
+
         Logging.log(LogLevel.DEBUG, "OperationRepo.enqueueAndWait(operation: $operation, force: $flush)")
 
         operation.id = UUID.randomUUID().toString()
@@ -142,6 +159,26 @@ internal class OperationRepo(
             internalEnqueue(OperationQueueItem(operation, waiter, bucket = enqueueIntoBucket), flush, true)
         }
         return waiter.waitForWake()
+    }
+
+    /**
+     * Drop anonymous (externalId == null) operations at enqueue time when IV is required —
+     * they cannot be authenticated and would otherwise sit in the queue forever, blocked by
+     * `hasValidJwtIfRequired`. LoginUserOperation is exempt because it's enqueued
+     * intentionally during logout and purged later by [removeOperationsWithoutExternalId]
+     * if needed. Outer-gated on `newCodePathsRun` so Phase 1 customers stay byte-for-byte
+     * on the legacy enqueue path.
+     */
+    private fun shouldSuppressAnonymousOp(op: Operation): Boolean {
+        if (!_identityVerificationService.newCodePathsRun) return false
+        if (op is LoginUserOperation) return false
+        val suppress =
+            _configModelStore.model.useIdentityVerification == JwtRequirement.REQUIRED &&
+                op.externalId == null
+        if (suppress) {
+            Logging.debug("OperationRepo: suppressing anonymous op under IV-required: $op")
+        }
+        return suppress
     }
 
     /**
@@ -203,9 +240,10 @@ internal class OperationRepo(
             } else {
                 queue.add(queueItem)
             }
-        }
-        if (addToStore) {
-            _operationModelStore.add(queueItem.operation)
+            // Inside the lock so queue.add + store.add are atomic vs. the IO-side purge.
+            if (addToStore) {
+                _operationModelStore.add(queueItem.operation)
+            }
         }
 
         waiter.wake(LoopWaiterMessage(flush, 0))
@@ -225,7 +263,10 @@ internal class OperationRepo(
             }
 
             val ops = getNextOps(executeBucket)
-            Logging.debug("processQueueForever:ops:\n$ops")
+            if (Logging.atLogLevel(LogLevel.DEBUG)) {
+                val queueSnapshotForLogging = synchronized(queue) { queue.toList() }
+                Logging.debug("processQueueForever:ops:\n$ops\nqueue(${queueSnapshotForLogging.size}):\n$queueSnapshotForLogging")
+            }
 
             if (ops != null) {
                 executeOperations(ops)
@@ -242,6 +283,52 @@ internal class OperationRepo(
     override fun forceExecuteOperations() {
         retryWaiter.wake(LoopWaiterMessage(true))
         waiter.wake(LoopWaiterMessage(false))
+    }
+
+    /**
+     * Drops queued operations whose externalId is null. Called by the IV-aware HYDRATE
+     * choreography in [OperationRepoIvExtensions] when `jwt_required` becomes REQUIRED
+     * to evict anon ops that can no longer execute.
+     */
+    internal fun removeOperationsWithoutExternalId() {
+        val removedIds: List<String> =
+            synchronized(queue) {
+                val anonymous = queue.filter { it.operation.externalId == null }
+                anonymous.forEach { it.waiter?.wake(false) }
+                queue.removeAll(anonymous)
+                // IV=ON never transfers anonymous state; clear existingOnesignalId so the
+                // executor takes the createUser (upsert) path. The merge-anon-into-identified
+                // path can't dispatch under IV — anon user creation requires a JWT-less call
+                // the backend rejects — and a stale local-id existingOnesignalId would leave
+                // canStartExecute=false forever, deadlocking the queue.
+                queue.forEach { item ->
+                    val op = item.operation
+                    if (op is LoginUserOperation && op.existingOnesignalId != null) {
+                        Logging.debug("OperationRepo: cleared existingOnesignalId on LoginUserOperation (was ${op.existingOnesignalId})")
+                        op.existingOnesignalId = null
+                    }
+                }
+                Logging.debug("OperationRepo: removeOperationsWithoutExternalId removed ${anonymous.size} of ${anonymous.size + queue.size} operations")
+                anonymous.map { it.operation.id }
+            }
+        // Persistent store removal outside the queue lock; ModelStore has its own locking.
+        removedIds.forEach { _operationModelStore.remove(it) }
+    }
+
+    /**
+     * Post-HYDRATE maintenance: scheduled on IO so it runs *after* `loadSavedOperations`
+     * populates the queue (fix for an earlier race where the purge ran against an empty
+     * in-memory queue on cold start). Force-execute always fires to release the pre-HYDRATE
+     * deferral in [getNextOps]. Invoked via the handler registered in [start].
+     */
+    internal fun onJwtConfigHydrated(ivRequired: Boolean) {
+        suspendifyOnIO {
+            awaitInitialized()
+            if (ivRequired) {
+                removeOperationsWithoutExternalId()
+            }
+            forceExecuteOperations()
+        }
     }
 
     /**
@@ -305,14 +392,27 @@ internal class OperationRepo(
                     ops.forEach { _operationModelStore.remove(it.operation.id) }
                     ops.forEach { it.waiter?.wake(true) }
                 }
-                ExecutionResult.FAIL_UNAUTHORIZED, // TODO: Need to provide callback for app to reset JWT. For now, fail with no retry.
+                ExecutionResult.FAIL_UNAUTHORIZED -> {
+                    // Outer gate: dispatch to IV extension only on new code paths.
+                    val handled =
+                        _identityVerificationService.newCodePathsRun &&
+                            handleFailUnauthorized(
+                                startingOp,
+                                ops,
+                                _jwtTokenStore,
+                                _identityVerificationService.ivBehaviorActive,
+                            )
+                    if (!handled) {
+                        // IV inactive or anon op: drop and wake waiters, matching FAIL_NORETRY.
+                        Logging.warn("Operation execution failed without retry: $operations")
+                        dropAndWake(ops)
+                    }
+                }
                 ExecutionResult.FAIL_NORETRY,
                 ExecutionResult.FAIL_CONFLICT,
                 -> {
                     Logging.warn("Operation execution failed without retry: $operations")
-                    // on failure we remove the operation from the store and wake any waiters
-                    ops.forEach { _operationModelStore.remove(it.operation.id) }
-                    ops.forEach { it.waiter?.wake(false) }
+                    dropAndWake(ops)
                 }
                 ExecutionResult.SUCCESS_STARTING_ONLY -> {
                     // remove the starting operation from the store and wake any waiters, then
@@ -372,11 +472,14 @@ internal class OperationRepo(
             }
         } catch (e: Throwable) {
             Logging.log(LogLevel.ERROR, "Error attempting to execute operation: $ops", e)
-
-            // on failure we remove the operation from the store and wake any waiters
-            ops.forEach { _operationModelStore.remove(it.operation.id) }
-            ops.forEach { it.waiter?.wake(false) }
+            dropAndWake(ops)
         }
+    }
+
+    /** Drop ops from the persistent store and wake any waiters with `false` (failure). */
+    private fun dropAndWake(ops: List<OperationQueueItem>) {
+        ops.forEach { _operationModelStore.remove(it.operation.id) }
+        ops.forEach { it.waiter?.wake(false) }
     }
 
     /**
@@ -415,12 +518,28 @@ internal class OperationRepo(
     }
 
     internal fun getNextOps(bucketFilter: Int): List<OperationQueueItem>? {
+        // Pre-HYDRATE deferral: wait until we know whether IV is required before dispatching
+        // any op, otherwise we could send an unsigned request when the customer has IV enabled.
+        // `isInitializedWithRemote` would be wrong here: pre-IV SDKs persisted it as `true`
+        // without ever reading `jwt_required`, so cached config from an upgrade looks
+        // "initialized" while `useIdentityVerification` is still UNKNOWN. Gating on UNKNOWN
+        // directly is correct because the IV-aware backend ships alongside this SDK — every
+        // successful HYDRATE will populate the field with REQUIRED or NOT_REQUIRED.
+        if (_configModelStore.model.useIdentityVerification == JwtRequirement.UNKNOWN) {
+            return null
+        }
+
+        // Snapshot gate state once per pass so all queue items see the same IV view.
+        val newCodePathsRun = _identityVerificationService.newCodePathsRun
+        val ivBehaviorActive = _identityVerificationService.ivBehaviorActive
         return synchronized(queue) {
             val startingOp =
                 queue.firstOrNull {
                     it.operation.canStartExecute &&
                         _newRecordState.canAccess(it.operation.applyToRecordId) &&
-                        it.bucket <= bucketFilter
+                        it.bucket <= bucketFilter &&
+                        // Outer gate: skip IV JWT check entirely on old code path.
+                        (!newCodePathsRun || hasValidJwtIfRequired(_jwtTokenStore, it.operation, ivBehaviorActive))
                 }
 
             if (startingOp != null) {

@@ -14,6 +14,8 @@ import com.onesignal.user.internal.backend.PropertiesObject
 import com.onesignal.user.internal.backend.SubscriptionObject
 import com.onesignal.user.internal.backend.SubscriptionObjectType
 import com.onesignal.user.internal.identity.IdentityModel
+import com.onesignal.user.internal.operations.ExecutorMocks.Companion.getIdentityVerificationService
+import com.onesignal.user.internal.operations.ExecutorMocks.Companion.getJwtTokenStore
 import com.onesignal.user.internal.operations.impl.executors.IdentityOperationExecutor
 import com.onesignal.user.internal.operations.impl.executors.LoginUserOperationExecutor
 import com.onesignal.user.internal.properties.PropertiesModel
@@ -43,6 +45,7 @@ class LoginUserOperationExecutorTests : FunSpec({
         CreateSubscriptionOperation(
             appId,
             localOneSignalId,
+            null,
             "subscriptionId1",
             SubscriptionType.PUSH,
             true,
@@ -76,6 +79,7 @@ class LoginUserOperationExecutorTests : FunSpec({
                 mockSubscriptionsModelStore,
                 MockHelper.configModelStore(),
                 MockHelper.languageContext(),
+                getJwtTokenStore(), getIdentityVerificationService(), mockk<com.onesignal.common.consistency.models.IConsistencyManager>(relaxed = true),
             )
         val operations =
             listOf<Operation>(
@@ -120,6 +124,7 @@ class LoginUserOperationExecutorTests : FunSpec({
                 mockSubscriptionsModelStore,
                 MockHelper.configModelStore(),
                 MockHelper.languageContext(),
+                getJwtTokenStore(), getIdentityVerificationService(), mockk<com.onesignal.common.consistency.models.IConsistencyManager>(relaxed = true),
             )
         val operations =
             listOf<Operation>(
@@ -148,7 +153,7 @@ class LoginUserOperationExecutorTests : FunSpec({
         val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
 
         val loginUserOperationExecutor =
-            LoginUserOperationExecutor(mockIdentityOperationExecutor, AndroidMockHelper.applicationService(), MockHelper.deviceService(), mockUserBackendService, mockIdentityModelStore, mockPropertiesModelStore, mockSubscriptionsModelStore, MockHelper.configModelStore(), MockHelper.languageContext())
+            LoginUserOperationExecutor(mockIdentityOperationExecutor, AndroidMockHelper.applicationService(), MockHelper.deviceService(), mockUserBackendService, mockIdentityModelStore, mockPropertiesModelStore, mockSubscriptionsModelStore, MockHelper.configModelStore(), MockHelper.languageContext(), getJwtTokenStore(), getIdentityVerificationService(), mockk<com.onesignal.common.consistency.models.IConsistencyManager>(relaxed = true))
         val operations =
             listOf<Operation>(
                 LoginUserOperation(appId, localOneSignalId, null, null),
@@ -176,7 +181,7 @@ class LoginUserOperationExecutorTests : FunSpec({
         val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
 
         val loginUserOperationExecutor =
-            LoginUserOperationExecutor(mockIdentityOperationExecutor, MockHelper.applicationService(), MockHelper.deviceService(), mockUserBackendService, mockIdentityModelStore, mockPropertiesModelStore, mockSubscriptionsModelStore, MockHelper.configModelStore(), MockHelper.languageContext())
+            LoginUserOperationExecutor(mockIdentityOperationExecutor, MockHelper.applicationService(), MockHelper.deviceService(), mockUserBackendService, mockIdentityModelStore, mockPropertiesModelStore, mockSubscriptionsModelStore, MockHelper.configModelStore(), MockHelper.languageContext(), getJwtTokenStore(), getIdentityVerificationService(), mockk<com.onesignal.common.consistency.models.IConsistencyManager>(relaxed = true))
         val operations = listOf<Operation>(LoginUserOperation(appId, localOneSignalId, "externalId", null))
 
         // When
@@ -214,6 +219,7 @@ class LoginUserOperationExecutorTests : FunSpec({
                 mockSubscriptionsModelStore,
                 MockHelper.configModelStore(),
                 MockHelper.languageContext(),
+                getJwtTokenStore(), getIdentityVerificationService(), mockk<com.onesignal.common.consistency.models.IConsistencyManager>(relaxed = true),
             )
         val operations = listOf<Operation>(LoginUserOperation(appId, localOneSignalId, "externalId", null))
 
@@ -242,7 +248,7 @@ class LoginUserOperationExecutorTests : FunSpec({
         val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
 
         val loginUserOperationExecutor =
-            LoginUserOperationExecutor(mockIdentityOperationExecutor, MockHelper.applicationService(), MockHelper.deviceService(), mockUserBackendService, mockIdentityModelStore, mockPropertiesModelStore, mockSubscriptionsModelStore, MockHelper.configModelStore(), MockHelper.languageContext())
+            LoginUserOperationExecutor(mockIdentityOperationExecutor, MockHelper.applicationService(), MockHelper.deviceService(), mockUserBackendService, mockIdentityModelStore, mockPropertiesModelStore, mockSubscriptionsModelStore, MockHelper.configModelStore(), MockHelper.languageContext(), getJwtTokenStore(), getIdentityVerificationService(), mockk<com.onesignal.common.consistency.models.IConsistencyManager>(relaxed = true))
         val operations = listOf<Operation>(LoginUserOperation(appId, localOneSignalId, "externalId", "existingOneSignalId"))
 
         // When
@@ -278,7 +284,7 @@ class LoginUserOperationExecutorTests : FunSpec({
         val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
 
         val loginUserOperationExecutor =
-            LoginUserOperationExecutor(mockIdentityOperationExecutor, MockHelper.applicationService(), MockHelper.deviceService(), mockUserBackendService, mockIdentityModelStore, mockPropertiesModelStore, mockSubscriptionsModelStore, MockHelper.configModelStore(), MockHelper.languageContext())
+            LoginUserOperationExecutor(mockIdentityOperationExecutor, MockHelper.applicationService(), MockHelper.deviceService(), mockUserBackendService, mockIdentityModelStore, mockPropertiesModelStore, mockSubscriptionsModelStore, MockHelper.configModelStore(), MockHelper.languageContext(), getJwtTokenStore(), getIdentityVerificationService(), mockk<com.onesignal.common.consistency.models.IConsistencyManager>(relaxed = true))
         val operations = listOf<Operation>(LoginUserOperation(appId, localOneSignalId, "externalId", "existingOneSignalId"))
 
         // When
@@ -314,7 +320,7 @@ class LoginUserOperationExecutorTests : FunSpec({
         val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
 
         val loginUserOperationExecutor =
-            LoginUserOperationExecutor(mockIdentityOperationExecutor, MockHelper.applicationService(), MockHelper.deviceService(), mockUserBackendService, mockIdentityModelStore, mockPropertiesModelStore, mockSubscriptionsModelStore, MockHelper.configModelStore(), MockHelper.languageContext())
+            LoginUserOperationExecutor(mockIdentityOperationExecutor, MockHelper.applicationService(), MockHelper.deviceService(), mockUserBackendService, mockIdentityModelStore, mockPropertiesModelStore, mockSubscriptionsModelStore, MockHelper.configModelStore(), MockHelper.languageContext(), getJwtTokenStore(), getIdentityVerificationService(), mockk<com.onesignal.common.consistency.models.IConsistencyManager>(relaxed = true))
         val operations = listOf<Operation>(LoginUserOperation(appId, localOneSignalId, "externalId", "existingOneSignalId"))
 
         // When
@@ -352,7 +358,7 @@ class LoginUserOperationExecutorTests : FunSpec({
         val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
 
         val loginUserOperationExecutor =
-            LoginUserOperationExecutor(mockIdentityOperationExecutor, MockHelper.applicationService(), MockHelper.deviceService(), mockUserBackendService, mockIdentityModelStore, mockPropertiesModelStore, mockSubscriptionsModelStore, MockHelper.configModelStore(), MockHelper.languageContext())
+            LoginUserOperationExecutor(mockIdentityOperationExecutor, MockHelper.applicationService(), MockHelper.deviceService(), mockUserBackendService, mockIdentityModelStore, mockPropertiesModelStore, mockSubscriptionsModelStore, MockHelper.configModelStore(), MockHelper.languageContext(), getJwtTokenStore(), getIdentityVerificationService(), mockk<com.onesignal.common.consistency.models.IConsistencyManager>(relaxed = true))
         val operations = listOf<Operation>(LoginUserOperation(appId, localOneSignalId, "externalId", "existingOneSignalId"))
 
         // When
@@ -403,6 +409,7 @@ class LoginUserOperationExecutorTests : FunSpec({
                 mockSubscriptionsModelStore,
                 MockHelper.configModelStore(),
                 MockHelper.languageContext(),
+                getJwtTokenStore(), getIdentityVerificationService(), mockk<com.onesignal.common.consistency.models.IConsistencyManager>(relaxed = true),
             )
         val operations =
             listOf<Operation>(
@@ -410,6 +417,7 @@ class LoginUserOperationExecutorTests : FunSpec({
                 CreateSubscriptionOperation(
                     appId,
                     localOneSignalId,
+                    null,
                     "subscriptionId1",
                     SubscriptionType.PUSH,
                     true,
@@ -419,6 +427,7 @@ class LoginUserOperationExecutorTests : FunSpec({
                 UpdateSubscriptionOperation(
                     appId,
                     localOneSignalId,
+                    null,
                     "subscriptionId1",
                     SubscriptionType.PUSH,
                     true,
@@ -428,13 +437,14 @@ class LoginUserOperationExecutorTests : FunSpec({
                 CreateSubscriptionOperation(
                     appId,
                     localOneSignalId,
+                    null,
                     "subscriptionId2",
                     SubscriptionType.EMAIL,
                     true,
                     "name@company.com",
                     SubscriptionStatus.SUBSCRIBED,
                 ),
-                DeleteSubscriptionOperation(appId, localOneSignalId, "subscriptionId2"),
+                DeleteSubscriptionOperation(appId, localOneSignalId, null, "subscriptionId2"),
             )
 
         // When
@@ -504,6 +514,7 @@ class LoginUserOperationExecutorTests : FunSpec({
                 mockSubscriptionsModelStore,
                 MockHelper.configModelStore(),
                 MockHelper.languageContext(),
+                getJwtTokenStore(), getIdentityVerificationService(), mockk<com.onesignal.common.consistency.models.IConsistencyManager>(relaxed = true),
             )
         val operations =
             listOf<Operation>(
@@ -511,6 +522,7 @@ class LoginUserOperationExecutorTests : FunSpec({
                 CreateSubscriptionOperation(
                     appId,
                     localOneSignalId,
+                    null,
                     localSubscriptionId1,
                     SubscriptionType.PUSH,
                     true,
@@ -520,6 +532,7 @@ class LoginUserOperationExecutorTests : FunSpec({
                 CreateSubscriptionOperation(
                     appId,
                     localOneSignalId,
+                    null,
                     localSubscriptionId2,
                     SubscriptionType.EMAIL,
                     true,
@@ -590,6 +603,7 @@ class LoginUserOperationExecutorTests : FunSpec({
                 mockSubscriptionsModelStore,
                 MockHelper.configModelStore(),
                 MockHelper.languageContext(),
+                getJwtTokenStore(), getIdentityVerificationService(), mockk<com.onesignal.common.consistency.models.IConsistencyManager>(relaxed = true),
             )
         val operations =
             listOf<Operation>(
@@ -597,6 +611,7 @@ class LoginUserOperationExecutorTests : FunSpec({
                 CreateSubscriptionOperation(
                     appId,
                     localOneSignalId,
+                    null,
                     localSubscriptionId1,
                     SubscriptionType.PUSH,
                     true,
@@ -606,6 +621,7 @@ class LoginUserOperationExecutorTests : FunSpec({
                 CreateSubscriptionOperation(
                     appId,
                     localOneSignalId,
+                    null,
                     localSubscriptionId2,
                     SubscriptionType.EMAIL,
                     true,
@@ -662,6 +678,7 @@ class LoginUserOperationExecutorTests : FunSpec({
                 mockSubscriptionsModelStore,
                 MockHelper.configModelStore(),
                 MockHelper.languageContext(),
+                getJwtTokenStore(), getIdentityVerificationService(), mockk<com.onesignal.common.consistency.models.IConsistencyManager>(relaxed = true),
             )
         val operations =
             listOf<Operation>(
@@ -669,6 +686,7 @@ class LoginUserOperationExecutorTests : FunSpec({
                 CreateSubscriptionOperation(
                     appId,
                     localOneSignalId,
+                    null,
                     localSubscriptionId1,
                     SubscriptionType.PUSH,
                     true,
@@ -678,6 +696,7 @@ class LoginUserOperationExecutorTests : FunSpec({
                 CreateSubscriptionOperation(
                     appId,
                     localOneSignalId,
+                    null,
                     localSubscriptionId2,
                     SubscriptionType.EMAIL,
                     true,
@@ -725,6 +744,7 @@ class LoginUserOperationExecutorTests : FunSpec({
                 mockSubscriptionsModelStore,
                 MockHelper.configModelStore(),
                 MockHelper.languageContext(),
+                getJwtTokenStore(), getIdentityVerificationService(), mockk<com.onesignal.common.consistency.models.IConsistencyManager>(relaxed = true),
             )
         // anonymous Login request
         val operations = listOf<Operation>(LoginUserOperation(appId, localOneSignalId, null, null))
@@ -771,14 +791,15 @@ class LoginUserOperationExecutorTests : FunSpec({
                 mockSubscriptionsModelStore,
                 MockHelper.configModelStore(),
                 MockHelper.languageContext(),
+                getJwtTokenStore(), getIdentityVerificationService(), mockk<com.onesignal.common.consistency.models.IConsistencyManager>(relaxed = true),
             )
 
         // send PUSH then EMAIL (local IDs 1,2) — order differs from backend response
         val ops =
             listOf(
                 LoginUserOperation(appId, localOneSignalId, null, null),
-                CreateSubscriptionOperation(appId, localOneSignalId, localSubscriptionId1, SubscriptionType.PUSH, true, "pushToken2", SubscriptionStatus.SUBSCRIBED),
-                CreateSubscriptionOperation(appId, localOneSignalId, localSubscriptionId2, SubscriptionType.EMAIL, true, "name@company.com", SubscriptionStatus.SUBSCRIBED),
+                CreateSubscriptionOperation(appId, localOneSignalId, null, localSubscriptionId1, SubscriptionType.PUSH, true, "pushToken2", SubscriptionStatus.SUBSCRIBED),
+                CreateSubscriptionOperation(appId, localOneSignalId, null, localSubscriptionId2, SubscriptionType.EMAIL, true, "name@company.com", SubscriptionStatus.SUBSCRIBED),
             )
 
         // When
@@ -835,12 +856,13 @@ class LoginUserOperationExecutorTests : FunSpec({
                 mockSubscriptionsModelStore,
                 configModelStore,
                 MockHelper.languageContext(),
+                getJwtTokenStore(), getIdentityVerificationService(), mockk<com.onesignal.common.consistency.models.IConsistencyManager>(relaxed = true),
             )
 
         val ops =
             listOf(
                 LoginUserOperation(appId, localOneSignalId, null, null),
-                CreateSubscriptionOperation(appId, localOneSignalId, localSubscriptionId1, SubscriptionType.PUSH, true, "pushToken1", SubscriptionStatus.SUBSCRIBED),
+                CreateSubscriptionOperation(appId, localOneSignalId, null, localSubscriptionId1, SubscriptionType.PUSH, true, "pushToken1", SubscriptionStatus.SUBSCRIBED),
             )
 
         // When
@@ -858,5 +880,67 @@ class LoginUserOperationExecutorTests : FunSpec({
         // pushSubscriptionId should be updated from local to remote id
         configModelStore.model.pushSubscriptionId shouldBe remoteSubscriptionId1
         coVerify(exactly = 1) { mockUserBackendService.createUser(appId, mapOf(), any(), any()) }
+    }
+
+    test("IV active: loginUser with existingOnesignalId + externalId goes straight to createUser, skipping optimistic SetAliasOperation") {
+        // Given: IV active. Under legacy or Phase 3 this input would hit the optimistic-merge
+        // SetAliasOperation path; under IV we must skip that because IdentityOperationExecutor
+        // would resolve alias to (external_id, newExternalId) and target the wrong user.
+        val mockUserBackendService = mockk<IUserBackendService>()
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any(), any()) } returns
+            CreateUserResponse(
+                mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId),
+                PropertiesObject(),
+                listOf(),
+            )
+
+        // Strict mock: if the optimistic-merge path is reached, the test fails because no
+        // `execute` stub is registered on IdentityOperationExecutor.
+        val mockIdentityOperationExecutor = mockk<IdentityOperationExecutor>()
+
+        val mockIdentityModelStore = MockHelper.identityModelStore()
+        val mockPropertiesModelStore = MockHelper.propertiesModelStore()
+        val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
+
+        val loginUserOperationExecutor =
+            LoginUserOperationExecutor(
+                mockIdentityOperationExecutor,
+                AndroidMockHelper.applicationService(),
+                MockHelper.deviceService(),
+                mockUserBackendService,
+                mockIdentityModelStore,
+                mockPropertiesModelStore,
+                mockSubscriptionsModelStore,
+                MockHelper.configModelStore(),
+                MockHelper.languageContext(),
+                getJwtTokenStore(),
+                getIdentityVerificationService(newCodePathsRun = true, ivBehaviorActive = true),
+                mockk<com.onesignal.common.consistency.models.IConsistencyManager>(relaxed = true),
+            )
+
+        // LoginUserOperation has existingOnesignalId AND externalId — the input shape that
+        // triggers the optimistic-merge branch under legacy.
+        val operations =
+            listOf<Operation>(
+                LoginUserOperation(appId, localOneSignalId, "new-external-id", "existing-osid"),
+            )
+
+        // When
+        val response = loginUserOperationExecutor.execute(operations)
+
+        // Then
+        response.result shouldBe ExecutionResult.SUCCESS
+        coVerify(exactly = 1) {
+            mockUserBackendService.createUser(
+                appId,
+                mapOf(IdentityConstants.EXTERNAL_ID to "new-external-id"),
+                any(),
+                any(),
+                any(),
+            )
+        }
+        // IdentityOperationExecutor must NOT be invoked (strict mock enforces this via kotest's
+        // unstubbed-call failure; coVerify(exactly = 0) makes the expectation explicit).
+        coVerify(exactly = 0) { mockIdentityOperationExecutor.execute(any()) }
     }
 })

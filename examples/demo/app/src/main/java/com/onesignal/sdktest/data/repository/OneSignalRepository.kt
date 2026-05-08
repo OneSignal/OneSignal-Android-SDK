@@ -19,10 +19,15 @@ class OneSignalRepository {
     }
 
     // User operations
-    suspend fun loginUser(externalUserId: String) = withContext(Dispatchers.IO) {
-        Log.d(TAG, "Logging in user with externalUserId: $externalUserId")
-        OneSignal.login(externalUserId)
+    suspend fun loginUser(externalUserId: String, jwtToken: String? = null) = withContext(Dispatchers.IO) {
+        Log.d(TAG, "Logging in user with externalUserId: $externalUserId, jwt: ${if (jwtToken != null) "provided" else "none"}")
+        OneSignal.login(externalUserId, jwtToken)
         Log.d(TAG, "Logged in user with onesignalId: ${OneSignal.User.onesignalId}")
+    }
+
+    suspend fun updateUserJwt(externalUserId: String, jwtToken: String) = withContext(Dispatchers.IO) {
+        Log.d(TAG, "Updating JWT for externalUserId: $externalUserId")
+        OneSignal.updateUserJwt(externalUserId, jwtToken)
     }
 
     suspend fun logoutUser() = withContext(Dispatchers.IO) {
@@ -236,8 +241,8 @@ class OneSignalRepository {
     }
 
     // Fetch user data from API
-    suspend fun fetchUser(onesignalId: String): UserData? = withContext(Dispatchers.IO) {
-        Log.d(TAG, "Fetching user data for: $onesignalId")
-        OneSignalService.fetchUser(onesignalId)
+    suspend fun fetchUser(aliasLabel: String, aliasValue: String, jwt: String? = null): UserData? = withContext(Dispatchers.IO) {
+        Log.d(TAG, "Fetching user data by $aliasLabel: $aliasValue")
+        OneSignalService.fetchUser(aliasLabel, aliasValue, jwt)
     }
 }

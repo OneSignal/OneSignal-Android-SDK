@@ -10,7 +10,7 @@ import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.debug.internal.logging.Logging
 import kotlinx.serialization.json.JsonObject
 
-internal interface IFeatureManager {
+interface IFeatureManager {
     fun isEnabled(feature: FeatureFlag): Boolean
 
     /**
@@ -163,6 +163,10 @@ internal class FeatureManager(
                     enabled = enabled,
                     source = "FeatureManager:${feature.activationMode}"
                 )
+
+            // SDK_IDENTITY_VERIFICATION has no side effect: IdentityVerificationService
+            // reads featureStates directly via isEnabled() at gate-check time.
+            FeatureFlag.SDK_IDENTITY_VERIFICATION -> {}
         }
     }
 

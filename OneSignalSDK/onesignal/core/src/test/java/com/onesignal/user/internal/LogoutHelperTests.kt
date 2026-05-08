@@ -6,6 +6,9 @@ import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.mocks.MockHelper
 import com.onesignal.user.internal.operations.LoginUserOperation
+import com.onesignal.user.internal.subscriptions.SubscriptionModel
+import com.onesignal.user.internal.subscriptions.SubscriptionModelStore
+import com.onesignal.user.internal.subscriptions.SubscriptionType
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.mockk.every
@@ -49,6 +52,11 @@ class LogoutHelperTests : FunSpec({
                 userSwitcher = mockUserSwitcher,
                 operationRepo = mockOperationRepo,
                 configModel = mockConfigModel,
+                subscriptionModelStore = mockk(relaxed = true),
+                identityVerificationService = mockk(relaxed = true) {
+                    every { newCodePathsRun } returns false
+                    every { ivBehaviorActive } returns false
+                },
                 lock = logoutLock,
             )
 
@@ -80,6 +88,11 @@ class LogoutHelperTests : FunSpec({
                 userSwitcher = mockUserSwitcher,
                 operationRepo = mockOperationRepo,
                 configModel = mockConfigModel,
+                subscriptionModelStore = mockk(relaxed = true),
+                identityVerificationService = mockk(relaxed = true) {
+                    every { newCodePathsRun } returns false
+                    every { ivBehaviorActive } returns false
+                },
                 lock = logoutLock,
             )
 
@@ -120,6 +133,11 @@ class LogoutHelperTests : FunSpec({
                 userSwitcher = mockUserSwitcher,
                 operationRepo = mockOperationRepo,
                 configModel = mockConfigModel,
+                subscriptionModelStore = mockk(relaxed = true),
+                identityVerificationService = mockk(relaxed = true) {
+                    every { newCodePathsRun } returns false
+                    every { ivBehaviorActive } returns false
+                },
                 lock = logoutLock,
             )
 
@@ -153,6 +171,11 @@ class LogoutHelperTests : FunSpec({
                 userSwitcher = mockUserSwitcher,
                 operationRepo = mockOperationRepo,
                 configModel = mockConfigModel,
+                subscriptionModelStore = mockk(relaxed = true),
+                identityVerificationService = mockk(relaxed = true) {
+                    every { newCodePathsRun } returns false
+                    every { ivBehaviorActive } returns false
+                },
                 lock = logoutLock,
             )
 
@@ -171,5 +194,53 @@ class LogoutHelperTests : FunSpec({
         // Then - due to synchronization, operations should complete properly
         verify(atLeast = 1) { mockUserSwitcher.createAndSwitchToNewUser() }
         verify(atLeast = 1) { mockOperationRepo.enqueue(any()) }
+    }
+
+    test("switchUserIv marks current push sub as internally disabled before switching users") {
+        // Given - IV active, push sub model in store
+        val pushSubId = "push-sub-id"
+        val pushSubModel =
+            SubscriptionModel().apply {
+                id = pushSubId
+                type = SubscriptionType.PUSH
+            }
+        val mockSubscriptionModelStore = mockk<SubscriptionModelStore>(relaxed = true)
+        every { mockSubscriptionModelStore.get(pushSubId) } returns pushSubModel
+        val mockUserSwitcher = mockk<UserSwitcher>(relaxed = true)
+        val mockConfigModel = mockk<ConfigModel>()
+        every { mockConfigModel.pushSubscriptionId } returns pushSubId
+
+        // When
+        val handled = switchUserIv(mockUserSwitcher, mockSubscriptionModelStore, mockConfigModel, ivBehaviorActive = true)
+
+        // Then
+        handled shouldBe true
+
+        // Order: flag must be set on the OLD push sub BEFORE the user-switch — setting it
+        // with the default NORMAL tag fires an UpdateSubscriptionOperation against the OLD
+        // user with their still-valid JWT, telling the backend that this device's push
+        // subscription is unsubscribing as the user logs out.
+        verifyOrder {
+            mockSubscriptionModelStore.get(pushSubId)
+            mockUserSwitcher.createAndSwitchToNewUser(suppressBackendOperation = true)
+        }
+
+        // The flag is set on the model (verified via the underlying property).
+        pushSubModel.isDisabledInternally shouldBe true
+    }
+
+    test("switchUserIv returns false when IV behavior is inactive") {
+        // Given - Phase 3: new code path on, IV behavior off
+        val mockSubscriptionModelStore = mockk<SubscriptionModelStore>(relaxed = true)
+        val mockUserSwitcher = mockk<UserSwitcher>(relaxed = true)
+        val mockConfigModel = mockk<ConfigModel>(relaxed = true)
+
+        // When
+        val handled = switchUserIv(mockUserSwitcher, mockSubscriptionModelStore, mockConfigModel, ivBehaviorActive = false)
+
+        // Then - falls through to legacy logout flow; no IV-specific calls.
+        handled shouldBe false
+        verify(exactly = 0) { mockUserSwitcher.createAndSwitchToNewUser(suppressBackendOperation = any()) }
+        verify(exactly = 0) { mockSubscriptionModelStore.get(any()) }
     }
 })

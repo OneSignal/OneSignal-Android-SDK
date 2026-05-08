@@ -8,10 +8,13 @@ import com.onesignal.common.NetworkUtils
 import com.onesignal.common.OneSignalUtils
 import com.onesignal.common.RootToolsInternalMethods
 import com.onesignal.common.TimeUtils
+import com.onesignal.common.consistency.enums.IamFetchRywTokenKey
+import com.onesignal.common.consistency.models.IConsistencyManager
 import com.onesignal.common.exceptions.BackendException
 import com.onesignal.common.modeling.ModelChangeTags
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.config.ConfigModelStore
+import com.onesignal.core.internal.config.impl.IdentityVerificationService
 import com.onesignal.core.internal.device.IDeviceService
 import com.onesignal.core.internal.language.ILanguageContext
 import com.onesignal.core.internal.operations.ExecutionResponse
@@ -24,6 +27,7 @@ import com.onesignal.user.internal.backend.IdentityConstants
 import com.onesignal.user.internal.backend.SubscriptionObject
 import com.onesignal.user.internal.backend.SubscriptionObjectType
 import com.onesignal.user.internal.identity.IdentityModelStore
+import com.onesignal.user.internal.jwt.JwtTokenStore
 import com.onesignal.user.internal.operations.CreateSubscriptionOperation
 import com.onesignal.user.internal.operations.DeleteSubscriptionOperation
 import com.onesignal.user.internal.operations.LoginUserOperation
@@ -47,6 +51,9 @@ internal class LoginUserOperationExecutor(
     private val _subscriptionsModelStore: SubscriptionModelStore,
     private val _configModelStore: ConfigModelStore,
     private val _languageContext: ILanguageContext,
+    private val _jwtTokenStore: JwtTokenStore,
+    private val _identityVerificationService: IdentityVerificationService,
+    private val _consistencyManager: IConsistencyManager,
 ) : IOperationExecutor {
     override val operations: List<String>
         get() = listOf(LOGIN_USER)
@@ -74,10 +81,18 @@ internal class LoginUserOperationExecutor(
         if (!containsSubscriptionOperation && loginUserOp.externalId == null) {
             return ExecutionResponse(ExecutionResult.FAIL_NORETRY)
         }
-        if (loginUserOp.existingOnesignalId == null || loginUserOp.externalId == null) {
+        if (loginUserOp.existingOnesignalId == null || loginUserOp.externalId == null ||
+            _identityVerificationService.ivBehaviorActive
+        ) {
             // When there is no existing user to attempt to associate with the externalId provided, we go right to
             // createUser.  If there is no externalId provided this is an insert, if there is this will be an
             // "upsert with retrieval" as the user may already exist.
+            //
+            // Under IV, also skip the optimistic SetAliasOperation: that inline op identifies the
+            // target user by `onesignal_id = existingOnesignalId`, but IV's alias-resolution would
+            // rewrite the call to identify by the new (not-yet-registered) `external_id`, producing
+            // a 404 or idempotent success against the wrong user. createUser's identities-map path
+            // handles the merge correctly through backend upsert semantics.
             return createUser(loginUserOp, operations)
         } else {
             // before we create a user we attempt to associate the user defined by existingOnesignalId with the
@@ -89,6 +104,7 @@ internal class LoginUserOperationExecutor(
                         SetAliasOperation(
                             loginUserOp.appId,
                             loginUserOp.existingOnesignalId!!,
+                            loginUserOp.externalId,
                             IdentityConstants.EXTERNAL_ID,
                             loginUserOp.externalId!!,
                         ),
@@ -168,7 +184,9 @@ internal class LoginUserOperationExecutor(
 
         try {
             val subscriptionList = subscriptions.toList()
-            val response = _userBackend.createUser(createUserOperation.appId, identities, subscriptionList.map { it.second }, properties)
+            val jwt = resolveJwt(createUserOperation, _jwtTokenStore, _identityVerificationService)
+            val response =
+                _userBackend.createUser(createUserOperation.appId, identities, subscriptionList.map { it.second }, properties, jwt)
             val idTranslations = mutableMapOf<String, String>()
             // Add the "local-to-backend" ID translation to the IdentifierTranslator for any operations that were
             // *not* executed but still reference the locally-generated IDs.
@@ -220,10 +238,20 @@ internal class LoginUserOperationExecutor(
                 backendSubscriptions.remove(backendSubscription)
             }
 
+            // Forward the create-user RYW data to ConsistencyManager so InAppMessagesManager
+            // can fetch IAMs once the user record has propagated. Gated on newCodePathsRun:
+            // Phase 1 users don't await RYW (legacy IAM fetch path), so storing it would be
+            // a no-op anyway. Backend only sends rywData under IV.
+            if (_identityVerificationService.newCodePathsRun) {
+                response.rywData?.let { rywData ->
+                    _consistencyManager.setRywData(backendOneSignalId, IamFetchRywTokenKey.USER, rywData)
+                }
+            }
+
             val wasPossiblyAnUpsert = identities.isNotEmpty()
             val followUpOperations =
                 if (wasPossiblyAnUpsert) {
-                    listOf(RefreshUserOperation(createUserOperation.appId, backendOneSignalId))
+                    listOf(RefreshUserOperation(createUserOperation.appId, backendOneSignalId, createUserOperation.externalId))
                 } else {
                     null
                 }

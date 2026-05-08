@@ -167,12 +167,13 @@ object OneSignalService {
      * Fetch user data from OneSignal API.
      * Note: This endpoint does not require authentication.
      * 
-     * @param onesignalId The OneSignal user ID
+     * @param aliasLabel The alias type to look up by (e.g. "onesignal_id" or "external_id")
+     * @param aliasValue The alias value
      * @return UserData object containing aliases, tags, emails, and SMS numbers, or null on error
      */
-    suspend fun fetchUser(onesignalId: String): UserData? = withContext(Dispatchers.IO) {
-        if (onesignalId.isEmpty()) {
-            LogManager.w(TAG, "Cannot fetch user - onesignalId is empty")
+    suspend fun fetchUser(aliasLabel: String, aliasValue: String, jwt: String? = null): UserData? = withContext(Dispatchers.IO) {
+        if (aliasValue.isEmpty()) {
+            LogManager.w(TAG, "Cannot fetch user - aliasValue is empty")
             return@withContext null
         }
         
@@ -180,9 +181,9 @@ object OneSignalService {
             LogManager.w(TAG, "Cannot fetch user - appId not set")
             return@withContext null
         }
-        
+
         try {
-            val url = "$ONESIGNAL_API_BASE_URL/apps/$appId/users/by/onesignal_id/$onesignalId"
+            val url = "$ONESIGNAL_API_BASE_URL/apps/$appId/users/by/$aliasLabel/$aliasValue"
             LogManager.d(TAG, "Fetching user data from: $url")
             
             val connection = (URL(url).openConnection() as HttpURLConnection).apply {
@@ -190,6 +191,9 @@ object OneSignalService {
                 connectTimeout = 30000
                 readTimeout = 30000
                 setRequestProperty("Accept", "application/json")
+                if (jwt != null) {
+                    setRequestProperty("Authorization", "Bearer $jwt")
+                }
                 requestMethod = "GET"
             }
             

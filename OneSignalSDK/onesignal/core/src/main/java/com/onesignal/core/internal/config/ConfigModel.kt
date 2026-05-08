@@ -2,6 +2,7 @@ package com.onesignal.core.internal.config
 
 import com.onesignal.common.modeling.Model
 import com.onesignal.core.internal.http.OneSignalService.ONESIGNAL_API_BASE_URL
+import com.onesignal.user.internal.jwt.JwtRequirement
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -236,13 +237,18 @@ class ConfigModel : Model() {
             setBooleanProperty(::enterprise.name, value)
         }
 
-    /**
-     * Whether SMS auth hash should be used.
-     */
-    var useIdentityVerification: Boolean
-        get() = getBooleanProperty(::useIdentityVerification.name) { false }
+    /** Mirrors backend `jwt_required`. Pre-HYDRATE callers see [JwtRequirement.UNKNOWN]. */
+    internal var useIdentityVerification: JwtRequirement
+        get() = JwtRequirement.fromBoolean(getOptBooleanProperty(::useIdentityVerification.name))
         set(value) {
-            setBooleanProperty(::useIdentityVerification.name, value)
+            setOptBooleanProperty(
+                ::useIdentityVerification.name,
+                when (value) {
+                    JwtRequirement.UNKNOWN -> null
+                    JwtRequirement.NOT_REQUIRED -> false
+                    JwtRequirement.REQUIRED -> true
+                },
+            )
         }
 
     /**

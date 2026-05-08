@@ -53,9 +53,10 @@ class SetTagOperation() : Operation(UpdateUserOperationExecutor.SET_TAG) {
     override val canStartExecute: Boolean get() = !IDManager.isLocalId(onesignalId)
     override val applyToRecordId: String get() = onesignalId
 
-    constructor(appId: String, onesignalId: String, key: String, value: String) : this() {
+    constructor(appId: String, onesignalId: String, externalId: String?, key: String, value: String) : this() {
         this.appId = appId
         this.onesignalId = onesignalId
+        this.externalId = externalId
         this.key = key
         this.value = value
     }

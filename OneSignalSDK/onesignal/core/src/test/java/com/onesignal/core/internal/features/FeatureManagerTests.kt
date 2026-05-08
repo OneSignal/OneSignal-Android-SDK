@@ -4,6 +4,7 @@ import com.onesignal.common.modeling.ModelChangeTags
 import com.onesignal.common.threading.ThreadingMode
 import com.onesignal.core.internal.config.ConfigModel
 import com.onesignal.core.internal.config.ConfigModelStore
+import com.onesignal.user.internal.jwt.JwtRequirement
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.mockk.every
@@ -24,6 +25,7 @@ class FeatureManagerTests : FunSpec({
     fun stubConfigModel(model: ConfigModel) {
         every { model.sdkRemoteFeatureFlags } returns emptyList()
         every { model.sdkRemoteFeatureFlagMetadata } returns null
+        every { model.useIdentityVerification } returns JwtRequirement.UNKNOWN
     }
 
     test("initial state enables BACKGROUND_THREADING when key is present in sdk remote flags") {
@@ -191,5 +193,27 @@ class FeatureManagerTests : FunSpec({
         manager.onModelReplaced(updatedModel, ModelChangeTags.HYDRATE)
 
         manager.enabledFeatureKeys() shouldBe emptyList()
+    }
+
+    test("IDENTITY_VERIFICATION is IMMEDIATE: mid-session flag flip flows through isEnabled") {
+        val initialModel = mockk<ConfigModel>()
+        stubConfigModel(initialModel)
+        val configModelStore = mockk<ConfigModelStore>()
+        every { configModelStore.model } returns initialModel
+        every { configModelStore.subscribe(any()) } just runs
+        val manager = FeatureManager(configModelStore)
+
+        manager.isEnabled(FeatureFlag.SDK_IDENTITY_VERIFICATION) shouldBe false
+
+        // Mid-session model replacement enables the flag remotely.
+        val updatedModel = mockk<ConfigModel>()
+        stubConfigModel(updatedModel)
+        every { updatedModel.sdkRemoteFeatureFlags } returns listOf(FeatureFlag.SDK_IDENTITY_VERIFICATION.key)
+        every { configModelStore.model } returns updatedModel
+
+        manager.onModelReplaced(updatedModel, ModelChangeTags.HYDRATE)
+
+        // Feature flag flips in-memory because IDENTITY_VERIFICATION is IMMEDIATE.
+        manager.isEnabled(FeatureFlag.SDK_IDENTITY_VERIFICATION) shouldBe true
     }
 })
