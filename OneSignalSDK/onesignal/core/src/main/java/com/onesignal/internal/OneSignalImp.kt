@@ -50,7 +50,11 @@ internal class OneSignalImp(
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) : IOneSignal, IServiceProvider {
 
-    private val suspendCompletion = CompletableDeferred<Unit>()
+    // Reset every time the synchronized(initLock) block flips state to IN_PROGRESS so that
+    // a retry-after-FAILED gets a fresh latch instead of an already-completed one. Mutated only
+    // under initLock; reads outside that lock must local-capture before suspending on it.
+    @Volatile
+    private var suspendCompletion = CompletableDeferred<Unit>()
 
     @Volatile
     private var initState: InitState = InitState.NOT_STARTED
@@ -305,6 +309,9 @@ internal class OneSignalImp(
             }
 
             initState = InitState.IN_PROGRESS
+            // Fresh latch for this init attempt -- prevents retry-after-FAILED waiters from
+            // observing the prior init's already-completed deferred.
+            suspendCompletion = CompletableDeferred()
         }
 
         // FeatureManager depends on ConfigModelStore/PreferencesService which requires appContext.
@@ -333,48 +340,69 @@ internal class OneSignalImp(
         return initWithContextSuspend(context, null)
     }
 
+    // ReturnCount: 4 returns vs detekt's limit of 2. The function intentionally has
+    // multiple early-return failure paths (user-locked, missing appId, exception). The
+    // existing detekt baseline entry was for the unannotated signature; once we added
+    // @Suppress(TooGenericExceptionCaught) the baseline ID no longer matched, so we
+    // suppress ReturnCount inline rather than churning the baseline.
+    @Suppress("ReturnCount", "TooGenericExceptionCaught")
     private fun internalInit(
         context: Context,
         appId: String?,
     ): Boolean {
-        // Check whether current Android user is accessible.
-        // Return early if it is inaccessible, as we are unable to complete initialization without access
-        // to device storage like SharedPreferences.
-        if (!AndroidUtils.isAndroidUserUnlocked(context)) {
-            Logging.warn("initWithContext called when device storage is locked, no user data is accessible!")
+        try {
+            // Check whether current Android user is accessible.
+            // Return early if it is inaccessible, as we are unable to complete initialization without access
+            // to device storage like SharedPreferences.
+            if (!AndroidUtils.isAndroidUserUnlocked(context)) {
+                Logging.warn("initWithContext called when device storage is locked, no user data is accessible!")
+                initState = InitState.FAILED
+                notifyInitComplete()
+                return false
+            }
+
+            initEssentials(context)
+
+            val startupService = bootstrapServices()
+
+            // Now that the IoC container is ready, subscribe the Otel lifecycle
+            // manager to config store events so it reacts to fresh remote config.
+            otelManager?.subscribeToConfigStore(services.getService<ConfigModelStore>())
+
+            val result = resolveAppId(appId, configModel, preferencesService)
+            if (result.failed) {
+                val message = "suspendInitInternal: no appId provided or found in local storage. Please pass a valid appId to initWithContext()."
+                val exception = IllegalStateException(message)
+                // attach the real crash cause to the init failure exception that will be throw shortly after
+                initFailureException?.addSuppressed(exception)
+                Logging.warn(message)
+                initState = InitState.FAILED
+                notifyInitComplete()
+                return false
+            }
+            configModel.appId = result.appId!! // safe because failed is false
+            val forceCreateUser = result.forceCreateUser
+
+            updateConfig()
+            userSwitcher.initUser(forceCreateUser)
+            startupService.scheduleStart()
+            initState = InitState.SUCCESS
+            notifyInitComplete()
+            return true
+        } catch (t: Throwable) {
+            // Any unchecked throw from initEssentials/bootstrapServices/subscribeToConfigStore/
+            // updateConfig/userSwitcher.initUser/startupService.scheduleStart would otherwise leave
+            // initState at IN_PROGRESS forever and `suspendCompletion` uncompleted -- causing
+            // re-entrant suspend callers (e.g. SyncJobService) to hang indefinitely on `await()`.
+            // Always reach a terminal state and signal waiters before propagating.
+            Logging.error("OneSignal: internalInit threw unexpectedly; marking init FAILED", t)
+            initFailureException = (initFailureException ?: IllegalStateException("OneSignal initWithContext failed.")).apply {
+                addSuppressed(t)
+            }
             initState = InitState.FAILED
             notifyInitComplete()
             return false
         }
-
-        initEssentials(context)
-
-        val startupService = bootstrapServices()
-
-        // Now that the IoC container is ready, subscribe the Otel lifecycle
-        // manager to config store events so it reacts to fresh remote config.
-        otelManager?.subscribeToConfigStore(services.getService<ConfigModelStore>())
-
-        val result = resolveAppId(appId, configModel, preferencesService)
-        if (result.failed) {
-            val message = "suspendInitInternal: no appId provided or found in local storage. Please pass a valid appId to initWithContext()."
-            val exception = IllegalStateException(message)
-            // attach the real crash cause to the init failure exception that will be throw shortly after
-            initFailureException?.addSuppressed(exception)
-            Logging.warn(message)
-            initState = InitState.FAILED
-            notifyInitComplete()
-            return false
-        }
-        configModel.appId = result.appId!! // safe because failed is false
-        val forceCreateUser = result.forceCreateUser
-
-        updateConfig()
-        userSwitcher.initUser(forceCreateUser)
-        startupService.scheduleStart()
-        initState = InitState.SUCCESS
-        notifyInitComplete()
-        return true
     }
 
     override fun login(
@@ -474,7 +502,16 @@ internal class OneSignalImp(
      * @param operationName Optional operation name to include in error messages (e.g., "login", "logout")
      */
     private suspend fun waitUntilInitInternal(operationName: String? = null) {
-        when (initState) {
+        // Local-capture state + deferred under initLock so we await on the same generation
+        // we observed (a concurrent retry-after-FAILED can replace `suspendCompletion`).
+        val observedState: InitState
+        val completionToAwait: CompletableDeferred<Unit>?
+        synchronized(initLock) {
+            observedState = initState
+            completionToAwait = if (observedState == InitState.IN_PROGRESS) suspendCompletion else null
+        }
+
+        when (observedState) {
             InitState.NOT_STARTED -> {
                 val message = if (operationName != null) {
                     "Must call 'initWithContext' before '$operationName'"
@@ -496,7 +533,7 @@ internal class OneSignalImp(
                 // This is intentional per PR #2412: "ANR is the lesser of two evils and the app can recover,
                 // where an uncaught throw it can not." To avoid ANRs, call SDK methods from background threads
                 // or use the suspend API from coroutines.
-                suspendCompletion.await()
+                completionToAwait!!.await()
 
                 // Log how long initialization took
                 val elapsed = System.currentTimeMillis() - startTime
@@ -632,19 +669,39 @@ internal class OneSignalImp(
     ): Boolean {
         Logging.log(LogLevel.DEBUG, "initWithContext(context: $context, appId: $appId)")
 
-        // This ensures the stack trace points to the caller that triggered init, not the async worker thread.
-        initFailureException = IllegalStateException("OneSignal initWithContext failed.")
-
         // Use IO dispatcher for initialization to prevent ANRs and optimize for I/O operations
         return withContext(runtimeIoDispatcher) {
-            // do not do this again if already initialized or init is in progress
+            val shouldRunInit: Boolean
+            // Local-capture under the lock so that even if a concurrent retry-after-FAILED
+            // resets `suspendCompletion`, we await on the same generation we observed.
+            val completionToAwait: CompletableDeferred<Unit>?
             synchronized(initLock) {
                 if (initState.isSDKAccessible()) {
-                    Logging.log(LogLevel.DEBUG, "initWithContext: SDK already initialized or in progress")
-                    return@withContext true
+                    shouldRunInit = false
+                    completionToAwait = suspendCompletion
+                } else {
+                    shouldRunInit = true
+                    completionToAwait = null
+                    initState = InitState.IN_PROGRESS
+                    // Fresh latch for this init attempt.
+                    suspendCompletion = CompletableDeferred()
+                    // Only the call that actually starts init owns the failure-attribution exception.
+                    // Re-entrant callers must not overwrite it -- otherwise the failure stack trace
+                    // would point at the SyncJobService coroutine instead of the original initiator.
+                    initFailureException = IllegalStateException("OneSignal initWithContext failed.")
                 }
+            }
 
-                initState = InitState.IN_PROGRESS
+            if (!shouldRunInit) {
+                // Another caller has already started (or completed) init. Honor this method's
+                // contract by suspending until initialization is *fully* completed -- not just
+                // kicked off. This closes a race where re-entrant suspend callers (e.g. the
+                // SyncJobService entry point under SDK_BACKGROUND_THREADING) would otherwise
+                // proceed to use IBackgroundService implementations like SessionService whose
+                // bootstrap() had not yet run, NPE'ing on still-null model fields.
+                Logging.log(LogLevel.DEBUG, "initWithContext: init already in progress or completed, awaiting completion")
+                completionToAwait!!.await()
+                return@withContext initState == InitState.SUCCESS
             }
 
             val result = internalInit(context, appId)

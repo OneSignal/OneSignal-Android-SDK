@@ -35,13 +35,24 @@ internal class SessionService(
     private val _time: ITime,
 ) : ISessionService, IBootstrapService, IStartableService, IBackgroundService, IApplicationLifecycleHandler {
     override val startTime: Long
-        get() = session!!.startTime
+        // Pre-bootstrap default returns "now" so call sites computing `_time.currentTimeMillis - startTime`
+        // (e.g. IAM session-duration / SESSION_TIME triggers) see ~0ms elapsed instead of ~58 years
+        // (which is what `0L` / Jan 1970 would produce).
+        get() = session?.startTime ?: _time.currentTimeMillis
 
     /**
      * Run in the background when the session would time out, only if a session is currently active.
+     *
+     * Returns null if [bootstrap] has not yet run -- callers that invoke us before bootstrap
+     * (possible under SDK_BACKGROUND_THREADING when init is still in flight) should treat this
+     * as "no schedule needed" rather than crashing on a null-deref.
      */
     override val scheduleBackgroundRunIn: Long?
-        get() = if (session!!.isValid) config!!.sessionFocusTimeout else null
+        get() {
+            val session = this.session ?: return null
+            val config = this.config ?: return null
+            return if (session.isValid) config.sessionFocusTimeout else null
+        }
 
     private val sessionLifeCycleNotifier: EventProducer<ISessionLifecycleHandler> = EventProducer()
     private var session: SessionModel? = null
@@ -69,13 +80,17 @@ internal class SessionService(
     }
 
     private fun endSession() {
-        if (!session!!.isValid) return
-        val activeDuration = session!!.activeDuration
+        // Defensive: if bootstrap() has not run yet, there is no session state to end.
+        // This can happen under SDK_BACKGROUND_THREADING when SyncJobService races with
+        // an in-flight initWithContext that has not yet reached bootstrapServices().
+        val session = this.session ?: return
+        if (!session.isValid) return
+        val activeDuration = session.activeDuration
         Logging.debug("SessionService.backgroundRun: Session ended. activeDuration: $activeDuration")
 
-        session!!.isValid = false
+        session.isValid = false
         sessionLifeCycleNotifier.fire { it.onSessionEnded(activeDuration) }
-        session!!.activeDuration = 0L
+        session.activeDuration = 0L
     }
 
     /**
@@ -90,34 +105,45 @@ internal class SessionService(
     override fun onFocus(firedOnSubscribe: Boolean) {
         Logging.log(LogLevel.DEBUG, "SessionService.onFocus() - fired from start: $firedOnSubscribe")
 
+        val session = this.session
+        if (session == null) {
+            Logging.warn("SessionService.onFocus called before bootstrap; ignoring.")
+            return
+        }
+
         // Treat app cold starts as a new session, we attempt to end any previous session to do this.
         if (!hasFocused) {
             hasFocused = true
             endSession()
         }
 
-        if (!session!!.isValid) {
+        if (!session.isValid) {
             // As the old session was made inactive, we need to create a new session
             shouldFireOnSubscribe = firedOnSubscribe
-            session!!.sessionId = UUID.randomUUID().toString()
-            session!!.startTime = _time.currentTimeMillis
-            session!!.focusTime = session!!.startTime
-            session!!.isValid = true
-            Logging.debug("SessionService: New session started at ${session!!.startTime}")
+            session.sessionId = UUID.randomUUID().toString()
+            session.startTime = _time.currentTimeMillis
+            session.focusTime = session.startTime
+            session.isValid = true
+            Logging.debug("SessionService: New session started at ${session.startTime}")
             sessionLifeCycleNotifier.fire { it.onSessionStarted() }
         } else {
             // existing session: just remember the focus time so we can calculate the active time
             // when onUnfocused is called.
-            session!!.focusTime = _time.currentTimeMillis
+            session.focusTime = _time.currentTimeMillis
             sessionLifeCycleNotifier.fire { it.onSessionActive() }
         }
     }
 
     override fun onUnfocused() {
+        val session = this.session
+        if (session == null) {
+            Logging.warn("SessionService.onUnfocused called before bootstrap; ignoring.")
+            return
+        }
         // capture the amount of time the app was focused
-        val dt = _time.currentTimeMillis - session!!.focusTime
-        session!!.activeDuration += dt
-        Logging.log(LogLevel.DEBUG, "SessionService.onUnfocused adding time $dt for total: ${session!!.activeDuration}")
+        val dt = _time.currentTimeMillis - session.focusTime
+        session.activeDuration += dt
+        Logging.log(LogLevel.DEBUG, "SessionService.onUnfocused adding time $dt for total: ${session.activeDuration}")
     }
 
     override fun subscribe(handler: ISessionLifecycleHandler) {
