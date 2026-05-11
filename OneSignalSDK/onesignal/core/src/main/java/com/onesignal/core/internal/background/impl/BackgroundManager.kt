@@ -32,6 +32,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.pm.PackageManager
 import androidx.core.content.ContextCompat
+import com.onesignal.common.threading.ThreadingMode
 import com.onesignal.common.threading.suspendifyOnSerialIO
 import com.onesignal.core.internal.application.IApplicationLifecycleHandler
 import com.onesignal.core.internal.application.IApplicationService
@@ -71,25 +72,42 @@ internal class BackgroundManager(
         _applicationService.addApplicationLifecycleHandler(this)
     }
 
-    // JobScheduler operations are synchronous Binder transactions that can block
-    // the calling thread for many seconds on some devices (notably under MIUI/
-    // power-save). Lifecycle callbacks fire on the main thread, so we offload via
-    // suspendifyOnSerialIO to keep the main thread responsive.
+    // JobScheduler.cancel / .schedule are synchronous Binder transactions to
+    // system_server that can block the calling thread for many seconds on some
+    // devices (notably Xiaomi/MIUI under power-save). Lifecycle callbacks fire
+    // on the main thread, so running these inline produces the SDK-4505 ANR.
     //
-    // suspendifyOnSerialIO (not suspendifyOnIO) is required because a rapid
-    // background -> foreground burst would otherwise enqueue a `schedule` and a
-    // `cancel` onto the multi-threaded IO pool, where two worker threads can
-    // execute them out of order — leaving a sync job scheduled while the app is
-    // foregrounded, or vice versa. The serial dispatcher guarantees submission
-    // order on the main thread equals execution order, so the last lifecycle
-    // event always wins, and any future per-event work added to these handlers
-    // (session timing, analytics, focus counters) stays correctly ordered.
+    // The offload is gated on ThreadingMode.useBackgroundThreading (remote FF
+    // `sdk_background_threading`, latched at app startup) so the fix can be
+    // rolled out gradually and an A/B comparison against the legacy inline
+    // path is possible:
+    //
+    //   FF on  -> suspendifyOnSerialIO { ... }
+    //               Routes through OneSignalDispatchers.SerialIO, a dedicated
+    //               single-thread executor. Submission order on the main thread
+    //               equals execution order, so a rapid `unfocused -> focused`
+    //               burst can't reorder a stale `schedule` past a fresh
+    //               `cancel` (which a multi-threaded pool can). Required as
+    //               soon as these handlers grow per-event work (session
+    //               timing, analytics, focus counters) that can't be
+    //               reconciled from a single state snapshot.
+    //
+    //   FF off -> legacy inline path. Retains the ANR-prone behavior for the
+    //               control cohort.
     override fun onFocus(firedOnSubscribe: Boolean) {
-        suspendifyOnSerialIO { cancelSyncTask() }
+        if (ThreadingMode.useBackgroundThreading) {
+            suspendifyOnSerialIO { cancelSyncTask() }
+        } else {
+            cancelSyncTask()
+        }
     }
 
     override fun onUnfocused() {
-        suspendifyOnSerialIO { scheduleBackground() }
+        if (ThreadingMode.useBackgroundThreading) {
+            suspendifyOnSerialIO { scheduleBackground() }
+        } else {
+            scheduleBackground()
+        }
     }
 
     private fun scheduleBackground() {

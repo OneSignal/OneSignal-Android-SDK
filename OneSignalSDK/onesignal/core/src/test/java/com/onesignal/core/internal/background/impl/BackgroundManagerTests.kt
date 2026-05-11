@@ -1,7 +1,10 @@
 package com.onesignal.core.internal.background.impl
 
+import android.app.job.JobScheduler
+import android.content.Context
 import com.onesignal.common.threading.OneSignalDispatchers
 import com.onesignal.common.threading.ThreadingMode
+import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.mocks.MockHelper
@@ -15,19 +18,31 @@ import io.mockk.verifyOrder
 import kotlinx.coroutines.Job
 
 /**
- * Regression coverage for SDK-4505. Asserts that BackgroundManager.onFocus() and
- * onUnfocused() offload their JobScheduler work via suspendifyOnSerialIO so that
- *  1. the JobScheduler Binder call doesn't run inline on the main thread (the ANR), and
- *  2. rapid foreground/background switches are processed in submission order (the
- *     refinement on top of the original PR — a multi-threaded IO pool could reorder
- *     a `schedule` after a `cancel`, leaving the SDK in the opposite of the requested
- *     state).
+ * Regression coverage for SDK-4505. Asserts the two-pronged behavior of
+ * BackgroundManager.onFocus / onUnfocused:
  *
- * Mirrors the pattern in ThreadUtilsFeatureFlagTests: mock OneSignalDispatchers and
- * verify launchOnSerialIO is invoked from the lifecycle entry points when background
- * threading is enabled (the configuration the production ANR was reported under).
+ *   FF on  (sdk_background_threading enabled)
+ *     -> route through OneSignalDispatchers.launchOnSerialIO so the
+ *        JobScheduler Binder call doesn't run inline on the main thread
+ *        (the ANR fix), and rapid bursts stay in submission order (the
+ *        serial-dispatcher refinement).
+ *
+ *   FF off
+ *     -> legacy inline path. cancelSyncTask / scheduleBackground execute
+ *        on the calling thread; no dispatcher is involved. This is the
+ *        control cohort for the gated rollout.
  */
 class BackgroundManagerTests : FunSpec({
+
+    fun applicationServiceWithStubbedJobScheduler(): IApplicationService {
+        val appService = MockHelper.applicationService()
+        val context = mockk<Context>(relaxed = true)
+        val jobScheduler = mockk<JobScheduler>(relaxed = true)
+        every { appService.appContext } returns context
+        every { context.getSystemService(Context.JOB_SCHEDULER_SERVICE) } returns jobScheduler
+        every { jobScheduler.allPendingJobs } returns emptyList()
+        return appService
+    }
 
     beforeEach {
         Logging.logLevel = LogLevel.NONE
@@ -39,7 +54,7 @@ class BackgroundManagerTests : FunSpec({
         ThreadingMode.useBackgroundThreading = false
     }
 
-    test("onFocus routes through OneSignalDispatchers.launchOnSerialIO when BACKGROUND_THREADING is on") {
+    test("FF on: onFocus routes through OneSignalDispatchers.launchOnSerialIO") {
         ThreadingMode.useBackgroundThreading = true
         mockkObject(OneSignalDispatchers)
         every { OneSignalDispatchers.launchOnSerialIO(any<suspend () -> Unit>()) } returns mockk<Job>(relaxed = true)
@@ -56,7 +71,7 @@ class BackgroundManagerTests : FunSpec({
         verify(exactly = 1) { OneSignalDispatchers.launchOnSerialIO(any<suspend () -> Unit>()) }
     }
 
-    test("onUnfocused routes through OneSignalDispatchers.launchOnSerialIO when BACKGROUND_THREADING is on") {
+    test("FF on: onUnfocused routes through OneSignalDispatchers.launchOnSerialIO") {
         ThreadingMode.useBackgroundThreading = true
         mockkObject(OneSignalDispatchers)
         every { OneSignalDispatchers.launchOnSerialIO(any<suspend () -> Unit>()) } returns mockk<Job>(relaxed = true)
@@ -73,7 +88,7 @@ class BackgroundManagerTests : FunSpec({
         verify(exactly = 1) { OneSignalDispatchers.launchOnSerialIO(any<suspend () -> Unit>()) }
     }
 
-    test("rapid unfocus -> focus burst submits both events to the serial dispatcher in order") {
+    test("FF on: rapid unfocus -> focus burst submits both events to the serial dispatcher in order") {
         ThreadingMode.useBackgroundThreading = true
         mockkObject(OneSignalDispatchers)
         every { OneSignalDispatchers.launchOnSerialIO(any<suspend () -> Unit>()) } returns mockk<Job>(relaxed = true)
@@ -96,5 +111,39 @@ class BackgroundManagerTests : FunSpec({
             OneSignalDispatchers.launchOnSerialIO(any<suspend () -> Unit>())
             OneSignalDispatchers.launchOnSerialIO(any<suspend () -> Unit>())
         }
+    }
+
+    test("FF off: onFocus runs inline and does NOT dispatch to the serial dispatcher") {
+        ThreadingMode.useBackgroundThreading = false
+        mockkObject(OneSignalDispatchers)
+        every { OneSignalDispatchers.launchOnSerialIO(any<suspend () -> Unit>()) } returns mockk<Job>(relaxed = true)
+
+        val backgroundManager =
+            BackgroundManager(
+                applicationServiceWithStubbedJobScheduler(),
+                MockHelper.time(0L),
+                emptyList(),
+            )
+
+        backgroundManager.onFocus(firedOnSubscribe = false)
+
+        verify(exactly = 0) { OneSignalDispatchers.launchOnSerialIO(any<suspend () -> Unit>()) }
+    }
+
+    test("FF off: onUnfocused runs inline and does NOT dispatch to the serial dispatcher") {
+        ThreadingMode.useBackgroundThreading = false
+        mockkObject(OneSignalDispatchers)
+        every { OneSignalDispatchers.launchOnSerialIO(any<suspend () -> Unit>()) } returns mockk<Job>(relaxed = true)
+
+        val backgroundManager =
+            BackgroundManager(
+                applicationServiceWithStubbedJobScheduler(),
+                MockHelper.time(0L),
+                emptyList(),
+            )
+
+        backgroundManager.onUnfocused()
+
+        verify(exactly = 0) { OneSignalDispatchers.launchOnSerialIO(any<suspend () -> Unit>()) }
     }
 })
