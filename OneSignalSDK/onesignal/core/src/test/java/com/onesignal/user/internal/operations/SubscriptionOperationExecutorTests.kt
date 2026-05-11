@@ -1,6 +1,7 @@
 package com.onesignal.user.internal.operations
 
 import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
+import com.onesignal.common.IDManager
 import com.onesignal.common.consistency.RywData
 import com.onesignal.common.consistency.enums.IamFetchRywTokenKey
 import com.onesignal.common.consistency.models.IConsistencyManager
@@ -23,6 +24,7 @@ import com.onesignal.user.internal.subscriptions.SubscriptionStatus
 import com.onesignal.user.internal.subscriptions.SubscriptionType
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
 import io.mockk.clearMocks
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -625,6 +627,70 @@ class SubscriptionOperationExecutorTests :
                     },
                 )
             }
+        }
+
+        // Regression for SDK-4388: when an UpdateSubscriptionOperation PATCH returns 404 outside
+        // the missing-retry window, the executor must enqueue a recovery CreateSubscriptionOperation
+        // with a *local* subscriptionId. Re-using the original non-local id would bounce back
+        // through execute() -> updateExistingSubscriptionFromCreate -> PATCH -> 404 indefinitely
+        // (because non-local-id Creates dispatch as PATCHes), preventing the rebuild-user / POST
+        // recovery path in createSubscription from ever running.
+        test("update subscription 404 outside retry window enqueues recovery CreateSubscriptionOperation with local id") {
+            // Given
+            val mockSubscriptionBackendService = mockk<ISubscriptionBackendService>()
+            coEvery { mockSubscriptionBackendService.updateSubscription(any(), any(), any()) } throws BackendException(404)
+
+            val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
+            val mockBuildUserService = mockk<IRebuildUserService>()
+
+            val subscriptionOperationExecutor =
+                SubscriptionOperationExecutor(
+                    mockSubscriptionBackendService,
+                    MockHelper.deviceService(),
+                    AndroidMockHelper.applicationService(),
+                    mockSubscriptionsModelStore,
+                    MockHelper.configModelStore(),
+                    mockBuildUserService,
+                    getNewRecordState(),
+                    mockConsistencyManager,
+                    getJwtTokenStore(), getIdentityVerificationService(),
+                )
+
+            val operations =
+                listOf<Operation>(
+                    UpdateSubscriptionOperation(
+                        appId,
+                        remoteOneSignalId,
+                        "ext-1",
+                        remoteSubscriptionId,
+                        SubscriptionType.PUSH,
+                        true,
+                        "pushToken2",
+                        SubscriptionStatus.SUBSCRIBED,
+                    ),
+                )
+
+            // When
+            val response = subscriptionOperationExecutor.execute(operations)
+
+            // Then
+            response.result shouldBe ExecutionResult.FAIL_NORETRY
+            response.operations shouldNotBe null
+            response.operations!!.size shouldBe 1
+            val recovery = response.operations!!.first() as CreateSubscriptionOperation
+            // The recovery op must carry a fresh LOCAL id, not the original non-local one.
+            // This is what forces execute() to dispatch through the POST/rebuild-user path on the
+            // next execution instead of looping back into PATCH -> 404 forever.
+            IDManager.isLocalId(recovery.subscriptionId) shouldBe true
+            recovery.subscriptionId shouldNotBe remoteSubscriptionId
+            // All other fields propagated so the recovered subscription matches the desired state.
+            recovery.appId shouldBe appId
+            recovery.onesignalId shouldBe remoteOneSignalId
+            recovery.externalId shouldBe "ext-1"
+            recovery.type shouldBe SubscriptionType.PUSH
+            recovery.enabled shouldBe true
+            recovery.address shouldBe "pushToken2"
+            recovery.status shouldBe SubscriptionStatus.SUBSCRIBED
         }
 
         test("update subscription fails with retry when the backend returns MISSING, when isInMissingRetryWindow") {
