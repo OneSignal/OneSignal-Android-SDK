@@ -128,6 +128,32 @@ fun suspendifyOnSerialIO(block: suspend () -> Unit) {
 }
 
 /**
+ * Conditionally dispatches [block] to the serial IO thread when the SDK_BACKGROUND_THREADING
+ * remote feature flag is enabled, otherwise runs [block] inline on the calling thread.
+ *
+ * Used to gate incremental rollouts of off-main lifecycle work where we want to A/B compare
+ * the offloaded behavior against the previous inline behavior in production. Customers without
+ * the flag see the original code path; customers with the flag see the offloaded one.
+ *
+ * Differs from [suspendifyOnSerialIO] (which always routes through the serial dispatcher
+ * because its ordering guarantee is the whole point) and from [suspendifyOnIO] (which always
+ * dispatches off-main, just to a different pool depending on the flag).
+ *
+ * The block is non-suspending because the FF-off branch executes on the caller's thread —
+ * any suspending work would force a [kotlinx.coroutines.runBlocking] there, defeating the
+ * purpose of the comparison.
+ *
+ * @param block Non-suspending work to run inline (FF off) or on the serial IO thread (FF on).
+ */
+fun runOnSerialIOIfBackgroundThreading(block: () -> Unit) {
+    if (ThreadingMode.useBackgroundThreading) {
+        suspendifyOnSerialIO { block() }
+    } else {
+        block()
+    }
+}
+
+/**
  * Modern utility for executing suspending code with completion callback.
  * Uses OneSignal's centralized thread management for better resource control.
  *

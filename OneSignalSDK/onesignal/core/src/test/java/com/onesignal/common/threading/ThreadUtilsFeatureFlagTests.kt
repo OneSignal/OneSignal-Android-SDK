@@ -120,4 +120,35 @@ class ThreadUtilsFeatureFlagTests : FunSpec({
         latch.await(2, TimeUnit.SECONDS) shouldBe true
         ranBlock shouldBe true
     }
+
+    test("runOnSerialIOIfBackgroundThreading routes through launchOnSerialIO when BACKGROUND_THREADING is on") {
+        // Given
+        ThreadingMode.useBackgroundThreading = true
+        mockkObject(OneSignalDispatchers)
+        every { OneSignalDispatchers.launchOnSerialIO(any<suspend () -> Unit>()) } returns mockk<Job>(relaxed = true)
+        var ranInline = false
+
+        // When
+        runOnSerialIOIfBackgroundThreading { ranInline = true }
+
+        // Then
+        ranInline shouldBe false
+        verify(exactly = 1) { OneSignalDispatchers.launchOnSerialIO(any<suspend () -> Unit>()) }
+    }
+
+    test("runOnSerialIOIfBackgroundThreading runs inline on caller thread when BACKGROUND_THREADING is off") {
+        // Given
+        ThreadingMode.useBackgroundThreading = false
+        mockkObject(OneSignalDispatchers)
+        every { OneSignalDispatchers.launchOnSerialIO(any<suspend () -> Unit>()) } returns mockk<Job>(relaxed = true)
+        val callerThread = Thread.currentThread()
+        var ranOnThread: Thread? = null
+
+        // When
+        runOnSerialIOIfBackgroundThreading { ranOnThread = Thread.currentThread() }
+
+        // Then
+        ranOnThread shouldBe callerThread
+        verify(exactly = 0) { OneSignalDispatchers.launchOnSerialIO(any<suspend () -> Unit>()) }
+    }
 })
