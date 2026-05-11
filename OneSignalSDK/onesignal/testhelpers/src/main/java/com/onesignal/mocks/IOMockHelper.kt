@@ -3,6 +3,7 @@ package com.onesignal.mocks
 import com.onesignal.common.threading.OneSignalDispatchers
 import com.onesignal.common.threading.suspendifyOnIO
 import com.onesignal.common.threading.suspendifyOnMain
+import com.onesignal.common.threading.suspendifyOnSerialIO
 import io.kotest.core.listeners.AfterSpecListener
 import io.kotest.core.listeners.BeforeSpecListener
 import io.kotest.core.listeners.BeforeTestListener
@@ -26,13 +27,14 @@ import java.util.concurrent.atomic.AtomicInteger
  * Test helper that makes OneSignal's async threading behavior deterministic in unit tests.
  * Can be helpful to speed up unit tests by replacing all delay(x) or Thread.sleep(x).
  *
- * In production, `suspendifyOnIO`, `launchOnIO`, and `launchOnDefault` launch work on
- * background threads and return immediately. This causes tests to require arbitrary delays
- * (e.g., delay(50)) to wait for async work to finish.
+ * In production, `suspendifyOnIO`, `suspendifyOnSerialIO`, `launchOnIO`, `launchOnSerialIO`,
+ * and `launchOnDefault` launch work on background threads and return immediately. This causes
+ * tests to require arbitrary delays (e.g., delay(50)) to wait for async work to finish.
  *
  * This helper avoids that by:
- *  - Mocking `suspendifyOnIO`, `suspendifyOnMain`, and `OneSignalDispatchers.launchOnIO` /
- *    `launchOnDefault` so their blocks run immediately
+ *  - Mocking `suspendifyOnIO`, `suspendifyOnSerialIO`, `suspendifyOnMain`, and
+ *    `OneSignalDispatchers.launchOnIO` / `launchOnSerialIO` / `launchOnDefault` so their
+ *    blocks run immediately
  *  - Completing a `CompletableDeferred` when the async block finishes
  *  - Providing `awaitIO()` so tests can explicitly wait for all async work without sleeps
  *
@@ -126,6 +128,11 @@ object IOMockHelper : BeforeSpecListener, AfterSpecListener, BeforeTestListener,
             trackAsyncWork(block)
         }
 
+        every { suspendifyOnSerialIO(any<suspend () -> Unit>()) } answers {
+            val block = firstArg<suspend () -> Unit>()
+            trackAsyncWork(block)
+        }
+
         every { suspendifyOnMain(any<suspend () -> Unit>()) } answers {
             val block = firstArg<suspend () -> Unit>()
             trackAsyncWork(block)
@@ -135,6 +142,13 @@ object IOMockHelper : BeforeSpecListener, AfterSpecListener, BeforeTestListener,
             val block = firstArg<suspend () -> Unit>()
             trackAsyncWork(block)
             // Return a mock Job (launchOnIO returns a Job)
+            mockk<Job>(relaxed = true)
+        }
+
+        every { OneSignalDispatchers.launchOnSerialIO(any<suspend () -> Unit>()) } answers {
+            val block = firstArg<suspend () -> Unit>()
+            trackAsyncWork(block)
+            // Return a mock Job (launchOnSerialIO returns a Job)
             mockk<Job>(relaxed = true)
         }
 

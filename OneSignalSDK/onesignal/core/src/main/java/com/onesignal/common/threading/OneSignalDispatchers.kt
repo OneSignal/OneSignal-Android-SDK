@@ -9,6 +9,8 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.ThreadFactory
 import java.util.concurrent.ThreadPoolExecutor
@@ -43,6 +45,8 @@ object OneSignalDispatchers {
         "$BASE_THREAD_NAME-IO" // Thread name prefix for I/O operations
     private const val DEFAULT_THREAD_NAME_PREFIX =
         "$BASE_THREAD_NAME-Default" // Thread name prefix for CPU operations
+    private const val SERIAL_IO_THREAD_NAME =
+        "$BASE_THREAD_NAME-SerialIO" // Single, named thread for order-sensitive work
 
     private class OptimizedThreadFactory(
         private val namePrefix: String,
@@ -77,6 +81,27 @@ object OneSignalDispatchers {
         } catch (e: Exception) {
             Logging.error("OneSignalDispatchers: Failed to create IO executor: ${e.message}")
             throw e // Let the dispatcher fallback handle this
+        }
+    }
+
+    /**
+     * Single-thread executor for order-sensitive work (e.g. lifecycle event handlers that
+     * must run in the order the events fired on the main thread). Submission order on the
+     * main thread equals execution order on this thread, so callers don't need their own
+     * synchronization to preserve sequence — they only need to capture any time-sensitive
+     * state (timestamps, current state snapshots) on the caller before dispatching.
+     */
+    private val serialIOExecutor: ExecutorService by lazy {
+        try {
+            Executors.newSingleThreadExecutor(
+                OptimizedThreadFactory(
+                    namePrefix = SERIAL_IO_THREAD_NAME,
+                    priority = Thread.NORM_PRIORITY - 1,
+                ),
+            )
+        } catch (e: Exception) {
+            Logging.error("OneSignalDispatchers: Failed to create SerialIO executor: ${e.message}")
+            throw e
         }
     }
 
@@ -117,12 +142,28 @@ object OneSignalDispatchers {
         }
     }
 
+    val SerialIO: CoroutineDispatcher by lazy {
+        try {
+            serialIOExecutor.asCoroutineDispatcher()
+        } catch (e: Exception) {
+            // Fall back to a limited-parallelism view of Dispatchers.IO. A single shared view
+            // serializes our submissions even when our own executor failed to start.
+            Logging.error("OneSignalDispatchers: Using fallback serialized Dispatchers.IO: ${e.message}")
+            @Suppress("OPT_IN_USAGE")
+            Dispatchers.IO.limitedParallelism(1)
+        }
+    }
+
     private val IOScope: CoroutineScope by lazy {
         CoroutineScope(SupervisorJob() + IO)
     }
 
     private val DefaultScope: CoroutineScope by lazy {
         CoroutineScope(SupervisorJob() + Default)
+    }
+
+    private val SerialIOScope: CoroutineScope by lazy {
+        CoroutineScope(SupervisorJob() + SerialIO)
     }
 
     fun launchOnIO(block: suspend () -> Unit): Job {
@@ -133,16 +174,30 @@ object OneSignalDispatchers {
         return DefaultScope.launch { block() }
     }
 
+    /**
+     * Launches [block] on the dedicated serial IO thread. Tasks submitted from any thread
+     * run one-at-a-time in submission order, which makes this the right entry point for
+     * order-sensitive lifecycle work (e.g. focus/unfocus handlers).
+     */
+    fun launchOnSerialIO(block: suspend () -> Unit): Job {
+        return SerialIOScope.launch { block() }
+    }
+
     internal fun getPerformanceMetrics(): String {
         return try {
+            val serialQueueSize =
+                (serialIOExecutor as? ThreadPoolExecutor)?.queue?.size?.toString() ?: "n/a"
+            val serialCompleted =
+                (serialIOExecutor as? ThreadPoolExecutor)?.completedTaskCount ?: 0L
             """
             OneSignalDispatchers Performance Metrics:
             - IO Pool: ${ioExecutor.activeCount}/${ioExecutor.corePoolSize} active/core threads
             - IO Queue: ${ioExecutor.queue.size} pending tasks
             - Default Pool: ${defaultExecutor.activeCount}/${defaultExecutor.corePoolSize} active/core threads
             - Default Queue: ${defaultExecutor.queue.size} pending tasks
-            - Total completed tasks: ${ioExecutor.completedTaskCount + defaultExecutor.completedTaskCount}
-            - Memory usage: ~${(ioExecutor.activeCount + defaultExecutor.activeCount) * 1024}KB (thread stacks, ~1MB each)
+            - SerialIO Queue: $serialQueueSize pending tasks
+            - Total completed tasks: ${ioExecutor.completedTaskCount + defaultExecutor.completedTaskCount + serialCompleted}
+            - Memory usage: ~${(ioExecutor.activeCount + defaultExecutor.activeCount + 1) * 1024}KB (thread stacks, ~1MB each)
             """.trimIndent()
         } catch (e: Exception) {
             "OneSignalDispatchers not initialized or using fallback dispatchers ${e.message}"
@@ -150,40 +205,37 @@ object OneSignalDispatchers {
     }
 
     internal fun getStatus(): String {
-        val ioExecutorStatus =
-            try {
-                if (ioExecutor.isShutdown) "Shutdown" else "Active"
-            } catch (e: Exception) {
-                "ioExecutor Not initialized ${e.message ?: "Unknown error"}"
-            }
-
-        val defaultExecutorStatus =
-            try {
-                if (defaultExecutor.isShutdown) "Shutdown" else "Active"
-            } catch (e: Exception) {
-                "defaultExecutor Not initialized ${e.message ?: "Unknown error"}"
-            }
-
-        val ioScopeStatus =
-            try {
-                if (IOScope.isActive) "Active" else "Cancelled"
-            } catch (e: Exception) {
-                "IOScope Not initialized ${e.message ?: "Unknown error"}"
-            }
-
-        val defaultScopeStatus =
-            try {
-                if (DefaultScope.isActive) "Active" else "Cancelled"
-            } catch (e: Exception) {
-                "DefaultScope Not initialized ${e.message ?: "Unknown error"}"
-            }
-
         return """
             OneSignalDispatchers Status:
-            - IO Executor: $ioExecutorStatus
-            - Default Executor: $defaultExecutorStatus
-            - IO Scope: $ioScopeStatus
-            - Default Scope: $defaultScopeStatus
+            - IO Executor: ${executorStatus("ioExecutor") { ioExecutor.isShutdown }}
+            - Default Executor: ${executorStatus("defaultExecutor") { defaultExecutor.isShutdown }}
+            - SerialIO Executor: ${executorStatus("serialIOExecutor") { serialIOExecutor.isShutdown }}
+            - IO Scope: ${scopeStatus("IOScope") { IOScope.isActive }}
+            - Default Scope: ${scopeStatus("DefaultScope") { DefaultScope.isActive }}
+            - SerialIO Scope: ${scopeStatus("SerialIOScope") { SerialIOScope.isActive }}
         """.trimIndent()
     }
+
+    private inline fun executorStatus(
+        name: String,
+        isShutdown: () -> Boolean,
+    ): String =
+        try {
+            if (isShutdown()) "Shutdown" else "Active"
+        } catch (e: Exception) {
+            "$name $NOT_INITIALIZED ${e.message ?: UNKNOWN_ERROR}"
+        }
+
+    private inline fun scopeStatus(
+        name: String,
+        isActive: () -> Boolean,
+    ): String =
+        try {
+            if (isActive()) "Active" else "Cancelled"
+        } catch (e: Exception) {
+            "$name $NOT_INITIALIZED ${e.message ?: UNKNOWN_ERROR}"
+        }
+
+    private const val NOT_INITIALIZED = "Not initialized"
+    private const val UNKNOWN_ERROR = "Unknown error"
 }

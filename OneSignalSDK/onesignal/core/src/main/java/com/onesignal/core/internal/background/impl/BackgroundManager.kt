@@ -32,7 +32,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.pm.PackageManager
 import androidx.core.content.ContextCompat
-import com.onesignal.common.threading.suspendifyOnIO
+import com.onesignal.common.threading.suspendifyOnSerialIO
 import com.onesignal.core.internal.application.IApplicationLifecycleHandler
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.background.IBackgroundManager
@@ -74,15 +74,22 @@ internal class BackgroundManager(
     // JobScheduler operations are synchronous Binder transactions that can block
     // the calling thread for many seconds on some devices (notably under MIUI/
     // power-save). Lifecycle callbacks fire on the main thread, so we offload via
-    // suspendifyOnIO to keep the main thread responsive. State mutations inside
-    // cancelSyncTask/scheduleSyncTask are guarded by `synchronized(lock)`, so
-    // running on the multi-threaded IO pool is safe.
+    // suspendifyOnSerialIO to keep the main thread responsive.
+    //
+    // suspendifyOnSerialIO (not suspendifyOnIO) is required because a rapid
+    // background -> foreground burst would otherwise enqueue a `schedule` and a
+    // `cancel` onto the multi-threaded IO pool, where two worker threads can
+    // execute them out of order — leaving a sync job scheduled while the app is
+    // foregrounded, or vice versa. The serial dispatcher guarantees submission
+    // order on the main thread equals execution order, so the last lifecycle
+    // event always wins, and any future per-event work added to these handlers
+    // (session timing, analytics, focus counters) stays correctly ordered.
     override fun onFocus(firedOnSubscribe: Boolean) {
-        suspendifyOnIO { cancelSyncTask() }
+        suspendifyOnSerialIO { cancelSyncTask() }
     }
 
     override fun onUnfocused() {
-        suspendifyOnIO { scheduleBackground() }
+        suspendifyOnSerialIO { scheduleBackground() }
     }
 
     private fun scheduleBackground() {

@@ -99,6 +99,35 @@ fun suspendifyOnDefault(block: suspend () -> Unit) {
 }
 
 /**
+ * Allows a non suspending function to create a scope that runs on the dedicated
+ * single-thread serial IO dispatcher. Tasks submitted from any thread run one-at-a-time
+ * in submission order, so callers do not need their own synchronization to preserve event
+ * ordering. This is the right entry point for lifecycle event handlers that do per-event
+ * work (timing, analytics, scheduler state) and must observe events in the order the
+ * Android framework fired them.
+ *
+ * Always routes through [OneSignalDispatchers.launchOnSerialIO] regardless of
+ * [ThreadingMode.useBackgroundThreading]: the serial ordering guarantee is the whole
+ * point of this helper, and the dedicated single thread carries none of the resource
+ * concerns that motivated the background-threading FF in the first place.
+ *
+ * Callers should capture any time-sensitive state (timestamps, "current" snapshots) on
+ * the caller's thread before invoking this — the work itself may run a few hundred ms
+ * later under load.
+ *
+ * @param block The suspending code to execute
+ */
+fun suspendifyOnSerialIO(block: suspend () -> Unit) {
+    OneSignalDispatchers.launchOnSerialIO {
+        try {
+            block()
+        } catch (e: Exception) {
+            Logging.error("Exception in suspendifyOnSerialIO", e)
+        }
+    }
+}
+
+/**
  * Modern utility for executing suspending code with completion callback.
  * Uses OneSignal's centralized thread management for better resource control.
  *
