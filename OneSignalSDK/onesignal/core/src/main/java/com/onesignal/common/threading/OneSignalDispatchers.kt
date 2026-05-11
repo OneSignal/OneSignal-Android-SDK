@@ -216,7 +216,11 @@ object OneSignalDispatchers {
         """.trimIndent()
     }
 
-    private inline fun executorStatus(
+    // Visible to tests so the failure branch (where `isShutdown()` itself throws — happens
+    // when the underlying executor's lazy initializer threw and re-throws on every access)
+    // can be exercised without forcing a real ThreadPoolExecutor to fail to construct, which
+    // is impractical to trigger in a unit test.
+    internal fun executorStatus(
         name: String,
         isShutdown: () -> Boolean,
     ): String =
@@ -226,7 +230,7 @@ object OneSignalDispatchers {
             "$name $NOT_INITIALIZED ${e.message ?: UNKNOWN_ERROR}"
         }
 
-    private inline fun scopeStatus(
+    internal fun scopeStatus(
         name: String,
         isActive: () -> Boolean,
     ): String =
