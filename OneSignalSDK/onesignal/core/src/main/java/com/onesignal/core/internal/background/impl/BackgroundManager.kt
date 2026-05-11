@@ -32,6 +32,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.pm.PackageManager
 import androidx.core.content.ContextCompat
+import com.onesignal.common.threading.suspendifyOnIO
 import com.onesignal.core.internal.application.IApplicationLifecycleHandler
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.background.IBackgroundManager
@@ -70,12 +71,18 @@ internal class BackgroundManager(
         _applicationService.addApplicationLifecycleHandler(this)
     }
 
+    // JobScheduler operations are synchronous Binder transactions that can block
+    // the calling thread for many seconds on some devices (notably under MIUI/
+    // power-save). Lifecycle callbacks fire on the main thread, so we offload via
+    // suspendifyOnIO to keep the main thread responsive. State mutations inside
+    // cancelSyncTask/scheduleSyncTask are guarded by `synchronized(lock)`, so
+    // running on the multi-threaded IO pool is safe.
     override fun onFocus(firedOnSubscribe: Boolean) {
-        cancelSyncTask()
+        suspendifyOnIO { cancelSyncTask() }
     }
 
     override fun onUnfocused() {
-        scheduleBackground()
+        suspendifyOnIO { scheduleBackground() }
     }
 
     private fun scheduleBackground() {
