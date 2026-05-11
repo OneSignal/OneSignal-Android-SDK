@@ -250,7 +250,12 @@ internal class SubscriptionOperationExecutor(
                     ) {
                         return ExecutionResponse(ExecutionResult.FAIL_RETRY, retryAfterSeconds = ex.retryAfterSeconds)
                     }
-                    // toss this, but create an identical CreateSubscriptionOperation to re-create the subscription being updated.
+                    // SDK-4388 follow-up: the original update target no longer exists on the
+                    // backend, so issue a fresh local-id Create. A non-local id here would re-route
+                    // through updateExistingSubscriptionFromCreate -> PATCH -> 404 indefinitely
+                    // because execute() dispatches non-local-id Creates as PATCHes; only a local
+                    // id forces the POST/rebuild-user recovery path that can actually re-create
+                    // the subscription.
                     ExecutionResponse(
                         ExecutionResult.FAIL_NORETRY,
                         operations =
@@ -259,7 +264,7 @@ internal class SubscriptionOperationExecutor(
                                 lastOperation.appId,
                                 lastOperation.onesignalId,
                                 lastOperation.externalId,
-                                lastOperation.subscriptionId,
+                                IDManager.createLocalId(),
                                 lastOperation.type,
                                 lastOperation.enabled,
                                 lastOperation.address,
