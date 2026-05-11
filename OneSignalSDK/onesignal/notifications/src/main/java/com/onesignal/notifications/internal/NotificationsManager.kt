@@ -2,6 +2,7 @@ package com.onesignal.notifications.internal
 
 import android.app.Activity
 import com.onesignal.common.events.EventProducer
+import com.onesignal.common.threading.runOnSerialIOIfBackgroundThreading
 import com.onesignal.common.threading.suspendifyOnIO
 import com.onesignal.core.internal.application.IApplicationLifecycleHandler
 import com.onesignal.core.internal.application.IApplicationService
@@ -58,8 +59,23 @@ internal class NotificationsManager(
         }
     }
 
+    // beginEnqueueingWork performs synchronous WorkManager DB I/O (and on first
+    // call lazily initializes WorkManager itself, opening/migrating its SQLite
+    // store). Lifecycle callbacks fire on the main thread, so on devices where
+    // that I/O is slow — heavy storage contention, low memory, OEM throttling —
+    // the call can block the main thread for many seconds and trip an ANR.
+    //
+    // Gated on SDK_BACKGROUND_THREADING via runOnSerialIOIfBackgroundThreading
+    // so we can A/B compare the offloaded behavior (FF on → serial IO dispatch)
+    // against the previous inline behavior (FF off → main thread) in production.
+    // The serial dispatcher is the same one BackgroundManager uses for its
+    // lifecycle JobScheduler calls; keeping both handlers on it preserves
+    // submission order on the main thread = execution order on the serial
+    // thread, and leaves room to add per-event work here later (focus counters,
+    // notification analytics) without re-introducing reorder hazards on a
+    // multi-threaded IO pool.
     override fun onFocus(firedOnSubscribe: Boolean) {
-        refreshNotificationState()
+        runOnSerialIOIfBackgroundThreading { refreshNotificationState() }
     }
 
     override fun onUnfocused() {
