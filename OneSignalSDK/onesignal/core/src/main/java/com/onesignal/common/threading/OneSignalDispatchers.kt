@@ -235,7 +235,6 @@ object OneSignalDispatchers {
             prewarmStarted = false
         }
     }
-
     internal fun getPerformanceMetrics(): String {
         return try {
             val serialQueueSize =
