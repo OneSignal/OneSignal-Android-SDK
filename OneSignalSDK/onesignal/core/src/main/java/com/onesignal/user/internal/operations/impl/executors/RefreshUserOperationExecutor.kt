@@ -107,7 +107,7 @@ internal class RefreshUserOperationExecutor(
             val pushSubscriptionIdFromConfig = _configModelStore.model.pushSubscriptionId
 
             val subscriptionModels = mutableListOf<SubscriptionModel>()
-            var pushSelfHealOperation: UpdateSubscriptionOperation? = null
+            var pushSelfHealOperationForStuckSubscription: UpdateSubscriptionOperation? = null
             for (subscription in response.subscriptions) {
                 val subscriptionModel = SubscriptionModel()
                 subscriptionModel.id = subscription.id!!
@@ -135,7 +135,7 @@ internal class RefreshUserOperationExecutor(
                 // so we don't want to cache these subscriptions from the backend.
                 if (subscriptionModel.type != SubscriptionType.PUSH) {
                     subscriptionModels.add(subscriptionModel)
-                } else if (subscription.id == pushSubscriptionIdFromConfig && pushSelfHealOperation == null) {
+                } else if (subscription.id == pushSubscriptionIdFromConfig && pushSelfHealOperationForStuckSubscription == null) {
                     // Self-heal for users stuck at "Never Subscribed". Older SDK builds dispatched
                     // the merged create-subscription + update-subscription(SUBSCRIBED) batch as a
                     // POST /subscriptions carrying the already-existing server-side id; the server
@@ -147,7 +147,7 @@ internal class RefreshUserOperationExecutor(
                     // re-assert local truth via PATCH. "Device is the source of truth" is the
                     // existing policy for push; this just enforces it across the wire when the
                     // server has drifted out of sync.
-                    pushSelfHealOperation = buildPushSelfHealOperationForStuckSubscription(op, subscription, pushSubscriptionIdFromConfig)
+                    pushSelfHealOperationForStuckSubscription = buildPushSelfHealOperationForStuckSubscription(op, subscription, pushSubscriptionIdFromConfig)
                 }
             }
 
@@ -167,7 +167,7 @@ internal class RefreshUserOperationExecutor(
 
             return ExecutionResponse(
                 ExecutionResult.SUCCESS,
-                operations = pushSelfHealOperation?.let { listOf<Operation>(it) },
+                operations = pushSelfHealOperationForStuckSubscription?.let { listOf<Operation>(it) },
             )
         } catch (ex: BackendException) {
             val responseType = NetworkUtils.getResponseStatusType(ex.statusCode)
