@@ -34,6 +34,7 @@ import com.onesignal.common.events.EventProducer
 import com.onesignal.common.threading.Waiter
 import com.onesignal.common.threading.WaiterWithValue
 import com.onesignal.common.threading.launchOnIO
+import com.onesignal.common.threading.runOnSerialIOIfBackgroundThreading
 import com.onesignal.core.internal.application.ApplicationLifecycleHandlerBase
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.config.ConfigModelStore
@@ -84,16 +85,32 @@ internal class NotificationPermissionController(
     private fun registerPollingLifecycleListener() {
         _applicationService.addApplicationLifecycleHandler(
             object : ApplicationLifecycleHandlerBase() {
+                // The body reads `_configModelStore.model.foregroundFetchNotificationPermissionInterval`
+                // (a synchronized-map read against the live ConfigModel) and calls
+                // `pollingWaiter.wake()`, which dispatches a coroutine resume onto the IO pool
+                // via `channel.trySend` -> `ThreadPoolExecutor.execute`. Production OTel shows
+                // that on cold start the dispatcher / executor lazy chain itself stalls the
+                // main thread for many seconds when this is the first IO-pool consumer (see
+                // SDK-4507).
+                //
+                // Gated on SDK_BACKGROUND_THREADING via runOnSerialIOIfBackgroundThreading so we
+                // can A/B compare offloaded vs inline behavior. FF off retains the original
+                // semantics so existing tests that drive `onFocus` synchronously still observe
+                // the polling-interval update / wake immediately on the calling thread.
                 override fun onFocus(firedOnSubscribe: Boolean) {
                     super.onFocus(firedOnSubscribe)
-                    pollingWaitInterval = _configModelStore.model.foregroundFetchNotificationPermissionInterval
-                    pollingWaiter.wake()
+                    runOnSerialIOIfBackgroundThreading {
+                        pollingWaitInterval = _configModelStore.model.foregroundFetchNotificationPermissionInterval
+                        pollingWaiter.wake()
+                    }
                 }
 
                 override fun onUnfocused() {
                     super.onUnfocused()
-                    // Changing the polling interval to 1 day to effectively pause polling
-                    pollingWaitInterval = _configModelStore.model.backgroundFetchNotificationPermissionInterval
+                    runOnSerialIOIfBackgroundThreading {
+                        // Changing the polling interval to 1 day to effectively pause polling
+                        pollingWaitInterval = _configModelStore.model.backgroundFetchNotificationPermissionInterval
+                    }
                 }
             },
         )

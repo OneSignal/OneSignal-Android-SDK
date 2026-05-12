@@ -1,6 +1,8 @@
 package com.onesignal.core.internal.config.impl
 
 import com.onesignal.common.modeling.ModelChangeTags
+import com.onesignal.common.threading.OneSignalDispatchers
+import com.onesignal.common.threading.runOnSerialIOIfBackgroundThreading
 import com.onesignal.core.internal.application.IApplicationLifecycleHandler
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.backend.IFeatureFlagsBackendService
@@ -17,7 +19,10 @@ import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
+import io.mockk.mockkStatic
 import io.mockk.slot
+import io.mockk.unmockkStatic
+import io.mockk.verify
 
 /**
  * Regression coverage for the duplicate Turbine feature-flags fetch at SDK startup.
@@ -186,5 +191,45 @@ class FeatureFlagsRefreshServiceTests : FunSpec({
         service.onFocus(firedOnSubscribe = false)
         awaitIO()
         fetchCount() shouldBe 2
+    }
+
+    test("onFocus / onUnfocused route through runOnSerialIOIfBackgroundThreading (SDK-4507)") {
+        // SDK-4507: the lifecycle handlers run on the main thread via
+        // ApplicationService.handleFocus -> applicationLifecycleNotifier.fire. The body of
+        // restartForegroundPolling calls OneSignalDispatchers.launchOnIO, which on first cold
+        // use pays the executor + dispatcher + scope construction cost on the calling thread.
+        // The fix wraps both handlers in runOnSerialIOIfBackgroundThreading; this test pins
+        // down the dispatch contract.
+        //
+        // Reset the cumulative call counter on ThreadUtilsKt (IOMockHelper installs the static
+        // mock at spec-level, so calls from earlier tests in this spec would otherwise count
+        // against our `verify(exactly = ...)` assertion). Unmock + remock is the cheapest way
+        // to drop the recorded calls; we then re-install the inline-run answer IOMockHelper
+        // provided so the wrapped block still executes and onFocus/onUnfocused keep their
+        // side effects.
+        unmockkStatic("com.onesignal.common.threading.ThreadUtilsKt")
+        mockkStatic("com.onesignal.common.threading.ThreadUtilsKt")
+        every { runOnSerialIOIfBackgroundThreading(any<() -> Unit>()) } answers {
+            firstArg<() -> Unit>().invoke()
+        }
+        every { OneSignalDispatchers.launchOnIO(any<suspend () -> Unit>()) } returns mockk(relaxed = true)
+
+        val model = ConfigModel().apply { appId = "appId-1" }
+        val store = mockConfigStore(model)
+        val (backend, _) = mockBackend()
+        // start: [true, false] (loop iter1=true, iter2=false break) + onFocus restart loop: [true, false].
+        val app = foregroundedAppService(true, false, true, false)
+
+        val service = FeatureFlagsRefreshService(app, store, backend).apply { refreshIntervalMs = 0L }
+        service.start()
+        awaitIO()
+
+        // start() fires onFocus(true) via the addApplicationLifecycleHandler mock, so we
+        // already have 1 invocation from initial focus. Direct onFocus / onUnfocused calls
+        // bump the counter to 3 total.
+        service.onFocus(firedOnSubscribe = false)
+        service.onUnfocused()
+
+        verify(exactly = 3) { runOnSerialIOIfBackgroundThreading(any<() -> Unit>()) }
     }
 })

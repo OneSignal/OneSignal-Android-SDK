@@ -4,6 +4,7 @@ import com.onesignal.common.modeling.ISingletonModelStoreChangeHandler
 import com.onesignal.common.modeling.ModelChangeTags
 import com.onesignal.common.modeling.ModelChangedArgs
 import com.onesignal.common.threading.OneSignalDispatchers
+import com.onesignal.common.threading.runOnSerialIOIfBackgroundThreading
 import com.onesignal.core.internal.application.IApplicationLifecycleHandler
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.backend.IFeatureFlagsBackendService
@@ -69,15 +70,30 @@ internal class FeatureFlagsRefreshService(
         // Foreground-at-subscribe is handled by [IApplicationService.addApplicationLifecycleHandler] (fires onFocus).
     }
 
+    // restartForegroundPolling calls OneSignalDispatchers.launchOnIO, which on first cold use
+    // pays the executor + dispatcher + scope construction cost on the caller's thread. Since
+    // onFocus is delivered by ApplicationService.handleFocus on the main thread, that cost
+    // showed up as multi-second main-thread blocks under sdk_background_threading (SDK-4507).
+    //
+    // Gated on SDK_BACKGROUND_THREADING via runOnSerialIOIfBackgroundThreading so the FF-off
+    // cohort retains the original inline semantics (and the existing synchronous-onFocus tests
+    // observe the polling-job swap immediately). restartForegroundPolling itself takes the
+    // `synchronized(this)` lock that onModelUpdated / onModelReplaced share, so submission
+    // order preservation by the serial dispatcher is also a nice-to-have for back-to-back
+    // focus events.
     override fun onFocus(firedOnSubscribe: Boolean) {
-        restartForegroundPolling()
+        runOnSerialIOIfBackgroundThreading { restartForegroundPolling() }
     }
 
     override fun onUnfocused() {
-        synchronized(this) {
-            pollJob?.cancel()
-            pollJob = null
-            pollingAppId = null
+        runOnSerialIOIfBackgroundThreading {
+            // Qualify `this` so we lock on the FeatureFlagsRefreshService instance rather than
+            // the (no-receiver) lambda; same monitor restartForegroundPolling acquires.
+            synchronized(this@FeatureFlagsRefreshService) {
+                pollJob?.cancel()
+                pollJob = null
+                pollingAppId = null
+            }
         }
     }
 
