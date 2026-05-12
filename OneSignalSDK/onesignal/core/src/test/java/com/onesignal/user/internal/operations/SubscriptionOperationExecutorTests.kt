@@ -632,16 +632,33 @@ class SubscriptionOperationExecutorTests :
 
         // Regression: when an UpdateSubscriptionOperation PATCH returns 404 outside
         // the missing-retry window, the executor must enqueue a recovery CreateSubscriptionOperation
-        // with a *local* subscriptionId. Re-using the original non-local id would bounce back
-        // through execute() -> updateExistingSubscriptionFromCreate -> PATCH -> 404 indefinitely
-        // (because non-local-id Creates dispatch as PATCHes), preventing the rebuild-user / POST
-        // recovery path in createSubscription from ever running.
-        test("update subscription 404 outside retry window enqueues recovery CreateSubscriptionOperation with local id") {
+        // with a *local* subscriptionId AND rewrite the cached SubscriptionModel + pushSubscriptionId
+        // to that same local id. Two reasons:
+        //   1. A non-local recovery id would bounce back through execute() ->
+        //      updateExistingSubscriptionFromCreate -> PATCH -> 404 indefinitely (because
+        //      non-local-id Creates dispatch as PATCHes), preventing the rebuild-user / POST
+        //      recovery path in createSubscription from ever running.
+        //   2. If the model store still held the original non-local id, the rebuild-user path
+        //      (LoginUserOperationExecutor's getRebuildOperationsIfCurrentUser) would emit a
+        //      second Create carrying that stale id; both Creates would land in POST /users
+        //      and the backend would create two subscription rows for the same device.
+        test("update subscription 404 outside retry window rewrites cached subscription id and enqueues local-id Create") {
             // Given
             val mockSubscriptionBackendService = mockk<ISubscriptionBackendService>()
             coEvery { mockSubscriptionBackendService.updateSubscription(any(), any(), any()) } throws BackendException(404)
 
             val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
+            val cachedSubscriptionModel =
+                SubscriptionModel().apply {
+                    id = remoteSubscriptionId
+                    type = SubscriptionType.PUSH
+                    address = "pushToken2"
+                    optedIn = true
+                }
+            every { mockSubscriptionsModelStore.get(remoteSubscriptionId) } returns cachedSubscriptionModel
+
+            val configModelStore = MockHelper.configModelStore().also { it.model.pushSubscriptionId = remoteSubscriptionId }
+
             val mockBuildUserService = mockk<IRebuildUserService>()
 
             val subscriptionOperationExecutor =
@@ -650,7 +667,7 @@ class SubscriptionOperationExecutorTests :
                     MockHelper.deviceService(),
                     AndroidMockHelper.applicationService(),
                     mockSubscriptionsModelStore,
-                    MockHelper.configModelStore(),
+                    configModelStore,
                     mockBuildUserService,
                     getNewRecordState(),
                     mockConsistencyManager,
@@ -692,6 +709,10 @@ class SubscriptionOperationExecutorTests :
             recovery.enabled shouldBe true
             recovery.address shouldBe "pushToken2"
             recovery.status shouldBe SubscriptionStatus.SUBSCRIBED
+            // The cached SubscriptionModel and pushSubscriptionId must now point at the new local id
+            // so the rebuild-user path emits a Create with the same id and dedupes with this recovery.
+            cachedSubscriptionModel.id shouldBe recovery.subscriptionId
+            configModelStore.model.pushSubscriptionId shouldBe recovery.subscriptionId
         }
 
         test("update subscription fails with retry when the backend returns MISSING, when isInMissingRetryWindow") {
