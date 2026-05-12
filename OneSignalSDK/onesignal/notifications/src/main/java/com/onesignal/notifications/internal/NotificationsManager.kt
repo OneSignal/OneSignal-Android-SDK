@@ -2,6 +2,7 @@ package com.onesignal.notifications.internal
 
 import android.app.Activity
 import com.onesignal.common.events.EventProducer
+import com.onesignal.common.threading.runOnSerialIOIfBackgroundThreading
 import com.onesignal.common.threading.suspendifyOnIO
 import com.onesignal.core.internal.application.IApplicationLifecycleHandler
 import com.onesignal.core.internal.application.IApplicationService
@@ -58,8 +59,11 @@ internal class NotificationsManager(
         }
     }
 
+    // refreshNotificationState drives WorkManager DB I/O; the first call lazily inits WorkManager
+    // (opens/migrates its SQLite store) and can block the main thread for seconds on slow storage
+    // (SDK-4506).
     override fun onFocus(firedOnSubscribe: Boolean) {
-        refreshNotificationState()
+        runOnSerialIOIfBackgroundThreading { refreshNotificationState() }
     }
 
     override fun onUnfocused() {
