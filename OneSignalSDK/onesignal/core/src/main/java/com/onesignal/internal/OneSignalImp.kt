@@ -309,6 +309,14 @@ internal class OneSignalImp(
     ): Boolean {
         Logging.log(LogLevel.DEBUG, "Calling deprecated initWithContext(context: $context, appId: $appId)")
 
+        // Warm OneSignalDispatchers on a dedicated daemon thread so the first production caller
+        // of suspendifyOnIO / launchOnSerialIO doesn't pay the ThreadPoolExecutor + dispatcher +
+        // scope construction cost on the main thread. See SDK-4507; OTel showed that cost as
+        // 5–20s main-thread blocks at first foreground/background lifecycle event under
+        // sdk_background_threading. Calling prewarm() is idempotent, fire-and-forget, and safe
+        // even if a prior initWithContext attempt already started the prewarm.
+        OneSignalDispatchers.prewarm()
+
         synchronized(initLock) {
             if (initState.isSDKAccessible()) {
                 Logging.log(LogLevel.DEBUG, "initWithContext: SDK already initialized or in progress")
@@ -807,6 +815,12 @@ internal class OneSignalImp(
         appId: String?,
     ): Boolean {
         Logging.log(LogLevel.DEBUG, "initWithContext(context: $context, appId: $appId)")
+
+        // Same SDK-4507 warm-up as the synchronous variant. Reaching this entry point on the
+        // main thread (e.g. SyncJobService.onStartJob -> suspendifyOnIO -> initWithContext(context))
+        // pays the cold-init cost on the dispatcher used to enter [withContext] below, so warm
+        // OneSignalDispatchers on a background thread before we touch [runtimeIoDispatcher].
+        OneSignalDispatchers.prewarm()
 
         // Use IO dispatcher for initialization to prevent ANRs and optimize for I/O operations
         return withContext(runtimeIoDispatcher) {
