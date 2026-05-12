@@ -102,7 +102,7 @@ internal class RefreshUserOperationExecutor(
             propertiesModel.timezone = TimeUtils.getTimeZoneId()
 
             // Retrieve the push subscription ID from the backend configuration model store. Used
-            // both for re-attaching the locally-cached push model below and for the SDK-4474
+            // both for re-attaching the locally-cached push model below and for the push
             // self-heal divergence check inside the loop.
             val pushSubscriptionIdFromConfig = _configModelStore.model.pushSubscriptionId
 
@@ -136,10 +136,9 @@ internal class RefreshUserOperationExecutor(
                 if (subscriptionModel.type != SubscriptionType.PUSH) {
                     subscriptionModels.add(subscriptionModel)
                 } else if (subscription.id == pushSubscriptionIdFromConfig && pushSelfHealOperation == null) {
-                    // SDK-4474 self-heal for SDK-4388 victims. The buggy
-                    // SubscriptionOperationExecutor in older SDK builds dispatched the merged
-                    // create-subscription + update-subscription(SUBSCRIBED) batch as a POST
-                    // /subscriptions carrying the already-existing server-side id; the server
+                    // Self-heal for users stuck at "Never Subscribed". Older SDK builds dispatched
+                    // the merged create-subscription + update-subscription(SUBSCRIBED) batch as a
+                    // POST /subscriptions carrying the already-existing server-side id; the server
                     // responded 200 {} (no-op) and the local op queue was emptied, leaving the
                     // server stuck at enabled:false / notification_types:0. Once that user
                     // upgrades to a fixed SDK build, nothing in the queue triggers the fix path.
@@ -200,9 +199,9 @@ internal class RefreshUserOperationExecutor(
     }
 
     /**
-     * SDK-4474 self-heal builder. Returns an [UpdateSubscriptionOperation] iff the cached
-     * push subscription model resolves to enabled-and-opted-in but the server response
-     * recorded the same id as disabled. Returns null otherwise (no divergence — no-op).
+     * Push self-heal builder. Returns an [UpdateSubscriptionOperation] iff the cached push
+     * subscription model resolves to enabled-and-opted-in but the server response recorded
+     * the same id as disabled. Returns null otherwise (no divergence — no-op).
      *
      * Caller has already verified that [serverSubscription.id] matches the cached
      * `pushSubscriptionId`, so this method only inspects the local model + server flags.
@@ -226,7 +225,7 @@ internal class RefreshUserOperationExecutor(
                 "RefreshUserOperationExecutor: push subscription $pushSubscriptionId diverged from server " +
                     "(server enabled=${serverSubscription.enabled} notificationTypes=${serverSubscription.notificationTypes}; " +
                     "local opted-in and SUBSCRIBED). Enqueuing follow-up update-subscription op to re-assert local " +
-                    "truth via PATCH /subscriptions/{id}. See SDK-4388 / SDK-4474.",
+                    "truth via PATCH /subscriptions/{id}.",
             )
             UpdateSubscriptionOperation(
                 op.appId,

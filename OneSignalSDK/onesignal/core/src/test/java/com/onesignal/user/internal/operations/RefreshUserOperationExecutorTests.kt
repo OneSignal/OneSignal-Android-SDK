@@ -64,7 +64,7 @@ class RefreshUserOperationExecutorTests : FunSpec({
                 mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId, "aliasLabel1" to "aliasValue1"),
                 PropertiesObject(country = remoteCountry, language = remoteLanguage, timezoneId = remoteTimeZone, tags = remoteTags),
                 listOf(
-                    // notificationTypes = 1 keeps server-side view healthy so the SDK-4474
+                    // notificationTypes = 1 keeps server-side view healthy so the push
                     // self-heal divergence check is a no-op for this happy-path test.
                     SubscriptionObject(existingSubscriptionId1, SubscriptionObjectType.ANDROID_PUSH, enabled = true, notificationTypes = 1, token = "on-backend-push-token"),
                     SubscriptionObject(remoteSubscriptionId1, SubscriptionObjectType.ANDROID_PUSH, enabled = true, notificationTypes = 1, token = "pushToken2"),
@@ -326,10 +326,11 @@ class RefreshUserOperationExecutorTests : FunSpec({
         }
     }
 
-    // SDK-4474 self-heal divergence detection. Verifies that when the device-cached push
+    // Push self-heal divergence detection. Verifies that when the device-cached push
     // subscription resolves to enabled-and-opted-in but the GET /users response returns the
-    // same subscription as disabled (the SDK-4388 stuck state), RefreshUserOperationExecutor
-    // emits a follow-up UpdateSubscriptionOperation to re-assert local truth via PATCH.
+    // same subscription as disabled (the "Never Subscribed" stuck state),
+    // RefreshUserOperationExecutor emits a follow-up UpdateSubscriptionOperation to re-assert
+    // local truth via PATCH.
     fun buildSelfHealHarness(
         serverPushEnabled: Boolean,
         serverNotificationTypes: Int?,
@@ -396,8 +397,8 @@ class RefreshUserOperationExecutorTests : FunSpec({
         return Triple(executor, cachedPushSubscriptionModel, mockUserBackendService)
     }
 
-    test("SDK-4474 self-heal: enqueues follow-up update-subscription op when server is stuck-disabled but local is enabled") {
-        // Given: server view says push is disabled (the SDK-4388 stuck state), local view says enabled
+    test("push self-heal: enqueues follow-up update-subscription op when server is stuck-disabled but local is enabled") {
+        // Given: server view says push is disabled (the stuck state), local view says enabled
         val (executor, _, _) =
             buildSelfHealHarness(
                 serverPushEnabled = false,
@@ -434,7 +435,7 @@ class RefreshUserOperationExecutorTests : FunSpec({
         }
     }
 
-    test("SDK-4474 self-heal: does NOT enqueue follow-up op when server matches local (healthy push subscription)") {
+    test("push self-heal: does NOT enqueue follow-up op when server matches local (healthy push subscription)") {
         // Given: server already enabled and notificationTypes=1, local also enabled
         val (executor, _, _) =
             buildSelfHealHarness(
@@ -453,7 +454,7 @@ class RefreshUserOperationExecutorTests : FunSpec({
         response.operations shouldBe null
     }
 
-    test("SDK-4474 self-heal: does NOT enqueue follow-up op when local is opted out (UNSUBSCRIBE is intentional)") {
+    test("push self-heal: does NOT enqueue follow-up op when local is opted out (UNSUBSCRIBE is intentional)") {
         // Given: server is disabled, but so is local (user explicitly opted out)
         val (executor, _, _) =
             buildSelfHealHarness(
@@ -472,7 +473,7 @@ class RefreshUserOperationExecutorTests : FunSpec({
         response.operations shouldBe null
     }
 
-    test("SDK-4474 self-heal: does NOT enqueue follow-up op when local has NO_PERMISSION (OS-level disable is real)") {
+    test("push self-heal: does NOT enqueue follow-up op when local has NO_PERMISSION (OS-level disable is real)") {
         // Given: server disabled, local also has no notification permission
         val (executor, _, _) =
             buildSelfHealHarness(
