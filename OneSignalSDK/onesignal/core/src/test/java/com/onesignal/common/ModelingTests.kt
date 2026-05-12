@@ -20,6 +20,50 @@ import java.util.UUID
 
 class ModelingTests : FunSpec({
 
+    test("initializeFromModel does not throw ConcurrentModificationException when source model is mutated concurrently") {
+        // Given a source model that is being mutated continuously on one thread...
+        val sourceModel = MockHelper.configModelStore().model
+        val destinationModel = MockHelper.configModelStore().model
+
+        val stop = java.util.concurrent.atomic.AtomicBoolean(false)
+        val failure = java.util.concurrent.atomic.AtomicReference<Throwable?>(null)
+
+        val mutator =
+            Thread {
+                var i = 0
+                while (!stop.get()) {
+                    sourceModel.setOptAnyProperty("k${i % 32}", "v$i")
+                    i++
+                }
+            }
+
+        val initializer =
+            Thread {
+                try {
+                    repeat(500) {
+                        destinationModel.initializeFromModel(null, sourceModel)
+                    }
+                } catch (t: Throwable) {
+                    failure.set(t)
+                } finally {
+                    stop.set(true)
+                }
+            }
+
+        // When both threads run concurrently
+        mutator.start()
+        initializer.start()
+
+        initializer.join(10_000)
+        stop.set(true)
+        mutator.join(10_000)
+
+        // Then initializeFromModel must not throw a ConcurrentModificationException
+        failure.get() shouldBe null
+        initializer.state shouldBe Thread.State.TERMINATED
+        mutator.state shouldBe Thread.State.TERMINATED
+    }
+
     test("Deadlock related to Model.setOptAnyProperty") {
         // Given
         val modelStore = MockHelper.configModelStore()

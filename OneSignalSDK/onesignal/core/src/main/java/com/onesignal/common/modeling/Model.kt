@@ -129,15 +129,23 @@ open class Model(
         id: String?,
         model: Model,
     ) {
-        val newData = Collections.synchronizedMap(mutableMapOf<String, Any?>())
+        // Snapshot the source map under its own monitor. `model.data` is a
+        // Collections.synchronizedMap, which only makes individual operations
+        // thread-safe; iterating its entry set requires holding the map's
+        // monitor or a ConcurrentModificationException can be thrown if
+        // another thread mutates it (e.g. via setOptAnyProperty).
+        val sourceSnapshot =
+            synchronized(model.data) {
+                model.data.toMap()
+            }
 
-        for (item in model.data) {
-            if (item.value is Model) {
-                val childModel = item.value as Model
-                childModel._parentModel = this
-                newData[item.key] = childModel
+        val newData = mutableMapOf<String, Any?>()
+        for ((key, value) in sourceSnapshot) {
+            if (value is Model) {
+                value._parentModel = this
+                newData[key] = value
             } else {
-                newData[item.key] = item.value
+                newData[key] = value
             }
         }
 
@@ -145,6 +153,9 @@ open class Model(
             newData[::id.name] = id
         }
 
+        // Acquire `this.data` only after releasing `model.data` so the two
+        // monitors are never held simultaneously, avoiding any lock-ordering
+        // deadlocks between concurrent initializeFromModel calls.
         synchronized(data) {
             data.clear()
             data.putAll(newData)
