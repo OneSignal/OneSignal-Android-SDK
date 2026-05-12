@@ -32,6 +32,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.pm.PackageManager
 import androidx.core.content.ContextCompat
+import com.onesignal.common.threading.runOnSerialIOIfBackgroundThreading
 import com.onesignal.core.internal.application.IApplicationLifecycleHandler
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.background.IBackgroundManager
@@ -70,12 +71,15 @@ internal class BackgroundManager(
         _applicationService.addApplicationLifecycleHandler(this)
     }
 
+    // JobScheduler.cancel/schedule are synchronous Binder calls; on some devices they block the
+    // main thread for seconds (SDK-4505). Offload to SerialIO so a rapid unfocus -> focus burst
+    // still runs cancel-then-schedule in submission order. FF gates the rollout.
     override fun onFocus(firedOnSubscribe: Boolean) {
-        cancelSyncTask()
+        runOnSerialIOIfBackgroundThreading { cancelSyncTask() }
     }
 
     override fun onUnfocused() {
-        scheduleBackground()
+        runOnSerialIOIfBackgroundThreading { scheduleBackground() }
     }
 
     private fun scheduleBackground() {

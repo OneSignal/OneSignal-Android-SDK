@@ -4,6 +4,7 @@ import com.onesignal.common.modeling.ISingletonModelStoreChangeHandler
 import com.onesignal.common.modeling.ModelChangeTags
 import com.onesignal.common.modeling.ModelChangedArgs
 import com.onesignal.common.threading.OneSignalDispatchers
+import com.onesignal.common.threading.runOnSerialIOIfBackgroundThreading
 import com.onesignal.core.internal.application.IApplicationLifecycleHandler
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.backend.IFeatureFlagsBackendService
@@ -69,15 +70,22 @@ internal class FeatureFlagsRefreshService(
         // Foreground-at-subscribe is handled by [IApplicationService.addApplicationLifecycleHandler] (fires onFocus).
     }
 
+    // restartForegroundPolling calls launchOnIO; on cold start that can be the first
+    // OneSignalDispatchers consumer and pay the lazy-chain init cost on the main thread
+    // (SDK-4506). SerialIO also preserves order with the matching onUnfocused cancel.
     override fun onFocus(firedOnSubscribe: Boolean) {
-        restartForegroundPolling()
+        runOnSerialIOIfBackgroundThreading { restartForegroundPolling() }
     }
 
     override fun onUnfocused() {
-        synchronized(this) {
-            pollJob?.cancel()
-            pollJob = null
-            pollingAppId = null
+        runOnSerialIOIfBackgroundThreading {
+            // Qualify `this` so we lock on the service instance (same monitor
+            // restartForegroundPolling acquires), not on the no-receiver lambda.
+            synchronized(this@FeatureFlagsRefreshService) {
+                pollJob?.cancel()
+                pollJob = null
+                pollingAppId = null
+            }
         }
     }
 

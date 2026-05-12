@@ -34,6 +34,7 @@ import com.onesignal.common.events.EventProducer
 import com.onesignal.common.threading.Waiter
 import com.onesignal.common.threading.WaiterWithValue
 import com.onesignal.common.threading.launchOnIO
+import com.onesignal.common.threading.runOnSerialIOIfBackgroundThreading
 import com.onesignal.core.internal.application.ApplicationLifecycleHandlerBase
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.config.ConfigModelStore
@@ -84,16 +85,23 @@ internal class NotificationPermissionController(
     private fun registerPollingLifecycleListener() {
         _applicationService.addApplicationLifecycleHandler(
             object : ApplicationLifecycleHandlerBase() {
+                // pollingWaiter.wake() dispatches onto the IO pool; on cold start it can be the
+                // first OneSignalDispatchers consumer and pay the lazy-chain init cost on the
+                // main thread (SDK-4506).
                 override fun onFocus(firedOnSubscribe: Boolean) {
                     super.onFocus(firedOnSubscribe)
-                    pollingWaitInterval = _configModelStore.model.foregroundFetchNotificationPermissionInterval
-                    pollingWaiter.wake()
+                    runOnSerialIOIfBackgroundThreading {
+                        pollingWaitInterval = _configModelStore.model.foregroundFetchNotificationPermissionInterval
+                        pollingWaiter.wake()
+                    }
                 }
 
                 override fun onUnfocused() {
                     super.onUnfocused()
-                    // Changing the polling interval to 1 day to effectively pause polling
-                    pollingWaitInterval = _configModelStore.model.backgroundFetchNotificationPermissionInterval
+                    runOnSerialIOIfBackgroundThreading {
+                        // Changing the polling interval to 1 day to effectively pause polling
+                        pollingWaitInterval = _configModelStore.model.backgroundFetchNotificationPermissionInterval
+                    }
                 }
             },
         )
