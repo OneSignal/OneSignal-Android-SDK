@@ -1,6 +1,7 @@
 package com.onesignal.session.internal.session.impl
 
 import com.onesignal.common.events.EventProducer
+import com.onesignal.common.threading.runOnSerialIOIfBackgroundThreading
 import com.onesignal.core.internal.application.IApplicationLifecycleHandler
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.background.IBackgroundService
@@ -101,8 +102,35 @@ internal class SessionService(
      * In this case, the app is already foregrounded, so this method is fired immediately on subscribing
      * to the IApplicationService. Listeners of this service will not subscribe in time to capture
      * the `onSessionStarted()` callback here, so fire it when they themselves subscribe.
+     *
+     * SDK-4508: Production OTel shows this handler fired from `ApplicationService.handleFocus` on
+     * the main thread blocking for many seconds when the cold-init dispatcher / executor lazy
+     * chain inside [com.onesignal.common.threading.OneSignalDispatchers] runs as a downstream
+     * effect of `sessionLifeCycleNotifier.fire { onSessionStarted/Active }`. The subscribed
+     * handlers (operation repo, IAM trigger eval, etc.) hand work off to those pools, and the
+     * first of them to touch the chain pays the construction cost on whichever thread is
+     * delivering the event.
+     *
+     * We capture timing-sensitive state on the caller's thread (so `session.startTime` /
+     * `session.focusTime` reflect the moment Android delivered the event, not whenever the
+     * serial dispatcher gets around to running our block) and then hand the rest of the work
+     * to [runOnSerialIOIfBackgroundThreading]. FF off retains the original inline semantics for
+     * the rollout control cohort and the existing synchronous-onFocus tests.
      */
     override fun onFocus(firedOnSubscribe: Boolean) {
+        // Capture timing state BEFORE handing off so the session timestamps reflect main-thread
+        // event arrival, not whenever the serial dispatcher runs the block. Same pattern the
+        // KDoc on `suspendifyOnSerialIO` recommends for time-sensitive lifecycle work.
+        val focusTimeMs = _time.currentTimeMillis
+        runOnSerialIOIfBackgroundThreading {
+            handleOnFocus(firedOnSubscribe, focusTimeMs)
+        }
+    }
+
+    private fun handleOnFocus(
+        firedOnSubscribe: Boolean,
+        focusTimeMs: Long,
+    ) {
         Logging.log(LogLevel.DEBUG, "SessionService.onFocus() - fired from start: $firedOnSubscribe")
 
         val session = this.session
@@ -121,7 +149,7 @@ internal class SessionService(
             // As the old session was made inactive, we need to create a new session
             shouldFireOnSubscribe = firedOnSubscribe
             session.sessionId = UUID.randomUUID().toString()
-            session.startTime = _time.currentTimeMillis
+            session.startTime = focusTimeMs
             session.focusTime = session.startTime
             session.isValid = true
             Logging.debug("SessionService: New session started at ${session.startTime}")
@@ -129,19 +157,28 @@ internal class SessionService(
         } else {
             // existing session: just remember the focus time so we can calculate the active time
             // when onUnfocused is called.
-            session.focusTime = _time.currentTimeMillis
+            session.focusTime = focusTimeMs
             sessionLifeCycleNotifier.fire { it.onSessionActive() }
         }
     }
 
     override fun onUnfocused() {
+        // Same pattern as onFocus: capture the timing on the caller's thread so activeDuration
+        // accounting is unaffected by serial-dispatcher latency, then offload.
+        val unfocusTimeMs = _time.currentTimeMillis
+        runOnSerialIOIfBackgroundThreading {
+            handleOnUnfocused(unfocusTimeMs)
+        }
+    }
+
+    private fun handleOnUnfocused(unfocusTimeMs: Long) {
         val session = this.session
         if (session == null) {
             Logging.warn("SessionService.onUnfocused called before bootstrap; ignoring.")
             return
         }
         // capture the amount of time the app was focused
-        val dt = _time.currentTimeMillis - session.focusTime
+        val dt = unfocusTimeMs - session.focusTime
         session.activeDuration += dt
         Logging.log(LogLevel.DEBUG, "SessionService.onUnfocused adding time $dt for total: ${session.activeDuration}")
     }
