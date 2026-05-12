@@ -57,9 +57,9 @@ internal class SubscriptionOperationExecutor(
         val startingOp = operations.first()
 
         return if (startingOp is CreateSubscriptionOperation) {
-            // SDK-4388: if the subscription already exists on the backend (non-local id),
-            // POSTing to /subscriptions with that id is silently treated as a no-op and
-            // drops the merged enabled/status payload. Dispatch as an update instead.
+            // If the subscription already exists on the backend (non-local id), POSTing
+            // to /subscriptions with that id is silently a server-side no-op and drops
+            // the merged enabled/status payload. Dispatch as an update instead.
             if (!IDManager.isLocalId(startingOp.subscriptionId)) {
                 updateExistingSubscriptionFromCreate(startingOp, operations)
             } else {
@@ -250,11 +250,11 @@ internal class SubscriptionOperationExecutor(
                     ) {
                         return ExecutionResponse(ExecutionResult.FAIL_RETRY, retryAfterSeconds = ex.retryAfterSeconds)
                     }
-                    // SDK-4388 follow-up: the original update target no longer exists on the
-                    // backend, so issue a fresh local-id Create. A non-local id here would re-route
-                    // through updateExistingSubscriptionFromCreate -> PATCH -> 404 indefinitely
-                    // because execute() dispatches non-local-id Creates as PATCHes; only a local
-                    // id forces the POST/rebuild-user recovery path that can actually re-create
+                    // The original update target no longer exists on the backend, so issue
+                    // a fresh local-id Create. A non-local id here would re-route through
+                    // updateExistingSubscriptionFromCreate -> PATCH -> 404 indefinitely because
+                    // execute() dispatches non-local-id Creates as PATCHes; only a local id
+                    // forces the POST/rebuild-user recovery path that can actually re-create
                     // the subscription.
                     ExecutionResponse(
                         ExecutionResult.FAIL_NORETRY,

@@ -111,9 +111,9 @@ class SubscriptionOperationExecutorTests :
             }
         }
 
-        // SDK-4388: A CreateSubscriptionOperation can carry a non-local subscriptionId when
-        // a subscription that already exists on the backend is re-attached to a new local user
-        // (e.g. createAndSwitchToNewUser after login). POSTing to /subscriptions with that id is
+        // A CreateSubscriptionOperation can carry a non-local subscriptionId when a subscription
+        // that already exists on the backend is re-attached to a new local user (e.g.
+        // createAndSwitchToNewUser after login). POSTing to /subscriptions with that id is
         // silently a no-op on the server, so we must PATCH the existing subscription instead.
         test("create subscription PATCHes existing subscription when subscription ID is non-local") {
             // Given
@@ -629,7 +629,7 @@ class SubscriptionOperationExecutorTests :
             }
         }
 
-        // Regression for SDK-4388: when an UpdateSubscriptionOperation PATCH returns 404 outside
+        // Regression: when an UpdateSubscriptionOperation PATCH returns 404 outside
         // the missing-retry window, the executor must enqueue a recovery CreateSubscriptionOperation
         // with a *local* subscriptionId. Re-using the original non-local id would bounce back
         // through execute() -> updateExistingSubscriptionFromCreate -> PATCH -> 404 indefinitely
@@ -1027,7 +1027,7 @@ class SubscriptionOperationExecutorTests :
             response.retryAfterSeconds shouldBe 5
         }
 
-        // Repro for SDK-4388: when a CreateSubscriptionOperation is grouped with a follow-up
+        // When a CreateSubscriptionOperation is grouped with a follow-up
         // UpdateSubscriptionOperation for a subscription that already exists on the server
         // (non-local subscriptionId), the executor must PATCH the merged final state instead
         // of POSTing (which the backend treats as a no-op, silently dropping enabled/status).
@@ -1101,7 +1101,7 @@ class SubscriptionOperationExecutorTests :
             }
         }
 
-        // SDK-4388: when a CreateSubscriptionOperation with a non-local id is grouped with a
+        // When a CreateSubscriptionOperation with a non-local id is grouped with a
         // DeleteSubscriptionOperation, the executor must short-circuit to SUCCESS without
         // making any backend calls. Creating-then-deleting an already-existing subscription is
         // a no-op, and a stray PATCH here would resurrect a subscription the caller intended
@@ -1160,7 +1160,7 @@ class SubscriptionOperationExecutorTests :
             }
         }
 
-        // SDK-4388: when the PATCH dispatched for a non-local-id Create fails with a retryable
+        // When the PATCH dispatched for a non-local-id Create fails with a retryable
         // network error, the executor must propagate FAIL_RETRY (and any retryAfterSeconds) so
         // OperationRepo can re-execute, rather than swallowing the error or routing back to a
         // POST that the backend would silently no-op.
@@ -1223,7 +1223,7 @@ class SubscriptionOperationExecutorTests :
             }
         }
 
-        // SDK-4388: when multiple UpdateSubscriptionOperations are batched with a non-local-id
+        // When multiple UpdateSubscriptionOperations are batched with a non-local-id
         // Create, the executor must collapse them into a single PATCH carrying the *last*
         // update's values (not the create's, not the first update's). Locks in last-wins
         // semantics so a future "merge updates" refactor can't silently change behavior on
