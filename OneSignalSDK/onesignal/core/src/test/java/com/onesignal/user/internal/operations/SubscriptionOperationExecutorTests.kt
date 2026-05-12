@@ -581,6 +581,7 @@ class SubscriptionOperationExecutorTests :
             coEvery { mockSubscriptionBackendService.updateSubscription(any(), any(), any()) } throws BackendException(404)
 
             val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
+            every { mockSubscriptionsModelStore.get(any()) } returns null
             val mockBuildUserService = mockk<IRebuildUserService>()
 
             val subscriptionOperationExecutor =

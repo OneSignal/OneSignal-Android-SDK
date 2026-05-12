@@ -256,6 +256,24 @@ internal class SubscriptionOperationExecutor(
                     // execute() dispatches non-local-id Creates as PATCHes; only a local id
                     // forces the POST/rebuild-user recovery path that can actually re-create
                     // the subscription.
+                    val recoveryLocalId = IDManager.createLocalId()
+                    val staleSubscriptionId = lastOperation.subscriptionId
+
+                    // Rewrite the cached SubscriptionModel id (and pushSubscriptionId, if it
+                    // pointed at the stale id) to the new local id. This keeps the recovery
+                    // Create and the rebuild-user path's getRebuildOperationsIfCurrentUser
+                    // emitting Creates with the same subscriptionId, so they dedupe instead
+                    // of producing two POST /users subscription rows. HYDRATE prevents the
+                    // SubscriptionModelStoreListener from enqueuing follow-on operations.
+                    _subscriptionModelStore.get(staleSubscriptionId)?.setStringProperty(
+                        SubscriptionModel::id.name,
+                        recoveryLocalId,
+                        ModelChangeTags.HYDRATE,
+                    )
+                    if (_configModelStore.model.pushSubscriptionId == staleSubscriptionId) {
+                        _configModelStore.model.pushSubscriptionId = recoveryLocalId
+                    }
+
                     ExecutionResponse(
                         ExecutionResult.FAIL_NORETRY,
                         operations =
@@ -264,7 +282,7 @@ internal class SubscriptionOperationExecutor(
                                 lastOperation.appId,
                                 lastOperation.onesignalId,
                                 lastOperation.externalId,
-                                IDManager.createLocalId(),
+                                recoveryLocalId,
                                 lastOperation.type,
                                 lastOperation.enabled,
                                 lastOperation.address,
