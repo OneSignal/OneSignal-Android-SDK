@@ -99,6 +99,38 @@ fun suspendifyOnDefault(block: suspend () -> Unit) {
 }
 
 /**
+ * Runs [block] on the single-thread serial IO dispatcher. Tasks from any thread execute
+ * one-at-a-time in submission order — the entry point for lifecycle handlers that need to
+ * preserve event ordering. Always routes off-main regardless of [ThreadingMode.useBackgroundThreading].
+ *
+ * Capture time-sensitive state (timestamps, "current" snapshots) on the caller's thread
+ * before invoking — the block itself may run later under load.
+ */
+fun suspendifyOnSerialIO(block: suspend () -> Unit) {
+    OneSignalDispatchers.launchOnSerialIO {
+        try {
+            block()
+        } catch (e: Exception) {
+            Logging.error("Exception in suspendifyOnSerialIO", e)
+        }
+    }
+}
+
+/**
+ * FF-gated rollout helper for lifecycle offload work. When [ThreadingMode.useBackgroundThreading]
+ * is on, dispatches [block] to the serial IO thread; when off, runs it inline so the control
+ * cohort retains the original behavior. The block is non-suspending so the FF-off branch doesn't
+ * need a [kotlinx.coroutines.runBlocking].
+ */
+fun runOnSerialIOIfBackgroundThreading(block: () -> Unit) {
+    if (ThreadingMode.useBackgroundThreading) {
+        suspendifyOnSerialIO { block() }
+    } else {
+        block()
+    }
+}
+
+/**
  * Modern utility for executing suspending code with completion callback.
  * Uses OneSignal's centralized thread management for better resource control.
  *
