@@ -172,6 +172,69 @@ object OneSignalDispatchers {
         return SerialIOScope.launch { block() }
     }
 
+    @Volatile
+    private var prewarmStarted = false
+    private val prewarmLock = Any()
+
+    /**
+     * Triggers the lazy initialization of [IO], [Default], and [SerialIO] (and their backing
+     * executors, dispatchers, and scopes) on a short-lived background thread.
+     *
+     * Background:
+     * The lazy `by lazy` properties below construct `ThreadPoolExecutor` instances and wrap them
+     * in `asCoroutineDispatcher() + SupervisorJob() + CoroutineScope(...)`. Production OTel
+     * shows that when the **first** caller of [launchOnIO] / [launchOnSerialIO] is on the main
+     * thread (Activity-lifecycle handler, `JobService.onStartJob`, etc.), the construction cost
+     * — which includes a `kotlinx.coroutines.BuildersKt.launch` that hits
+     * `ThreadPoolExecutor.execute` and `LinkedBlockingQueue.offer` synchronously — is paid on
+     * the calling thread, blocking the main thread for many seconds on cold start. See SDK-4507.
+     *
+     * Calling [prewarm] from a non-time-sensitive spot in [com.onesignal.OneSignal.initWithContext]
+     * shifts that cost to a dedicated `OneSignal-prewarm` daemon thread, so the first
+     * production caller — including main-thread lifecycle handlers — only pays the much cheaper
+     * "submit work to an already-constructed executor" cost.
+     *
+     * Idempotent and fire-and-forget: a no-op on second and subsequent calls. Safe to invoke
+     * from any thread; the heavy lifting always happens on the daemon thread we spawn here, not
+     * on the caller. Failures are logged and swallowed because the executors retain their
+     * existing fallback paths (e.g. `Dispatchers.IO.limitedParallelism(1)` for [SerialIO]) and a
+     * failed prewarm will simply mean the first production caller pays the original cost.
+     */
+    fun prewarm() {
+        if (prewarmStarted) return
+        synchronized(prewarmLock) {
+            if (prewarmStarted) return
+            prewarmStarted = true
+        }
+        val prewarmThread = Thread(
+            {
+                try {
+                    // Each launch* call below triggers the corresponding lazy chain
+                    // (executor -> dispatcher -> scope) and submits an empty coroutine,
+                    // which forces the worker thread(s) to start as well.
+                    launchOnIO { /* warm IOScope + ioExecutor */ }
+                    launchOnDefault { /* warm DefaultScope + defaultExecutor */ }
+                    launchOnSerialIO { /* warm SerialIOScope + serialIOExecutor */ }
+                } catch (e: Exception) {
+                    Logging.warn("OneSignalDispatchers.prewarm failed: ${e.message}")
+                }
+            },
+            "$BASE_THREAD_NAME-prewarm",
+        )
+        prewarmThread.isDaemon = true
+        prewarmThread.priority = Thread.NORM_PRIORITY - 2
+        prewarmThread.start()
+    }
+
+    /**
+     * Test-only hook to reset [prewarmStarted] so different specs can exercise the
+     * "first call wins" branch independently. Not part of any public contract.
+     */
+    internal fun resetPrewarmForTest() {
+        synchronized(prewarmLock) {
+            prewarmStarted = false
+        }
+    }
     internal fun getPerformanceMetrics(): String {
         return try {
             val serialQueueSize =

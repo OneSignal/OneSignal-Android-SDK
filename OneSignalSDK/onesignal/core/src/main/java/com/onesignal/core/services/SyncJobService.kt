@@ -29,12 +29,22 @@ package com.onesignal.core.services
 import android.app.job.JobParameters
 import android.app.job.JobService
 import com.onesignal.OneSignal
+import com.onesignal.common.threading.OneSignalDispatchers
 import com.onesignal.common.threading.suspendifyOnIO
 import com.onesignal.core.internal.background.IBackgroundManager
 import com.onesignal.debug.internal.logging.Logging
 
 class SyncJobService : JobService() {
     override fun onStartJob(jobParameters: JobParameters): Boolean {
+        // Android delivers JobService.onStartJob on the main thread. The suspendifyOnIO call
+        // below is the SDK's first IO-pool consumer on cold start in this process, and the
+        // executor + dispatcher + coroutine-scope lazy chain it triggers was producing multi-
+        // second main-thread blocks in production (SDK-4507). prewarm() shifts that cost to a
+        // short-lived daemon thread; idempotent, so it's harmless when initWithContext already
+        // ran. Must happen BEFORE suspendifyOnIO; calling it inside the dispatched block would
+        // be too late because the cold-init cost has already been paid on entry to the helper.
+        OneSignalDispatchers.prewarm()
+
         suspendifyOnIO {
             var reschedule = false
 
