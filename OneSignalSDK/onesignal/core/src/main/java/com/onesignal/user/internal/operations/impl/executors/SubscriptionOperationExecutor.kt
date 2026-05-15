@@ -57,7 +57,14 @@ internal class SubscriptionOperationExecutor(
         val startingOp = operations.first()
 
         return if (startingOp is CreateSubscriptionOperation) {
-            createSubscription(startingOp, operations)
+            // If the subscription already exists on the backend (non-local id), POSTing
+            // to /subscriptions with that id is silently a server-side no-op and drops
+            // the merged enabled/status payload. Dispatch as an update instead.
+            if (!IDManager.isLocalId(startingOp.subscriptionId)) {
+                updateExistingSubscriptionFromCreate(startingOp, operations)
+            } else {
+                createSubscription(startingOp, operations)
+            }
         } else if (operations.any { it is DeleteSubscriptionOperation }) {
             if (operations.size > 1) {
                 throw Exception("Only supports one operation! Attempted operations:\n$operations")
@@ -76,6 +83,30 @@ internal class SubscriptionOperationExecutor(
         }
     }
 
+    private suspend fun updateExistingSubscriptionFromCreate(
+        createOperation: CreateSubscriptionOperation,
+        operations: List<Operation>,
+    ): ExecutionResponse {
+        // if there are any deletes all operations should be tossed, nothing to do.
+        if (operations.any { it is DeleteSubscriptionOperation }) {
+            return ExecutionResponse(ExecutionResult.SUCCESS)
+        }
+
+        val lastUpdateOperation = operations.lastOrNull { it is UpdateSubscriptionOperation } as UpdateSubscriptionOperation?
+        val patchOp =
+            UpdateSubscriptionOperation(
+                createOperation.appId,
+                createOperation.onesignalId,
+                createOperation.externalId,
+                createOperation.subscriptionId,
+                createOperation.type,
+                lastUpdateOperation?.enabled ?: createOperation.enabled,
+                lastUpdateOperation?.address ?: createOperation.address,
+                lastUpdateOperation?.status ?: createOperation.status,
+            )
+        return updateSubscription(patchOp, listOf(patchOp))
+    }
+
     private suspend fun createSubscription(
         createOperation: CreateSubscriptionOperation,
         operations: List<Operation>,
@@ -91,12 +122,11 @@ internal class SubscriptionOperationExecutor(
         val enabled = lastUpdateOperation?.enabled ?: createOperation.enabled
         val address = lastUpdateOperation?.address ?: createOperation.address
         val status = lastUpdateOperation?.status ?: createOperation.status
-        val subId = if (!IDManager.isLocalId(createOperation.subscriptionId)) createOperation.subscriptionId else null
 
         try {
             val subscription =
                 SubscriptionObject(
-                    id = subId,
+                    id = null,
                     convert(createOperation.type),
                     address,
                     enabled,
@@ -220,7 +250,30 @@ internal class SubscriptionOperationExecutor(
                     ) {
                         return ExecutionResponse(ExecutionResult.FAIL_RETRY, retryAfterSeconds = ex.retryAfterSeconds)
                     }
-                    // toss this, but create an identical CreateSubscriptionOperation to re-create the subscription being updated.
+                    // The original update target no longer exists on the backend, so issue
+                    // a fresh local-id Create. A non-local id here would re-route through
+                    // updateExistingSubscriptionFromCreate -> PATCH -> 404 indefinitely because
+                    // execute() dispatches non-local-id Creates as PATCHes; only a local id
+                    // forces the POST/rebuild-user recovery path that can actually re-create
+                    // the subscription.
+                    val recoveryLocalId = IDManager.createLocalId()
+                    val staleSubscriptionId = lastOperation.subscriptionId
+
+                    // Rewrite the cached SubscriptionModel id (and pushSubscriptionId, if it
+                    // pointed at the stale id) to the new local id. This keeps the recovery
+                    // Create and the rebuild-user path's getRebuildOperationsIfCurrentUser
+                    // emitting Creates with the same subscriptionId, so they dedupe instead
+                    // of producing two POST /users subscription rows. HYDRATE prevents the
+                    // SubscriptionModelStoreListener from enqueuing follow-on operations.
+                    _subscriptionModelStore.get(staleSubscriptionId)?.setStringProperty(
+                        SubscriptionModel::id.name,
+                        recoveryLocalId,
+                        ModelChangeTags.HYDRATE,
+                    )
+                    if (_configModelStore.model.pushSubscriptionId == staleSubscriptionId) {
+                        _configModelStore.model.pushSubscriptionId = recoveryLocalId
+                    }
+
                     ExecutionResponse(
                         ExecutionResult.FAIL_NORETRY,
                         operations =
@@ -229,7 +282,7 @@ internal class SubscriptionOperationExecutor(
                                 lastOperation.appId,
                                 lastOperation.onesignalId,
                                 lastOperation.externalId,
-                                lastOperation.subscriptionId,
+                                recoveryLocalId,
                                 lastOperation.type,
                                 lastOperation.enabled,
                                 lastOperation.address,
