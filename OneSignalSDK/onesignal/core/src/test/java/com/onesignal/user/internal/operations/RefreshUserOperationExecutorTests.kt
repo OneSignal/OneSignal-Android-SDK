@@ -5,6 +5,8 @@ import com.onesignal.common.exceptions.BackendException
 import com.onesignal.common.modeling.ModelChangeTags
 import com.onesignal.core.internal.operations.ExecutionResult
 import com.onesignal.core.internal.operations.Operation
+import com.onesignal.debug.LogLevel
+import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.mocks.MockHelper
 import com.onesignal.user.internal.backend.CreateUserResponse
 import com.onesignal.user.internal.backend.IUserBackendService
@@ -18,6 +20,7 @@ import com.onesignal.user.internal.operations.ExecutorMocks.Companion.getIdentit
 import com.onesignal.user.internal.operations.ExecutorMocks.Companion.getJwtTokenStore
 import com.onesignal.user.internal.operations.ExecutorMocks.Companion.getNewRecordState
 import com.onesignal.user.internal.operations.impl.executors.RefreshUserOperationExecutor
+import com.onesignal.user.internal.operations.impl.executors.SubscriptionOperationExecutor
 import com.onesignal.user.internal.properties.PropertiesModel
 import com.onesignal.user.internal.subscriptions.SubscriptionModel
 import com.onesignal.user.internal.subscriptions.SubscriptionModelStore
@@ -61,8 +64,10 @@ class RefreshUserOperationExecutorTests : FunSpec({
                 mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId, "aliasLabel1" to "aliasValue1"),
                 PropertiesObject(country = remoteCountry, language = remoteLanguage, timezoneId = remoteTimeZone, tags = remoteTags),
                 listOf(
-                    SubscriptionObject(existingSubscriptionId1, SubscriptionObjectType.ANDROID_PUSH, enabled = true, token = "on-backend-push-token"),
-                    SubscriptionObject(remoteSubscriptionId1, SubscriptionObjectType.ANDROID_PUSH, enabled = true, token = "pushToken2"),
+                    // notificationTypes = 1 keeps server-side view healthy so the push
+                    // self-heal divergence check is a no-op for this happy-path test.
+                    SubscriptionObject(existingSubscriptionId1, SubscriptionObjectType.ANDROID_PUSH, enabled = true, notificationTypes = 1, token = "on-backend-push-token"),
+                    SubscriptionObject(remoteSubscriptionId1, SubscriptionObjectType.ANDROID_PUSH, enabled = true, notificationTypes = 1, token = "pushToken2"),
                     SubscriptionObject(remoteSubscriptionId2, SubscriptionObjectType.EMAIL, token = "name@company.com"),
                 ),
             )
@@ -319,6 +324,172 @@ class RefreshUserOperationExecutorTests : FunSpec({
         coVerify(exactly = 1) {
             mockUserBackendService.getUser(appId, IdentityConstants.ONESIGNAL_ID, remoteOneSignalId)
         }
+    }
+
+    // Push self-heal divergence detection. Verifies that when the device-cached push
+    // subscription resolves to enabled-and-opted-in but the GET /users response returns the
+    // same subscription as disabled (the "Never Subscribed" stuck state),
+    // RefreshUserOperationExecutor emits a follow-up UpdateSubscriptionOperation to re-assert
+    // local truth via PATCH.
+    fun buildSelfHealHarness(
+        serverPushEnabled: Boolean,
+        serverNotificationTypes: Int?,
+        localOptedIn: Boolean,
+        localStatus: SubscriptionStatus,
+        localAddress: String,
+    ): Triple<RefreshUserOperationExecutor, SubscriptionModel, IUserBackendService> {
+        val mockUserBackendService = mockk<IUserBackendService>()
+        coEvery { mockUserBackendService.getUser(appId, IdentityConstants.ONESIGNAL_ID, remoteOneSignalId) } returns
+            CreateUserResponse(
+                mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId),
+                PropertiesObject(),
+                listOf(
+                    SubscriptionObject(
+                        existingSubscriptionId1,
+                        SubscriptionObjectType.ANDROID_PUSH,
+                        enabled = serverPushEnabled,
+                        notificationTypes = serverNotificationTypes,
+                        token = "on-backend-push-token",
+                    ),
+                ),
+            )
+
+        val mockIdentityModelStore = MockHelper.identityModelStore()
+        val mockIdentityModel = IdentityModel()
+        mockIdentityModel.onesignalId = remoteOneSignalId
+        every { mockIdentityModelStore.model } returns mockIdentityModel
+        every { mockIdentityModelStore.replace(any(), any()) } just runs
+
+        val mockPropertiesModelStore = MockHelper.propertiesModelStore()
+        val mockPropertiesModel = PropertiesModel()
+        mockPropertiesModel.onesignalId = remoteOneSignalId
+        every { mockPropertiesModelStore.model } returns mockPropertiesModel
+        every { mockPropertiesModelStore.replace(any(), any()) } just runs
+
+        val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
+        every { mockSubscriptionsModelStore.replaceAll(any(), any()) } just runs
+
+        val cachedPushSubscriptionModel = SubscriptionModel()
+        cachedPushSubscriptionModel.id = existingSubscriptionId1
+        cachedPushSubscriptionModel.type = SubscriptionType.PUSH
+        cachedPushSubscriptionModel.address = localAddress
+        cachedPushSubscriptionModel.status = localStatus
+        cachedPushSubscriptionModel.optedIn = localOptedIn
+        every { mockSubscriptionsModelStore.get(existingSubscriptionId1) } returns cachedPushSubscriptionModel
+
+        val mockConfigModelStore =
+            MockHelper.configModelStore {
+                it.pushSubscriptionId = existingSubscriptionId1
+            }
+
+        val executor =
+            RefreshUserOperationExecutor(
+                mockUserBackendService,
+                mockIdentityModelStore,
+                mockPropertiesModelStore,
+                mockSubscriptionsModelStore,
+                mockConfigModelStore,
+                mockk<IRebuildUserService>(),
+                getNewRecordState(),
+                getJwtTokenStore(), getIdentityVerificationService(),
+            )
+
+        return Triple(executor, cachedPushSubscriptionModel, mockUserBackendService)
+    }
+
+    test("push self-heal: enqueues follow-up update-subscription op when server is stuck-disabled but local is enabled") {
+        // Given: server view says push is disabled (the stuck state), local view says enabled
+        val (executor, _, _) =
+            buildSelfHealHarness(
+                serverPushEnabled = false,
+                serverNotificationTypes = 0,
+                localOptedIn = true,
+                localStatus = SubscriptionStatus.SUBSCRIBED,
+                localAddress = onDevicePushToken,
+            )
+
+        // Suppress logcat output for the self-heal WARN line so the unmocked android.util.Log
+        // in robolectric-free unit tests doesn't blow up. Restored in finally.
+        val originalLogLevel = Logging.logLevel
+        Logging.logLevel = LogLevel.NONE
+        try {
+            // When
+            val response = executor.execute(listOf(RefreshUserOperation(appId, remoteOneSignalId, null)))
+
+            // Then a single UpdateSubscriptionOperation is returned to the op repo
+            response.result shouldBe ExecutionResult.SUCCESS
+            response.operations?.count() shouldBe 1
+            val followup = response.operations!![0]
+            (followup is UpdateSubscriptionOperation) shouldBe true
+            followup as UpdateSubscriptionOperation
+            followup.name shouldBe SubscriptionOperationExecutor.UPDATE_SUBSCRIPTION
+            followup.appId shouldBe appId
+            followup.onesignalId shouldBe remoteOneSignalId
+            followup.subscriptionId shouldBe existingSubscriptionId1
+            followup.type shouldBe SubscriptionType.PUSH
+            followup.enabled shouldBe true
+            followup.address shouldBe onDevicePushToken
+            followup.status shouldBe SubscriptionStatus.SUBSCRIBED
+        } finally {
+            Logging.logLevel = originalLogLevel
+        }
+    }
+
+    test("push self-heal: does NOT enqueue follow-up op when server matches local (healthy push subscription)") {
+        // Given: server already enabled and notificationTypes=1, local also enabled
+        val (executor, _, _) =
+            buildSelfHealHarness(
+                serverPushEnabled = true,
+                serverNotificationTypes = 1,
+                localOptedIn = true,
+                localStatus = SubscriptionStatus.SUBSCRIBED,
+                localAddress = onDevicePushToken,
+            )
+
+        // When
+        val response = executor.execute(listOf(RefreshUserOperation(appId, remoteOneSignalId, null)))
+
+        // Then no follow-up ops emitted
+        response.result shouldBe ExecutionResult.SUCCESS
+        response.operations shouldBe null
+    }
+
+    test("push self-heal: does NOT enqueue follow-up op when local is opted out (UNSUBSCRIBE is intentional)") {
+        // Given: server is disabled, but so is local (user explicitly opted out)
+        val (executor, _, _) =
+            buildSelfHealHarness(
+                serverPushEnabled = false,
+                serverNotificationTypes = -2,
+                localOptedIn = false,
+                localStatus = SubscriptionStatus.SUBSCRIBED,
+                localAddress = onDevicePushToken,
+            )
+
+        // When
+        val response = executor.execute(listOf(RefreshUserOperation(appId, remoteOneSignalId, null)))
+
+        // Then no follow-up — opt-out is the user's intent, not divergence
+        response.result shouldBe ExecutionResult.SUCCESS
+        response.operations shouldBe null
+    }
+
+    test("push self-heal: does NOT enqueue follow-up op when local has NO_PERMISSION (OS-level disable is real)") {
+        // Given: server disabled, local also has no notification permission
+        val (executor, _, _) =
+            buildSelfHealHarness(
+                serverPushEnabled = false,
+                serverNotificationTypes = 0,
+                localOptedIn = true,
+                localStatus = SubscriptionStatus.NO_PERMISSION,
+                localAddress = onDevicePushToken,
+            )
+
+        // When
+        val response = executor.execute(listOf(RefreshUserOperation(appId, remoteOneSignalId, null)))
+
+        // Then no follow-up — OS denies notifications, server's view is correct
+        response.result shouldBe ExecutionResult.SUCCESS
+        response.operations shouldBe null
     }
 
     test("refresh user is retried when backend returns MISSING, but isInMissingRetryWindow") {
