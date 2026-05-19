@@ -158,7 +158,7 @@ fun UserSection(
             HorizontalDivider(color = OsDivider, modifier = Modifier.padding(vertical = DemoLayout.gap))
             CardKvRow(
                 label = "External ID",
-                value = externalUserId ?: "—",
+                value = externalUserId ?: "–",
                 valueTestTag = "user_external_id_value",
             )
         }

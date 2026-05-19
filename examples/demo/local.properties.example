@@ -1,0 +1,20 @@
+# OneSignal Android demo - local override file
+# ---------------------------------------------
+# Copy this file to `local.properties` (already gitignored) and fill in the
+# values you want to override. Mirrors the Capacitor demo's `.env.example`.
+#
+# Each value can also be passed on the command line via `-PKEY=value`
+# (e.g. `./gradlew :app:installGmsDebug -PONESIGNAL_APP_ID=...`),
+# and the CLI takes precedence over local.properties.
+
+# Required for real testing: your OneSignal App ID. Get one at https://onesignal.com.
+# Leave unset to use the demo's shared default app.
+ONESIGNAL_APP_ID=
+
+# Optional: notification channel id used by the "WITH SOUND" payload.
+# Leave empty to use the shared default (matches Capacitor's
+# VITE_ONESIGNAL_ANDROID_CHANNEL_ID default).
+ONESIGNAL_ANDROID_CHANNEL_ID=
+
+# Optional: masks App ID and Push Subscription ID in the UI for E2E screenshots/recordings.
+E2E_MODE=false

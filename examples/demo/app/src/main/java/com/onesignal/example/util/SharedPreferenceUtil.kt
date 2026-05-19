@@ -6,7 +6,6 @@ import android.content.SharedPreferences
 object SharedPreferenceUtil {
 
     private const val APP_SHARED_PREFS = "com.onesignal.example"
-    private const val OS_APP_ID_SHARED_PREF = "OS_APP_ID_SHARED_PREF"
     private const val PRIVACY_CONSENT_SHARED_PREF = "PRIVACY_CONSENT_SHARED_PREF"
     private const val USER_EXTERNAL_USER_ID_SHARED_PREF = "USER_EXTERNAL_USER_ID_SHARED_PREF"
     private const val LOCATION_SHARED_PREF = "LOCATION_SHARED_PREF"
@@ -23,11 +22,6 @@ object SharedPreferenceUtil {
         return getSharedPreference(context).contains(key)
     }
 
-    fun getOneSignalAppId(context: Context): String? {
-        val defaultAppId = "77e32082-ea27-42e3-a898-c72e141824ef"
-        return getSharedPreference(context).getString(OS_APP_ID_SHARED_PREF, defaultAppId)
-    }
-
     fun getUserPrivacyConsent(context: Context): Boolean {
         return getSharedPreference(context).getBoolean(PRIVACY_CONSENT_SHARED_PREF, false)
     }
@@ -42,10 +36,6 @@ object SharedPreferenceUtil {
 
     fun getCachedInAppMessagingPausedStatus(context: Context): Boolean {
         return getSharedPreference(context).getBoolean(IN_APP_MESSAGING_PAUSED_PREF, true)
-    }
-
-    fun cacheOneSignalAppId(context: Context, appId: String) {
-        getSharedPreference(context).edit().putString(OS_APP_ID_SHARED_PREF, appId).apply()
     }
 
     fun cacheUserPrivacyConsent(context: Context, privacyConsent: Boolean) {

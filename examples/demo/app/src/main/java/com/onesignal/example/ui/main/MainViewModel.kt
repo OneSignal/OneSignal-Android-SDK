@@ -138,7 +138,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
     private fun loadInitialState() {
         val context = getApplication<Application>()
         
-        _appId.value = SharedPreferenceUtil.getOneSignalAppId(context) ?: ""
+        _appId.value = com.onesignal.example.BuildConfig.ONESIGNAL_APP_ID
         _consentRequired.value = repository.getConsentRequired()
         _privacyConsentGiven.value = repository.getPrivacyConsent()
         _inAppMessagesPaused.value = repository.isInAppMessagesPaused()

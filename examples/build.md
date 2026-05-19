@@ -18,6 +18,26 @@ The project can be opened two ways depending on the goal:
 - **`examples/demo/`** — standalone project. SDK is pulled from Maven and the version is overridable via `-PSDK_VERSION=X.Y.Z` (defaults to `5.6.1`).
 - **`OneSignalSDK/`** — wraps `examples/demo/` via `settings.gradle` and substitutes the published OneSignal dependency with the local source modules. `-PSDK_VERSION=X.Y.Z` is required here.
 
+### `local.properties` overrides (Android's `.env`)
+
+The demo uses **`examples/demo/local.properties`** as its Capacitor-style override file (gitignored by default). Copy `local.properties.example` to `local.properties` and fill in the values you want:
+
+```properties
+ONESIGNAL_APP_ID=
+ONESIGNAL_ANDROID_CHANNEL_ID=
+E2E_MODE=false
+```
+
+Each key resolves in this order at build time: `-PKEY=value` from the CLI → `local.properties` → a sensible built-in default. The values are surfaced through `BuildConfig.ONESIGNAL_APP_ID`, `BuildConfig.ONESIGNAL_ANDROID_CHANNEL_ID`, and `BuildConfig.E2E_MODE` (see `app/build.gradle.kts`'s `demoOverride(...)` helper).
+
+| Key | Used by | Capacitor counterpart |
+|-----|---------|-----------------------|
+| `ONESIGNAL_APP_ID` | `MainApplication.onCreate` + `MainViewModel.loadInitialState` | `VITE_ONESIGNAL_APP_ID` |
+| `ONESIGNAL_ANDROID_CHANNEL_ID` | `OneSignalService.sendNotification` (WITH SOUND payload) | `VITE_ONESIGNAL_ANDROID_CHANNEL_ID` |
+| `E2E_MODE` | `util/MaskValue.kt` | `VITE_E2E_MODE` |
+
+> Changing `ONESIGNAL_APP_ID` no longer needs an uninstall — the value is read straight from `BuildConfig` on every launch, no SharedPreferences cache.
+
 ### Product flavors
 
 Two flavors are declared on the `default` dimension:
@@ -41,10 +61,12 @@ android {
         targetSdk = 34
         multiDexEnabled = true
 
-        // Masks App ID and Push Subscription ID in the UI when true so screenshots
-        // from automated runs don't leak per-tenant identifiers. Matches Capacitor's
-        // VITE_E2E_MODE / shared guide's E2E_MODE flag.
-        val e2eMode = (project.findProperty("E2E_MODE") as? String)?.toBoolean() ?: false
+        // demoOverride() walks -P, then local.properties, then the built-in default.
+        val onesignalAppId = demoOverride("ONESIGNAL_APP_ID")
+            ?: "77e32082-ea27-42e3-a898-c72e141824ef"
+        buildConfigField("String", "ONESIGNAL_APP_ID", "\"$onesignalAppId\"")
+
+        val e2eMode = demoOverride("E2E_MODE")?.toBoolean() ?: false
         buildConfigField("boolean", "E2E_MODE", e2eMode.toString())
     }
 
@@ -164,7 +186,7 @@ The ADM permission name and intent category use the application's package, so th
 
 The `vine_boom.wav` file from [`sdk-shared/assets`](https://github.com/OneSignal/sdk-shared/tree/main/assets) lives at `app/src/main/res/raw/vine_boom.wav` and is referenced from the **Send Push → WITH SOUND** payload as `android_sound = "vine_boom"` (no extension) plus `android_channel_id` from `BuildConfig.ONESIGNAL_ANDROID_CHANNEL_ID`.
 
-`ONESIGNAL_ANDROID_CHANNEL_ID` is a Gradle property exposed via `buildConfigField` in `app/build.gradle.kts`. It defaults to `b3b015d9-c050-4042-8548-dcc34aa44aa4` (same default as the Capacitor demo's `VITE_ONESIGNAL_ANDROID_CHANNEL_ID`); override with `-PONESIGNAL_ANDROID_CHANNEL_ID=...` to point at a channel you've configured for your own app.
+`ONESIGNAL_ANDROID_CHANNEL_ID` is sourced through the [`local.properties` override system](#localproperties-overrides-androids-env) (`-P...`, then `local.properties`, then the demo default `b3b015d9-c050-4042-8548-dcc34aa44aa4`) and exposed as `BuildConfig.ONESIGNAL_ANDROID_CHANNEL_ID`.
 
 ### Service config files
 
@@ -224,7 +246,7 @@ examples/demo/
 
 - Run with the `gms` flavor by default; switch to `huawei` only when validating HMS-specific code paths.
 - Always pass `-PSDK_VERSION=X.Y.Z` when building from `OneSignalSDK/`. The standalone `examples/demo/` build is the path of least resistance for feature testing.
-- Changing the App ID requires uninstalling the app before reinstall (`./gradlew :app:uninstallGmsDebug`) so the SDK picks up the new value.
+- Changing the App ID via `local.properties` only requires a rebuild — the demo reads `BuildConfig.ONESIGNAL_APP_ID` on every launch, no SharedPreferences cache. (The SDK itself still stores per-app data, so swapping App IDs mid-test may still need `./gradlew :app:uninstallGmsDebug` to clear OneSignal's own state.)
 - Keep `isMinifyEnabled = true` on the `release` build type — it exercises R8 + the SDK's published ProGuard rules and protects against regressions like SDK-4185.
 - Don't reintroduce `LoadingOverlay`. Loading is per-section by design (matches the shared guide's "Loading State" rules in styles.md).
 - When adding a new section or interactive element, give it a `testTag` that matches the shared guide's table (or follows the `{sectionKey}_*` pattern). Cross-platform Appium runs in `sdk-shared/appium/tests/` depend on it.

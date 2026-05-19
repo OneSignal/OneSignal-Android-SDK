@@ -17,7 +17,7 @@ import com.onesignal.notifications.INotificationClickEvent
 import com.onesignal.notifications.INotificationClickListener
 import com.onesignal.notifications.INotificationLifecycleListener
 import com.onesignal.notifications.INotificationWillDisplayEvent
-import com.onesignal.example.R
+import com.onesignal.example.BuildConfig
 import com.onesignal.example.data.network.OneSignalService
 import com.onesignal.example.util.SharedPreferenceUtil
 import com.onesignal.example.util.TooltipHelper
@@ -53,14 +53,9 @@ class MainApplication : MultiDexApplication() {
             }
         }
 
-        // Get or set the OneSignal App ID
-        var appId = SharedPreferenceUtil.getOneSignalAppId(this)
-        if (appId == null) {
-            appId = getString(R.string.onesignal_app_id)
-            SharedPreferenceUtil.cacheOneSignalAppId(this, appId)
-        }
-
-        // Initialize OneSignal Service with app ID and REST API key
+        // App ID comes from BuildConfig, sourced from local.properties / -P override at build
+        // time. Update via `examples/demo/local.properties` (ONESIGNAL_APP_ID=...) and rebuild.
+        val appId = BuildConfig.ONESIGNAL_APP_ID
         OneSignalService.setAppId(appId)
         
         // Initialize tooltip helper
