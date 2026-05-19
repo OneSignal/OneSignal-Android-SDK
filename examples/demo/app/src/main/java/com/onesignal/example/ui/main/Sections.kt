@@ -490,7 +490,7 @@ fun TriggersSection(
 }
 
 @Composable
-fun TrackEventSection(
+fun CustomEventsSection(
     onTrackClick: () -> Unit,
     onInfoClick: () -> Unit,
 ) {

@@ -255,9 +255,9 @@ fun MainScreen(viewModel: MainViewModel) {
                 onInfoClick = { showTooltipDialog = "triggers" }
             )
 
-            TrackEventSection(
+            CustomEventsSection(
                 onTrackClick = { showTrackEventDialog = true },
-                onInfoClick = { showTooltipDialog = "trackEvent" }
+                onInfoClick = { showTooltipDialog = "customEvents" }
             )
 
             LocationSection(
