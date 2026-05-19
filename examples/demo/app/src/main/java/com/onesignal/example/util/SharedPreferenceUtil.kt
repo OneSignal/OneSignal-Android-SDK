@@ -35,7 +35,10 @@ object SharedPreferenceUtil {
     }
 
     fun getCachedInAppMessagingPausedStatus(context: Context): Boolean {
-        return getSharedPreference(context).getBoolean(IN_APP_MESSAGING_PAUSED_PREF, true)
+        // Default to NOT paused so a fresh install behaves like every other
+        // demo (Capacitor / Cordova / RN / Flutter / etc): IAMs display until
+        // the user explicitly toggles the pause switch on.
+        return getSharedPreference(context).getBoolean(IN_APP_MESSAGING_PAUSED_PREF, false)
     }
 
     fun cacheUserPrivacyConsent(context: Context, privacyConsent: Boolean) {

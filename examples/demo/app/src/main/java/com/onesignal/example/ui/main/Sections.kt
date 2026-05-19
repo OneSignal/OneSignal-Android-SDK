@@ -424,7 +424,7 @@ fun TagsSection(
             DestructiveButton(
                 text = "REMOVE SELECTED",
                 onClick = onRemoveSelected,
-                testTag = "remove_selected_tags_button",
+                testTag = "remove_tags_button",
             )
         }
     }
@@ -478,12 +478,12 @@ fun TriggersSection(
             DestructiveButton(
                 text = "REMOVE SELECTED",
                 onClick = onRemoveSelected,
-                testTag = "remove_selected_triggers_button",
+                testTag = "remove_triggers_button",
             )
             DestructiveButton(
                 text = "CLEAR ALL",
                 onClick = onClearAll,
-                testTag = "clear_all_triggers_button",
+                testTag = "clear_triggers_button",
             )
         }
     }

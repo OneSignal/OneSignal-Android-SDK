@@ -72,7 +72,7 @@ fun MainScreen(viewModel: MainViewModel) {
     val smsNumbers by viewModel.smsNumbers.observeAsState(emptyList())
     val tags by viewModel.tags.observeAsState(emptyList())
     val triggers by viewModel.triggers.observeAsState(emptyList())
-    val inAppMessagesPaused by viewModel.inAppMessagesPaused.observeAsState(true)
+    val inAppMessagesPaused by viewModel.inAppMessagesPaused.observeAsState(false)
     val locationShared by viewModel.locationShared.observeAsState(false)
     val isLoading by viewModel.isLoading.observeAsState(false)
     val toastMessage by viewModel.toastMessage.observeAsState()
