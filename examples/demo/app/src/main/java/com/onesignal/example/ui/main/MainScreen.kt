@@ -263,6 +263,7 @@ fun MainScreen(viewModel: MainViewModel) {
             LocationSection(
                 locationShared = locationShared,
                 onLocationSharedChange = { viewModel.setLocationShared(it) },
+                onCheckLocationShared = { viewModel.checkLocationShared() },
                 onPromptLocation = { viewModel.promptLocation() },
                 onInfoClick = { showTooltipDialog = "location" }
             )

@@ -510,6 +510,7 @@ fun CustomEventsSection(
 fun LocationSection(
     locationShared: Boolean,
     onLocationSharedChange: (Boolean) -> Unit,
+    onCheckLocationShared: () -> Unit,
     onPromptLocation: () -> Unit,
     onInfoClick: () -> Unit,
 ) {
@@ -526,5 +527,6 @@ fun LocationSection(
         }
         Spacer(modifier = Modifier.height(DemoLayout.gap))
         PrimaryButton(text = "PROMPT LOCATION", onClick = onPromptLocation, testTag = "prompt_location_button")
+        PrimaryButton(text = "CHECK LOCATION", onClick = onCheckLocationShared, testTag = "check_location_button")
     }
 }

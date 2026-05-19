@@ -605,6 +605,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
         Log.i(TAG, if (shared) "Location sharing enabled" else "Location sharing disabled")
     }
 
+    fun checkLocationShared() {
+        showToast("Location shared: ${repository.isLocationShared()}")
+    }
+
     fun promptLocation() {
         viewModelScope.launch(Dispatchers.IO) {
             repository.promptLocation()
