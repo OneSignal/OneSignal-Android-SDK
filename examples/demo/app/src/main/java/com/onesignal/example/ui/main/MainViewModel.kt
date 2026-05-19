@@ -567,14 +567,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
     fun trackEvent(name: String, properties: Map<String, Any?>?) {
         viewModelScope.launch(Dispatchers.IO) {
             repository.trackEvent(name, properties)
-            withContext(Dispatchers.Main) {
-                val message = if (!properties.isNullOrEmpty()) {
-                    "Event tracked: $name with properties"
-                } else {
-                    "Event tracked: $name"
-                }
-                showToast(message)
-            }
+            withContext(Dispatchers.Main) { showToast("Event tracked: $name") }
         }
     }
 
