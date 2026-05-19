@@ -496,7 +496,7 @@ fun CustomEventsSection(
 ) {
     DemoSection {
         SectionCard(
-            title = "Track Event",
+            title = "Custom Events",
             showCard = false,
             sectionKey = "custom_events",
             onInfoClick = onInfoClick,
