@@ -135,9 +135,14 @@ fun MainScreen(viewModel: MainViewModel) {
         snackbarHost = {
             SnackbarHost(hostState = snackbarHostState) { data ->
                 Snackbar(
-                    snackbarData = data,
-                    modifier = Modifier.testTag("snackbar_toast")
-                )
+                    modifier = Modifier.testTag("snackbar_toast"),
+                    contentColor = Color.White,
+                ) {
+                    Text(
+                        text = data.visuals.message,
+                        color = Color.White,
+                    )
+                }
             }
         }
     ) { paddingValues ->
