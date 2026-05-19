@@ -14,11 +14,15 @@ Build a sample Android app with:
 - Kotlin Coroutines for background threading (Dispatchers.IO, Dispatchers.Main)
 - Gradle Kotlin DSL with inline dependency versions (no buildSrc, so it works when included from the SDK project)
 - Support for Google FCM and Huawei HMS product flavors (matching existing OneSignalDemo setup)
-- Package name: com.onesignal.sdktest (must match google-services.json and agconnect-services.json)
-- All dialogs should have EMPTY input fields (for Appium testing - test framework enters values)
+- Package name: com.onesignal.example (must match google-services.json and agconnect-services.json)
+- All dialogs should have EMPTY input fields (for Appium / E2E testing - test framework enters values)
+- All buttons, toggles, list items, and dialog inputs should expose snake_case `testTag`s
+  matching the Capacitor demo (see Phase 9 - Cross-Platform E2E Parity)
 - Material3 theming with OneSignal brand colors
 - App name (in strings.xml): "OneSignal Demo"
 - Top app bar: use CenterAlignedTopAppBar (Material3) with the OneSignal logo + "Sample App" text, centered horizontally
+- buildFeatures.buildConfig = true and an E2E_MODE buildConfigField for E2E test runs
+  (mirrors the Capacitor demo's VITE_E2E_MODE)
 ```
 
 ### Prompt 1.2 - OneSignal Code Organization
@@ -27,8 +31,11 @@ Build a sample Android app with:
 Centralize all OneSignal SDK calls in a single OneSignalRepository.kt class:
 
 User operations:
-- loginUser(externalUserId: String)
+- loginUser(externalUserId: String, jwtToken: String? = null)
 - logoutUser()
+- updateUserJwt(externalUserId: String, jwtToken: String)
+- Identity Verification toggle in the UI controls whether API calls use external_id (+ cached JWT)
+  or the OneSignal ID; persisted via SharedPreferences
 
 Alias operations:
 - addAlias(label: String, id: String)
@@ -133,6 +140,11 @@ In MainViewModel.kt, implement observers:
 - IPushSubscriptionObserver - react to push subscription changes
 - IPermissionObserver - react to notification permission changes
 - IUserStateObserver - call fetchUserDataFromApi() when user changes (login/logout)
+- IUserJwtInvalidatedListener - surface JWT invalidation events via toast + log
+
+fetchUserDataFromApi() uses a monotonic `fetchRequestSequence: Long` counter so that
+stale REST responses (after rapid login/logout cycles) are dropped and never overwrite
+fresher data. Mirrors the Capacitor demo's `requestSequenceRef`.
 ```
 
 ---
@@ -141,27 +153,31 @@ In MainViewModel.kt, implement observers:
 
 ### Section Order (top to bottom) - FINAL
 
-1. **App Section** (App ID, Guidance Banner, Consent Toggle, Logged-in-as display, Login/Logout)
-2. **Push Section** (Push ID, Enabled Toggle, Auto-prompts permission on load)
-3. **Send Push Notification Section** (Simple, With Image, Custom buttons)
-4. **In-App Messaging Section** (Pause toggle)
-5. **Send In-App Message Section** (Top Banner, Bottom Banner, Center Modal, Full Screen - with icons)
-6. **Aliases Section** (Add/Add Multiple, read-only list)
-7. **Emails Section** (Collapsible list >5 items)
-8. **SMS Section** (Collapsible list >5 items)
-9. **Tags Section** (Add/Add Multiple/Remove Selected)
-10. **Outcome Events Section** (Send Outcome dialog with type selection)
-11. **Triggers Section** (Add/Add Multiple/Remove Selected/Clear All - IN MEMORY ONLY)
-12. **Track Event Section** (Track Event with JSON validation)
-13. **Location Section** (Location Shared toggle, Prompt Location button)
-14. **Next Screen Button**
+1. **App Section** (App ID, Guidance Banner, Consent Required toggle, Privacy Consent toggle)
+2. **User Section** (Identity Verification toggle, Status, External ID, Login/Logout/Update JWT)
+3. **Push Section** (Push ID, Enabled Toggle, Auto-prompts permission on load)
+4. **Send Push Notification Section** (Simple, With Image, Custom buttons)
+5. **In-App Messaging Section** (Pause toggle)
+6. **Send In-App Message Section** (Top Banner, Bottom Banner, Center Modal, Full Screen - with icons)
+7. **Aliases Section** (Add/Add Multiple, read-only list with inline loading when empty)
+8. **Emails Section** (Collapsible list >5 items, inline loading when empty)
+9. **SMS Section** (Collapsible list >5 items, inline loading when empty)
+10. **Tags Section** (Add/Add Multiple/Remove Selected, inline loading when empty)
+11. **Outcome Events Section** (Send Outcome dialog with type selection)
+12. **Triggers Section** (Add/Add Multiple/Remove Selected/Clear All - IN MEMORY ONLY)
+13. **Track Event Section** (Track Event with JSON validation)
+14. **Location Section** (Location Shared toggle, Prompt Location button)
+15. **Next Screen Button**
 
 ### Prompt 2.1 - App Section
 
 ```
-App Section layout:
+App Section layout (sectionKey = "app"):
 
 1. App ID display (readonly Text showing the OneSignal App ID)
+   - Wrapped in `maskValue(appId)` so the value renders as `***` when
+     BuildConfig.E2E_MODE is true (so screenshots from automation don't leak it)
+   - testTag = "app_id_value"
 
 2. Sticky guidance banner below App ID:
    - Text: "Add your own App ID, then rebuild to fully test all functionality."
@@ -173,30 +189,55 @@ App Section layout:
       - Label: "Consent Required"
       - Description: "Require consent before SDK processes data"
       - Sets OneSignal.consentRequired
+      - testTag = "consent_required_toggle"
    b. "Privacy Consent" toggle (only visible when Consent Required is ON):
       - Label: "Privacy Consent"
       - Description: "Consent given for data collection"
       - Sets OneSignal.consentGiven
+      - testTag = "privacy_consent_toggle"
       - Separated from the above toggle by a horizontal divider
    - NOT a blocking overlay - user can interact with app regardless of state
+```
 
-4. User status card (always visible, ABOVE the login/logout buttons):
-   - Card with two rows separated by a divider
-   - Row 1: "Status" label on the left, value on the right
-   - Row 2: "External ID" label on the left, value on the right
-   - When logged out:
-     - Status shows "Anonymous"
-     - External ID shows "–" (dash)
-   - When logged in:
-     - Status shows "Logged In" with green styling (Color(0xFF2E7D32))
-     - External ID shows the actual external user ID
+### Prompt 2.1b - User Section
 
-5. LOGIN USER button:
+```
+User Section layout (sectionKey = "user"):
+
+1. Identity Verification toggle:
+   - Label: "Identity Verification"
+   - Description: "Use external_id for API calls"
+   - testTag = "identity_verification_toggle"
+   - Persisted via SharedPreferenceUtil.cacheIdentityVerification(...)
+
+2. Status row (read-only):
+   - Label "Status" on the left, value on the right
+   - When logged out: "Anonymous"
+   - When logged in: "Logged In" with green styling (Color(0xFF2E7D32))
+   - testTag = "user_status_value"
+
+3. External ID row (read-only):
+   - Label "External ID" on the left
+   - Value: external user ID or "—" when logged out
+   - testTag = "user_external_id_value"
+
+4. LOGIN USER button (testTag = "login_user_button"):
    - Shows "LOGIN USER" when no user is logged in
    - Shows "SWITCH USER" when a user is logged in
-   - Opens dialog with empty "External User Id" field
+   - Disabled while viewModel.isLoading is true
+   - Opens LoginDialog: empty "External User Id" field
+     (testTag = "login_user_id_input") and optional "JWT Token" field
+     (testTag = "login_user_jwt_input"); confirm button uses
+     `singleinput_confirm_button` for Capacitor parity
 
-6. LOGOUT USER button (only visible when a user is logged in)
+5. LOGOUT USER button (only when logged in):
+   - testTag = "logout_user_button"
+   - Disabled while viewModel.isLoading is true
+
+6. UPDATE USER JWT button (always visible):
+   - testTag = "update_user_jwt_button"
+   - Opens PairInputDialog (External User Id + JWT Token) and calls
+     viewModel.updateUserJwt(externalId, token)
 ```
 
 ### Prompt 2.2 - Push Section
@@ -390,32 +431,43 @@ Secondary Screen (launched by "Next Screen" button at bottom of main screen):
 ### Prompt 3.1 - Data Loading Flow
 
 ```
-Loading indicator overlay:
-- Full-screen semi-transparent overlay with centered spinner
+Loading is inline per list section (no full-screen overlay). Mirrors the Capacitor demo.
+
 - isLoading LiveData in MainViewModel
-- Show/hide based on isLoading state
-- IMPORTANT: Add 100ms delay after populating data before dismissing loading indicator
-  - This ensures UI has time to render
-  - Use kotlinx.coroutines.delay(100) after setting all LiveData values
+- Aliases / Emails / SMS / Tags sections receive `loading: Boolean = viewModel.isLoading`
+- When a list is empty AND loading is true, the LoadingState composable
+  (centered CircularProgressIndicator, testTag = "${sectionKey}_loading")
+  replaces the EmptyState text in the same card.
+- When a list has items, the items render normally — loading is silent.
+- Login / Logout buttons are `enabled = !isLoading` instead of showing a spinner
+  (matches Capacitor's "disabled while async" pattern on Live Activity update).
+- IMPORTANT: Keep the 100ms render delay before clearing isLoading in
+  fetchUserDataFromApi() so list state has time to settle before the spinner disappears.
+
+Request sequencing (stale-result drop):
+- MainViewModel keeps a monotonic `fetchRequestSequence: Long`.
+- fetchUserDataFromApi() captures `val requestId = ++fetchRequestSequence` up front.
+- After every suspend point, the function bails (`return@withContext`) if
+  `requestId != fetchRequestSequence` so the older response can't overwrite newer state.
+- Same guard wraps the catch branch and the final `_isLoading.value = false`.
 
 On cold start:
 - Check if OneSignal.User.onesignalId is not null
-- If exists: show loading -> call fetchUserDataFromApi() -> populate UI -> delay 100ms -> hide loading
-- If null: just show empty state (no loading indicator)
+- If exists: call fetchUserDataFromApi() (which flips _isLoading on while running)
+- If null: nothing to do; lists render their EmptyState text immediately
 
 On login (LOGIN USER / SWITCH USER):
-- Show loading indicator immediately
-- Call OneSignal.login(externalUserId)
+- Set _isLoading.value = true
+- Call OneSignal.login(externalUserId, jwtToken)
 - Clear old user data (aliases, emails, sms, triggers)
 - Wait for onUserStateChange callback
-- onUserStateChange calls fetchUserDataFromApi()
-- fetchUserDataFromApi() populates UI, delays 100ms, then hides loading
+- onUserStateChange calls fetchUserDataFromApi() (sequencing handles overlap)
 
 On logout:
-- Show loading indicator
+- Set _isLoading.value = true
 - Call OneSignal.logout()
 - Clear local lists (aliases, emails, sms, triggers)
-- Hide loading indicator
+- _isLoading.value = false at the end
 
 On onUserStateChange callback:
 - Call fetchUserDataFromApi() to sync with server state
@@ -670,36 +722,48 @@ Create reusable Compose components in ui/components/:
 SectionCard.kt:
 - Card with title text and optional info icon
 - Column content slot
-- OnInfoClick callback for tooltips
+- onInfoClick callback for tooltips
+- `sectionKey: String?` parameter; when non-null, applies
+  testTag("${sectionKey}_section") to the outer column and
+  testTag("${sectionKey}_info_icon") to the info icon
+- Info icon contentDescription is dynamic ("$title info")
 
 ToggleRow.kt:
 - Label, optional description, Switch
 - Horizontal layout with space between
+- Accepts `testTag: String?` and `contentDescription: String?` for the Switch
 
 ActionButton.kt:
 - PrimaryButton (filled, primary color background)
+- OutlineButton (outlined)
 - DestructiveButton (outlined, red accent)
+- IconButton (icon + label, used in CTA rows)
 - Full-width buttons for consistent styling
+- All variants accept `testTag: String?` (applied via Modifier.applyTestTag)
 
 ListComponents.kt:
-- PairItem (key-value with delete icon)
-- SingleItem (single value with delete icon)
-- EmptyState (centered "No items" text)
-- CollapsibleSingleList (shows 5, expandable)
-- PairList (simple list of pairs)
-
-LoadingOverlay.kt:
-- Semi-transparent full-screen overlay
-- Centered CircularProgressIndicator
-- Shown via isLoading state
+- PairItem (key-value with delete icon) - dynamic testTags:
+    ${sectionKey}_pair_key_$key, ${sectionKey}_pair_value_$key, ${sectionKey}_remove_$key
+- SingleItem (single value with delete icon):
+    ${sectionKey}_value_$value, ${sectionKey}_remove_$value
+- EmptyState (centered "No items" text), testTag = "${sectionKey}_empty"
+- LoadingState (centered CircularProgressIndicator), testTag = "${sectionKey}_loading"
+- CollapsibleSingleList (shows 5, expandable) — accepts sectionKey + loading
+- PairList (simple list of pairs) — accepts sectionKey + loading
+- When list is empty and loading=true, render LoadingState in place of EmptyState
 
 Dialogs.kt:
-- SingleInputDialog (one text field)
-- PairInputDialog (key-value fields, single pair)
+- SingleInputDialog (one text field) - accepts inputTestTag, confirmTestTag
+- PairInputDialog (key-value fields, single pair) - accepts keyTestTag, valueTestTag, confirmTestTag
 - MultiPairInputDialog (dynamic rows, add/remove, batch submit)
 - MultiSelectRemoveDialog (checkboxes for batch remove)
-- LoginDialog, OutcomeDialog, TrackEventDialog
-- CustomNotificationDialog, TooltipDialog
+- LoginDialog (External User Id input + optional JWT Token input)
+- OutcomeDialog (radio + name/value inputs)
+- TrackEventDialog (name + optional JSON properties)
+- CustomNotificationDialog, TooltipDialog (tooltip_title / tooltip_description / tooltip_ok_button)
+
+Note: there is no LoadingOverlay component. Loading is rendered inline per list
+section via LoadingState, and async buttons disable themselves while loading.
 ```
 
 ### Prompt 8.3 - Reusable Multi-Pair Dialog (Compose)
@@ -814,28 +878,98 @@ log_list = driver.find_element(By.XPATH, "//*[@resource-id='log_view_list']")
 driver.execute_script("mobile: scroll", {"element": log_list, "direction": "down"})
 ```
 
-### Prompt 8.7 - Toast Messages
+### Prompt 8.7 - Toast / Snackbar Messages
 
 ```
-All user actions should display toast messages:
+Feedback is split between user-visible Snackbars and silent log entries,
+matching the Capacitor demo's surface.
 
-- Login: "Logged in as: {userId}"
+Surface a Snackbar (toast) ONLY for these actions:
+- Login:  "Logged in as: {userId}"
 - Logout: "Logged out"
-- Add alias: "Alias added: {label}"
-- Add multiple aliases: "{count} alias(es) added"
-- Similar patterns for tags, triggers, emails, SMS
-- Notifications: "Notification sent: {type}" or "Failed to send notification"
-- In-App Messages: "Sent In-App Message: {type}"
-- Outcomes: "Outcome sent: {name}"
-- Events: "Event tracked: {name}"
-- Location: "Location sharing enabled/disabled"
-- Push: "Push enabled/disabled"
+- Outcomes:
+    - "Outcome sent: {name}"
+    - "Unique outcome sent: {name}"
+    - "Outcome with value sent: {name} = {value}"
+- Track Event: "Event tracked: {name}"
+- Location: "Location permission: {result}" (from promptLocation)
+- IUserJwtInvalidatedListener: "User JWT invalidated"
+
+Everything else (tag/alias/email/sms add/remove, push enable/disable,
+in-app pause, send-push results, send-IAM, trigger ops, identity verification
+toggle, etc.) is silent in the UI and only logged via LogManager.info(...).
 
 Implementation:
-- MainViewModel has toastMessage: LiveData<String?>
-- MainActivity observes and shows Android Toast
-- LaunchedEffect triggers on toastMessage change
-- All toast messages are also logged via LogManager.info()
+- MainViewModel exposes toastMessage: LiveData<String?>
+- MainScreen owns a SnackbarHostState inside Scaffold(snackbarHost = { SnackbarHost(...) })
+- The Snackbar applies Modifier.testTag("snackbar_toast") for E2E parity
+- A LaunchedEffect(toastMessage) calls snackbarHostState.showSnackbar(message)
+  then viewModel.clearToast()
+- MainActivity does NOT bridge messages through android.widget.Toast anymore
+- All Snackbar messages are also written to LogManager.info()
+```
+
+---
+
+## Phase 9 - Cross-Platform E2E Parity
+
+The Android demo's E2E surface mirrors the Capacitor demo so the same Appium
+scripts (or any test framework that targets resource-id / accessibility-id) can
+drive both apps with one set of locators.
+
+### Prompt 9.1 - testTag Naming Convention
+
+```
+Every interactive Composable applies a snake_case testTag. The naming mirrors
+the Capacitor demo's `data-testid` values 1:1 so cross-platform locators stay
+the same.
+
+Conventions:
+- Section wrappers:        ${sectionKey}_section
+- Section info icon:       ${sectionKey}_info_icon
+- Displayed values:        ${sectionKey}_value, ${sectionKey}_pair_key_$key, ${sectionKey}_pair_value_$key
+- Remove buttons:          ${sectionKey}_remove_$key
+- Empty states:            ${sectionKey}_empty
+- Inline loading spinner:  ${sectionKey}_loading
+- Specific buttons / toggles use stable names, e.g.:
+    login_user_button, logout_user_button, update_user_jwt_button,
+    prompt_push_button, push_enabled_toggle, push_id_value,
+    consent_required_toggle, privacy_consent_toggle, identity_verification_toggle,
+    iam_paused_toggle, send_iam_top_banner_button (per IAM type, lowercase),
+    track_event_button, outcome_type_normal_radio, outcome_send_button,
+    next_screen_button
+- Dialog inputs use the dialog/section prefix:
+    login_user_id_input, login_user_jwt_input,
+    singleinput_confirm_button, pairinput_key_input, pairinput_value_input,
+    pairinput_confirm_button, multipairinput_add_row_button,
+    tooltip_title, tooltip_description, tooltip_ok_button
+- Snackbar uses testTag = "snackbar_toast"
+- The main scroll container uses testTag = "main_scroll_view"
+```
+
+### Prompt 9.2 - E2E_MODE & maskValue
+
+```
+Sensitive identifiers (App ID, Push Subscription ID) should be redacted in the
+UI when the app runs under E2E automation, so screenshots and screen recordings
+from CI runs don't leak per-tenant IDs.
+
+build.gradle.kts:
+- buildFeatures { buildConfig = true }
+- defaultConfig:
+    val e2eMode = (project.findProperty("E2E_MODE") as? String)?.toBoolean() ?: false
+    buildConfigField("boolean", "E2E_MODE", e2eMode.toString())
+- Enable per-run with: `./gradlew :app:installGmsDebug -PE2E_MODE=true`
+- Mirrors the Capacitor demo's VITE_E2E_MODE flag.
+
+util/MaskValue.kt:
+    fun maskValue(value: String?): String =
+        if (BuildConfig.E2E_MODE && !value.isNullOrEmpty()) "***" else value.orEmpty()
+
+Apply maskValue(...) wherever an identifier is rendered in the UI
+(currently: App ID display and Push Subscription ID display in MainScreen).
+The masked value still flows through the SDK calls normally — only the
+displayed string is redacted.
 ```
 
 ---
@@ -845,10 +979,12 @@ Implementation:
 ```
 examples/demo/
 ├── app/
+│   ├── build.gradle.kts                       # namespace + applicationId = com.onesignal.example
+│   │                                          # buildConfig = true, E2E_MODE buildConfigField
 │   ├── src/main/
-│   │   ├── java/com/onesignal/sdktest/
+│   │   ├── java/com/onesignal/example/
 │   │   │   ├── application/
-│   │   │   │   └── MainApplication.kt   # SDK init, log listener, observers
+│   │   │   │   └── MainApplication.kt         # SDK init, log listener, observers
 │   │   │   ├── data/
 │   │   │   │   ├── model/
 │   │   │   │   │   ├── NotificationType.kt    # With bigPicture URL
@@ -859,18 +995,17 @@ examples/demo/
 │   │   │   │       └── OneSignalRepository.kt
 │   │   │   ├── ui/
 │   │   │   │   ├── components/                # Reusable Compose components
-│   │   │   │   │   ├── SectionCard.kt         # Card with title and info icon
-│   │   │   │   │   ├── ToggleRow.kt           # Label + Switch
-│   │   │   │   │   ├── ActionButton.kt        # Primary/Destructive buttons
-│   │   │   │   │   ├── ListComponents.kt      # PairList, SingleList, EmptyState
-│   │   │   │   │   ├── LoadingOverlay.kt      # Full-screen loading spinner
+│   │   │   │   │   ├── SectionCard.kt         # title + info icon, sectionKey-driven testTags
+│   │   │   │   │   ├── ToggleRow.kt           # Label + Switch (testTag aware)
+│   │   │   │   │   ├── ActionButton.kt        # Primary/Outline/Destructive/Icon (testTag aware)
+│   │   │   │   │   ├── ListComponents.kt      # PairList, SingleList, EmptyState, LoadingState
 │   │   │   │   │   ├── LogView.kt             # Collapsible log viewer (Appium-ready)
-│   │   │   │   │   └── Dialogs.kt             # All dialog composables
+│   │   │   │   │   └── Dialogs.kt             # All dialog composables (testTag aware)
 │   │   │   │   ├── main/
 │   │   │   │   │   ├── MainActivity.kt        # ComponentActivity with setContent
-│   │   │   │   │   ├── MainScreen.kt          # Main Compose screen (includes LogView)
-│   │   │   │   │   ├── Sections.kt            # Individual section composables
-│   │   │   │   │   └── MainViewModel.kt       # With batch operations
+│   │   │   │   │   ├── MainScreen.kt          # Scaffold + SnackbarHost, maskValue display
+│   │   │   │   │   ├── Sections.kt            # App / User / Push / ... section composables
+│   │   │   │   │   └── MainViewModel.kt       # Batch ops + fetchRequestSequence
 │   │   │   │   ├── secondary/
 │   │   │   │   │   └── SecondaryActivity.kt   # Simple Compose screen
 │   │   │   │   └── theme/
@@ -878,6 +1013,7 @@ examples/demo/
 │   │   │   └── util/
 │   │   │       ├── SharedPreferenceUtil.kt
 │   │   │       ├── LogManager.kt              # Thread-safe pass-through logger
+│   │   │       ├── MaskValue.kt               # E2E_MODE-aware redaction helper
 │   │   │       └── TooltipHelper.kt           # Fetches tooltips from remote URL
 │   │   └── res/
 │   │       └── values/
@@ -885,11 +1021,11 @@ examples/demo/
 │   │           ├── colors.xml
 │   │           └── styles.xml
 │   └── src/huawei/
-│       └── java/com/onesignal/sdktest/notification/
+│       └── java/com/onesignal/example/notification/
 │           └── HmsMessageServiceAppLevel.kt
-├── google-services.json
-├── agconnect-services.json
-└── build_app_prompt.md (this file)
+├── google-services.json                       # package_name = com.onesignal.example
+├── agconnect-services.json                    # package_name = com.onesignal.example
+└── build.md (this file)
 ```
 
 Note:
@@ -897,6 +1033,7 @@ Note:
 - All UI is Jetpack Compose (no XML layouts)
 - Tooltip content is fetched from remote URL (not bundled locally)
 - LogView at top of screen displays SDK and app logs for debugging/Appium testing
+- There is no LoadingOverlay component — list sections render inline LoadingState
 
 ---
 
@@ -913,12 +1050,14 @@ Note: REST API key is NOT required for the fetchUser endpoint.
 
 ### Package Name
 
-The package name MUST be `com.onesignal.sdktest` to work with the existing:
+The package name is `com.onesignal.example`, configured in both:
 
-- `google-services.json` (Firebase configuration)
-- `agconnect-services.json` (Huawei configuration)
+- `app/build.gradle.kts` (`namespace` and the `applicationId` on both `gms`
+  and `huawei` product flavors)
+- `app/google-services.json` and `app/agconnect-services.json` (`package_name` entries)
 
-If you change the package name, you must also update these files with your own Firebase/Huawei project configuration.
+If you change the package name, you must update all four locations and supply
+your own Firebase / Huawei project configuration files.
 
 ---
 
@@ -939,12 +1078,20 @@ This app demonstrates all OneSignal Android SDK features:
 
 The app is designed to be:
 
-1. **Testable** - Empty dialogs for Appium automation
-2. **Comprehensive** - All SDK features demonstrated
-3. **Clean** - MVVM architecture with Jetpack Compose UI
-4. **Cross-platform ready** - Tooltip content in JSON for sharing across wrappers
-5. **Session-based triggers** - Triggers stored in memory only, cleared on restart
-6. **Responsive UI** - Loading indicator with delay to ensure UI populates before dismissing
-7. **Performant** - Tooltip JSON loaded on background thread
-8. **Modern UI** - Material3 theming with reusable Compose components
-9. **Batch Operations** - Add multiple items at once, select and remove multiple items
+1. **Testable** - Empty dialogs and snake_case testTags on every interactive element
+   for Appium automation
+2. **Capacitor-parity** - Same `data-testid` / `testTag` names, same section order,
+   same toast/log split, same `snackbar_toast` tag, same E2E mode masking
+3. **Comprehensive** - All SDK features demonstrated (including JWT login, JWT update,
+   and identity verification)
+4. **Clean** - MVVM architecture with Jetpack Compose UI
+5. **Cross-platform ready** - Tooltip content in JSON for sharing across wrappers
+6. **Session-based triggers** - Triggers stored in memory only, cleared on restart
+7. **Responsive UI** - Inline per-section loading instead of a blocking overlay,
+   buttons disable themselves while async work is in flight
+8. **Race-safe** - Monotonic `fetchRequestSequence` drops stale REST responses
+9. **Performant** - Tooltip JSON loaded on background thread
+10. **Modern UI** - Material3 theming with reusable Compose components
+11. **Batch Operations** - Add multiple items at once, select and remove multiple items
+12. **Privacy-aware in CI** - `E2E_MODE` + `maskValue()` redact App ID / Push ID in
+    screenshots and recordings
