@@ -14,7 +14,7 @@ import java.util.Locale
  */
 object LogManager {
     
-    private const val TAG = "OneSignalDemo"
+    const val TAG = "OneSignalDemo"
     private const val MAX_LOGS = 100
     
     private val _logs = mutableStateListOf<LogEntry>()
@@ -26,16 +26,22 @@ object LogManager {
     /**
      * Log with custom tag (used by SDK log listener)
      */
-    fun log(tag: String, message: String, level: LogLevel) {
+    fun log(message: String, level: LogLevel) {
         // Forward to Android logcat (can happen on any thread)
         when (level) {
-            LogLevel.DEBUG -> Log.d(tag, message)
-            LogLevel.INFO -> Log.i(tag, message)
-            LogLevel.WARN -> Log.w(tag, message)
-            LogLevel.ERROR -> Log.e(tag, message)
+            LogLevel.DEBUG -> Log.d(TAG, message)
+            LogLevel.INFO -> Log.i(TAG, message)
+            LogLevel.WARN -> Log.w(TAG, message)
+            LogLevel.ERROR -> Log.e(TAG, message)
         }
-        
-        // Create entry with current timestamp
+        appendToPanel(message, level)
+    }
+
+    /**
+     * The SDK already writes to logcat with its own "OneSignal" tag,
+     * so the in-app log listener forwards UI-only to avoid duplicate logcat lines.
+     */
+    fun appendToPanel(message: String, level: LogLevel) {
         val entry = LogEntry(
             timestamp = timeFormat.format(Date()),
             message = message,
@@ -60,34 +66,22 @@ object LogManager {
     }
     
     // Convenience methods with default tag
-    fun d(message: String) = log(TAG, message, LogLevel.DEBUG)
-    fun i(message: String) = log(TAG, message, LogLevel.INFO)
-    fun w(message: String) = log(TAG, message, LogLevel.WARN)
-    fun e(message: String) = log(TAG, message, LogLevel.ERROR)
-    
-    // Methods with custom tag (mimics android.util.Log API)
-    fun d(tag: String, message: String) = log(tag, message, LogLevel.DEBUG)
-    fun i(tag: String, message: String) = log(tag, message, LogLevel.INFO)
-    fun w(tag: String, message: String) = log(tag, message, LogLevel.WARN)
-    fun e(tag: String, message: String) = log(tag, message, LogLevel.ERROR)
+    fun d(message: String) = log(message, LogLevel.DEBUG)
+    fun i(message: String) = log(message, LogLevel.INFO)
+    fun w(message: String) = log(message, LogLevel.WARN)
+    fun e(message: String) = log(message, LogLevel.ERROR)
     
     // Methods with throwable (mimics android.util.Log API)
-    fun e(tag: String, message: String, throwable: Throwable) {
-        Log.e(tag, message, throwable)
-        log(tag, "$message: ${throwable.message}", LogLevel.ERROR)
+    fun e(message: String, throwable: Throwable) {
+        Log.e(TAG, message, throwable)
+        log("$message: ${throwable.message}", LogLevel.ERROR)
     }
     
-    fun w(tag: String, message: String, throwable: Throwable) {
-        Log.w(tag, message, throwable)
-        log(tag, "$message: ${throwable.message}", LogLevel.WARN)
+    fun w(message: String, throwable: Throwable) {
+        Log.w(TAG, message, throwable)
+        log("$message: ${throwable.message}", LogLevel.WARN)
     }
-    
-    // Legacy methods for compatibility
-    fun info(message: String) = i(message)
-    fun debug(message: String) = d(message)
-    fun warn(message: String) = w(message)
-    fun error(message: String) = e(message)
-    
+
     fun clear() {
         if (Looper.myLooper() == Looper.getMainLooper()) {
             _logs.clear()

@@ -18,7 +18,6 @@ import java.net.URL
  */
 object OneSignalService {
     
-    private const val TAG = "OneSignalService"
     private const val ONESIGNAL_API_URL = "https://onesignal.com/api/v1/notifications"
     private const val ONESIGNAL_API_BASE_URL = "https://api.onesignal.com"
     
@@ -37,13 +36,13 @@ object OneSignalService {
         val subscription = OneSignal.User.pushSubscription
         
         if (!subscription.optedIn) {
-            LogManager.w(TAG, "Cannot send notification - user not opted in")
+            LogManager.w("Cannot send notification - user not opted in")
             return@withContext false
         }
         
         val subscriptionId = subscription.id
         if (subscriptionId.isNullOrEmpty()) {
-            LogManager.w(TAG, "Cannot send notification - no subscription ID")
+            LogManager.w("Cannot send notification - no subscription ID")
             return@withContext false
         }
 
@@ -59,17 +58,17 @@ object OneSignalService {
                 // Add large icon if available
                 type.largeIcon?.let { 
                     put("large_icon", it)
-                    LogManager.d(TAG, "Adding large_icon: $it")
+                    LogManager.d("Adding large_icon: $it")
                 }
                 // Add big picture if available
                 type.bigPicture?.let { 
                     put("big_picture", it)
-                    LogManager.d(TAG, "Adding big_picture: $it")
+                    LogManager.d("Adding big_picture: $it")
                 }
             }
             
-            LogManager.d(TAG, "Sending notification: ${notificationJson.toString(2)}")
-            LogManager.d(TAG, "Request URL: $ONESIGNAL_API_URL")
+            LogManager.d("Sending notification: ${notificationJson.toString(2)}")
+            LogManager.d("Request URL: $ONESIGNAL_API_URL")
 
             val connection = (URL(ONESIGNAL_API_URL).openConnection() as HttpURLConnection).apply {
                 useCaches = false
@@ -90,16 +89,16 @@ object OneSignalService {
             
             if (responseCode == HttpURLConnection.HTTP_OK || responseCode == HttpURLConnection.HTTP_ACCEPTED || responseCode == HttpURLConnection.HTTP_CREATED) {
                 val response = connection.inputStream.bufferedReader().use { it.readText() }
-                LogManager.d(TAG, "Notification sent successfully: $response")
+                LogManager.d("Notification sent successfully: $response")
                 return@withContext true
             } else {
                 val errorResponse = connection.errorStream?.bufferedReader()?.use { it.readText() } ?: "Unknown error"
-                LogManager.e(TAG, "Failed to send notification (HTTP $responseCode): $errorResponse")
-                LogManager.e(TAG, "Request body was: ${notificationJson.toString()}")
+                LogManager.e("Failed to send notification (HTTP $responseCode): $errorResponse")
+                LogManager.e("Request body was: ${notificationJson.toString()}")
                 return@withContext false
             }
         } catch (e: Exception) {
-            LogManager.e(TAG, "Error sending notification", e)
+            LogManager.e("Error sending notification", e)
             return@withContext false
         }
     }
@@ -111,13 +110,13 @@ object OneSignalService {
         val subscription = OneSignal.User.pushSubscription
         
         if (!subscription.optedIn) {
-            LogManager.w(TAG, "Cannot send notification - user not opted in")
+            LogManager.w("Cannot send notification - user not opted in")
             return@withContext false
         }
         
         val subscriptionId = subscription.id
         if (subscriptionId.isNullOrEmpty()) {
-            LogManager.w(TAG, "Cannot send notification - no subscription ID")
+            LogManager.w("Cannot send notification - no subscription ID")
             return@withContext false
         }
         
@@ -150,15 +149,15 @@ object OneSignalService {
             
             if (responseCode == HttpURLConnection.HTTP_OK || responseCode == HttpURLConnection.HTTP_ACCEPTED || responseCode == HttpURLConnection.HTTP_CREATED) {
                 val response = connection.inputStream.bufferedReader().use { it.readText() }
-                LogManager.d(TAG, "Custom notification sent successfully: $response")
+                LogManager.d("Custom notification sent successfully: $response")
                 return@withContext true
             } else {
                 val errorResponse = connection.errorStream?.bufferedReader()?.use { it.readText() } ?: "Unknown error"
-                LogManager.e(TAG, "Failed to send custom notification (HTTP $responseCode): $errorResponse")
+                LogManager.e("Failed to send custom notification (HTTP $responseCode): $errorResponse")
                 return@withContext false
             }
         } catch (e: Exception) {
-            LogManager.e(TAG, "Error sending custom notification", e)
+            LogManager.e("Error sending custom notification", e)
             return@withContext false
         }
     }
@@ -173,18 +172,18 @@ object OneSignalService {
      */
     suspend fun fetchUser(aliasLabel: String, aliasValue: String, jwt: String? = null): UserData? = withContext(Dispatchers.IO) {
         if (aliasValue.isEmpty()) {
-            LogManager.w(TAG, "Cannot fetch user - aliasValue is empty")
+            LogManager.w("Cannot fetch user - aliasValue is empty")
             return@withContext null
         }
         
         if (appId.isEmpty()) {
-            LogManager.w(TAG, "Cannot fetch user - appId not set")
+            LogManager.w("Cannot fetch user - appId not set")
             return@withContext null
         }
 
         try {
             val url = "$ONESIGNAL_API_BASE_URL/apps/$appId/users/by/$aliasLabel/$aliasValue"
-            LogManager.d(TAG, "Fetching user data from: $url")
+            LogManager.d("Fetching user data from: $url")
             
             val connection = (URL(url).openConnection() as HttpURLConnection).apply {
                 useCaches = false
@@ -201,22 +200,22 @@ object OneSignalService {
             
             if (responseCode == HttpURLConnection.HTTP_OK) {
                 val response = connection.inputStream.bufferedReader().use { it.readText() }
-                LogManager.d(TAG, "User data fetched successfully, parsing response...")
+                LogManager.d("User data fetched successfully, parsing response...")
                 try {
                     val userData = parseUserResponse(response)
-                    LogManager.d(TAG, "Parsed user data: aliases=${userData.aliases.size}, tags=${userData.tags.size}, emails=${userData.emails.size}, sms=${userData.smsNumbers.size}")
+                    LogManager.d("Parsed user data: aliases=${userData.aliases.size}, tags=${userData.tags.size}, emails=${userData.emails.size}, sms=${userData.smsNumbers.size}")
                     return@withContext userData
                 } catch (e: Exception) {
-                    LogManager.e(TAG, "Error parsing user response", e)
+                    LogManager.e("Error parsing user response", e)
                     return@withContext null
                 }
             } else {
                 val errorResponse = connection.errorStream?.bufferedReader()?.use { it.readText() } ?: "Unknown error"
-                LogManager.e(TAG, "Failed to fetch user (HTTP $responseCode): $errorResponse")
+                LogManager.e("Failed to fetch user (HTTP $responseCode): $errorResponse")
                 return@withContext null
             }
         } catch (e: Exception) {
-            LogManager.e(TAG, "Error fetching user", e)
+            LogManager.e("Error fetching user", e)
             return@withContext null
         }
     }

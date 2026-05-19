@@ -100,14 +100,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
     private val triggersList = mutableListOf<Pair<String, String>>()
 
     init {
-        LogManager.info("App initialized")
+        LogManager.i("App initialized")
         loadInitialState()
         OneSignal.User.pushSubscription.addObserver(this)
         OneSignal.Notifications.addPermissionObserver(this)
         OneSignal.User.addObserver(this)
         OneSignal.addUserJwtInvalidatedListener(this)
-        android.util.Log.d("MainViewModel", "init: observers registered, current onesignalId=${OneSignal.User.onesignalId}")
-        LogManager.debug("OneSignal ID: ${OneSignal.User.onesignalId ?: "not set"}")
+        LogManager.d("OneSignal ID: ${OneSignal.User.onesignalId ?: "not set"}")
     }
 
     // IPermissionObserver
@@ -117,7 +116,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
 
     // IUserStateObserver - called when user changes (login/logout)
     override fun onUserStateChange(state: UserChangedState) {
-        android.util.Log.d("MainViewModel", "onUserStateChange fired: ${state.current.onesignalId}")
         viewModelScope.launch(Dispatchers.Main) {
             loadExistingAliases()
             loadExistingTags()
@@ -209,7 +207,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
                     _isLoading.value = false
                 }
             } catch (e: Exception) {
-                android.util.Log.e("MainViewModel", "Error fetching user data", e)
                 withContext(Dispatchers.Main) {
                     logError("Failed to fetch user data: ${e.message}")
                     _isLoading.value = false
@@ -648,14 +645,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
 
     private fun showToast(message: String) {
         _toastMessage.value = message
-        LogManager.info(message)
+        LogManager.i(message)
     }
     
     fun clearToast() { _toastMessage.value = null }
     
     // Logging utilities
-    private fun logError(message: String) = LogManager.error(message)
-    private fun logDebug(message: String) = LogManager.debug(message)
+    private fun logError(message: String) = LogManager.e(message)
+    private fun logDebug(message: String) = LogManager.d(message)
 
     override fun onPushSubscriptionChange(state: PushSubscriptionChangedState) {
         _pushSubscriptionId.postValue(state.current.id)
@@ -663,7 +660,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
     }
 
     override fun onUserJwtInvalidated(event: UserJwtInvalidatedEvent) {
-        LogManager.warn("JWT invalidated for externalId: ${event.externalId}")
+        LogManager.w("JWT invalidated for externalId: ${event.externalId}")
         showToast("JWT invalidated for: ${event.externalId}")
     }
 

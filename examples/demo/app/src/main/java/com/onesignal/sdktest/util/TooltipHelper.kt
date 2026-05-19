@@ -72,7 +72,7 @@ object TooltipHelper {
                 }
             } catch (e: Exception) {
                 // Tooltips are non-critical; log and continue
-                android.util.Log.w("TooltipHelper", "Failed to fetch tooltip content: ${e.message}")
+                android.util.Log.w(LogManager.TAG, "Failed to fetch tooltip content: ${e.message}")
             }
         }
     }
