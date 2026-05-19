@@ -35,6 +35,15 @@ android {
         // Enable with `-PE2E_MODE=true` (matches Capacitor demo's VITE_E2E_MODE flag).
         val e2eMode = (project.findProperty("E2E_MODE") as? String)?.toBoolean() ?: false
         buildConfigField("boolean", "E2E_MODE", e2eMode.toString())
+
+        // Optional OneSignal channel id used by the "WITH SOUND" notification payload.
+        // Override via `-PONESIGNAL_ANDROID_CHANNEL_ID=...`; falls back to the same default
+        // the Capacitor demo ships with so the shared Appium suite can rely on a stable id.
+        val androidChannelId = (project.findProperty("ONESIGNAL_ANDROID_CHANNEL_ID") as? String)
+            ?.trim()
+            ?.takeIf { it.isNotEmpty() }
+            ?: "b3b015d9-c050-4042-8548-dcc34aa44aa4"
+        buildConfigField("String", "ONESIGNAL_ANDROID_CHANNEL_ID", "\"$androidChannelId\"")
     }
 
     buildFeatures {

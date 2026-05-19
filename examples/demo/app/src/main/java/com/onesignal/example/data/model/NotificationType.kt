@@ -8,7 +8,8 @@ enum class NotificationType(
     val notificationTitle: String,
     val notificationBody: String,
     val bigPicture: String? = null,
-    val largeIcon: String? = null
+    val largeIcon: String? = null,
+    val sound: String? = null
 ) {
     SIMPLE(
         title = "Simple",
@@ -20,5 +21,11 @@ enum class NotificationType(
         notificationTitle = "Image Notification",
         notificationBody = "This notification includes an image",
         bigPicture = "https://media.onesignal.com/automated_push_templates/ratings_template.png"
+    ),
+    WITH_SOUND(
+        title = "With Sound",
+        notificationTitle = "Sound Notification",
+        notificationBody = "This notification plays a custom sound",
+        sound = "vine_boom"
     )
 }

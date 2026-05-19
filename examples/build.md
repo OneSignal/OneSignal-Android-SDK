@@ -162,7 +162,9 @@ The ADM permission name and intent category use the application's package, so th
 
 ### Custom notification sound
 
-Copy `vine_boom.wav` from [`sdk-shared/assets`](https://github.com/OneSignal/sdk-shared/tree/main/assets) to `app/src/main/res/raw/vine_boom.wav`. Reference it from the `Send Push - With Sound` payload as `android_sound = "vine_boom"` (no extension).
+The `vine_boom.wav` file from [`sdk-shared/assets`](https://github.com/OneSignal/sdk-shared/tree/main/assets) lives at `app/src/main/res/raw/vine_boom.wav` and is referenced from the **Send Push → WITH SOUND** payload as `android_sound = "vine_boom"` (no extension) plus `android_channel_id` from `BuildConfig.ONESIGNAL_ANDROID_CHANNEL_ID`.
+
+`ONESIGNAL_ANDROID_CHANNEL_ID` is a Gradle property exposed via `buildConfigField` in `app/build.gradle.kts`. It defaults to `b3b015d9-c050-4042-8548-dcc34aa44aa4` (same default as the Capacitor demo's `VITE_ONESIGNAL_ANDROID_CHANNEL_ID`); override with `-PONESIGNAL_ANDROID_CHANNEL_ID=...` to point at a channel you've configured for your own app.
 
 ### Service config files
 

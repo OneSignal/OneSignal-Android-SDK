@@ -193,7 +193,9 @@ fun MainScreen(viewModel: MainViewModel) {
             SendPushSection(
                 onSimpleClick = { viewModel.sendNotification(NotificationType.SIMPLE) },
                 onImageClick = { viewModel.sendNotification(NotificationType.WITH_IMAGE) },
+                onSoundClick = { viewModel.sendNotification(NotificationType.WITH_SOUND) },
                 onCustomClick = { showCustomNotificationDialog = true },
+                onClearAllClick = { viewModel.clearAllNotifications() },
                 onInfoClick = { showTooltipDialog = "sendPushNotification" }
             )
 

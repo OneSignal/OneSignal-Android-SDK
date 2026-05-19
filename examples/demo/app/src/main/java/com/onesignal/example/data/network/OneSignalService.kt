@@ -2,6 +2,7 @@ package com.onesignal.example.data.network
 
 import android.util.Log
 import com.onesignal.OneSignal
+import com.onesignal.example.BuildConfig
 import com.onesignal.example.data.model.NotificationType
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -56,15 +57,18 @@ object OneSignalService {
                 put("android_group", type.title)
                 put("android_led_color", "FF595CF2")
                 put("android_accent_color", "FF595CF2")
-                // Add large icon if available
-                type.largeIcon?.let { 
+                type.largeIcon?.let {
                     put("large_icon", it)
                     Log.d(TAG, "Adding large_icon: $it")
                 }
-                // Add big picture if available
-                type.bigPicture?.let { 
+                type.bigPicture?.let {
                     put("big_picture", it)
                     Log.d(TAG, "Adding big_picture: $it")
+                }
+                type.sound?.let {
+                    put("android_sound", it)
+                    put("android_channel_id", BuildConfig.ONESIGNAL_ANDROID_CHANNEL_ID)
+                    Log.d(TAG, "Adding android_sound: $it (channel: ${BuildConfig.ONESIGNAL_ANDROID_CHANNEL_ID})")
                 }
             }
             

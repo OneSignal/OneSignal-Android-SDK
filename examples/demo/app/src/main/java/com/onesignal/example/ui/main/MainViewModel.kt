@@ -648,6 +648,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
         }
     }
 
+    fun clearAllNotifications() {
+        OneSignal.Notifications.clearAllNotifications()
+        Log.i(TAG, "All notifications cleared")
+    }
+
     fun sendInAppMessage(title: String, triggerKey: String, triggerValue: String) {
         viewModelScope.launch(Dispatchers.IO) {
             repository.addTrigger(triggerKey, triggerValue)

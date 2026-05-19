@@ -292,7 +292,9 @@ fun PushSection(
 fun SendPushSection(
     onSimpleClick: () -> Unit,
     onImageClick: () -> Unit,
+    onSoundClick: () -> Unit,
     onCustomClick: () -> Unit,
+    onClearAllClick: () -> Unit,
     onInfoClick: () -> Unit
 ) {
     SectionCard(
@@ -302,8 +304,10 @@ fun SendPushSection(
         onInfoClick = onInfoClick
     ) {
         PrimaryButton(text = "SIMPLE", onClick = onSimpleClick, testTag = "send_simple_button")
-        PrimaryButton(text = "WITH IMAGE", onClick = onImageClick, testTag = "send_with_image_button")
+        PrimaryButton(text = "WITH IMAGE", onClick = onImageClick, testTag = "send_image_button")
+        PrimaryButton(text = "WITH SOUND", onClick = onSoundClick, testTag = "send_sound_button")
         PrimaryButton(text = "CUSTOM", onClick = onCustomClick, testTag = "send_custom_button")
+        OutlineButton(text = "CLEAR ALL", onClick = onClearAllClick, testTag = "clear_all_button")
     }
 }
 
