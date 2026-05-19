@@ -1,9 +1,19 @@
 package com.onesignal.example.ui.components
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -12,17 +22,26 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import com.onesignal.example.ui.theme.OneSignalRed
+import com.onesignal.example.ui.theme.DemoLayout
+import com.onesignal.example.ui.theme.OsGrey500
+import com.onesignal.example.ui.theme.OsPrimary
 
-private val ButtonShape = RoundedCornerShape(10.dp)
+private val ButtonShape = RoundedCornerShape(DemoLayout.buttonRadius)
+
+private val ButtonTextStyle
+    @Composable get() = MaterialTheme.typography.bodyMedium.copy(
+        fontWeight = FontWeight.SemiBold,
+    )
 
 private fun Modifier.applyTestTag(tag: String?): Modifier =
     if (tag != null) this.testTag(tag) else this
 
-/**
- * Primary action button (full width, colored background).
- */
+private fun Modifier.buttonLayout(testTag: String?): Modifier = this
+    .fillMaxWidth()
+    .padding(horizontal = DemoLayout.pagePadding, vertical = 4.dp)
+    .height(DemoLayout.buttonHeight)
+    .applyTestTag(testTag)
+
 @Composable
 fun PrimaryButton(
     text: String,
@@ -34,37 +53,22 @@ fun PrimaryButton(
 ) {
     Button(
         onClick = onClick,
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp)
-            .height(44.dp)
-            .applyTestTag(testTag),
+        modifier = modifier.buttonLayout(testTag),
         colors = ButtonDefaults.buttonColors(
             containerColor = backgroundColor,
-            disabledContainerColor = backgroundColor.copy(alpha = 0.4f)
+            disabledContainerColor = OsGrey500,
         ),
         enabled = enabled,
         shape = ButtonShape,
         elevation = ButtonDefaults.buttonElevation(
             defaultElevation = 0.dp,
-            pressedElevation = 0.dp
-        )
+            pressedElevation = 0.dp,
+        ),
     ) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.labelLarge.copy(
-                color = Color.White,
-                fontWeight = FontWeight.SemiBold,
-                fontSize = 13.sp,
-                letterSpacing = 0.8.sp
-            )
-        )
+        Text(text = text, style = ButtonTextStyle, color = Color.White)
     }
 }
 
-/**
- * Outline button (outlined primary style).
- */
 @Composable
 fun OutlineButton(
     text: String,
@@ -73,34 +77,22 @@ fun OutlineButton(
     enabled: Boolean = true,
     testTag: String? = null,
 ) {
-    val color = MaterialTheme.colorScheme.primary
+    val color = if (enabled) OsPrimary else OsGrey500
     OutlinedButton(
         onClick = onClick,
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp)
-            .height(44.dp)
-            .applyTestTag(testTag),
-        colors = ButtonDefaults.outlinedButtonColors(contentColor = color),
+        modifier = modifier.buttonLayout(testTag),
+        colors = ButtonDefaults.outlinedButtonColors(
+            contentColor = color,
+            disabledContentColor = OsGrey500,
+        ),
         enabled = enabled,
         shape = ButtonShape,
-        border = BorderStroke(1.dp, if (enabled) color.copy(alpha = 0.5f) else color.copy(alpha = 0.2f))
+        border = BorderStroke(1.dp, color),
     ) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.labelLarge.copy(
-                color = color,
-                fontWeight = FontWeight.SemiBold,
-                fontSize = 13.sp,
-                letterSpacing = 0.8.sp
-            )
-        )
+        Text(text = text, style = ButtonTextStyle, color = color)
     }
 }
 
-/**
- * Destructive button (outlined red style).
- */
 @Composable
 fun DestructiveButton(
     text: String,
@@ -109,80 +101,44 @@ fun DestructiveButton(
     enabled: Boolean = true,
     testTag: String? = null,
 ) {
-    OutlinedButton(
-        onClick = onClick,
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp)
-            .height(44.dp)
-            .applyTestTag(testTag),
-        colors = ButtonDefaults.outlinedButtonColors(
-            contentColor = OneSignalRed
-        ),
-        enabled = enabled,
-        shape = ButtonShape,
-        border = BorderStroke(1.dp, if (enabled) OneSignalRed.copy(alpha = 0.5f) else OneSignalRed.copy(alpha = 0.2f))
-    ) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.labelLarge.copy(
-                color = OneSignalRed,
-                fontWeight = FontWeight.SemiBold,
-                fontSize = 13.sp,
-                letterSpacing = 0.8.sp
-            )
-        )
-    }
+    OutlineButton(text = text, onClick = onClick, modifier = modifier, enabled = enabled, testTag = testTag)
 }
 
-/**
- * Button with icon on the right side.
- */
 @Composable
 fun IconButton(
     text: String,
     icon: ImageVector,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    backgroundColor: Color = OneSignalRed,
+    backgroundColor: Color = OsPrimary,
     testTag: String? = null,
 ) {
     Button(
         onClick = onClick,
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp)
-            .height(44.dp)
-            .applyTestTag(testTag),
-        colors = ButtonDefaults.buttonColors(
-            containerColor = backgroundColor
-        ),
+        modifier = modifier.buttonLayout(testTag),
+        colors = ButtonDefaults.buttonColors(containerColor = backgroundColor),
         shape = ButtonShape,
         elevation = ButtonDefaults.buttonElevation(
             defaultElevation = 0.dp,
-            pressedElevation = 0.dp
-        )
+            pressedElevation = 0.dp,
+        ),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
                 text = text,
-                style = MaterialTheme.typography.labelLarge.copy(
-                    color = Color.White,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 13.sp,
-                    letterSpacing = 0.8.sp
-                ),
-                modifier = Modifier.padding(end = 8.dp)
+                style = ButtonTextStyle,
+                color = Color.White,
+                modifier = Modifier.padding(end = DemoLayout.gap),
             )
-            Icon(
+            androidx.compose.material3.Icon(
                 imageVector = icon,
                 contentDescription = null,
                 tint = Color.White,
-                modifier = Modifier.size(18.dp)
+                modifier = Modifier.size(18.dp),
             )
         }
     }

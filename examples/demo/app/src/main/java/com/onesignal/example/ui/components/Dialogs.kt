@@ -15,22 +15,45 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import androidx.compose.ui.graphics.Color
-import com.onesignal.example.ui.theme.OneSignalRed
+import com.onesignal.example.ui.theme.DemoLayout
+import com.onesignal.example.ui.theme.OsGrey500
+import com.onesignal.example.ui.theme.OsGrey700
+import com.onesignal.example.ui.theme.OsPrimary
 import org.json.JSONObject
 
-private val TextFieldShape = RoundedCornerShape(10.dp)
+private val TextFieldShape = RoundedCornerShape(DemoLayout.inputRadius)
+private val DialogShape = RoundedCornerShape(DemoLayout.dialogRadius)
 
 @Composable
 private fun dialogTextFieldColors() = OutlinedTextFieldDefaults.colors(
-    unfocusedBorderColor = Color(0xFFBDBDBD),
-    focusedBorderColor = OneSignalRed,
-    cursorColor = OneSignalRed,
-    focusedLabelColor = OneSignalRed
+    unfocusedBorderColor = OsGrey700,
+    focusedBorderColor = OsPrimary,
+    cursorColor = OsPrimary,
+    focusedLabelColor = OsPrimary,
 )
+
+@Composable
+private fun dialogTextButtonColors() = ButtonDefaults.textButtonColors(
+    contentColor = OsPrimary,
+    disabledContentColor = OsGrey500,
+)
+
+@Composable
+private fun DialogTitle(text: String, modifier: Modifier = Modifier) {
+    Text(text = text, style = MaterialTheme.typography.headlineSmall, modifier = modifier)
+}
+
+@Composable
+private fun DialogActionLabel(text: String) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
+    )
+}
 
 private fun Modifier.applyTestTag(tag: String?): Modifier =
     if (tag != null) this.testTag(tag) else this
@@ -52,10 +75,10 @@ fun SingleInputDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = DemoLayout.pagePadding),
         properties = DialogProperties(usePlatformDefaultWidth = false),
         title = {
-            Text(title, style = MaterialTheme.typography.titleMedium)
+            DialogTitle(title)
         },
         text = {
             OutlinedTextField(
@@ -74,16 +97,17 @@ fun SingleInputDialog(
                 onClick = { onConfirm(value) },
                 enabled = value.isNotBlank(),
                 modifier = Modifier.applyTestTag(confirmTestTag),
+                colors = dialogTextButtonColors(),
             ) {
-                Text("Add")
+                DialogActionLabel("Add")
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
+            TextButton(onClick = onDismiss, colors = dialogTextButtonColors()) {
+                DialogActionLabel("Cancel")
             }
         },
-        shape = RoundedCornerShape(16.dp)
+        shape = DialogShape
     )
 }
 
@@ -109,12 +133,12 @@ fun PairInputDialog(
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
         Surface(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
-            shape = RoundedCornerShape(16.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = DemoLayout.pagePadding),
+            shape = DialogShape,
             tonalElevation = 2.dp
         ) {
             Column(modifier = Modifier.padding(24.dp)) {
-                Text(title, style = MaterialTheme.typography.titleMedium)
+                DialogTitle(title)
                 Spacer(modifier = Modifier.height(20.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -144,15 +168,16 @@ fun PairInputDialog(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.End
                 ) {
-                    TextButton(onClick = onDismiss) {
-                        Text("Cancel")
+                    TextButton(onClick = onDismiss, colors = dialogTextButtonColors()) {
+                        DialogActionLabel("Cancel")
                     }
                     TextButton(
                         onClick = { onConfirm(key, value) },
                         enabled = key.isNotBlank() && value.isNotBlank(),
                         modifier = Modifier.applyTestTag(confirmTestTag),
+                        colors = dialogTextButtonColors(),
                     ) {
-                        Text("Add")
+                        DialogActionLabel("Add")
                     }
                 }
             }
@@ -180,12 +205,12 @@ fun MultiPairInputDialog(
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
         Surface(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
-            shape = RoundedCornerShape(16.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = DemoLayout.pagePadding),
+            shape = DialogShape,
             tonalElevation = 2.dp
         ) {
             Column(modifier = Modifier.padding(24.dp)) {
-                Text(title, style = MaterialTheme.typography.titleMedium)
+                DialogTitle(title)
                 Spacer(modifier = Modifier.height(20.dp))
                 Column(
                     modifier = Modifier
@@ -266,15 +291,16 @@ fun MultiPairInputDialog(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.End
                 ) {
-                    TextButton(onClick = onDismiss) {
-                        Text("Cancel")
+                    TextButton(onClick = onDismiss, colors = dialogTextButtonColors()) {
+                        DialogActionLabel("Cancel")
                     }
                     TextButton(
                         onClick = { onConfirm(pairs) },
                         enabled = allValid,
                         modifier = Modifier.testTag("multipair_confirm_button"),
+                        colors = dialogTextButtonColors(),
                     ) {
-                        Text("Add All")
+                        DialogActionLabel("Add All")
                     }
                 }
             }
@@ -296,10 +322,10 @@ fun MultiSelectRemoveDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = DemoLayout.pagePadding),
         properties = DialogProperties(usePlatformDefaultWidth = false),
         title = {
-            Text(title, style = MaterialTheme.typography.titleMedium)
+            DialogTitle(title)
         },
         text = {
             Column(
@@ -347,16 +373,17 @@ fun MultiSelectRemoveDialog(
                 onClick = { onConfirm(selectedKeys) },
                 enabled = selectedKeys.isNotEmpty(),
                 modifier = Modifier.testTag("multiselect_confirm_button"),
+                colors = dialogTextButtonColors(),
             ) {
-                Text("Remove (${selectedKeys.size})")
+                DialogActionLabel("Remove (${selectedKeys.size})")
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
+            TextButton(onClick = onDismiss, colors = dialogTextButtonColors()) {
+                DialogActionLabel("Cancel")
             }
         },
-        shape = RoundedCornerShape(16.dp)
+        shape = DialogShape
     )
 }
 
@@ -375,10 +402,10 @@ fun LoginDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = DemoLayout.pagePadding),
         properties = DialogProperties(usePlatformDefaultWidth = false),
         title = {
-            Text("Login User", style = MaterialTheme.typography.titleMedium)
+            DialogTitle("Login User")
         },
         text = {
             Column {
@@ -412,16 +439,17 @@ fun LoginDialog(
                 onClick = { onConfirm(externalId, jwtToken.ifBlank { null }) },
                 enabled = externalId.isNotBlank(),
                 modifier = Modifier.testTag("singleinput_confirm_button"),
+                colors = dialogTextButtonColors(),
             ) {
-                Text("Login")
+                DialogActionLabel("Login")
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
+            TextButton(onClick = onDismiss, colors = dialogTextButtonColors()) {
+                DialogActionLabel("Cancel")
             }
         },
-        shape = RoundedCornerShape(16.dp)
+        shape = DialogShape
     )
 }
 
@@ -447,10 +475,10 @@ fun OutcomeDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = DemoLayout.pagePadding),
         properties = DialogProperties(usePlatformDefaultWidth = false),
         title = {
-            Text("Send Outcome", style = MaterialTheme.typography.titleMedium)
+            DialogTitle("Send Outcome")
         },
         text = {
             Column {
@@ -466,8 +494,8 @@ fun OutcomeDialog(
                         )
                         Text(
                             text = label,
-                            style = MaterialTheme.typography.bodyMedium,
-                            modifier = Modifier.padding(start = 4.dp)
+                            style = MaterialTheme.typography.bodyLarge,
+                            modifier = Modifier.padding(start = 4.dp),
                         )
                     }
                 }
@@ -514,16 +542,17 @@ fun OutcomeDialog(
                 },
                 enabled = outcomeName.isNotBlank(),
                 modifier = Modifier.testTag("outcome_send_button"),
+                colors = dialogTextButtonColors(),
             ) {
-                Text("Send")
+                DialogActionLabel("Send")
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
+            TextButton(onClick = onDismiss, colors = dialogTextButtonColors()) {
+                DialogActionLabel("Cancel")
             }
         },
-        shape = RoundedCornerShape(16.dp)
+        shape = DialogShape
     )
 }
 
@@ -567,10 +596,10 @@ fun TrackEventDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = DemoLayout.pagePadding),
         properties = DialogProperties(usePlatformDefaultWidth = false),
         title = {
-            Text("Track Event", style = MaterialTheme.typography.titleMedium)
+            DialogTitle("Track Event")
         },
         text = {
             Column {
@@ -628,16 +657,17 @@ fun TrackEventDialog(
                 },
                 enabled = eventName.isNotBlank() && isValueValid,
                 modifier = Modifier.testTag("event_track_button"),
+                colors = dialogTextButtonColors(),
             ) {
-                Text("Track")
+                DialogActionLabel("Track")
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
+            TextButton(onClick = onDismiss, colors = dialogTextButtonColors()) {
+                DialogActionLabel("Cancel")
             }
         },
-        shape = RoundedCornerShape(16.dp)
+        shape = DialogShape
     )
 }
 
@@ -654,10 +684,10 @@ fun CustomNotificationDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = DemoLayout.pagePadding),
         properties = DialogProperties(usePlatformDefaultWidth = false),
         title = {
-            Text("Custom Notification", style = MaterialTheme.typography.titleMedium)
+            DialogTitle("Custom Notification")
         },
         text = {
             Column {
@@ -691,16 +721,17 @@ fun CustomNotificationDialog(
                 onClick = { onConfirm(title, body) },
                 enabled = title.isNotBlank() && body.isNotBlank(),
                 modifier = Modifier.testTag("custom_notification_send_button"),
+                colors = dialogTextButtonColors(),
             ) {
-                Text("Send")
+                DialogActionLabel("Send")
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
+            TextButton(onClick = onDismiss, colors = dialogTextButtonColors()) {
+                DialogActionLabel("Cancel")
             }
         },
-        shape = RoundedCornerShape(16.dp)
+        shape = DialogShape
     )
 }
 
@@ -716,12 +747,12 @@ fun TooltipDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = DemoLayout.pagePadding),
         properties = DialogProperties(usePlatformDefaultWidth = false),
         title = {
             Text(
                 title,
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.headlineSmall,
                 modifier = Modifier.testTag("tooltip_title"),
             )
         },
@@ -748,10 +779,11 @@ fun TooltipDialog(
             TextButton(
                 onClick = onDismiss,
                 modifier = Modifier.testTag("tooltip_ok_button"),
+                colors = dialogTextButtonColors(),
             ) {
-                Text("OK")
+                DialogActionLabel("OK")
             }
         },
-        shape = RoundedCornerShape(16.dp)
+        shape = DialogShape
     )
 }

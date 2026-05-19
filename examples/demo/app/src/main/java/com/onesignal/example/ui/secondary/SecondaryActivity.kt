@@ -21,12 +21,11 @@ import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.onesignal.example.ui.components.DestructiveButton
-import com.onesignal.example.ui.theme.LightBackground
-import com.onesignal.example.ui.theme.OneSignalRed
+import com.onesignal.example.ui.theme.OsLightBackground
+import com.onesignal.example.ui.theme.OsPrimary
 import com.onesignal.example.ui.theme.OneSignalTheme
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -43,7 +42,6 @@ class SecondaryActivity : ComponentActivity() {
                 Scaffold(
                     topBar = {
                         CenterAlignedTopAppBar(
-                            modifier = Modifier.shadow(elevation = 4.dp),
                             title = { Text("Secondary Screen", color = Color.White) },
                             navigationIcon = {
                                 IconButton(onClick = { finish() }) {
@@ -54,12 +52,10 @@ class SecondaryActivity : ComponentActivity() {
                                     )
                                 }
                             },
-                            colors = TopAppBarDefaults.topAppBarColors(
-                                containerColor = OneSignalRed
-                            )
+                            colors = TopAppBarDefaults.topAppBarColors(containerColor = OsPrimary),
                         )
                     },
-                    containerColor = LightBackground
+                    containerColor = OsLightBackground,
                 ) { paddingValues ->
                     Column(
                         modifier = Modifier

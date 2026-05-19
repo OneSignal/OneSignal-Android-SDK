@@ -32,15 +32,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.onesignal.example.R
 import com.onesignal.example.data.model.NotificationType
 import com.onesignal.example.ui.components.CustomNotificationDialog
@@ -54,7 +51,8 @@ import com.onesignal.example.ui.components.SingleInputDialog
 import com.onesignal.example.ui.components.TooltipDialog
 import com.onesignal.example.ui.components.TrackEventDialog
 import com.onesignal.example.ui.secondary.SecondaryActivity
-import com.onesignal.example.ui.theme.OneSignalRed
+import com.onesignal.example.ui.theme.DemoLayout
+import com.onesignal.example.ui.theme.OsPrimary
 import com.onesignal.example.util.TooltipHelper
 import com.onesignal.example.util.maskValue
 
@@ -118,27 +116,23 @@ fun MainScreen(viewModel: MainViewModel) {
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
-                modifier = Modifier.shadow(elevation = 4.dp),
                 title = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Image(
                             painter = painterResource(id = R.drawable.onesignal_rectangle),
                             contentDescription = "OneSignal Logo",
-                            modifier = Modifier.height(24.dp),
-                            colorFilter = ColorFilter.tint(Color.White)
+                            modifier = Modifier.height(DemoLayout.logoHeight),
+                            colorFilter = ColorFilter.tint(Color.White),
                         )
                         Spacer(modifier = Modifier.width(10.dp))
                         Text(
                             "Android",
-                            color = Color.White.copy(alpha = 0.7f),
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Normal
+                            style = MaterialTheme.typography.titleMedium,
+                            color = Color.White,
                         )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = OneSignalRed
-                )
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = OsPrimary),
             )
         },
         snackbarHost = {
@@ -158,8 +152,6 @@ fun MainScreen(viewModel: MainViewModel) {
                 .verticalScroll(rememberScrollState())
                 .testTag("main_scroll_view")
         ) {
-            Spacer(modifier = Modifier.height(4.dp))
-
             AppSection(
                 appId = maskValue(appId),
                 consentRequired = consentRequired,
@@ -272,8 +264,6 @@ fun MainScreen(viewModel: MainViewModel) {
                 onPromptLocation = { viewModel.promptLocation() },
                 onInfoClick = { showTooltipDialog = "location" }
             )
-
-            Spacer(modifier = Modifier.height(8.dp))
 
             PrimaryButton(
                 text = "NEXT SCREEN",

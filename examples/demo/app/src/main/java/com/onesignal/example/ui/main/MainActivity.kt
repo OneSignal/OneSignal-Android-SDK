@@ -7,7 +7,7 @@ import androidx.activity.viewModels
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
-import com.onesignal.example.ui.theme.LightBackground
+import com.onesignal.example.ui.theme.OsLightBackground
 import com.onesignal.example.ui.theme.OneSignalTheme
 
 class MainActivity : ComponentActivity() {
@@ -21,7 +21,7 @@ class MainActivity : ComponentActivity() {
             OneSignalTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
-                    color = LightBackground
+                    color = OsLightBackground
                 ) {
                     MainScreen(viewModel = viewModel)
                 }

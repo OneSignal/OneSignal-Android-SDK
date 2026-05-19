@@ -9,9 +9,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -26,13 +26,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.onesignal.example.ui.theme.DividerColor
+import com.onesignal.example.ui.theme.DemoLayout
+import com.onesignal.example.ui.theme.OsDivider
+import com.onesignal.example.ui.theme.OsGrey600
+import com.onesignal.example.ui.theme.OsPrimary
 
-/**
- * A row displaying a key-value pair with delete button.
- */
 @Composable
 fun PairItem(
     key: String,
@@ -44,8 +45,8 @@ fun PairItem(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .padding(DemoLayout.gap / 2),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1f)) {
             val keyModifier = if (sectionKey != null) {
@@ -56,10 +57,9 @@ fun PairItem(
             Text(
                 text = key,
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                modifier = keyModifier
+                modifier = keyModifier,
             )
             val valueModifier = if (sectionKey != null) {
                 Modifier.testTag("${sectionKey}_pair_value_$key")
@@ -69,33 +69,30 @@ fun PairItem(
             Text(
                 text = value,
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = OsGrey600,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                modifier = valueModifier
+                modifier = valueModifier,
             )
         }
         if (onDelete != null) {
             val removeModifier = if (sectionKey != null) {
-                Modifier.size(32.dp).testTag("${sectionKey}_remove_$key")
+                Modifier.size(28.dp).testTag("${sectionKey}_remove_$key")
             } else {
-                Modifier.size(32.dp)
+                Modifier.size(28.dp)
             }
             IconButton(onClick = onDelete, modifier = removeModifier) {
                 Icon(
                     imageVector = Icons.Default.Close,
                     contentDescription = "Remove $key",
-                    tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f),
-                    modifier = Modifier.size(18.dp)
+                    tint = OsPrimary,
+                    modifier = Modifier.size(18.dp),
                 )
             }
         }
     }
 }
 
-/**
- * A row displaying a single value with delete button.
- */
 @Composable
 fun SingleItem(
     value: String,
@@ -106,8 +103,8 @@ fun SingleItem(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .padding(DemoLayout.gap / 2),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         val valueModifier = Modifier
             .weight(1f)
@@ -115,30 +112,26 @@ fun SingleItem(
         Text(
             text = value,
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurface,
             modifier = valueModifier,
             maxLines = 1,
-            overflow = TextOverflow.Ellipsis
+            overflow = TextOverflow.Ellipsis,
         )
         val removeModifier = if (sectionKey != null) {
-            Modifier.size(32.dp).testTag("${sectionKey}_remove_$value")
+            Modifier.size(28.dp).testTag("${sectionKey}_remove_$value")
         } else {
-            Modifier.size(32.dp)
+            Modifier.size(28.dp)
         }
         IconButton(onClick = onDelete, modifier = removeModifier) {
             Icon(
                 imageVector = Icons.Default.Close,
                 contentDescription = "Remove $value",
-                tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f),
-                modifier = Modifier.size(18.dp)
+                tint = OsPrimary,
+                modifier = Modifier.size(18.dp),
             )
         }
     }
 }
 
-/**
- * Empty state text.
- */
 @Composable
 fun EmptyState(
     text: String,
@@ -147,24 +140,13 @@ fun EmptyState(
 ) {
     val containerModifier = modifier
         .fillMaxWidth()
-        .padding(vertical = 20.dp)
+        .padding(vertical = DemoLayout.cardPadding)
         .let { if (sectionKey != null) it.testTag("${sectionKey}_empty") else it }
-    Box(
-        modifier = containerModifier,
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-        )
+    Box(modifier = containerModifier, contentAlignment = Alignment.Center) {
+        Text(text = text, style = MaterialTheme.typography.bodyMedium, color = OsGrey600)
     }
 }
 
-/**
- * Inline loading state shown in the empty list slot while an SDK fetch is in
- * flight. Mirrors Capacitor's `LoadingState` in `ListWidgets.tsx`.
- */
 @Composable
 fun LoadingState(
     modifier: Modifier = Modifier,
@@ -172,23 +154,17 @@ fun LoadingState(
 ) {
     val containerModifier = modifier
         .fillMaxWidth()
-        .padding(vertical = 20.dp)
+        .padding(vertical = DemoLayout.cardPadding)
         .let { if (sectionKey != null) it.testTag("${sectionKey}_loading") else it }
-    Box(
-        modifier = containerModifier,
-        contentAlignment = Alignment.Center
-    ) {
+    Box(modifier = containerModifier, contentAlignment = Alignment.Center) {
         CircularProgressIndicator(
-            color = MaterialTheme.colorScheme.primary,
+            color = OsPrimary,
             strokeWidth = 2.dp,
-            modifier = Modifier.size(28.dp)
+            modifier = Modifier.size(24.dp),
         )
     }
 }
 
-/**
- * Collapsible list section for emails/SMS (shows "X more available" when collapsed).
- */
 @Composable
 fun CollapsibleSingleList(
     items: List<String>,
@@ -216,42 +192,32 @@ fun CollapsibleSingleList(
             }
         } else {
             displayItems.forEachIndexed { index, item ->
-                SingleItem(
-                    value = item,
-                    onDelete = { onDelete(item) },
-                    sectionKey = sectionKey
-                )
+                SingleItem(value = item, onDelete = { onDelete(item) }, sectionKey = sectionKey)
                 if (index < displayItems.lastIndex) {
-                    HorizontalDivider(
-                        color = DividerColor,
-                        modifier = Modifier.padding(horizontal = 16.dp)
-                    )
+                    HorizontalDivider(color = OsDivider)
                 }
             }
 
             if (shouldCollapse) {
-                HorizontalDivider(
-                    color = DividerColor,
-                    modifier = Modifier.padding(horizontal = 16.dp)
-                )
+                HorizontalDivider(color = OsDivider)
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable { expanded = !expanded }
-                        .padding(12.dp),
+                        .padding(vertical = DemoLayout.gap / 2),
                     horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
                         text = if (expanded) "Show less" else "${items.size - maxCollapsedItems} more",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary
+                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
+                        color = OsPrimary,
                     )
                     Icon(
                         imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(18.dp)
+                        tint = OsPrimary,
+                        modifier = Modifier.size(18.dp),
                     )
                 }
             }
@@ -259,9 +225,6 @@ fun CollapsibleSingleList(
     }
 }
 
-/**
- * List of key-value pairs with optional action buttons.
- */
 @Composable
 fun PairList(
     items: List<Pair<String, String>>,
@@ -284,13 +247,10 @@ fun PairList(
                     key = key,
                     value = value,
                     onDelete = onDelete?.let { { it(key) } },
-                    sectionKey = sectionKey
+                    sectionKey = sectionKey,
                 )
                 if (index < items.lastIndex) {
-                    HorizontalDivider(
-                        color = DividerColor,
-                        modifier = Modifier.padding(horizontal = 16.dp)
-                    )
+                    HorizontalDivider(color = OsDivider)
                 }
             }
         }

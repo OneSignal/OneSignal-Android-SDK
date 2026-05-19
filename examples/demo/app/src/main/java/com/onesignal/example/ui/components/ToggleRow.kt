@@ -1,7 +1,16 @@
 package com.onesignal.example.ui.components
 
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -9,13 +18,10 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
-import com.onesignal.example.ui.theme.OneSignalRed
+import com.onesignal.example.ui.theme.DemoLayout
+import com.onesignal.example.ui.theme.OsGrey600
+import com.onesignal.example.ui.theme.OsPrimary
 
-/**
- * Reusable toggle row with label and optional description.
- * Pass `testTag` and `contentDescription` to match Capacitor's
- * `data-testid` / `aria-label` pattern on `IonToggle`.
- */
 @Composable
 fun ToggleRow(
     label: String,
@@ -30,27 +36,25 @@ fun ToggleRow(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 14.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .padding(vertical = DemoLayout.gap),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = label,
-                style = MaterialTheme.typography.bodyLarge,
+                style = MaterialTheme.typography.bodyMedium,
                 color = if (enabled) {
                     MaterialTheme.colorScheme.onSurface
                 } else {
                     MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
-                }
+                },
             )
             if (description != null) {
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = description,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(
-                        alpha = if (enabled) 1f else 0.4f
-                    )
+                    color = OsGrey600.copy(alpha = if (enabled) 1f else 0.4f),
                 )
             }
         }
@@ -71,9 +75,9 @@ fun ToggleRow(
             modifier = switchModifier,
             colors = SwitchDefaults.colors(
                 checkedThumbColor = MaterialTheme.colorScheme.surface,
-                checkedTrackColor = OneSignalRed,
-                checkedBorderColor = OneSignalRed
-            )
+                checkedTrackColor = OsPrimary,
+                checkedBorderColor = OsPrimary,
+            ),
         )
     }
 }

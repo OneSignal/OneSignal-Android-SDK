@@ -20,12 +20,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import com.onesignal.example.ui.theme.DemoLayout
+import com.onesignal.example.ui.theme.OsCardBorder
+import com.onesignal.example.ui.theme.OsGrey500
 
-/**
- * Reusable section card with title and optional info tooltip.
- * `sectionKey` mirrors the Capacitor demo's `sectionKey` prop and seeds the
- * snake_case test tags used by cross-platform E2E selectors.
- */
 @Composable
 fun SectionCard(
     title: String,
@@ -33,7 +31,7 @@ fun SectionCard(
     showCard: Boolean = true,
     sectionKey: String? = null,
     onInfoClick: (() -> Unit)? = null,
-    content: @Composable ColumnScope.() -> Unit
+    content: @Composable ColumnScope.() -> Unit,
 ) {
     val containerModifier = if (sectionKey != null) {
         modifier.fillMaxWidth().testTag("${sectionKey}_section")
@@ -41,19 +39,17 @@ fun SectionCard(
         modifier.fillMaxWidth()
     }
     Column(modifier = containerModifier) {
-        // Section header
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp)
-                .padding(top = 16.dp, bottom = 6.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .padding(horizontal = DemoLayout.pagePadding)
+                .padding(bottom = DemoLayout.gap),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
                 text = title.uppercase(),
                 style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
             )
             if (onInfoClick != null) {
                 val infoModifier = if (sectionKey != null) {
@@ -61,15 +57,12 @@ fun SectionCard(
                 } else {
                     Modifier.size(28.dp)
                 }
-                IconButton(
-                    onClick = onInfoClick,
-                    modifier = infoModifier
-                ) {
+                IconButton(onClick = onInfoClick, modifier = infoModifier) {
                     Icon(
                         imageVector = Icons.Outlined.Info,
                         contentDescription = "$title info",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(18.dp)
+                        tint = OsGrey500,
+                        modifier = Modifier.size(18.dp),
                     )
                 }
             }
@@ -79,24 +72,30 @@ fun SectionCard(
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                ),
+                    .padding(horizontal = DemoLayout.pagePadding),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 shape = MaterialTheme.shapes.medium,
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)),
-                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+                border = BorderStroke(DemoLayout.cardBorderWidth, OsCardBorder),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
             ) {
                 Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    content = content
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(DemoLayout.cardPadding),
+                    content = content,
                 )
             }
         } else {
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                content = content
-            )
+            Column(modifier = Modifier.fillMaxWidth(), content = content)
         }
     }
+}
+
+/** Wraps a top-level demo section with 24dp bottom spacing (styles.md section spacing). */
+@Composable
+fun DemoSection(
+    modifier: Modifier = Modifier,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    Column(modifier = modifier.padding(bottom = DemoLayout.sectionGap), content = content)
 }
