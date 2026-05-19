@@ -21,6 +21,7 @@ import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.onesignal.example.ui.components.DestructiveButton
@@ -42,6 +43,7 @@ class SecondaryActivity : ComponentActivity() {
                 Scaffold(
                     topBar = {
                         CenterAlignedTopAppBar(
+                            modifier = Modifier.shadow(elevation = 4.dp),
                             title = { Text("Secondary Screen", color = Color.White) },
                             navigationIcon = {
                                 IconButton(onClick = { finish() }) {
