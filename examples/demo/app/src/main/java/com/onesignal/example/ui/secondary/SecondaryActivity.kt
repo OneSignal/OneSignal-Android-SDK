@@ -17,15 +17,13 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.CenterAlignedTopAppBar
-import androidx.compose.material3.TopAppBarDefaults
+import com.onesignal.example.ui.components.DemoAppBar
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.onesignal.example.ui.components.DestructiveButton
 import com.onesignal.example.ui.theme.OsLightBackground
-import com.onesignal.example.ui.theme.OsPrimary
 import com.onesignal.example.ui.theme.OneSignalTheme
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -41,18 +39,17 @@ class SecondaryActivity : ComponentActivity() {
             OneSignalTheme {
                 Scaffold(
                     topBar = {
-                        CenterAlignedTopAppBar(
+                        DemoAppBar(
                             title = { Text("Secondary Screen", color = Color.White) },
                             navigationIcon = {
                                 IconButton(onClick = { finish() }) {
                                     Icon(
                                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                                         contentDescription = "Back",
-                                        tint = Color.White
+                                        tint = Color.White,
                                     )
                                 }
                             },
-                            colors = TopAppBarDefaults.topAppBarColors(containerColor = OsPrimary),
                         )
                     },
                     containerColor = OsLightBackground,

@@ -21,8 +21,7 @@ import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.CenterAlignedTopAppBar
-import androidx.compose.material3.TopAppBarDefaults
+import com.onesignal.example.ui.components.DemoAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -52,7 +51,6 @@ import com.onesignal.example.ui.components.TooltipDialog
 import com.onesignal.example.ui.components.TrackEventDialog
 import com.onesignal.example.ui.secondary.SecondaryActivity
 import com.onesignal.example.ui.theme.DemoLayout
-import com.onesignal.example.ui.theme.OsPrimary
 import com.onesignal.example.util.TooltipHelper
 import com.onesignal.example.util.maskValue
 
@@ -115,7 +113,7 @@ fun MainScreen(viewModel: MainViewModel) {
 
     Scaffold(
         topBar = {
-            CenterAlignedTopAppBar(
+            DemoAppBar(
                 title = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Image(
@@ -132,7 +130,6 @@ fun MainScreen(viewModel: MainViewModel) {
                         )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = OsPrimary),
             )
         },
         snackbarHost = {
@@ -148,6 +145,7 @@ fun MainScreen(viewModel: MainViewModel) {
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
+                .padding(top = DemoLayout.scrollTopPadding)
                 .background(MaterialTheme.colorScheme.background)
                 .verticalScroll(rememberScrollState())
                 .testTag("main_scroll_view")

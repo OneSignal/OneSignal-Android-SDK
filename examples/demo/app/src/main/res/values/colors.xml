@@ -14,6 +14,7 @@
     <color name="colorRed">#E9444E</color>
 
     <color name="colorTextLight">#FFFFFF</color>
+    <color name="colorLaunchBackground">#FFFFFF</color>
 
     <color name="colorToastInfo">#1E88E5</color>
     <color name="colorToastSuccess">#47B84C</color>
