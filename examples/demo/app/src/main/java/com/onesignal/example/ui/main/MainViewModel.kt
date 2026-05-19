@@ -559,7 +559,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
     fun sendOutcomeWithValue(name: String, value: Float) {
         viewModelScope.launch(Dispatchers.IO) {
             repository.sendOutcomeWithValue(name, value)
-            withContext(Dispatchers.Main) { showToast("Outcome with value sent: $name = $value") }
+            withContext(Dispatchers.Main) { showToast("Outcome sent: $name = $value") }
         }
     }
 
