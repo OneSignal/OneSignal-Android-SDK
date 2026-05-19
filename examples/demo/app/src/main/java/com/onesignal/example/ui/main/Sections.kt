@@ -403,8 +403,8 @@ fun AliasesSection(
         )
     }
     Spacer(modifier = Modifier.height(8.dp))
-    PrimaryButton(text = "ADD", onClick = onAddClick, testTag = "add_alias_button")
-    PrimaryButton(text = "ADD MULTIPLE", onClick = onAddMultipleClick, testTag = "add_multiple_aliases_button")
+    PrimaryButton(text = "ADD ALIAS", onClick = onAddClick, testTag = "add_alias_button")
+    PrimaryButton(text = "ADD MULTIPLE ALIASES", onClick = onAddMultipleClick, testTag = "add_multiple_aliases_button")
 }
 
 // === EMAILS SECTION ===
@@ -472,8 +472,8 @@ fun TagsSection(
         )
     }
     Spacer(modifier = Modifier.height(8.dp))
-    PrimaryButton(text = "ADD", onClick = onAddClick, testTag = "add_tag_button")
-    PrimaryButton(text = "ADD MULTIPLE", onClick = onAddMultipleClick, testTag = "add_multiple_tags_button")
+    PrimaryButton(text = "ADD TAG", onClick = onAddClick, testTag = "add_tag_button")
+    PrimaryButton(text = "ADD MULTIPLE TAGS", onClick = onAddMultipleClick, testTag = "add_multiple_tags_button")
 
     if (tags.isNotEmpty()) {
         DestructiveButton(
@@ -520,9 +520,9 @@ fun TriggersSection(
         )
     }
     Spacer(modifier = Modifier.height(8.dp))
-    PrimaryButton(text = "ADD", onClick = onAddClick, testTag = "add_trigger_button")
+    PrimaryButton(text = "ADD TRIGGER", onClick = onAddClick, testTag = "add_trigger_button")
     PrimaryButton(
-        text = "ADD MULTIPLE",
+        text = "ADD MULTIPLE TRIGGERS",
         onClick = onAddMultipleClick,
         testTag = "add_multiple_triggers_button"
     )
