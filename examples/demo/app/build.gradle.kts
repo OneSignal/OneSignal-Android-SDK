@@ -18,7 +18,7 @@ if (taskRequests.contains("gms")) {
 val sdkVersion: String = rootProject.findProperty("SDK_VERSION") as? String ?: "5.6.1"
 
 android {
-    namespace = "com.onesignal.sdktest"
+    namespace = "com.onesignal.example"
     compileSdk = 34
 
     defaultConfig {
@@ -51,12 +51,12 @@ android {
     productFlavors {
         create("gms") {
             dimension = "default"
-            applicationId = "com.onesignal.sdktest"
+            applicationId = "com.onesignal.example"
         }
         create("huawei") {
             dimension = "default"
             minSdk = 21
-            applicationId = "com.onesignal.sdktest"
+            applicationId = "com.onesignal.example"
         }
     }
 
