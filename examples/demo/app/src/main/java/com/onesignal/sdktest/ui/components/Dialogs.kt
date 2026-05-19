@@ -13,6 +13,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -31,6 +32,9 @@ private fun dialogTextFieldColors() = OutlinedTextFieldDefaults.colors(
     focusedLabelColor = OneSignalRed
 )
 
+private fun Modifier.applyTestTag(tag: String?): Modifier =
+    if (tag != null) this.testTag(tag) else this
+
 /**
  * Dialog for entering a single value.
  */
@@ -40,10 +44,12 @@ fun SingleInputDialog(
     label: String,
     onDismiss: () -> Unit,
     onConfirm: (String) -> Unit,
-    keyboardType: KeyboardType = KeyboardType.Text
+    keyboardType: KeyboardType = KeyboardType.Text,
+    inputTestTag: String? = null,
+    confirmTestTag: String? = "singleinput_confirm_button",
 ) {
     var value by remember { mutableStateOf("") }
-    
+
     AlertDialog(
         onDismissRequest = onDismiss,
         modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
@@ -56,7 +62,7 @@ fun SingleInputDialog(
                 value = value,
                 onValueChange = { value = it },
                 label = { Text(label) },
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().applyTestTag(inputTestTag),
                 keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
                 singleLine = true,
                 shape = TextFieldShape,
@@ -66,7 +72,8 @@ fun SingleInputDialog(
         confirmButton = {
             TextButton(
                 onClick = { onConfirm(value) },
-                enabled = value.isNotBlank()
+                enabled = value.isNotBlank(),
+                modifier = Modifier.applyTestTag(confirmTestTag),
             ) {
                 Text("Add")
             }
@@ -89,11 +96,14 @@ fun PairInputDialog(
     keyLabel: String = "Key",
     valueLabel: String = "Value",
     onDismiss: () -> Unit,
-    onConfirm: (String, String) -> Unit
+    onConfirm: (String, String) -> Unit,
+    keyTestTag: String? = null,
+    valueTestTag: String? = null,
+    confirmTestTag: String? = "singlepair_confirm_button",
 ) {
     var key by remember { mutableStateOf("") }
     var value by remember { mutableStateOf("") }
-    
+
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false)
@@ -114,7 +124,7 @@ fun PairInputDialog(
                         value = key,
                         onValueChange = { key = it },
                         label = { Text(keyLabel) },
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier.weight(1f).applyTestTag(keyTestTag),
                         singleLine = true,
                         shape = TextFieldShape,
                         colors = dialogTextFieldColors()
@@ -123,7 +133,7 @@ fun PairInputDialog(
                         value = value,
                         onValueChange = { value = it },
                         label = { Text(valueLabel) },
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier.weight(1f).applyTestTag(valueTestTag),
                         singleLine = true,
                         shape = TextFieldShape,
                         colors = dialogTextFieldColors()
@@ -139,7 +149,8 @@ fun PairInputDialog(
                     }
                     TextButton(
                         onClick = { onConfirm(key, value) },
-                        enabled = key.isNotBlank() && value.isNotBlank()
+                        enabled = key.isNotBlank() && value.isNotBlank(),
+                        modifier = Modifier.applyTestTag(confirmTestTag),
                     ) {
                         Text("Add")
                     }
@@ -161,9 +172,9 @@ fun MultiPairInputDialog(
     onConfirm: (List<Pair<String, String>>) -> Unit
 ) {
     var pairs by remember { mutableStateOf(listOf(Pair("", ""))) }
-    
+
     val allValid = pairs.all { it.first.isNotBlank() && it.second.isNotBlank() }
-    
+
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false)
@@ -196,7 +207,9 @@ fun MultiPairInputDialog(
                                     }
                                 },
                                 label = { Text(keyLabel) },
-                                modifier = Modifier.weight(1f),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .testTag("multipair_key_$index"),
                                 singleLine = true,
                                 shape = TextFieldShape,
                                 colors = dialogTextFieldColors()
@@ -209,7 +222,9 @@ fun MultiPairInputDialog(
                                     }
                                 },
                                 label = { Text(valueLabel) },
-                                modifier = Modifier.weight(1f),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .testTag("multipair_value_$index"),
                                 singleLine = true,
                                 shape = TextFieldShape,
                                 colors = dialogTextFieldColors()
@@ -222,7 +237,7 @@ fun MultiPairInputDialog(
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.Close,
-                                        contentDescription = "Remove",
+                                        contentDescription = "Remove row",
                                         tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f)
                                     )
                                 }
@@ -232,12 +247,14 @@ fun MultiPairInputDialog(
                             HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
                         }
                     }
-                    
+
                     Spacer(modifier = Modifier.height(12.dp))
-                    
+
                     TextButton(
                         onClick = { pairs = pairs + Pair("", "") },
-                        modifier = Modifier.align(Alignment.CenterHorizontally)
+                        modifier = Modifier
+                            .align(Alignment.CenterHorizontally)
+                            .testTag("multipair_add_row_button")
                     ) {
                         Icon(Icons.Default.Add, contentDescription = null)
                         Spacer(modifier = Modifier.width(4.dp))
@@ -254,7 +271,8 @@ fun MultiPairInputDialog(
                     }
                     TextButton(
                         onClick = { onConfirm(pairs) },
-                        enabled = allValid
+                        enabled = allValid,
+                        modifier = Modifier.testTag("multipair_confirm_button"),
                     ) {
                         Text("Add All")
                     }
@@ -275,7 +293,7 @@ fun MultiSelectRemoveDialog(
     onConfirm: (Collection<String>) -> Unit
 ) {
     var selectedKeys by remember { mutableStateOf(setOf<String>()) }
-    
+
     AlertDialog(
         onDismissRequest = onDismiss,
         modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
@@ -290,7 +308,7 @@ fun MultiSelectRemoveDialog(
                     .heightIn(max = 400.dp)
                     .verticalScroll(rememberScrollState())
             ) {
-                items.forEach { (key, value) ->
+                items.forEach { (key, _) ->
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -312,7 +330,8 @@ fun MultiSelectRemoveDialog(
                                 } else {
                                     selectedKeys - key
                                 }
-                            }
+                            },
+                            modifier = Modifier.testTag("remove_checkbox_$key"),
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
@@ -326,7 +345,8 @@ fun MultiSelectRemoveDialog(
         confirmButton = {
             TextButton(
                 onClick = { onConfirm(selectedKeys) },
-                enabled = selectedKeys.isNotEmpty()
+                enabled = selectedKeys.isNotEmpty(),
+                modifier = Modifier.testTag("multiselect_confirm_button"),
             ) {
                 Text("Remove (${selectedKeys.size})")
             }
@@ -342,6 +362,8 @@ fun MultiSelectRemoveDialog(
 
 /**
  * Dialog for login/switch user with optional JWT token.
+ * Uses the same `singleinput_confirm_button` tag Capacitor's `SingleInputModal`
+ * exposes so cross-platform E2E selectors line up on the login flow.
  */
 @Composable
 fun LoginDialog(
@@ -364,7 +386,9 @@ fun LoginDialog(
                     value = externalId,
                     onValueChange = { externalId = it },
                     label = { Text("External User Id") },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("login_user_id_input"),
                     singleLine = true,
                     shape = TextFieldShape,
                     colors = dialogTextFieldColors()
@@ -374,7 +398,9 @@ fun LoginDialog(
                     value = jwtToken,
                     onValueChange = { jwtToken = it },
                     label = { Text("JWT Token (optional)") },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("login_user_jwt_input"),
                     singleLine = true,
                     shape = TextFieldShape,
                     colors = dialogTextFieldColors()
@@ -384,7 +410,8 @@ fun LoginDialog(
         confirmButton = {
             TextButton(
                 onClick = { onConfirm(externalId, jwtToken.ifBlank { null }) },
-                enabled = externalId.isNotBlank()
+                enabled = externalId.isNotBlank(),
+                modifier = Modifier.testTag("singleinput_confirm_button"),
             ) {
                 Text("Login")
             }
@@ -411,9 +438,13 @@ fun OutcomeDialog(
     var selectedType by remember { mutableStateOf(0) }
     var outcomeName by remember { mutableStateOf("") }
     var outcomeValue by remember { mutableStateOf("") }
-    
-    val outcomeTypes = listOf("Normal Outcome", "Unique Outcome", "Outcome with Value")
-    
+
+    val outcomeTypes = listOf(
+        Triple(0, "Normal Outcome", "outcome_type_normal_radio"),
+        Triple(1, "Unique Outcome", "outcome_type_unique_radio"),
+        Triple(2, "Outcome with Value", "outcome_type_value_radio")
+    )
+
     AlertDialog(
         onDismissRequest = onDismiss,
         modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
@@ -423,42 +454,47 @@ fun OutcomeDialog(
         },
         text = {
             Column {
-                outcomeTypes.forEachIndexed { index, type ->
+                outcomeTypes.forEach { (index, label, tag) ->
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         RadioButton(
                             selected = selectedType == index,
-                            onClick = { selectedType = index }
+                            onClick = { selectedType = index },
+                            modifier = Modifier.testTag(tag),
                         )
                         Text(
-                            text = type,
+                            text = label,
                             style = MaterialTheme.typography.bodyMedium,
                             modifier = Modifier.padding(start = 4.dp)
                         )
                     }
                 }
-                
+
                 Spacer(modifier = Modifier.height(16.dp))
-                
+
                 OutlinedTextField(
                     value = outcomeName,
                     onValueChange = { outcomeName = it },
                     label = { Text("Outcome Name") },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("outcome_name_input"),
                     singleLine = true,
                     shape = TextFieldShape,
                     colors = dialogTextFieldColors()
                 )
-                
+
                 if (selectedType == 2) {
                     Spacer(modifier = Modifier.height(10.dp))
                     OutlinedTextField(
                         value = outcomeValue,
                         onValueChange = { outcomeValue = it },
                         label = { Text("Value") },
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("outcome_value_input"),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         singleLine = true,
                         shape = TextFieldShape,
@@ -476,7 +512,8 @@ fun OutcomeDialog(
                         2 -> onSendWithValue(outcomeName, outcomeValue.toFloatOrNull() ?: 0f)
                     }
                 },
-                enabled = outcomeName.isNotBlank()
+                enabled = outcomeName.isNotBlank(),
+                modifier = Modifier.testTag("outcome_send_button"),
             ) {
                 Text("Send")
             }
@@ -525,9 +562,9 @@ fun TrackEventDialog(
     var eventName by remember { mutableStateOf("") }
     var eventValue by remember { mutableStateOf("") }
     var showError by remember { mutableStateOf(false) }
-    
+
     val isValueValid = isValidJsonObject(eventValue)
-    
+
     AlertDialog(
         onDismissRequest = onDismiss,
         modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
@@ -541,24 +578,28 @@ fun TrackEventDialog(
                     value = eventName,
                     onValueChange = { eventName = it },
                     label = { Text("Event Name") },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("event_name_input"),
                     singleLine = true,
                     isError = eventName.isBlank() && showError,
                     shape = TextFieldShape,
                     colors = dialogTextFieldColors()
                 )
-                
+
                 Spacer(modifier = Modifier.height(10.dp))
-                
+
                 OutlinedTextField(
                     value = eventValue,
-                    onValueChange = { 
+                    onValueChange = {
                         eventValue = it
                         showError = false
                     },
                     label = { Text("Properties (JSON, optional)") },
                     placeholder = { Text("{\"key\": \"value\"}") },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("event_properties_input"),
                     singleLine = false,
                     minLines = 2,
                     maxLines = 4,
@@ -566,7 +607,7 @@ fun TrackEventDialog(
                     shape = TextFieldShape,
                     colors = dialogTextFieldColors(),
                     supportingText = if (!isValueValid && eventValue.isNotBlank()) {
-                        { 
+                        {
                             Text(
                                 text = "Invalid JSON format",
                                 color = MaterialTheme.colorScheme.error
@@ -578,14 +619,15 @@ fun TrackEventDialog(
         },
         confirmButton = {
             TextButton(
-                onClick = { 
+                onClick = {
                     showError = true
                     if (eventName.isNotBlank() && isValueValid) {
                         val properties = parseJsonToMap(eventValue)
                         onConfirm(eventName, properties)
                     }
                 },
-                enabled = eventName.isNotBlank() && isValueValid
+                enabled = eventName.isNotBlank() && isValueValid,
+                modifier = Modifier.testTag("event_track_button"),
             ) {
                 Text("Track")
             }
@@ -623,7 +665,9 @@ fun CustomNotificationDialog(
                     value = title,
                     onValueChange = { title = it },
                     label = { Text("Title") },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("custom_notification_title_input"),
                     singleLine = true,
                     shape = TextFieldShape,
                     colors = dialogTextFieldColors()
@@ -633,7 +677,9 @@ fun CustomNotificationDialog(
                     value = body,
                     onValueChange = { body = it },
                     label = { Text("Body") },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("custom_notification_body_input"),
                     singleLine = true,
                     shape = TextFieldShape,
                     colors = dialogTextFieldColors()
@@ -643,7 +689,8 @@ fun CustomNotificationDialog(
         confirmButton = {
             TextButton(
                 onClick = { onConfirm(title, body) },
-                enabled = title.isNotBlank() && body.isNotBlank()
+                enabled = title.isNotBlank() && body.isNotBlank(),
+                modifier = Modifier.testTag("custom_notification_send_button"),
             ) {
                 Text("Send")
             }
@@ -672,13 +719,18 @@ fun TooltipDialog(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
         properties = DialogProperties(usePlatformDefaultWidth = false),
         title = {
-            Text(title, style = MaterialTheme.typography.titleMedium)
+            Text(
+                title,
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.testTag("tooltip_title"),
+            )
         },
         text = {
             Column {
                 Text(
                     description,
-                    style = MaterialTheme.typography.bodyMedium
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.testTag("tooltip_description"),
                 )
                 options?.let { opts ->
                     Spacer(modifier = Modifier.height(12.dp))
@@ -693,7 +745,10 @@ fun TooltipDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) {
+            TextButton(
+                onClick = onDismiss,
+                modifier = Modifier.testTag("tooltip_ok_button"),
+            ) {
                 Text("OK")
             }
         },

@@ -18,20 +18,29 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 
 /**
  * Reusable section card with title and optional info tooltip.
+ * `sectionKey` mirrors the Capacitor demo's `sectionKey` prop and seeds the
+ * snake_case test tags used by cross-platform E2E selectors.
  */
 @Composable
 fun SectionCard(
     title: String,
     modifier: Modifier = Modifier,
     showCard: Boolean = true,
+    sectionKey: String? = null,
     onInfoClick: (() -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    Column(modifier = modifier.fillMaxWidth()) {
+    val containerModifier = if (sectionKey != null) {
+        modifier.fillMaxWidth().testTag("${sectionKey}_section")
+    } else {
+        modifier.fillMaxWidth()
+    }
+    Column(modifier = containerModifier) {
         // Section header
         Row(
             modifier = Modifier
@@ -47,13 +56,18 @@ fun SectionCard(
                 modifier = Modifier.weight(1f)
             )
             if (onInfoClick != null) {
+                val infoModifier = if (sectionKey != null) {
+                    Modifier.size(28.dp).testTag("${sectionKey}_info_icon")
+                } else {
+                    Modifier.size(28.dp)
+                }
                 IconButton(
                     onClick = onInfoClick,
-                    modifier = Modifier.size(28.dp)
+                    modifier = infoModifier
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.Info,
-                        contentDescription = "Info",
+                        contentDescription = "$title info",
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(18.dp)
                     )

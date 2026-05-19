@@ -29,10 +29,17 @@ android {
         multiDexEnabled = true
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // E2E_MODE masks sensitive values (App ID, Push ID) in the UI so screenshots
+        // and recordings from automated runs do not leak per-tenant identifiers.
+        // Enable with `-PE2E_MODE=true` (matches Capacitor demo's VITE_E2E_MODE flag).
+        val e2eMode = (project.findProperty("E2E_MODE") as? String)?.toBoolean() ?: false
+        buildConfigField("boolean", "E2E_MODE", e2eMode.toString())
     }
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     composeOptions {

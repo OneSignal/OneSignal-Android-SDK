@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -18,6 +17,9 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -33,6 +35,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -40,7 +43,6 @@ import androidx.compose.ui.unit.sp
 import com.onesignal.sdktest.R
 import com.onesignal.sdktest.data.model.NotificationType
 import com.onesignal.sdktest.ui.components.CustomNotificationDialog
-import com.onesignal.sdktest.ui.components.LoadingOverlay
 import com.onesignal.sdktest.ui.components.LoginDialog
 import com.onesignal.sdktest.ui.components.LogView
 import com.onesignal.sdktest.ui.components.MultiPairInputDialog
@@ -53,15 +55,14 @@ import com.onesignal.sdktest.ui.components.TooltipDialog
 import com.onesignal.sdktest.ui.components.TrackEventDialog
 import com.onesignal.sdktest.ui.secondary.SecondaryActivity
 import com.onesignal.sdktest.ui.theme.OneSignalRed
-
 import com.onesignal.sdktest.util.TooltipHelper
+import com.onesignal.sdktest.util.maskValue
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(viewModel: MainViewModel) {
     val context = LocalContext.current
-    
-    // Observe all LiveData as State
+
     val appId by viewModel.appId.observeAsState("")
     val pushSubscriptionId by viewModel.pushSubscriptionId.observeAsState()
     val pushEnabled by viewModel.pushEnabled.observeAsState(false)
@@ -78,7 +79,8 @@ fun MainScreen(viewModel: MainViewModel) {
     val inAppMessagesPaused by viewModel.inAppMessagesPaused.observeAsState(true)
     val locationShared by viewModel.locationShared.observeAsState(false)
     val isLoading by viewModel.isLoading.observeAsState(false)
-    
+    val toastMessage by viewModel.toastMessage.observeAsState()
+
     // Dialog states
     var showLoginDialog by remember { mutableStateOf(false) }
     var showUpdateJwtDialog by remember { mutableStateOf(false) }
@@ -96,59 +98,75 @@ fun MainScreen(viewModel: MainViewModel) {
     var showTrackEventDialog by remember { mutableStateOf(false) }
     var showCustomNotificationDialog by remember { mutableStateOf(false) }
     var showTooltipDialog by remember { mutableStateOf<String?>(null) }
-    
-    // Auto prompt for notification permission
+
     LaunchedEffect(Unit) {
         viewModel.promptPush()
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        Scaffold(
-            topBar = {
-                CenterAlignedTopAppBar(
-                    title = {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Image(
-                                painter = painterResource(id = R.drawable.onesignal_rectangle),
-                                contentDescription = "OneSignal Logo",
-                                modifier = Modifier.height(24.dp),
-                                colorFilter = ColorFilter.tint(Color.White)
-                            )
-                            Spacer(modifier = Modifier.width(10.dp))
-                            Text(
-                                "Sample App",
-                                color = Color.White.copy(alpha = 0.7f),
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Normal
-                            )
-                        }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = OneSignalRed
-                    )
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    // Bridge the LiveData toast queue to a Compose Snackbar so the snackbar can be
+    // targeted with `Modifier.testTag("snackbar_toast")` in E2E (matches Capacitor).
+    LaunchedEffect(toastMessage) {
+        val message = toastMessage
+        if (!message.isNullOrEmpty()) {
+            snackbarHostState.showSnackbar(message)
+            viewModel.clearToast()
+        }
+    }
+
+    Scaffold(
+        topBar = {
+            CenterAlignedTopAppBar(
+                title = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Image(
+                            painter = painterResource(id = R.drawable.onesignal_rectangle),
+                            contentDescription = "OneSignal Logo",
+                            modifier = Modifier.height(24.dp),
+                            colorFilter = ColorFilter.tint(Color.White)
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Text(
+                            "Sample App",
+                            color = Color.White.copy(alpha = 0.7f),
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Normal
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = OneSignalRed
+                )
+            )
+        },
+        snackbarHost = {
+            SnackbarHost(hostState = snackbarHostState) { data ->
+                Snackbar(
+                    snackbarData = data,
+                    modifier = Modifier.testTag("snackbar_toast")
                 )
             }
-        ) { paddingValues ->
+        }
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .background(MaterialTheme.colorScheme.background)
+        ) {
+            LogView(defaultExpanded = true)
+
             Column(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
-                    .background(MaterialTheme.colorScheme.background)
+                    .weight(1f)
+                    .verticalScroll(rememberScrollState())
+                    .testTag("main_scroll_view")
             ) {
-                // Log view at top (fixed, not scrolling)
-                LogView(defaultExpanded = true)
-                
-                // Scrollable content
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .verticalScroll(rememberScrollState())
-                ) {
                 Spacer(modifier = Modifier.height(4.dp))
-                
-                // === APP SECTION ===
+
                 AppSection(
-                    appId = appId,
+                    appId = maskValue(appId),
                     consentRequired = consentRequired,
                     onConsentRequiredChange = { viewModel.setConsentRequired(it) },
                     privacyConsentGiven = privacyConsentGiven,
@@ -157,91 +175,85 @@ fun MainScreen(viewModel: MainViewModel) {
                         context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://onesignal.com")))
                     }
                 )
-                
-                // === USER SECTION ===
+
                 UserSection(
                     externalUserId = externalUserId,
                     useIdentityVerification = useIdentityVerification,
                     onUseIdentityVerificationChange = { viewModel.setUseIdentityVerification(it) },
                     onLoginClick = { showLoginDialog = true },
                     onLogoutClick = { viewModel.logoutUser() },
-                    onUpdateJwtClick = { showUpdateJwtDialog = true }
+                    onUpdateJwtClick = { showUpdateJwtDialog = true },
+                    isLoading = isLoading
                 )
-                
-                // === PUSH SECTION ===
+
                 PushSection(
-                    pushSubscriptionId = pushSubscriptionId,
+                    pushSubscriptionId = pushSubscriptionId?.let { maskValue(it) },
                     pushEnabled = pushEnabled,
                     hasPermission = hasNotificationPermission,
                     onEnabledChange = { viewModel.setPushEnabled(it) },
                     onPromptPush = { viewModel.promptPush() },
                     onInfoClick = { showTooltipDialog = "push" }
                 )
-                
-                // === SEND PUSH NOTIFICATION SECTION ===
+
                 SendPushSection(
                     onSimpleClick = { viewModel.sendNotification(NotificationType.SIMPLE) },
                     onImageClick = { viewModel.sendNotification(NotificationType.WITH_IMAGE) },
                     onCustomClick = { showCustomNotificationDialog = true },
                     onInfoClick = { showTooltipDialog = "sendPushNotification" }
                 )
-                
-                // === IN-APP MESSAGING SECTION ===
+
                 InAppMessagingSection(
                     isPaused = inAppMessagesPaused,
                     onPausedChange = { viewModel.setInAppMessagesPaused(it) },
                     onInfoClick = { showTooltipDialog = "inAppMessaging" }
                 )
-                
-                // === SEND IN-APP MESSAGE SECTION ===
+
                 SendInAppMessageSection(
                     onSendMessage = { type ->
                         viewModel.sendInAppMessage(type.title, type.triggerKey, type.triggerValue)
                     },
                     onInfoClick = { showTooltipDialog = "sendInAppMessage" }
                 )
-                
-                // === ALIASES SECTION ===
+
                 AliasesSection(
                     aliases = aliases,
                     onAddClick = { showAddAliasDialog = true },
                     onAddMultipleClick = { showAddMultipleAliasDialog = true },
-                    onInfoClick = { showTooltipDialog = "aliases" }
+                    onInfoClick = { showTooltipDialog = "aliases" },
+                    loading = isLoading
                 )
-                
-                // === EMAILS SECTION ===
+
                 EmailsSection(
                     emails = emails,
                     onAddClick = { showAddEmailDialog = true },
                     onRemove = { viewModel.removeEmail(it) },
-                    onInfoClick = { showTooltipDialog = "emails" }
+                    onInfoClick = { showTooltipDialog = "emails" },
+                    loading = isLoading
                 )
-                
-                // === SMS SECTION ===
+
                 SmsSection(
                     smsNumbers = smsNumbers,
                     onAddClick = { showAddSmsDialog = true },
                     onRemove = { viewModel.removeSms(it) },
-                    onInfoClick = { showTooltipDialog = "sms" }
+                    onInfoClick = { showTooltipDialog = "sms" },
+                    loading = isLoading
                 )
-                
-                // === TAGS SECTION ===
+
                 TagsSection(
                     tags = tags,
                     onAddClick = { showAddTagDialog = true },
                     onAddMultipleClick = { showAddMultipleTagDialog = true },
                     onRemove = { viewModel.removeTag(it) },
                     onRemoveSelected = { showRemoveTagsDialog = true },
-                    onInfoClick = { showTooltipDialog = "tags" }
+                    onInfoClick = { showTooltipDialog = "tags" },
+                    loading = isLoading
                 )
-                
-                // === OUTCOME EVENTS SECTION ===
+
                 OutcomeSection(
                     onSendOutcome = { showOutcomeDialog = true },
                     onInfoClick = { showTooltipDialog = "outcomes" }
                 )
-                
-                // === TRIGGERS SECTION ===
+
                 TriggersSection(
                     triggers = triggers,
                     onAddClick = { showAddTriggerDialog = true },
@@ -251,40 +263,34 @@ fun MainScreen(viewModel: MainViewModel) {
                     onClearAll = { viewModel.clearTriggers() },
                     onInfoClick = { showTooltipDialog = "triggers" }
                 )
-                
-                // === TRACK EVENT SECTION ===
+
                 TrackEventSection(
                     onTrackClick = { showTrackEventDialog = true },
                     onInfoClick = { showTooltipDialog = "trackEvent" }
                 )
-                
-                // === LOCATION SECTION ===
+
                 LocationSection(
                     locationShared = locationShared,
                     onLocationSharedChange = { viewModel.setLocationShared(it) },
                     onPromptLocation = { viewModel.promptLocation() },
                     onInfoClick = { showTooltipDialog = "location" }
                 )
-                
+
                 Spacer(modifier = Modifier.height(8.dp))
-                
-                // === NEXT SCREEN BUTTON ===
+
                 PrimaryButton(
                     text = "NEXT SCREEN",
                     onClick = {
                         context.startActivity(Intent(context, SecondaryActivity::class.java))
-                    }
+                    },
+                    testTag = "next_screen_button"
                 )
-                
+
                 Spacer(modifier = Modifier.height(24.dp))
-                }
             }
         }
-        
-        // Loading overlay
-        LoadingOverlay(isLoading = isLoading)
     }
-    
+
     // === DIALOGS ===
     if (showLoginDialog) {
         LoginDialog(
@@ -318,10 +324,12 @@ fun MainScreen(viewModel: MainViewModel) {
             onConfirm = { key, value ->
                 viewModel.addAlias(key, value)
                 showAddAliasDialog = false
-            }
+            },
+            keyTestTag = "alias_label_input",
+            valueTestTag = "alias_id_input"
         )
     }
-    
+
     if (showAddMultipleAliasDialog) {
         MultiPairInputDialog(
             title = "Add Multiple Aliases",
@@ -334,7 +342,7 @@ fun MainScreen(viewModel: MainViewModel) {
             }
         )
     }
-    
+
     if (showAddEmailDialog) {
         SingleInputDialog(
             title = "Add Email",
@@ -343,10 +351,11 @@ fun MainScreen(viewModel: MainViewModel) {
             onConfirm = { email ->
                 viewModel.addEmail(email)
                 showAddEmailDialog = false
-            }
+            },
+            inputTestTag = "email_input"
         )
     }
-    
+
     if (showAddSmsDialog) {
         SingleInputDialog(
             title = "Add SMS",
@@ -355,10 +364,11 @@ fun MainScreen(viewModel: MainViewModel) {
             onConfirm = { sms ->
                 viewModel.addSms(sms)
                 showAddSmsDialog = false
-            }
+            },
+            inputTestTag = "sms_input"
         )
     }
-    
+
     if (showAddTagDialog) {
         PairInputDialog(
             title = "Add Tag",
@@ -366,10 +376,12 @@ fun MainScreen(viewModel: MainViewModel) {
             onConfirm = { key, value ->
                 viewModel.addTag(key, value)
                 showAddTagDialog = false
-            }
+            },
+            keyTestTag = "tag_key_input",
+            valueTestTag = "tag_value_input"
         )
     }
-    
+
     if (showAddMultipleTagDialog) {
         MultiPairInputDialog(
             title = "Add Multiple Tags",
@@ -380,7 +392,7 @@ fun MainScreen(viewModel: MainViewModel) {
             }
         )
     }
-    
+
     if (showRemoveTagsDialog && tags.isNotEmpty()) {
         MultiSelectRemoveDialog(
             title = "Remove Tags",
@@ -392,7 +404,7 @@ fun MainScreen(viewModel: MainViewModel) {
             }
         )
     }
-    
+
     if (showAddTriggerDialog) {
         PairInputDialog(
             title = "Add Trigger",
@@ -400,10 +412,12 @@ fun MainScreen(viewModel: MainViewModel) {
             onConfirm = { key, value ->
                 viewModel.addTrigger(key, value)
                 showAddTriggerDialog = false
-            }
+            },
+            keyTestTag = "trigger_key_input",
+            valueTestTag = "trigger_value_input"
         )
     }
-    
+
     if (showAddMultipleTriggerDialog) {
         MultiPairInputDialog(
             title = "Add Multiple Triggers",
@@ -414,7 +428,7 @@ fun MainScreen(viewModel: MainViewModel) {
             }
         )
     }
-    
+
     if (showRemoveTriggersDialog && triggers.isNotEmpty()) {
         MultiSelectRemoveDialog(
             title = "Remove Triggers",
@@ -426,7 +440,7 @@ fun MainScreen(viewModel: MainViewModel) {
             }
         )
     }
-    
+
     if (showOutcomeDialog) {
         OutcomeDialog(
             onDismiss = { showOutcomeDialog = false },
@@ -444,7 +458,7 @@ fun MainScreen(viewModel: MainViewModel) {
             }
         )
     }
-    
+
     if (showTrackEventDialog) {
         TrackEventDialog(
             onDismiss = { showTrackEventDialog = false },
@@ -454,7 +468,7 @@ fun MainScreen(viewModel: MainViewModel) {
             }
         )
     }
-    
+
     if (showCustomNotificationDialog) {
         CustomNotificationDialog(
             onDismiss = { showCustomNotificationDialog = false },
@@ -464,7 +478,7 @@ fun MainScreen(viewModel: MainViewModel) {
             }
         )
     }
-    
+
     showTooltipDialog?.let { key ->
         val tooltip = TooltipHelper.getTooltip(key)
         if (tooltip != null) {

@@ -9,12 +9,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.onesignal.sdktest.ui.theme.OneSignalRed
 
 private val ButtonShape = RoundedCornerShape(10.dp)
+
+private fun Modifier.applyTestTag(tag: String?): Modifier =
+    if (tag != null) this.testTag(tag) else this
 
 /**
  * Primary action button (full width, colored background).
@@ -25,14 +29,16 @@ fun PrimaryButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     backgroundColor: Color = MaterialTheme.colorScheme.primary,
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    testTag: String? = null,
 ) {
     Button(
         onClick = onClick,
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 4.dp)
-            .height(44.dp),
+            .height(44.dp)
+            .applyTestTag(testTag),
         colors = ButtonDefaults.buttonColors(
             containerColor = backgroundColor,
             disabledContainerColor = backgroundColor.copy(alpha = 0.4f)
@@ -64,7 +70,8 @@ fun OutlineButton(
     text: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    testTag: String? = null,
 ) {
     val color = MaterialTheme.colorScheme.primary
     OutlinedButton(
@@ -72,7 +79,8 @@ fun OutlineButton(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 4.dp)
-            .height(44.dp),
+            .height(44.dp)
+            .applyTestTag(testTag),
         colors = ButtonDefaults.outlinedButtonColors(contentColor = color),
         enabled = enabled,
         shape = ButtonShape,
@@ -98,14 +106,16 @@ fun DestructiveButton(
     text: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    testTag: String? = null,
 ) {
     OutlinedButton(
         onClick = onClick,
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 4.dp)
-            .height(44.dp),
+            .height(44.dp)
+            .applyTestTag(testTag),
         colors = ButtonDefaults.outlinedButtonColors(
             contentColor = OneSignalRed
         ),
@@ -134,14 +144,16 @@ fun IconButton(
     icon: ImageVector,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    backgroundColor: Color = OneSignalRed
+    backgroundColor: Color = OneSignalRed,
+    testTag: String? = null,
 ) {
     Button(
         onClick = onClick,
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 4.dp)
-            .height(44.dp),
+            .height(44.dp)
+            .applyTestTag(testTag),
         colors = ButtonDefaults.buttonColors(
             containerColor = backgroundColor
         ),

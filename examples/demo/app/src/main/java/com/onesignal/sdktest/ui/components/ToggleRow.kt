@@ -5,11 +5,16 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.onesignal.sdktest.ui.theme.OneSignalRed
 
 /**
  * Reusable toggle row with label and optional description.
+ * Pass `testTag` and `contentDescription` to match Capacitor's
+ * `data-testid` / `aria-label` pattern on `IonToggle`.
  */
 @Composable
 fun ToggleRow(
@@ -18,7 +23,9 @@ fun ToggleRow(
     onCheckedChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
     description: String? = null,
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    testTag: String? = null,
+    contentDescription: String? = null,
 ) {
     Row(
         modifier = modifier
@@ -48,10 +55,20 @@ fun ToggleRow(
             }
         }
         Spacer(modifier = Modifier.width(12.dp))
+        val switchModifier = Modifier
+            .let { if (testTag != null) it.testTag(testTag) else it }
+            .let { mod ->
+                if (contentDescription != null) {
+                    mod.semantics { this.contentDescription = contentDescription }
+                } else {
+                    mod
+                }
+            }
         Switch(
             checked = checked,
             onCheckedChange = onCheckedChange,
             enabled = enabled,
+            modifier = switchModifier,
             colors = SwitchDefaults.colors(
                 checkedThumbColor = MaterialTheme.colorScheme.surface,
                 checkedTrackColor = OneSignalRed,

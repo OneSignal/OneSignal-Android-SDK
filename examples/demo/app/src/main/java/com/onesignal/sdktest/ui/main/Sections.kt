@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -25,8 +24,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -40,7 +39,6 @@ import com.onesignal.sdktest.ui.components.SectionCard
 import com.onesignal.sdktest.ui.components.ToggleRow
 import com.onesignal.sdktest.ui.theme.DividerColor
 import com.onesignal.sdktest.ui.theme.OneSignalGreen
-import com.onesignal.sdktest.ui.theme.OneSignalGreenLight
 import com.onesignal.sdktest.ui.theme.OneSignalRed
 import com.onesignal.sdktest.ui.theme.WarningBackground
 
@@ -54,8 +52,7 @@ fun AppSection(
     onConsentChange: (Boolean) -> Unit,
     onGetKeysClick: () -> Unit
 ) {
-    SectionCard(title = "App") {
-        // App ID
+    SectionCard(title = "App", sectionKey = "app") {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -70,14 +67,14 @@ fun AppSection(
             )
             Text(
                 text = appId,
-                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium)
+                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
+                modifier = Modifier.testTag("app_id_value")
             )
         }
     }
-    
+
     Spacer(modifier = Modifier.height(8.dp))
-    
-    // Guidance Banner
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -102,10 +99,9 @@ fun AppSection(
             )
         }
     }
-    
+
     Spacer(modifier = Modifier.height(8.dp))
-    
-    // Privacy Consent Card
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -119,7 +115,9 @@ fun AppSection(
             label = "Consent Required",
             description = "Require consent before SDK processes data",
             checked = consentRequired,
-            onCheckedChange = onConsentRequiredChange
+            onCheckedChange = onConsentRequiredChange,
+            testTag = "consent_required_toggle",
+            contentDescription = "Consent required"
         )
         if (consentRequired) {
             HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
@@ -127,7 +125,9 @@ fun AppSection(
                 label = "Privacy Consent",
                 description = "Consent given for data collection",
                 checked = privacyConsentGiven,
-                onCheckedChange = onConsentChange
+                onCheckedChange = onConsentChange,
+                testTag = "privacy_consent_toggle",
+                contentDescription = "Privacy consent"
             )
         }
     }
@@ -141,19 +141,21 @@ fun UserSection(
     onUseIdentityVerificationChange: (Boolean) -> Unit,
     onLoginClick: () -> Unit,
     onLogoutClick: () -> Unit,
-    onUpdateJwtClick: () -> Unit
+    onUpdateJwtClick: () -> Unit,
+    isLoading: Boolean = false,
 ) {
     val isLoggedIn = !externalUserId.isNullOrEmpty()
 
-    SectionCard(title = "User") {
+    SectionCard(title = "User", sectionKey = "user") {
         ToggleRow(
             label = "Identity Verification",
             description = "Use external_id for API calls",
             checked = useIdentityVerification,
-            onCheckedChange = onUseIdentityVerificationChange
+            onCheckedChange = onUseIdentityVerificationChange,
+            testTag = "identity_verification_toggle",
+            contentDescription = "Identity verification"
         )
         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-        // Status
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -171,11 +173,11 @@ fun UserSection(
                 style = MaterialTheme.typography.bodyMedium.copy(
                     fontWeight = FontWeight.Medium,
                     color = if (isLoggedIn) OneSignalGreen else MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                ),
+                modifier = Modifier.testTag("user_status_value")
             )
         }
         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-        // External ID
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -192,7 +194,8 @@ fun UserSection(
                 text = externalUserId ?: "—",
                 style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.testTag("user_external_id_value")
             )
         }
     }
@@ -201,19 +204,24 @@ fun UserSection(
 
     PrimaryButton(
         text = if (isLoggedIn) "SWITCH USER" else "LOGIN USER",
-        onClick = onLoginClick
+        onClick = onLoginClick,
+        enabled = !isLoading,
+        testTag = "login_user_button"
     )
 
     if (isLoggedIn) {
         OutlineButton(
             text = "LOGOUT USER",
-            onClick = onLogoutClick
+            onClick = onLogoutClick,
+            enabled = !isLoading,
+            testTag = "logout_user_button"
         )
     }
 
     OutlineButton(
         text = "UPDATE USER JWT",
-        onClick = onUpdateJwtClick
+        onClick = onUpdateJwtClick,
+        testTag = "update_user_jwt_button"
     )
 }
 
@@ -227,8 +235,7 @@ fun PushSection(
     onPromptPush: () -> Unit,
     onInfoClick: () -> Unit
 ) {
-    SectionCard(title = "Push", onInfoClick = onInfoClick) {
-        // Push ID
+    SectionCard(title = "Push", sectionKey = "push", onInfoClick = onInfoClick) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -250,29 +257,32 @@ fun PushSection(
                     } else {
                         MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
                     }
-                )
+                ),
+                modifier = Modifier.testTag("push_id_value")
             )
         }
-        
+
         HorizontalDivider(
             color = DividerColor,
             modifier = Modifier.padding(horizontal = 16.dp)
         )
-        
-        // Enabled Toggle
+
         ToggleRow(
             label = "Enabled",
             checked = pushEnabled,
             onCheckedChange = onEnabledChange,
-            enabled = hasPermission
+            enabled = hasPermission,
+            testTag = "push_enabled_toggle",
+            contentDescription = "Push enabled"
         )
     }
-    
+
     if (!hasPermission) {
         Spacer(modifier = Modifier.height(8.dp))
         PrimaryButton(
             text = "PROMPT PUSH",
-            onClick = onPromptPush
+            onClick = onPromptPush,
+            testTag = "prompt_push_button"
         )
     }
 }
@@ -285,10 +295,15 @@ fun SendPushSection(
     onCustomClick: () -> Unit,
     onInfoClick: () -> Unit
 ) {
-    SectionCard(title = "Send Push Notification", showCard = false, onInfoClick = onInfoClick) {
-        PrimaryButton(text = "SIMPLE", onClick = onSimpleClick)
-        PrimaryButton(text = "WITH IMAGE", onClick = onImageClick)
-        PrimaryButton(text = "CUSTOM", onClick = onCustomClick)
+    SectionCard(
+        title = "Send Push Notification",
+        showCard = false,
+        sectionKey = "send_push",
+        onInfoClick = onInfoClick
+    ) {
+        PrimaryButton(text = "SIMPLE", onClick = onSimpleClick, testTag = "send_simple_button")
+        PrimaryButton(text = "WITH IMAGE", onClick = onImageClick, testTag = "send_with_image_button")
+        PrimaryButton(text = "CUSTOM", onClick = onCustomClick, testTag = "send_custom_button")
     }
 }
 
@@ -299,12 +314,14 @@ fun InAppMessagingSection(
     onPausedChange: (Boolean) -> Unit,
     onInfoClick: () -> Unit
 ) {
-    SectionCard(title = "In-App Messaging", onInfoClick = onInfoClick) {
+    SectionCard(title = "In-App Messaging", sectionKey = "iam", onInfoClick = onInfoClick) {
         ToggleRow(
             label = "Pause In-App Messages",
             description = "Toggle in-app message display",
             checked = isPaused,
-            onCheckedChange = onPausedChange
+            onCheckedChange = onPausedChange,
+            testTag = "pause_iam_toggle",
+            contentDescription = "Pause in-app messages"
         )
     }
 }
@@ -315,14 +332,22 @@ fun SendInAppMessageSection(
     onSendMessage: (InAppMessageType) -> Unit,
     onInfoClick: () -> Unit
 ) {
-    SectionCard(title = "Send In-App Message", showCard = false, onInfoClick = onInfoClick) {
+    SectionCard(
+        title = "Send In-App Message",
+        showCard = false,
+        sectionKey = "send_iam",
+        onInfoClick = onInfoClick
+    ) {
         InAppMessageType.values().forEach { type ->
+            // Capacitor exposes `send_iam_${type}_button`; reuse the enum name lower-cased.
+            val typeTag = type.name.lowercase()
             Button(
                 onClick = { onSendMessage(type) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 4.dp)
-                    .height(44.dp),
+                    .height(44.dp)
+                    .testTag("send_iam_${typeTag}_button"),
                 colors = ButtonDefaults.buttonColors(containerColor = OneSignalRed),
                 shape = RoundedCornerShape(10.dp),
                 elevation = ButtonDefaults.buttonElevation(
@@ -362,17 +387,20 @@ fun AliasesSection(
     aliases: List<Pair<String, String>>,
     onAddClick: () -> Unit,
     onAddMultipleClick: () -> Unit,
-    onInfoClick: () -> Unit
+    onInfoClick: () -> Unit,
+    loading: Boolean = false,
 ) {
-    SectionCard(title = "Aliases", onInfoClick = onInfoClick) {
+    SectionCard(title = "Aliases", sectionKey = "aliases", onInfoClick = onInfoClick) {
         PairList(
             items = aliases,
-            emptyText = "No aliases added"
+            emptyText = "No aliases added",
+            sectionKey = "aliases",
+            loading = loading
         )
     }
     Spacer(modifier = Modifier.height(8.dp))
-    PrimaryButton(text = "ADD", onClick = onAddClick)
-    PrimaryButton(text = "ADD MULTIPLE", onClick = onAddMultipleClick)
+    PrimaryButton(text = "ADD", onClick = onAddClick, testTag = "add_alias_button")
+    PrimaryButton(text = "ADD MULTIPLE", onClick = onAddMultipleClick, testTag = "add_multiple_aliases_button")
 }
 
 // === EMAILS SECTION ===
@@ -381,17 +409,20 @@ fun EmailsSection(
     emails: List<String>,
     onAddClick: () -> Unit,
     onRemove: (String) -> Unit,
-    onInfoClick: () -> Unit
+    onInfoClick: () -> Unit,
+    loading: Boolean = false,
 ) {
-    SectionCard(title = "Emails", onInfoClick = onInfoClick) {
+    SectionCard(title = "Emails", sectionKey = "emails", onInfoClick = onInfoClick) {
         CollapsibleSingleList(
             items = emails,
             emptyText = "No emails added",
-            onDelete = onRemove
+            onDelete = onRemove,
+            sectionKey = "emails",
+            loading = loading
         )
     }
     Spacer(modifier = Modifier.height(8.dp))
-    PrimaryButton(text = "ADD EMAIL", onClick = onAddClick)
+    PrimaryButton(text = "ADD EMAIL", onClick = onAddClick, testTag = "add_email_button")
 }
 
 // === SMS SECTION ===
@@ -400,17 +431,20 @@ fun SmsSection(
     smsNumbers: List<String>,
     onAddClick: () -> Unit,
     onRemove: (String) -> Unit,
-    onInfoClick: () -> Unit
+    onInfoClick: () -> Unit,
+    loading: Boolean = false,
 ) {
-    SectionCard(title = "SMS", onInfoClick = onInfoClick) {
+    SectionCard(title = "SMS", sectionKey = "sms", onInfoClick = onInfoClick) {
         CollapsibleSingleList(
             items = smsNumbers,
             emptyText = "No SMS added",
-            onDelete = onRemove
+            onDelete = onRemove,
+            sectionKey = "sms",
+            loading = loading
         )
     }
     Spacer(modifier = Modifier.height(8.dp))
-    PrimaryButton(text = "ADD SMS", onClick = onAddClick)
+    PrimaryButton(text = "ADD SMS", onClick = onAddClick, testTag = "add_sms_button")
 }
 
 // === TAGS SECTION ===
@@ -421,21 +455,28 @@ fun TagsSection(
     onAddMultipleClick: () -> Unit,
     onRemove: (String) -> Unit,
     onRemoveSelected: () -> Unit,
-    onInfoClick: () -> Unit
+    onInfoClick: () -> Unit,
+    loading: Boolean = false,
 ) {
-    SectionCard(title = "Tags", onInfoClick = onInfoClick) {
+    SectionCard(title = "Tags", sectionKey = "tags", onInfoClick = onInfoClick) {
         PairList(
             items = tags,
             emptyText = "No tags added",
-            onDelete = onRemove
+            onDelete = onRemove,
+            sectionKey = "tags",
+            loading = loading
         )
     }
     Spacer(modifier = Modifier.height(8.dp))
-    PrimaryButton(text = "ADD", onClick = onAddClick)
-    PrimaryButton(text = "ADD MULTIPLE", onClick = onAddMultipleClick)
-    
+    PrimaryButton(text = "ADD", onClick = onAddClick, testTag = "add_tag_button")
+    PrimaryButton(text = "ADD MULTIPLE", onClick = onAddMultipleClick, testTag = "add_multiple_tags_button")
+
     if (tags.isNotEmpty()) {
-        DestructiveButton(text = "REMOVE SELECTED", onClick = onRemoveSelected)
+        DestructiveButton(
+            text = "REMOVE SELECTED",
+            onClick = onRemoveSelected,
+            testTag = "remove_selected_tags_button"
+        )
     }
 }
 
@@ -445,8 +486,13 @@ fun OutcomeSection(
     onSendOutcome: () -> Unit,
     onInfoClick: () -> Unit
 ) {
-    SectionCard(title = "Outcome Events", showCard = false, onInfoClick = onInfoClick) {
-        PrimaryButton(text = "SEND OUTCOME", onClick = onSendOutcome)
+    SectionCard(
+        title = "Outcome Events",
+        showCard = false,
+        sectionKey = "outcomes",
+        onInfoClick = onInfoClick
+    ) {
+        PrimaryButton(text = "SEND OUTCOME", onClick = onSendOutcome, testTag = "send_outcome_button")
     }
 }
 
@@ -461,20 +507,33 @@ fun TriggersSection(
     onClearAll: () -> Unit,
     onInfoClick: () -> Unit
 ) {
-    SectionCard(title = "Triggers", onInfoClick = onInfoClick) {
+    SectionCard(title = "Triggers", sectionKey = "triggers", onInfoClick = onInfoClick) {
         PairList(
             items = triggers,
             emptyText = "No triggers added",
-            onDelete = onRemove
+            onDelete = onRemove,
+            sectionKey = "triggers"
         )
     }
     Spacer(modifier = Modifier.height(8.dp))
-    PrimaryButton(text = "ADD", onClick = onAddClick)
-    PrimaryButton(text = "ADD MULTIPLE", onClick = onAddMultipleClick)
-    
+    PrimaryButton(text = "ADD", onClick = onAddClick, testTag = "add_trigger_button")
+    PrimaryButton(
+        text = "ADD MULTIPLE",
+        onClick = onAddMultipleClick,
+        testTag = "add_multiple_triggers_button"
+    )
+
     if (triggers.isNotEmpty()) {
-        DestructiveButton(text = "REMOVE SELECTED", onClick = onRemoveSelected)
-        DestructiveButton(text = "CLEAR ALL", onClick = onClearAll)
+        DestructiveButton(
+            text = "REMOVE SELECTED",
+            onClick = onRemoveSelected,
+            testTag = "remove_selected_triggers_button"
+        )
+        DestructiveButton(
+            text = "CLEAR ALL",
+            onClick = onClearAll,
+            testTag = "clear_all_triggers_button"
+        )
     }
 }
 
@@ -484,8 +543,13 @@ fun TrackEventSection(
     onTrackClick: () -> Unit,
     onInfoClick: () -> Unit
 ) {
-    SectionCard(title = "Track Event", showCard = false, onInfoClick = onInfoClick) {
-        PrimaryButton(text = "TRACK EVENT", onClick = onTrackClick)
+    SectionCard(
+        title = "Track Event",
+        showCard = false,
+        sectionKey = "custom_events",
+        onInfoClick = onInfoClick
+    ) {
+        PrimaryButton(text = "TRACK EVENT", onClick = onTrackClick, testTag = "track_event_button")
     }
 }
 
@@ -497,14 +561,16 @@ fun LocationSection(
     onPromptLocation: () -> Unit,
     onInfoClick: () -> Unit
 ) {
-    SectionCard(title = "Location", onInfoClick = onInfoClick) {
+    SectionCard(title = "Location", sectionKey = "location", onInfoClick = onInfoClick) {
         ToggleRow(
             label = "Location Shared",
             description = "Share device location with OneSignal",
             checked = locationShared,
-            onCheckedChange = onLocationSharedChange
+            onCheckedChange = onLocationSharedChange,
+            testTag = "location_shared_toggle",
+            contentDescription = "Location shared"
         )
     }
     Spacer(modifier = Modifier.height(8.dp))
-    PrimaryButton(text = "PROMPT LOCATION", onClick = onPromptLocation)
+    PrimaryButton(text = "PROMPT LOCATION", onClick = onPromptLocation, testTag = "prompt_location_button")
 }
