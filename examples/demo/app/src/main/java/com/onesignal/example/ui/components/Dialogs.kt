@@ -12,8 +12,11 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -58,6 +61,15 @@ private fun DialogActionLabel(text: String) {
 private fun Modifier.applyTestTag(tag: String?): Modifier =
     if (tag != null) this.testTag(tag) else this
 
+// Compose dialogs render into a separate window (a sibling ViewRootImpl), so
+// the `testTagsAsResourceId=true` semantics flag we set at MainActivity's
+// root does NOT propagate into dialog content. Without re-applying it here,
+// every testTag inside a dialog stays invisible to UiAutomator2/Appium's
+// `id=foo` selector. Chain this helper onto each dialog's outermost modifier.
+@OptIn(ExperimentalComposeUiApi::class)
+private fun Modifier.exposeTestTagsAsResourceId(): Modifier =
+    this.semantics { testTagsAsResourceId = true }
+
 /**
  * Dialog for entering a single value.
  */
@@ -75,7 +87,7 @@ fun SingleInputDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        modifier = Modifier.fillMaxWidth().padding(horizontal = DemoLayout.pagePadding),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = DemoLayout.pagePadding).exposeTestTagsAsResourceId(),
         properties = DialogProperties(usePlatformDefaultWidth = false),
         title = {
             DialogTitle(title)
@@ -133,7 +145,7 @@ fun PairInputDialog(
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
         Surface(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = DemoLayout.pagePadding),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = DemoLayout.pagePadding).exposeTestTagsAsResourceId(),
             shape = DialogShape,
             tonalElevation = 2.dp
         ) {
@@ -205,7 +217,7 @@ fun MultiPairInputDialog(
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
         Surface(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = DemoLayout.pagePadding),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = DemoLayout.pagePadding).exposeTestTagsAsResourceId(),
             shape = DialogShape,
             tonalElevation = 2.dp
         ) {
@@ -322,7 +334,7 @@ fun MultiSelectRemoveDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        modifier = Modifier.fillMaxWidth().padding(horizontal = DemoLayout.pagePadding),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = DemoLayout.pagePadding).exposeTestTagsAsResourceId(),
         properties = DialogProperties(usePlatformDefaultWidth = false),
         title = {
             DialogTitle(title)
@@ -402,7 +414,7 @@ fun LoginDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        modifier = Modifier.fillMaxWidth().padding(horizontal = DemoLayout.pagePadding),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = DemoLayout.pagePadding).exposeTestTagsAsResourceId(),
         properties = DialogProperties(usePlatformDefaultWidth = false),
         title = {
             DialogTitle("Login User")
@@ -475,7 +487,7 @@ fun OutcomeDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        modifier = Modifier.fillMaxWidth().padding(horizontal = DemoLayout.pagePadding),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = DemoLayout.pagePadding).exposeTestTagsAsResourceId(),
         properties = DialogProperties(usePlatformDefaultWidth = false),
         title = {
             DialogTitle("Send Outcome")
@@ -596,7 +608,7 @@ fun TrackEventDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        modifier = Modifier.fillMaxWidth().padding(horizontal = DemoLayout.pagePadding),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = DemoLayout.pagePadding).exposeTestTagsAsResourceId(),
         properties = DialogProperties(usePlatformDefaultWidth = false),
         title = {
             DialogTitle("Track Event")
@@ -684,7 +696,7 @@ fun CustomNotificationDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        modifier = Modifier.fillMaxWidth().padding(horizontal = DemoLayout.pagePadding),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = DemoLayout.pagePadding).exposeTestTagsAsResourceId(),
         properties = DialogProperties(usePlatformDefaultWidth = false),
         title = {
             DialogTitle("Custom Notification")
@@ -747,7 +759,7 @@ fun TooltipDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        modifier = Modifier.fillMaxWidth().padding(horizontal = DemoLayout.pagePadding),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = DemoLayout.pagePadding).exposeTestTagsAsResourceId(),
         properties = DialogProperties(usePlatformDefaultWidth = false),
         title = {
             Text(
