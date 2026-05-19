@@ -1,6 +1,7 @@
 package com.onesignal.example.ui.main
 
 import android.app.Application
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
@@ -11,7 +12,6 @@ import com.onesignal.UserJwtInvalidatedEvent
 import com.onesignal.notifications.IPermissionObserver
 import com.onesignal.example.data.model.NotificationType
 import com.onesignal.example.data.repository.OneSignalRepository
-import com.onesignal.example.util.LogManager
 import com.onesignal.example.util.SharedPreferenceUtil
 import com.onesignal.user.state.IUserStateObserver
 import com.onesignal.user.state.UserChangedState
@@ -22,6 +22,10 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class MainViewModel(application: Application) : AndroidViewModel(application), IPushSubscriptionObserver, IPermissionObserver, IUserStateObserver, IUserJwtInvalidatedListener {
+
+    private companion object {
+        const val TAG = "MainViewModel"
+    }
 
     private val repository = OneSignalRepository()
 
@@ -105,14 +109,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
     private var fetchRequestSequence = 0L
 
     init {
-        LogManager.info("App initialized")
+        Log.i(TAG, "App initialized")
         loadInitialState()
         OneSignal.User.pushSubscription.addObserver(this)
         OneSignal.Notifications.addPermissionObserver(this)
         OneSignal.User.addObserver(this)
         OneSignal.addUserJwtInvalidatedListener(this)
-        android.util.Log.d("MainViewModel", "init: observers registered, current onesignalId=${OneSignal.User.onesignalId}")
-        LogManager.debug("OneSignal ID: ${OneSignal.User.onesignalId ?: "not set"}")
+        Log.d(TAG, "init: observers registered, current onesignalId=${OneSignal.User.onesignalId}")
+        Log.d(TAG, "OneSignal ID: ${OneSignal.User.onesignalId ?: "not set"}")
     }
 
     // IPermissionObserver
@@ -122,7 +126,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
 
     // IUserStateObserver - called when user changes (login/logout)
     override fun onUserStateChange(state: UserChangedState) {
-        android.util.Log.d("MainViewModel", "onUserStateChange fired: ${state.current.onesignalId}")
+        Log.d(TAG, "onUserStateChange fired: ${state.current.onesignalId}")
         viewModelScope.launch(Dispatchers.Main) {
             loadExistingAliases()
             loadExistingTags()
@@ -284,7 +288,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
             repository.updateUserJwt(externalUserId, jwtToken)
             withContext(Dispatchers.Main) {
                 SharedPreferenceUtil.cacheJwtToken(getApplication(), jwtToken)
-                LogManager.info("Updated JWT for: $externalUserId")
+                Log.i(TAG, "Updated JWT for: $externalUserId")
             }
         }
     }
@@ -314,7 +318,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
     fun setUseIdentityVerification(enabled: Boolean) {
         SharedPreferenceUtil.cacheIdentityVerification(getApplication(), enabled)
         _useIdentityVerification.value = enabled
-        LogManager.info(if (enabled) "Identity verification enabled" else "Identity verification disabled")
+        Log.i(TAG, if (enabled) "Identity verification enabled" else "Identity verification disabled")
     }
 
     // Consent required
@@ -322,7 +326,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
         repository.setConsentRequired(required)
         SharedPreferenceUtil.cacheConsentRequired(getApplication(), required)
         _consentRequired.value = required
-        LogManager.info(if (required) "Consent required enabled" else "Consent required disabled")
+        Log.i(TAG, if (required) "Consent required enabled" else "Consent required disabled")
     }
 
     // Privacy consent
@@ -330,7 +334,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
         repository.setPrivacyConsent(granted)
         SharedPreferenceUtil.cacheUserPrivacyConsent(getApplication(), granted)
         _privacyConsentGiven.value = granted
-        LogManager.info(if (granted) "Consent granted" else "Consent revoked")
+        Log.i(TAG, if (granted) "Consent granted" else "Consent revoked")
     }
 
     // Alias operations (single and batch)
@@ -341,7 +345,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
                 aliasesList.removeAll { it.first == label }
                 aliasesList.add(Pair(label, id))
                 refreshAliases()
-                LogManager.info("Alias added: $label")
+                Log.i(TAG, "Alias added: $label")
             }
         }
     }
@@ -356,7 +360,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
                     aliasesList.add(Pair(label, id))
                 }
                 refreshAliases()
-                LogManager.info("${pairs.size} alias(es) added")
+                Log.i(TAG, "${pairs.size} alias(es) added")
             }
         }
     }
@@ -367,7 +371,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
             withContext(Dispatchers.Main) {
                 aliasesList.removeAll { it.first == label }
                 refreshAliases()
-                LogManager.info("Alias removed: $label")
+                Log.i(TAG, "Alias removed: $label")
             }
         }
     }
@@ -378,7 +382,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
             withContext(Dispatchers.Main) {
                 aliasesList.removeAll { it.first in labels }
                 refreshAliases()
-                LogManager.info("${labels.size} alias(es) removed")
+                Log.i(TAG, "${labels.size} alias(es) removed")
             }
         }
     }
@@ -392,7 +396,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
                     emailsList.add(email)
                     refreshEmails()
                 }
-                LogManager.info("Email added: $email")
+                Log.i(TAG, "Email added: $email")
             }
         }
     }
@@ -403,7 +407,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
             withContext(Dispatchers.Main) {
                 emailsList.remove(email)
                 refreshEmails()
-                LogManager.info("Email removed: $email")
+                Log.i(TAG, "Email removed: $email")
             }
         }
     }
@@ -417,7 +421,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
                     smsNumbersList.add(smsNumber)
                     refreshSmsNumbers()
                 }
-                LogManager.info("SMS added: $smsNumber")
+                Log.i(TAG, "SMS added: $smsNumber")
             }
         }
     }
@@ -428,7 +432,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
             withContext(Dispatchers.Main) {
                 smsNumbersList.remove(smsNumber)
                 refreshSmsNumbers()
-                LogManager.info("SMS removed: $smsNumber")
+                Log.i(TAG, "SMS removed: $smsNumber")
             }
         }
     }
@@ -439,7 +443,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
             repository.addTag(key, value)
             withContext(Dispatchers.Main) {
                 loadExistingTags()
-                LogManager.info("Tag added: $key")
+                Log.i(TAG, "Tag added: $key")
             }
         }
     }
@@ -450,7 +454,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
             repository.addTags(map)
             withContext(Dispatchers.Main) {
                 loadExistingTags()
-                LogManager.info("${pairs.size} tag(s) added")
+                Log.i(TAG, "${pairs.size} tag(s) added")
             }
         }
     }
@@ -460,7 +464,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
             repository.removeTag(key)
             withContext(Dispatchers.Main) {
                 loadExistingTags()
-                LogManager.info("Tag removed: $key")
+                Log.i(TAG, "Tag removed: $key")
             }
         }
     }
@@ -470,7 +474,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
             repository.removeTags(keys)
             withContext(Dispatchers.Main) {
                 loadExistingTags()
-                LogManager.info("${keys.size} tag(s) removed")
+                Log.i(TAG, "${keys.size} tag(s) removed")
             }
         }
     }
@@ -483,7 +487,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
                 triggersList.removeAll { it.first == key }
                 triggersList.add(Pair(key, value))
                 refreshTriggers()
-                LogManager.info("Trigger added: $key")
+                Log.i(TAG, "Trigger added: $key")
             }
         }
     }
@@ -498,7 +502,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
                     triggersList.add(Pair(key, value))
                 }
                 refreshTriggers()
-                LogManager.info("${pairs.size} trigger(s) added")
+                Log.i(TAG, "${pairs.size} trigger(s) added")
             }
         }
     }
@@ -509,7 +513,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
             withContext(Dispatchers.Main) {
                 triggersList.removeAll { it.first == key }
                 refreshTriggers()
-                LogManager.info("Trigger removed: $key")
+                Log.i(TAG, "Trigger removed: $key")
             }
         }
     }
@@ -520,7 +524,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
             withContext(Dispatchers.Main) {
                 triggersList.removeAll { it.first in keys }
                 refreshTriggers()
-                LogManager.info("${keys.size} trigger(s) removed")
+                Log.i(TAG, "${keys.size} trigger(s) removed")
             }
         }
     }
@@ -532,7 +536,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
             withContext(Dispatchers.Main) {
                 triggersList.clear()
                 refreshTriggers()
-                LogManager.info("All triggers cleared")
+                Log.i(TAG, "All triggers cleared")
             }
         }
     }
@@ -580,7 +584,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
             repository.setPushEnabled(enabled)
             withContext(Dispatchers.Main) {
                 _pushEnabled.value = enabled
-                LogManager.info(if (enabled) "Push enabled" else "Push disabled")
+                Log.i(TAG, if (enabled) "Push enabled" else "Push disabled")
             }
         }
     }
@@ -597,7 +601,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
         repository.setInAppMessagesPaused(paused)
         SharedPreferenceUtil.cacheInAppMessagingPausedStatus(getApplication(), paused)
         _inAppMessagesPaused.value = paused
-        LogManager.info(if (paused) "In-app messages paused" else "In-app messages resumed")
+        Log.i(TAG, if (paused) "In-app messages paused" else "In-app messages resumed")
     }
 
     // Location
@@ -605,13 +609,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
         repository.setLocationShared(shared)
         SharedPreferenceUtil.cacheLocationSharedStatus(getApplication(), shared)
         _locationShared.value = shared
-        LogManager.info(if (shared) "Location sharing enabled" else "Location sharing disabled")
+        Log.i(TAG, if (shared) "Location sharing enabled" else "Location sharing disabled")
     }
 
     fun promptLocation() {
         viewModelScope.launch(Dispatchers.IO) {
             repository.promptLocation()
-            withContext(Dispatchers.Main) { LogManager.info("Location permission requested") }
+            withContext(Dispatchers.Main) { Log.i(TAG, "Location permission requested") }
         }
     }
 
@@ -622,7 +626,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
             val success = repository.sendNotification(type)
             withContext(Dispatchers.Main) {
                 if (success) {
-                    LogManager.info("Notification sent: ${type.title}")
+                    Log.i(TAG, "Notification sent: ${type.title}")
                 } else {
                     logError("Failed to send notification: ${type.title}")
                 }
@@ -636,7 +640,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
             val success = repository.sendCustomNotification(title, body)
             withContext(Dispatchers.Main) {
                 if (success) {
-                    LogManager.info("Notification sent: $title")
+                    Log.i(TAG, "Notification sent: $title")
                 } else {
                     logError("Failed to send notification: $title")
                 }
@@ -651,21 +655,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
                 triggersList.removeAll { it.first == triggerKey }
                 triggersList.add(Pair(triggerKey, triggerValue))
                 refreshTriggers()
-                LogManager.info("Sent In-App Message: $title")
+                Log.i(TAG, "Sent In-App Message: $title")
             }
         }
     }
 
     private fun showToast(message: String) {
         _toastMessage.value = message
-        LogManager.info(message)
+        Log.i(TAG, message)
     }
-    
+
     fun clearToast() { _toastMessage.value = null }
-    
-    // Logging utilities
-    private fun logError(message: String) = LogManager.error(message)
-    private fun logDebug(message: String) = LogManager.debug(message)
+
+    private fun logError(message: String) = Log.e(TAG, message)
+    private fun logDebug(message: String) = Log.d(TAG, message)
 
     override fun onPushSubscriptionChange(state: PushSubscriptionChangedState) {
         _pushSubscriptionId.postValue(state.current.id)
@@ -673,7 +676,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
     }
 
     override fun onUserJwtInvalidated(event: UserJwtInvalidatedEvent) {
-        LogManager.warn("JWT invalidated for externalId: ${event.externalId}")
+        Log.w(TAG, "JWT invalidated for externalId: ${event.externalId}")
         showToast("JWT invalidated for: ${event.externalId}")
     }
 

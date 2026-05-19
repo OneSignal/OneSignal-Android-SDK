@@ -112,7 +112,7 @@ Inline only — no full-screen overlay. The four list sections (Aliases, Emails,
 
 Compose's `SnackbarHostState`, mounted in `MainScreen`'s `Scaffold(snackbarHost = { SnackbarHost(...) })`. The `Snackbar` applies `Modifier.testTag("snackbar_toast")` so the shared Appium suite finds it.
 
-A `LaunchedEffect(viewModel.toastMessage)` calls `snackbarHostState.showSnackbar(...)` then `viewModel.clearToast()`. The host is the only feedback surface — there is no `android.widget.Toast` bridge in `MainActivity`. Snackbar usage matches the shared guide's allowed set (login/logout, outcomes, custom event, location check, JWT invalidation); every other action only writes to `LogManager.info(...)`.
+A `LaunchedEffect(viewModel.toastMessage)` calls `snackbarHostState.showSnackbar(...)` then `viewModel.clearToast()`. The host is the only feedback surface — there is no `android.widget.Toast` bridge in `MainActivity`. Snackbar usage matches the shared guide's allowed set (login/logout, outcomes, custom event, location check, JWT invalidation); every other action only writes to `android.util.Log.i(TAG, ...)`, matching the shared guide's "use the platform's built-in logging primitive directly" rule.
 
 ### Send In-App Message icons
 
@@ -130,9 +130,9 @@ All identifiers match the shared guide's table exactly (`login_user_button`, `co
 
 `MaskValue.kt` (`fun maskValue(value: String?): String = if (BuildConfig.E2E_MODE && !value.isNullOrEmpty()) "***" else value.orEmpty()`) wraps the App ID and Push Subscription ID displays in `MainScreen` to satisfy the shared guide's E2E masking requirement.
 
-### LogView (Android-only debug surface)
+### SDK log forwarding
 
-Above the section list `MainScreen` renders `LogView`, a collapsible logger backed by `LogManager`. `LogManager.d/i/w/e(tag, message)` pass through to `android.util.Log` and also append to a Compose-observable buffer; `MainApplication` registers `OneSignal.Debug.addLogListener` so SDK output is captured too. The view exposes its own Appium-friendly tags (`log_view_container`, `log_view_header`, `log_view_count`, `log_view_clear_button`, `log_view_list`, `log_view_empty`, and per-row `log_entry_N_*`). This component is not part of the shared guide.
+`MainApplication` registers `OneSignal.Debug.addLogListener` and forwards each entry to `android.util.Log` under the `OneSignalSDK` tag, so SDK output shows up alongside app output in Android Studio's Logcat (filter `package:mine` to see both). There is no in-app log viewer — match the shared guide and other wrapper SDK demos by relying on Logcat.
 
 ---
 
@@ -205,12 +205,11 @@ examples/demo/
         │   │   │   └── repository/OneSignalRepository.kt
         │   │   ├── ui/
         │   │   │   ├── components/        # SectionCard, ToggleRow, ActionButton,
-        │   │   │   │                      # ListComponents, Dialogs, LogView
+        │   │   │   │                      # ListComponents, Dialogs
         │   │   │   ├── main/              # MainActivity, MainScreen, Sections, MainViewModel
         │   │   │   ├── secondary/SecondaryActivity.kt
         │   │   │   └── theme/Theme.kt
-        │   │   └── util/                  # SharedPreferenceUtil, LogManager,
-        │   │                              # MaskValue, TooltipHelper
+        │   │   └── util/                  # SharedPreferenceUtil, MaskValue, TooltipHelper
         │   └── res/values/{strings,colors,styles}.xml
         └── huawei/
             ├── AndroidManifest.xml
