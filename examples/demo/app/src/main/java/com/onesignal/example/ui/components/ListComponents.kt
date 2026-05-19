@@ -141,9 +141,13 @@ fun EmptyState(
     val containerModifier = modifier
         .fillMaxWidth()
         .padding(vertical = DemoLayout.cardPadding)
-        .let { if (sectionKey != null) it.testTag("${sectionKey}_empty") else it }
     Box(modifier = containerModifier, contentAlignment = Alignment.Center) {
-        Text(text = text, style = MaterialTheme.typography.bodyMedium, color = OsGrey600)
+        Text(
+            text = text,
+            style = MaterialTheme.typography.bodyMedium,
+            color = OsGrey600,
+            modifier = if (sectionKey != null) Modifier.testTag("${sectionKey}_empty") else Modifier,
+        )
     }
 }
 
