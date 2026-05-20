@@ -202,7 +202,7 @@ fun PushSection(
         SectionCard(title = "Push", sectionKey = "push", onInfoClick = onInfoClick) {
             CardKvRow(
                 label = "Push ID",
-                value = pushSubscriptionId ?: "Not Available",
+                value = pushSubscriptionId ?: "—",
                 valueTestTag = "push_id_value",
                 valueColor = if (pushSubscriptionId != null) OsGrey600 else OsGrey600.copy(alpha = 0.5f),
             )

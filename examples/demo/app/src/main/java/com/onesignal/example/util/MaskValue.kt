@@ -13,6 +13,8 @@ private const val MASK_CHAR = '•'
  */
 fun maskValue(value: String?): String {
     if (value.isNullOrEmpty()) return value.orEmpty()
-    if (!BuildConfig.E2E_MODE) return value
-    return MASK_CHAR.toString().repeat(value.length)
+    if (BuildConfig.E2E_MODE && value != "—") {
+        return MASK_CHAR.toString().repeat(value.length)
+    }
+    return value
 }
