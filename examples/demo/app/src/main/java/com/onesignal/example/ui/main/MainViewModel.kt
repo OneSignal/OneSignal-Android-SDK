@@ -162,6 +162,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
     }
     
     fun fetchUserDataFromApi() {
+        val requestId = ++fetchRequestSequence
         val useIV = _useIdentityVerification.value == true
         val aliasLabel: String
         val aliasValue: String
@@ -186,7 +187,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
 
         val jwt = if (useIV) SharedPreferenceUtil.getCachedJwtToken(getApplication()) else null
 
-        val requestId = ++fetchRequestSequence
         _isLoading.value = true
         viewModelScope.launch(Dispatchers.IO) {
             try {
@@ -685,6 +685,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
     override fun onCleared() {
         super.onCleared()
         OneSignal.User.pushSubscription.removeObserver(this)
+        OneSignal.Notifications.removePermissionObserver(this)
+        OneSignal.User.removeObserver(this)
         OneSignal.removeUserJwtInvalidatedListener(this)
     }
 }

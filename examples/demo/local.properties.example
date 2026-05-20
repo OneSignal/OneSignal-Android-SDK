@@ -14,6 +14,7 @@ ONESIGNAL_APP_ID=
 # Optional: notification channel id used by the "WITH SOUND" payload.
 # Leave empty to use the shared default (matches Capacitor's
 # VITE_ONESIGNAL_ANDROID_CHANNEL_ID default).
+# If you set your own ONESIGNAL_APP_ID, also set this from your OneSignal dashboard.
 ONESIGNAL_ANDROID_CHANNEL_ID=
 
 # Optional: masks App ID and Push Subscription ID in the UI for E2E screenshots/recordings.
