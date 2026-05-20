@@ -158,7 +158,7 @@ fun UserSection(
             HorizontalDivider(color = OsDivider, modifier = Modifier.padding(vertical = DemoLayout.gap))
             CardKvRow(
                 label = "External ID",
-                value = externalUserId ?: "–",
+                value = externalUserId ?: "—",
                 valueTestTag = "user_external_id_value",
             )
         }
@@ -202,9 +202,9 @@ fun PushSection(
         SectionCard(title = "Push", sectionKey = "push", onInfoClick = onInfoClick) {
             CardKvRow(
                 label = "Push ID",
-                value = pushSubscriptionId ?: "—",
+                value = pushSubscriptionId.takeUnless { it.isNullOrEmpty() } ?: "—",
                 valueTestTag = "push_id_value",
-                valueColor = if (pushSubscriptionId != null) OsGrey600 else OsGrey600.copy(alpha = 0.5f),
+                valueColor = if (!pushSubscriptionId.isNullOrEmpty()) OsGrey600 else OsGrey600.copy(alpha = 0.5f),
             )
             HorizontalDivider(color = OsDivider, modifier = Modifier.padding(vertical = DemoLayout.gap))
             ToggleRow(
