@@ -5,6 +5,7 @@ import com.onesignal.OneSignal
 import com.onesignal.example.BuildConfig
 import com.onesignal.example.data.model.NotificationType
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.net.HttpURLConnection
@@ -22,6 +23,7 @@ object OneSignalService {
     private const val TAG = "OneSignalService"
     private const val ONESIGNAL_API_URL = "https://onesignal.com/api/v1/notifications"
     private const val ONESIGNAL_API_BASE_URL = "https://api.onesignal.com"
+    private const val MAX_NOTIFICATION_ATTEMPTS = 3
     
     private var appId: String = ""
 
@@ -72,36 +74,7 @@ object OneSignalService {
                 }
             }
             
-            Log.d(TAG, "Sending notification: ${notificationJson.toString(2)}")
-            Log.d(TAG, "Request URL: $ONESIGNAL_API_URL")
-
-            val connection = (URL(ONESIGNAL_API_URL).openConnection() as HttpURLConnection).apply {
-                useCaches = false
-                connectTimeout = 30000
-                readTimeout = 30000
-                setRequestProperty("Accept", "application/vnd.onesignal.v1+json")
-                setRequestProperty("Content-Type", "application/json; charset=UTF-8")
-                requestMethod = "POST"
-                doOutput = true
-                doInput = true
-            }
-            
-            val outputBytes = notificationJson.toString().toByteArray(Charsets.UTF_8)
-            connection.setFixedLengthStreamingMode(outputBytes.size)
-            connection.outputStream.write(outputBytes)
-            
-            val responseCode = connection.responseCode
-            
-            if (responseCode == HttpURLConnection.HTTP_OK || responseCode == HttpURLConnection.HTTP_ACCEPTED || responseCode == HttpURLConnection.HTTP_CREATED) {
-                val response = connection.inputStream.bufferedReader().use { it.readText() }
-                Log.d(TAG, "Notification sent successfully: $response")
-                return@withContext true
-            } else {
-                val errorResponse = connection.errorStream?.bufferedReader()?.use { it.readText() } ?: "Unknown error"
-                Log.e(TAG, "Failed to send notification (HTTP $responseCode): $errorResponse")
-                Log.e(TAG, "Request body was: ${notificationJson.toString()}")
-                return@withContext false
-            }
+            return@withContext postNotification(notificationJson, "notification")
         } catch (e: Exception) {
             Log.e(TAG, "Error sending notification", e)
             return@withContext false
@@ -135,6 +108,18 @@ object OneSignalService {
                 put("android_accent_color", "FF595CF2")
             }
             
+            return@withContext postNotification(notificationJson, "custom notification")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error sending custom notification", e)
+            return@withContext false
+        }
+    }
+
+    private suspend fun postNotification(notificationJson: JSONObject, label: String): Boolean {
+        Log.d(TAG, "Sending $label: ${notificationJson.toString(2)}")
+        Log.d(TAG, "Request URL: $ONESIGNAL_API_URL")
+
+        for (attempt in 1..MAX_NOTIFICATION_ATTEMPTS) {
             val connection = (URL(ONESIGNAL_API_URL).openConnection() as HttpURLConnection).apply {
                 useCaches = false
                 connectTimeout = 30000
@@ -145,25 +130,52 @@ object OneSignalService {
                 doOutput = true
                 doInput = true
             }
-            
-            val outputBytes = notificationJson.toString().toByteArray(Charsets.UTF_8)
-            connection.setFixedLengthStreamingMode(outputBytes.size)
-            connection.outputStream.write(outputBytes)
-            
-            val responseCode = connection.responseCode
-            
-            if (responseCode == HttpURLConnection.HTTP_OK || responseCode == HttpURLConnection.HTTP_ACCEPTED || responseCode == HttpURLConnection.HTTP_CREATED) {
-                val response = connection.inputStream.bufferedReader().use { it.readText() }
-                Log.d(TAG, "Custom notification sent successfully: $response")
-                return@withContext true
-            } else {
-                val errorResponse = connection.errorStream?.bufferedReader()?.use { it.readText() } ?: "Unknown error"
-                Log.e(TAG, "Failed to send custom notification (HTTP $responseCode): $errorResponse")
-                return@withContext false
+
+            try {
+                val outputBytes = notificationJson.toString().toByteArray(Charsets.UTF_8)
+                connection.setFixedLengthStreamingMode(outputBytes.size)
+                connection.outputStream.use { it.write(outputBytes) }
+
+                val responseCode = connection.responseCode
+                val response = if (responseCode in 200..299) {
+                    connection.inputStream.bufferedReader().use { it.readText() }
+                } else {
+                    connection.errorStream?.bufferedReader()?.use { it.readText() } ?: "Unknown error"
+                }
+
+                if (responseCode !in 200..299) {
+                    Log.e(TAG, "Failed to send $label (HTTP $responseCode): $response")
+                    Log.e(TAG, "Request body was: ${notificationJson.toString()}")
+                    return false
+                }
+
+                if (hasInvalidPlayerIds(response)) {
+                    if (attempt < MAX_NOTIFICATION_ATTEMPTS) {
+                        delay(3000L * attempt)
+                        continue
+                    }
+                    Log.e(TAG, "Failed to send $label: invalid_player_ids after retry")
+                    return false
+                }
+
+                Log.d(TAG, "$label sent successfully: $response")
+                return true
+            } finally {
+                connection.disconnect()
             }
-        } catch (e: Exception) {
-            Log.e(TAG, "Error sending custom notification", e)
-            return@withContext false
+        }
+
+        return false
+    }
+
+    private fun hasInvalidPlayerIds(response: String): Boolean {
+        return try {
+            val invalidIds = JSONObject(response)
+                .optJSONObject("errors")
+                ?.optJSONArray("invalid_player_ids")
+            invalidIds != null && invalidIds.length() > 0
+        } catch (_: Exception) {
+            false
         }
     }
     
