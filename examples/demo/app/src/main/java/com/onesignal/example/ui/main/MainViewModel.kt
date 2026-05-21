@@ -33,6 +33,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
     private val _appId = MutableLiveData<String>()
     val appId: LiveData<String> = _appId
 
+    // OneSignal ID
+    private val _oneSignalId = MutableLiveData<String?>()
+    val oneSignalId: LiveData<String?> = _oneSignalId
+
     // Push Subscription
     private val _pushSubscriptionId = MutableLiveData<String?>()
     val pushSubscriptionId: LiveData<String?> = _pushSubscriptionId
@@ -127,6 +131,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
     // IUserStateObserver - called when user changes (login/logout)
     override fun onUserStateChange(state: UserChangedState) {
         Log.d(TAG, "onUserStateChange fired: ${state.current.onesignalId}")
+        _oneSignalId.postValue(state.current.onesignalId)
         viewModelScope.launch(Dispatchers.Main) {
             loadExistingAliases()
             loadExistingTags()
@@ -250,6 +255,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
         _pushSubscriptionId.value = repository.getPushSubscriptionId()
         _pushEnabled.value = repository.isPushEnabled()
         _hasNotificationPermission.value = repository.hasNotificationPermission()
+        _oneSignalId.value = repository.getOneSignalId()
     }
 
     private fun refreshAliases() { _aliases.value = aliasesList.toList() }

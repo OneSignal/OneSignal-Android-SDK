@@ -23,7 +23,6 @@ object OneSignalService {
     private const val TAG = "OneSignalService"
     private const val ONESIGNAL_API_URL = "https://onesignal.com/api/v1/notifications"
     private const val ONESIGNAL_API_BASE_URL = "https://api.onesignal.com"
-    private const val MAX_NOTIFICATION_ATTEMPTS = 3
     
     private var appId: String = ""
 
@@ -116,10 +115,13 @@ object OneSignalService {
     }
 
     private suspend fun postNotification(notificationJson: JSONObject, label: String): Boolean {
-        Log.d(TAG, "Sending $label: ${notificationJson.toString(2)}")
-        Log.d(TAG, "Request URL: $ONESIGNAL_API_URL")
+        val maxAttempts = 5
+        val backoffMs: (Int) -> Long = { n -> 2_000L * (1L shl (n - 1)) }
 
-        for (attempt in 1..MAX_NOTIFICATION_ATTEMPTS) {
+        // Retry on `invalid_player_ids` to absorb the brief race where the
+        // subscription has been created locally but is not yet visible to the
+        // /notifications endpoint.
+        for (attempt in 1..maxAttempts) {
             val connection = (URL(ONESIGNAL_API_URL).openConnection() as HttpURLConnection).apply {
                 useCaches = false
                 connectTimeout = 30000
@@ -144,22 +146,24 @@ object OneSignalService {
                 }
 
                 if (responseCode !in 200..299) {
-                    Log.e(TAG, "Failed to send $label (HTTP $responseCode): $response")
-                    Log.e(TAG, "Request body was: ${notificationJson.toString()}")
+                    Log.e(TAG, "Send $label failed: $response")
                     return false
                 }
 
-                if (hasInvalidPlayerIds(response)) {
-                    if (attempt < MAX_NOTIFICATION_ATTEMPTS) {
-                        delay(3000L * attempt)
+                val invalidIds = invalidPlayerIds(response)
+                if (invalidIds != null) {
+                    if (attempt < maxAttempts) {
+                        delay(backoffMs(attempt))
                         continue
                     }
-                    Log.e(TAG, "Failed to send $label: invalid_player_ids after retry")
+                    Log.e(TAG, "Send $label failed: invalid_player_ids $invalidIds")
                     return false
                 }
 
-                Log.d(TAG, "$label sent successfully: $response")
                 return true
+            } catch (e: Exception) {
+                Log.e(TAG, "Send $label error: ${e.message}")
+                return false
             } finally {
                 connection.disconnect()
             }
@@ -168,14 +172,14 @@ object OneSignalService {
         return false
     }
 
-    private fun hasInvalidPlayerIds(response: String): Boolean {
+    private fun invalidPlayerIds(response: String): String? {
         return try {
             val invalidIds = JSONObject(response)
                 .optJSONObject("errors")
                 ?.optJSONArray("invalid_player_ids")
-            invalidIds != null && invalidIds.length() > 0
+            if (invalidIds != null && invalidIds.length() > 0) invalidIds.toString() else null
         } catch (_: Exception) {
-            false
+            null
         }
     }
     
