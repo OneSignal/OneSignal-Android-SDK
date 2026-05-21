@@ -58,12 +58,6 @@ android {
             ?: "77e32082-ea27-42e3-a898-c72e141824ef"
         buildConfigField("String", "ONESIGNAL_APP_ID", "\"$onesignalAppId\"")
 
-        // E2E_MODE masks sensitive values (App ID, Push ID) in the UI so screenshots
-        // and recordings from automated runs do not leak per-tenant identifiers.
-        // Matches Capacitor demo's VITE_E2E_MODE flag.
-        val e2eMode = demoOverride("E2E_MODE")?.toBoolean() ?: false
-        buildConfigField("boolean", "E2E_MODE", e2eMode.toString())
-
         // Optional OneSignal channel id used by the "WITH SOUND" notification payload.
         // Falls back to the same default the Capacitor demo ships with so the shared Appium
         // suite can rely on a stable id.

@@ -16,6 +16,3 @@ ONESIGNAL_APP_ID=
 # VITE_ONESIGNAL_ANDROID_CHANNEL_ID default).
 # If you set your own ONESIGNAL_APP_ID, also set this from your OneSignal dashboard.
 ONESIGNAL_ANDROID_CHANNEL_ID=
-
-# Optional: masks App ID and Push Subscription ID in the UI for E2E screenshots/recordings.
-E2E_MODE=false

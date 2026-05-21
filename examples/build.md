@@ -25,16 +25,14 @@ The demo uses **`examples/demo/local.properties`** as its Capacitor-style overri
 ```properties
 ONESIGNAL_APP_ID=
 ONESIGNAL_ANDROID_CHANNEL_ID=
-E2E_MODE=false
 ```
 
-Each key resolves in this order at build time: `-PKEY=value` from the CLI → `local.properties` → a sensible built-in default. The values are surfaced through `BuildConfig.ONESIGNAL_APP_ID`, `BuildConfig.ONESIGNAL_ANDROID_CHANNEL_ID`, and `BuildConfig.E2E_MODE` (see `app/build.gradle.kts`'s `demoOverride(...)` helper).
+Each key resolves in this order at build time: `-PKEY=value` from the CLI → `local.properties` → a sensible built-in default. The values are surfaced through `BuildConfig.ONESIGNAL_APP_ID` and `BuildConfig.ONESIGNAL_ANDROID_CHANNEL_ID` (see `app/build.gradle.kts`'s `demoOverride(...)` helper).
 
 | Key | Used by | Capacitor counterpart |
 |-----|---------|-----------------------|
 | `ONESIGNAL_APP_ID` | `MainApplication.onCreate` + `MainViewModel.loadInitialState` | `VITE_ONESIGNAL_APP_ID` |
 | `ONESIGNAL_ANDROID_CHANNEL_ID` | `OneSignalService.sendNotification` (WITH SOUND payload) | `VITE_ONESIGNAL_ANDROID_CHANNEL_ID` |
-| `E2E_MODE` | `util/MaskValue.kt` | `VITE_E2E_MODE` |
 
 > Changing `ONESIGNAL_APP_ID` no longer needs an uninstall — the value is read straight from `BuildConfig` on every launch, no SharedPreferences cache.
 
@@ -65,14 +63,11 @@ android {
         val onesignalAppId = demoOverride("ONESIGNAL_APP_ID")
             ?: "77e32082-ea27-42e3-a898-c72e141824ef"
         buildConfigField("String", "ONESIGNAL_APP_ID", "\"$onesignalAppId\"")
-
-        val e2eMode = demoOverride("E2E_MODE")?.toBoolean() ?: false
-        buildConfigField("boolean", "E2E_MODE", e2eMode.toString())
     }
 
     buildFeatures {
         compose = true
-        buildConfig = true   // required for E2E_MODE field above
+        buildConfig = true
     }
 
     composeOptions { kotlinCompilerExtensionVersion = "1.5.15" }
@@ -92,9 +87,6 @@ android {
 
 # Override SDK version (required when opened from OneSignalSDK/)
 ./gradlew :app:installGmsDebug -PSDK_VERSION=5.9.2
-
-# Enable E2E masking for automation runs
-./gradlew :app:installGmsDebug -PE2E_MODE=true
 
 # Huawei flavor
 ./gradlew :app:installHuaweiDebug
@@ -149,8 +141,6 @@ Use `androidx.compose.material.icons.filled.*` from `material-icons-extended`: `
 Apply test ids via `Modifier.testTag("...")`. A small `Modifier.applyTestTag(tag: String?)` extension noops when the tag is null, so reusable components (`SectionCard`, `ToggleRow`, `ActionButton`, the list widgets, every dialog) take a nullable tag parameter.
 
 All identifiers match the shared guide's table exactly (`login_user_button`, `consent_required_toggle`, `snackbar_toast`, etc.). The dynamic patterns from the shared guide (`{sectionKey}_section`, `{sectionKey}_info_icon`, `{sectionKey}_pair_key_{key}`, `{sectionKey}_loading`, `{sectionKey}_empty`, `{sectionKey}_remove_{key}`) are driven by `SectionCard(sectionKey = "...")` and the list composables in `ListComponents.kt`.
-
-`MaskValue.kt` (`fun maskValue(value: String?): String = if (BuildConfig.E2E_MODE && !value.isNullOrEmpty()) "***" else value.orEmpty()`) wraps the App ID and Push Subscription ID displays in `MainScreen` to satisfy the shared guide's E2E masking requirement.
 
 ### SDK log forwarding
 
@@ -215,7 +205,7 @@ examples/demo/
 ├── gradle.properties
 ├── build.md                               # this file
 └── app/
-    ├── build.gradle.kts                   # namespace = com.onesignal.example, E2E_MODE, gms/huawei flavors
+    ├── build.gradle.kts                   # namespace = com.onesignal.example, gms/huawei flavors
     ├── google-services.json               # package_name = com.onesignal.example
     ├── agconnect-services.json            # package_name = com.onesignal.example
     └── src/
@@ -233,7 +223,7 @@ examples/demo/
         │   │   │   ├── main/              # MainActivity, MainScreen, Sections, MainViewModel
         │   │   │   ├── secondary/SecondaryActivity.kt
         │   │   │   └── theme/Theme.kt
-        │   │   └── util/                  # SharedPreferenceUtil, MaskValue, TooltipHelper
+        │   │   └── util/                  # SharedPreferenceUtil, TooltipHelper
         │   └── res/values/{strings,colors,styles}.xml
         └── huawei/
             ├── AndroidManifest.xml

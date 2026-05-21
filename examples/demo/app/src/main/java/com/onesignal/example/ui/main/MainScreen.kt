@@ -52,7 +52,6 @@ import com.onesignal.example.ui.components.TrackEventDialog
 import com.onesignal.example.ui.secondary.SecondaryActivity
 import com.onesignal.example.ui.theme.DemoLayout
 import com.onesignal.example.util.TooltipHelper
-import com.onesignal.example.util.maskValue
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -155,7 +154,7 @@ fun MainScreen(viewModel: MainViewModel) {
                 .testTag("main_scroll_view")
         ) {
             AppSection(
-                appId = maskValue(appId),
+                appId = appId,
                 consentRequired = consentRequired,
                 onConsentRequiredChange = { viewModel.setConsentRequired(it) },
                 privacyConsentGiven = privacyConsentGiven,
@@ -176,7 +175,7 @@ fun MainScreen(viewModel: MainViewModel) {
             )
 
             PushSection(
-                pushSubscriptionId = pushSubscriptionId?.let { maskValue(it) },
+                pushSubscriptionId = pushSubscriptionId,
                 pushEnabled = pushEnabled,
                 hasPermission = hasNotificationPermission,
                 onEnabledChange = { viewModel.setPushEnabled(it) },
