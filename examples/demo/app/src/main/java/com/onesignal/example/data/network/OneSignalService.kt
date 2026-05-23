@@ -118,9 +118,14 @@ object OneSignalService {
         val maxAttempts = 5
         val backoffMs: (Int) -> Long = { n -> 2_000L * (1L shl (n - 1)) }
 
-        // Retry on `invalid_player_ids` to absorb the brief race where the
-        // subscription has been created locally but is not yet visible to the
-        // /notifications endpoint.
+        // Retry while the OneSignal backend hasn't yet indexed the freshly
+        // created subscription. The /notifications endpoint reports this race
+        // in a few different shapes, all of which return HTTP 200:
+        //   - {"id":"...","recipients":0}                       (user just switched, push token not yet attached)
+        //   - {"id":"...","errors":{"invalid_player_ids":[...]}}
+        //   - {"id":"","errors":["All included players are not subscribed"]}
+        //   - {"id":"","errors":[...]}
+        // Treat any 200 response with no real id, populated errors, or recipients=0 as transient.
         for (attempt in 1..maxAttempts) {
             val connection = (URL(ONESIGNAL_API_URL).openConnection() as HttpURLConnection).apply {
                 useCaches = false
@@ -150,13 +155,12 @@ object OneSignalService {
                     return false
                 }
 
-                val invalidIds = invalidPlayerIds(response)
-                if (invalidIds != null) {
+                if (isTransientSendFailure(response)) {
                     if (attempt < maxAttempts) {
                         delay(backoffMs(attempt))
                         continue
                     }
-                    Log.e(TAG, "Send $label failed: invalid_player_ids $invalidIds")
+                    Log.e(TAG, "Send $label failed: $response")
                     return false
                 }
 
@@ -172,14 +176,20 @@ object OneSignalService {
         return false
     }
 
-    private fun invalidPlayerIds(response: String): String? {
+    private fun isTransientSendFailure(response: String): Boolean {
         return try {
-            val invalidIds = JSONObject(response)
-                .optJSONObject("errors")
-                ?.optJSONArray("invalid_player_ids")
-            if (invalidIds != null && invalidIds.length() > 0) invalidIds.toString() else null
+            val parsed = JSONObject(response)
+            val id = parsed.optString("id", "")
+            val errorsValue = parsed.opt("errors")
+            val hasErrors = when (errorsValue) {
+                is org.json.JSONArray -> errorsValue.length() > 0
+                is JSONObject -> errorsValue.length() > 0
+                else -> false
+            }
+            val zeroRecipients = parsed.has("recipients") && parsed.optInt("recipients", -1) == 0
+            hasErrors || id.isEmpty() || zeroRecipients
         } catch (_: Exception) {
-            null
+            false
         }
     }
     

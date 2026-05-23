@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
@@ -53,9 +54,9 @@ fun SectionCard(
             )
             if (onInfoClick != null) {
                 val infoModifier = if (sectionKey != null) {
-                    Modifier.size(28.dp).testTag("${sectionKey}_info_icon")
+                    Modifier.size(32.dp).offset(x = 11.dp).testTag("${sectionKey}_info_icon")
                 } else {
-                    Modifier.size(28.dp)
+                    Modifier.size(32.dp).offset(x = 11.dp)
                 }
                 IconButton(onClick = onInfoClick, modifier = infoModifier) {
                     Icon(
