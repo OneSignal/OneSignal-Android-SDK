@@ -71,15 +71,7 @@ Alternatively, from the terminal:
 
 The app ships with a default OneSignal App ID (`77e32082-ea27-42e3-a898-c72e141824ef`).
 
-**Changing the App ID requires uninstalling and reinstalling the app for it to take effect.**
-
-To use your own App ID, update the `onesignal_app_id` value in `app/src/main/res/values/strings.xml`:
-
-```xml
-<string name="onesignal_app_id">YOUR_APP_ID_HERE</string>
-```
-
-Then uninstall the app from the device/emulator and run it again.
+To use your own App ID, copy `examples/demo/local.properties.example` to `examples/demo/local.properties` and set `ONESIGNAL_APP_ID=YOUR_APP_ID_HERE` (or pass `-PONESIGNAL_APP_ID=...` on the Gradle CLI). The value is read straight from `BuildConfig` on every launch — no uninstall required. See [`examples/build.md`](../build.md) for the full override contract.
 
 Once launched, you should see the following screen:
 
@@ -92,7 +84,7 @@ Once launched, you should see the following screen:
 The Red App is organized into collapsible sections, each exercising a different area of the SDK.
 
 ### App
-Configure the OneSignal **App ID** at runtime, toggle **privacy consent required**, and grant/revoke **privacy consent**.
+Displays the OneSignal **App ID** (set at build time via `local.properties` / `BuildConfig.ONESIGNAL_APP_ID`), toggles **privacy consent required**, and grants/revokes **privacy consent**.
 
 ### User
 **Login** with an external user ID or **Logout** to switch between identified and anonymous users. Displays the current OneSignal ID and external user ID.
@@ -148,10 +140,8 @@ Toggle **location sharing** on or off and **prompt** for location permission.
 ### Secondary Screen
 Navigate to a second screen with buttons to **simulate a crash** (`RuntimeException`) and **simulate an ANR** (10-second main-thread block) — useful for testing crash and ANR reporting.
 
-### Log Viewer
-A collapsible log panel at the top of the screen that surfaces real-time SDK log output, lifecycle callbacks, and observer events directly in the app.
-
-You can also monitor SDK logs in Android Studio's **Logcat** panel. Filter by `package:mine` to see OneSignal SDK output alongside app logs:
+### Logs
+SDK output is forwarded to Android Studio's **Logcat** panel under the `OneSignalSDK` tag (registered via `OneSignal.Debug.addLogListener` in `MainApplication`). Filter by `package:mine` to see OneSignal SDK output alongside app logs:
 
 <p align="center">
   <img src="assets/logcat-output.png" alt="Logcat output in Android Studio" width="900"/>

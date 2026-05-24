@@ -18,6 +18,9 @@ import com.onesignal.user.state.UserChangedState
 import com.onesignal.user.subscriptions.IPushSubscriptionObserver
 import com.onesignal.user.subscriptions.PushSubscriptionChangedState
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -88,9 +91,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
     private val _useIdentityVerification = MutableLiveData<Boolean>()
     val useIdentityVerification: LiveData<Boolean> = _useIdentityVerification
 
-    // Toast messages
-    private val _toastMessage = MutableLiveData<String?>()
-    val toastMessage: LiveData<String?> = _toastMessage
+    // Toast messages. Channel (not LiveData) so identical messages emitted in
+    // quick succession aren't collapsed by structural equality, and so callers
+    // on any thread (e.g. IUserJwtInvalidatedListener fires on a background
+    // dispatcher) can post safely without a main-thread assertion.
+    private val _toastMessages = Channel<String>(capacity = Channel.BUFFERED)
+    val toastMessages: Flow<String> = _toastMessages.receiveAsFlow()
 
     // Loading state
     private val _isLoading = MutableLiveData<Boolean>()
@@ -595,6 +601,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
         }
     }
 
+    // Auto-prompt is fired from a LaunchedEffect that re-runs on every
+    // composition (rotation/theme/font-scale). Gate it to once per VM lifetime
+    // so config changes don't re-trigger the OS prompt or the SDK's settings
+    // prepompt while the manual `prompt_push_button` remains the fallback.
+    private var hasAutoPrompted = false
+    fun autoPromptPushOnce() {
+        if (hasAutoPrompted) return
+        hasAutoPrompted = true
+        promptPush()
+    }
+
     // In-App Messages
     fun setInAppMessagesPaused(paused: Boolean) {
         repository.setInAppMessagesPaused(paused)
@@ -669,11 +686,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
     }
 
     private fun showToast(message: String) {
-        _toastMessage.value = message
+        _toastMessages.trySend(message)
         Log.i(TAG, message)
     }
-
-    fun clearToast() { _toastMessage.value = null }
 
     private fun logError(message: String) = Log.e(TAG, message)
     private fun logDebug(message: String) = Log.d(TAG, message)

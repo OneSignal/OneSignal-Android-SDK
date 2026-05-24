@@ -4,12 +4,14 @@ import android.util.Log
 import com.onesignal.OneSignal
 import com.onesignal.example.BuildConfig
 import com.onesignal.example.data.model.NotificationType
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
+import java.net.URLEncoder
 
 /**
  * OneSignal API service for testing purposes.
@@ -165,6 +167,10 @@ object OneSignalService {
                 }
 
                 return true
+            } catch (e: CancellationException) {
+                // Don't swallow structured-concurrency cancellation (e.g. viewModelScope
+                // teardown while `delay` is suspending between retries).
+                throw e
             } catch (e: Exception) {
                 Log.e(TAG, "Send $label error: ${e.message}")
                 return false
@@ -213,7 +219,12 @@ object OneSignalService {
         }
 
         try {
-            val url = "$ONESIGNAL_API_BASE_URL/apps/$appId/users/by/$aliasLabel/$aliasValue"
+            // Path-encode `aliasValue` so external_ids containing reserved chars
+            // (`/`, `?`, `#`, `%`, space, etc.) don't silently misroute the GET.
+            // URLEncoder targets application/x-www-form-urlencoded, which encodes
+            // space as `+`; swap to %20 since `+` is treated as a literal in paths.
+            val encodedAliasValue = URLEncoder.encode(aliasValue, "UTF-8").replace("+", "%20")
+            val url = "$ONESIGNAL_API_BASE_URL/apps/$appId/users/by/$aliasLabel/$encodedAliasValue"
             Log.d(TAG, "Fetching user data from: $url")
             
             val connection = (URL(url).openConnection() as HttpURLConnection).apply {

@@ -74,7 +74,6 @@ fun MainScreen(viewModel: MainViewModel) {
     val inAppMessagesPaused by viewModel.inAppMessagesPaused.observeAsState(false)
     val locationShared by viewModel.locationShared.observeAsState(false)
     val isLoading by viewModel.isLoading.observeAsState(false)
-    val toastMessage by viewModel.toastMessage.observeAsState()
 
     // Dialog states
     var showLoginDialog by remember { mutableStateOf(false) }
@@ -95,18 +94,18 @@ fun MainScreen(viewModel: MainViewModel) {
     var showTooltipDialog by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) {
-        viewModel.promptPush()
+        viewModel.autoPromptPushOnce()
     }
 
     val snackbarHostState = remember { SnackbarHostState() }
 
-    // Bridge the LiveData toast queue to a Compose Snackbar so the snackbar can be
-    // targeted with `Modifier.testTag("snackbar_toast")` in E2E (matches Capacitor).
-    LaunchedEffect(toastMessage) {
-        val message = toastMessage
-        if (!message.isNullOrEmpty()) {
+    // Collect the toast Channel as one-shot events so identical messages emitted
+    // within the snackbar display window aren't dropped by structural equality
+    // and so the snackbar can be targeted with `Modifier.testTag("snackbar_toast")`
+    // in E2E (matches Capacitor).
+    LaunchedEffect(Unit) {
+        viewModel.toastMessages.collect { message ->
             snackbarHostState.showSnackbar(message)
-            viewModel.clearToast()
         }
     }
 
@@ -299,7 +298,9 @@ fun MainScreen(viewModel: MainViewModel) {
             onConfirm = { externalId, token ->
                 viewModel.updateUserJwt(externalId, token)
                 showUpdateJwtDialog = false
-            }
+            },
+            keyTestTag = "update_jwt_external_id_input",
+            valueTestTag = "update_jwt_token_input"
         )
     }
 

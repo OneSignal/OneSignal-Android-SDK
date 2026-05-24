@@ -116,7 +116,7 @@ The Android demo **overrides the shared guide's "no repository wrapper" rule**. 
 
 ### Notification Permission
 
-`MainActivity.onCreate` calls `viewModel.promptPush()` at the end so the prompt appears after the UI is on screen. `MainViewModel.promptPush` calls `OneSignal.Notifications.requestPermission(true)`. The shared guide's `prompt_push_button` is the manual fallback when the user denies the first request.
+`MainScreen`'s entry `LaunchedEffect(Unit) { viewModel.autoPromptPushOnce() }` fires the prompt once after the UI is on screen. `MainViewModel.autoPromptPushOnce` is guarded by a one-shot flag so config changes (rotation, theme, font-scale) don't re-prompt; `promptPush` itself calls `OneSignal.Notifications.requestPermission(true)`. The shared guide's `prompt_push_button` is the manual fallback when the user denies the first request.
 
 ### Loading state
 
@@ -126,7 +126,7 @@ Inline only — no full-screen overlay. The four list sections (Aliases, Emails,
 
 Compose's `SnackbarHostState`, mounted in `MainScreen`'s `Scaffold(snackbarHost = { SnackbarHost(...) })`. The `Snackbar` applies `Modifier.testTag("snackbar_toast")` so the shared Appium suite finds it.
 
-A `LaunchedEffect(viewModel.toastMessage)` calls `snackbarHostState.showSnackbar(...)` then `viewModel.clearToast()`. The host is the only feedback surface — there is no `android.widget.Toast` bridge in `MainActivity`. Snackbar usage matches the shared guide's allowed set (login/logout, outcomes, custom event, location check, JWT invalidation); every other action only writes to `android.util.Log.i(TAG, ...)`, matching the shared guide's "use the platform's built-in logging primitive directly" rule.
+`MainViewModel` exposes `toastMessages: Flow<String>` backed by a buffered `Channel<String>` (not `LiveData`) so identical messages emitted in quick succession are not collapsed by structural equality, and so listeners that fire on a background dispatcher (e.g. `IUserJwtInvalidatedListener`) can post without violating LiveData's `@MainThread` contract. `MainScreen` collects the flow inside `LaunchedEffect(Unit) { viewModel.toastMessages.collect { snackbarHostState.showSnackbar(it) } }`. The host is the only feedback surface — there is no `android.widget.Toast` bridge in `MainActivity`. Snackbar usage matches the shared guide's allowed set (login/logout, outcomes, custom event, location check, JWT invalidation); every other action only writes to `android.util.Log.i(TAG, ...)`, matching the shared guide's "use the platform's built-in logging primitive directly" rule.
 
 ### Send In-App Message icons
 
