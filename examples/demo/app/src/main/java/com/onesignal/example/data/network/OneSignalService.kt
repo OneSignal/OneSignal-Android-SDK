@@ -76,6 +76,8 @@ object OneSignalService {
             }
             
             return@withContext postNotification(notificationJson, "notification")
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             Log.e(TAG, "Error sending notification", e)
             return@withContext false
@@ -110,6 +112,8 @@ object OneSignalService {
             }
             
             return@withContext postNotification(notificationJson, "custom notification")
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             Log.e(TAG, "Error sending custom notification", e)
             return@withContext false
@@ -256,6 +260,8 @@ object OneSignalService {
                 Log.e(TAG, "Failed to fetch user (HTTP $responseCode): $errorResponse")
                 return@withContext null
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             Log.e(TAG, "Error fetching user", e)
             return@withContext null

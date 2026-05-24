@@ -17,6 +17,7 @@ import com.onesignal.user.state.IUserStateObserver
 import com.onesignal.user.state.UserChangedState
 import com.onesignal.user.subscriptions.IPushSubscriptionObserver
 import com.onesignal.user.subscriptions.PushSubscriptionChangedState
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
@@ -234,6 +235,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
                     }
                     _isLoading.value = false
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 android.util.Log.e("MainViewModel", "Error fetching user data", e)
                 withContext(Dispatchers.Main) {
