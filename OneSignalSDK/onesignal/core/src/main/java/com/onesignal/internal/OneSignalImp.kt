@@ -51,8 +51,8 @@ import kotlinx.coroutines.withContext
 
 internal class OneSignalImp(
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
-) : IOneSignal, IServiceProvider {
-
+) : IOneSignal,
+    IServiceProvider {
     // Reset every time the synchronized(initLock) block flips state to IN_PROGRESS so that
     // a retry-after-FAILED gets a fresh latch instead of an already-completed one. Mutated only
     // under initLock; reads outside that lock must local-capture before suspending on it.
@@ -158,24 +158,25 @@ internal class OneSignalImp(
             "com.onesignal.location.LocationModule",
         )
     private val services: ServiceProvider =
-        ServiceBuilder().apply {
-            val modules = mutableListOf<IModule>()
-            modules.add(CoreModule())
-            modules.add(SessionModule())
-            modules.add(UserModule())
-            for (moduleClassName in listOfModules) {
-                try {
-                    val moduleClass = Class.forName(moduleClassName)
-                    val moduleInstance = moduleClass.newInstance() as IModule
-                    modules.add(moduleInstance)
-                } catch (e: ClassNotFoundException) {
-                    e.printStackTrace()
+        ServiceBuilder()
+            .apply {
+                val modules = mutableListOf<IModule>()
+                modules.add(CoreModule())
+                modules.add(SessionModule())
+                modules.add(UserModule())
+                for (moduleClassName in listOfModules) {
+                    try {
+                        val moduleClass = Class.forName(moduleClassName)
+                        val moduleInstance = moduleClass.newInstance() as IModule
+                        modules.add(moduleInstance)
+                    } catch (e: ClassNotFoundException) {
+                        e.printStackTrace()
+                    }
                 }
-            }
-            for (module in modules) {
-                module.register(this)
-            }
-        }.build()
+                for (module in modules) {
+                    module.register(this)
+                }
+            }.build()
 
     private val featureManager: IFeatureManager by lazy { services.getService<IFeatureManager>() }
     private val runtimeIoDispatcher: CoroutineDispatcher
@@ -251,10 +252,11 @@ internal class OneSignalImp(
         // anything that happens during the rest of init. FeatureManager is wired in via a
         // lazy supplier — `enabledFeatureFlags` is read per-event, so resolving the manager
         // can be deferred until services have bootstrapped.
-        otelManager = OtelLifecycleManager(
-            context = context,
-            featureManagerProvider = { services.getService<IFeatureManager>() },
-        ).also { it.initializeFromCachedConfig() }
+        otelManager =
+            OtelLifecycleManager(
+                context = context,
+                featureManagerProvider = { services.getService<IFeatureManager>() },
+            ).also { it.initializeFromCachedConfig() }
 
         PreferenceStoreFix.ensureNoObfuscatedPrefStore(context)
 
@@ -547,15 +549,20 @@ internal class OneSignalImp(
     @Suppress("UseCheckOrError")
     private fun requireInitForOperation(operationName: String) {
         when (initState) {
-            InitState.NOT_STARTED ->
+            InitState.NOT_STARTED -> {
                 throw IllegalStateException("Must call 'initWithContext' before '$operationName'")
+            }
+
             InitState.IN_PROGRESS -> {
                 warnIfBlockingOnMainThread(operationName)
                 waitForInit(operationName = operationName)
             }
-            InitState.FAILED ->
+
+            InitState.FAILED -> {
                 throw initFailureException
                     ?: IllegalStateException("Initialization failed before '$operationName'")
+            }
+
             InitState.SUCCESS -> {}
         }
     }
@@ -656,13 +663,15 @@ internal class OneSignalImp(
 
         when (observedState) {
             InitState.NOT_STARTED -> {
-                val message = if (operationName != null) {
-                    "Must call 'initWithContext' before '$operationName'"
-                } else {
-                    "Must call 'initWithContext' before use"
-                }
+                val message =
+                    if (operationName != null) {
+                        "Must call 'initWithContext' before '$operationName'"
+                    } else {
+                        "Must call 'initWithContext' before use"
+                    }
                 throw IllegalStateException(message)
             }
+
             InitState.IN_PROGRESS -> {
                 Logging.debug("Waiting for init to complete...")
 
@@ -680,11 +689,12 @@ internal class OneSignalImp(
 
                 // Log how long initialization took
                 val elapsed = System.currentTimeMillis() - startTime
-                val message = if (operationName != null) {
-                    "OneSignalImp initialization completed before '$operationName' (took ${elapsed}ms)"
-                } else {
-                    "OneSignalImp initialization completed (took ${elapsed}ms)"
-                }
+                val message =
+                    if (operationName != null) {
+                        "OneSignalImp initialization completed before '$operationName' (took ${elapsed}ms)"
+                    } else {
+                        "OneSignalImp initialization completed (took ${elapsed}ms)"
+                    }
                 Logging.debug(message)
 
                 // Re-check state after waiting - init might have failed during the wait
@@ -693,9 +703,11 @@ internal class OneSignalImp(
                 }
                 // initState is guaranteed to be SUCCESS here - consistent state
             }
+
             InitState.FAILED -> {
                 throw initFailureException ?: IllegalStateException("Initialization failed. Cannot proceed.")
             }
+
             else -> {
                 // SUCCESS - already initialized, no need to wait
             }
@@ -717,14 +729,23 @@ internal class OneSignalImp(
             return waitAndReturn(getter)
         }
         return when (initState) {
-            InitState.SUCCESS -> getter()
+            InitState.SUCCESS -> {
+                getter()
+            }
+
             InitState.IN_PROGRESS -> {
                 warnIfBlockingOnMainThread(operationName = null)
                 waitAndReturn(getter)
             }
-            InitState.FAILED -> throw initFailureException
-                ?: IllegalStateException("Initialization failed. Cannot proceed.")
-            InitState.NOT_STARTED -> throw IllegalStateException("Must call 'initWithContext' before use")
+
+            InitState.FAILED -> {
+                throw initFailureException
+                    ?: IllegalStateException("Initialization failed. Cannot proceed.")
+            }
+
+            InitState.NOT_STARTED -> {
+                throw IllegalStateException("Must call 'initWithContext' before use")
+            }
         }
     }
 

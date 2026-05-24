@@ -2,7 +2,12 @@
 <resources>
     <!-- Using Material3 theme for Compose -->
     <style name="AppTheme" parent="android:Theme.Material.Light.NoActionBar">
-        <item name="android:statusBarColor">@color/colorPrimary</item>
-        <item name="android:windowBackground">@color/colorRed</item>
+        <!-- Transparent system bars; enableEdgeToEdge() in the activity makes the
+             window draw under both bars and the topBar Surface paints the red behind
+             the status bar via its own insets. -->
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowBackground">@color/colorLaunchBackground</item>
+        <item name="android:windowSplashScreenBackground">@color/colorLaunchBackground</item>
     </style>
 </resources>

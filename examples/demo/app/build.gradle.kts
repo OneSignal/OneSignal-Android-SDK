@@ -1,9 +1,29 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
 }
 
 val kotlinVersion: String = rootProject.findProperty("kotlinVersion") as? String ?: "1.9.25"
+
+// Demo overrides resolution: prefer `-PKEY=value` from the CLI, fall back to
+// `examples/demo/local.properties` (gitignored), then a sensible built-in default.
+// Mirrors the Capacitor demo's `.env` workflow.
+val demoLocalProperties: Properties = run {
+    val props = Properties()
+    val file = file("../local.properties")
+    if (file.exists()) {
+        file.inputStream().use { props.load(it) }
+    }
+    props
+}
+
+fun demoOverride(key: String): String? {
+    val fromGradle = (project.findProperty(key) as? String)?.trim()?.takeIf { it.isNotEmpty() }
+    if (fromGradle != null) return fromGradle
+    return demoLocalProperties.getProperty(key)?.trim()?.takeIf { it.isNotEmpty() }
+}
 
 // Apply GMS or Huawei plugin based on build variant
 // Check at configuration time, not when task graph is ready
@@ -18,7 +38,7 @@ if (taskRequests.contains("gms")) {
 val sdkVersion: String = rootProject.findProperty("SDK_VERSION") as? String ?: "5.6.1"
 
 android {
-    namespace = "com.onesignal.sdktest"
+    namespace = "com.onesignal.example"
     compileSdk = 34
 
     defaultConfig {
@@ -29,10 +49,26 @@ android {
         multiDexEnabled = true
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // OneSignal App ID exposed via BuildConfig so the demo always reads it from one place.
+        // Override via `local.properties` (ONESIGNAL_APP_ID=...) or `-PONESIGNAL_APP_ID=...`.
+        // The built-in default points at the shared OneSignal demo app so the project builds
+        // and runs out of the box.
+        val onesignalAppId = demoOverride("ONESIGNAL_APP_ID")
+            ?: "77e32082-ea27-42e3-a898-c72e141824ef"
+        buildConfigField("String", "ONESIGNAL_APP_ID", "\"$onesignalAppId\"")
+
+        // Optional OneSignal channel id used by the "WITH SOUND" notification payload.
+        // Falls back to the same default the Capacitor demo ships with so the shared Appium
+        // suite can rely on a stable id.
+        val androidChannelId = demoOverride("ONESIGNAL_ANDROID_CHANNEL_ID")
+            ?: "b3b015d9-c050-4042-8548-dcc34aa44aa4"
+        buildConfigField("String", "ONESIGNAL_ANDROID_CHANNEL_ID", "\"$androidChannelId\"")
     }
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     composeOptions {
@@ -44,12 +80,12 @@ android {
     productFlavors {
         create("gms") {
             dimension = "default"
-            applicationId = "com.onesignal.sdktest"
+            applicationId = "com.onesignal.example"
         }
         create("huawei") {
             dimension = "default"
             minSdk = 21
-            applicationId = "com.onesignal.sdktest"
+            applicationId = "com.onesignal.example"
         }
     }
 
