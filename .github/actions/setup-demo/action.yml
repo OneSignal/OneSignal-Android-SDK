@@ -1,0 +1,53 @@
+name: 'Setup Demo'
+description: 'Installs the JDK and Android toolchains, caches Gradle, and writes the demo local.properties file'
+inputs:
+  onesignal-app-id:
+    description: 'OneSignal App ID written into examples/demo/local.properties'
+    required: true
+  onesignal-api-key:
+    description: 'OneSignal REST API key written into examples/demo/local.properties'
+    required: true
+runs:
+  using: 'composite'
+  steps:
+    - name: Set up Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: temurin
+        java-version: '17'
+
+    - name: Set up Android SDK
+      uses: android-actions/setup-android@v3
+      with:
+        cmdline-tools-version: '10406996'
+        log-accepted-android-sdk-licenses: false
+
+    - name: Cache Gradle
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.gradle/caches
+          ~/.gradle/wrapper
+        key: ${{ runner.os }}-gradle-demo-${{ hashFiles('examples/demo/**/*.gradle*', 'examples/demo/**/gradle-wrapper.properties') }}
+        restore-keys: |
+          ${{ runner.os }}-gradle-demo-
+          ${{ runner.os }}-gradle-
+
+    # Mirrors the Capacitor demo's `.env`: writes the override file before any
+    # build runs so the OneSignal App ID + channel id end up baked into
+    # BuildConfig. `examples/demo/app/build.gradle.kts` resolves each key in
+    # this order: `-PKEY=value` from the CLI > local.properties > built-in
+    # default, so writing to local.properties is the closest equivalent to
+    # the Capacitor `.env` flow.
+    - name: Write demo local.properties
+      shell: bash
+      working-directory: examples/demo
+      env:
+        ONESIGNAL_APP_ID: ${{ inputs.onesignal-app-id }}
+        ONESIGNAL_API_KEY: ${{ inputs.onesignal-api-key }}
+      run: |
+        {
+          echo "ONESIGNAL_APP_ID=${ONESIGNAL_APP_ID}"
+          echo "ONESIGNAL_API_KEY=${ONESIGNAL_API_KEY}"
+          echo "ONESIGNAL_ANDROID_CHANNEL_ID=7ec2ece9-c538-4656-9516-1316f48a005c"
+        } > local.properties
