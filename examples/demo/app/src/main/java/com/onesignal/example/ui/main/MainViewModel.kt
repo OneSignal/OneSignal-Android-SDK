@@ -282,7 +282,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
                 SharedPreferenceUtil.cacheUserExternalUserId(getApplication(), externalUserId)
                 SharedPreferenceUtil.cacheJwtToken(getApplication(), jwtToken)
                 _externalUserId.value = externalUserId
-                showToast("Logged in as: $externalUserId")
                 aliasesList.clear()
                 emailsList.clear()
                 smsNumbersList.clear()
@@ -315,7 +314,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
             withContext(Dispatchers.Main) {
                 SharedPreferenceUtil.cacheUserExternalUserId(getApplication(), "")
                 _externalUserId.value = null
-                showToast("Logged out")
                 loadExistingAliases()
                 loadExistingTags()
                 refreshPushSubscription()

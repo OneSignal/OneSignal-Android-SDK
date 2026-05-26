@@ -4,6 +4,7 @@ import androidx.compose.ui.unit.dp
 
 /** Spacing and sizing from sdk-shared/demo/styles.md */
 object DemoLayout {
+    const val toastDurationMs = 3_000L
     val gap = 8.dp
     val sectionGap = 24.dp
     val pagePadding = 16.dp

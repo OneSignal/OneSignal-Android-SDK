@@ -17,6 +17,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
@@ -38,19 +39,14 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.onesignal.example.R
 import com.onesignal.example.data.model.NotificationType
-import com.onesignal.example.ui.components.CustomNotificationDialog
-import com.onesignal.example.ui.components.LoginDialog
-import com.onesignal.example.ui.components.MultiPairInputDialog
-import com.onesignal.example.ui.components.MultiSelectRemoveDialog
-import com.onesignal.example.ui.components.OutcomeDialog
-import com.onesignal.example.ui.components.PairInputDialog
 import com.onesignal.example.ui.components.PrimaryButton
-import com.onesignal.example.ui.components.SingleInputDialog
 import com.onesignal.example.ui.components.TooltipDialog
-import com.onesignal.example.ui.components.TrackEventDialog
 import com.onesignal.example.ui.secondary.SecondaryActivity
 import com.onesignal.example.ui.theme.DemoLayout
 import com.onesignal.example.util.TooltipHelper
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -74,22 +70,6 @@ fun MainScreen(viewModel: MainViewModel) {
     val locationShared by viewModel.locationShared.observeAsState(false)
     val isLoading by viewModel.isLoading.observeAsState(false)
 
-    // Dialog states
-    var showLoginDialog by remember { mutableStateOf(false) }
-    var showUpdateJwtDialog by remember { mutableStateOf(false) }
-    var showAddAliasDialog by remember { mutableStateOf(false) }
-    var showAddMultipleAliasDialog by remember { mutableStateOf(false) }
-    var showAddEmailDialog by remember { mutableStateOf(false) }
-    var showAddSmsDialog by remember { mutableStateOf(false) }
-    var showAddTagDialog by remember { mutableStateOf(false) }
-    var showAddMultipleTagDialog by remember { mutableStateOf(false) }
-    var showRemoveTagsDialog by remember { mutableStateOf(false) }
-    var showAddTriggerDialog by remember { mutableStateOf(false) }
-    var showAddMultipleTriggerDialog by remember { mutableStateOf(false) }
-    var showRemoveTriggersDialog by remember { mutableStateOf(false) }
-    var showOutcomeDialog by remember { mutableStateOf(false) }
-    var showTrackEventDialog by remember { mutableStateOf(false) }
-    var showCustomNotificationDialog by remember { mutableStateOf(false) }
     var showTooltipDialog by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) {
@@ -98,13 +78,19 @@ fun MainScreen(viewModel: MainViewModel) {
 
     val snackbarHostState = remember { SnackbarHostState() }
 
-    // Collect the toast Channel as one-shot events so identical messages emitted
-    // within the snackbar display window aren't dropped by structural equality
-    // and so the snackbar can be targeted with `Modifier.testTag("snackbar_toast")`
-    // in E2E (matches Capacitor).
     LaunchedEffect(Unit) {
+        var dismissJob: Job? = null
         viewModel.toastMessages.collect { message ->
-            snackbarHostState.showSnackbar(message)
+            dismissJob?.cancel()
+            snackbarHostState.currentSnackbarData?.dismiss()
+            dismissJob = launch {
+                delay(DemoLayout.toastDurationMs)
+                snackbarHostState.currentSnackbarData?.dismiss()
+            }
+            snackbarHostState.showSnackbar(
+                message = message,
+                duration = SnackbarDuration.Indefinite,
+            )
         }
     }
 
@@ -166,9 +152,9 @@ fun MainScreen(viewModel: MainViewModel) {
                 externalUserId = externalUserId,
                 useIdentityVerification = useIdentityVerification,
                 onUseIdentityVerificationChange = { viewModel.setUseIdentityVerification(it) },
-                onLoginClick = { showLoginDialog = true },
-                onLogoutClick = { viewModel.logoutUser() },
-                onUpdateJwtClick = { showUpdateJwtDialog = true },
+                onLogin = { userId, jwt -> viewModel.loginUser(userId, jwt) },
+                onLogout = { viewModel.logoutUser() },
+                onUpdateJwt = { externalId, token -> viewModel.updateUserJwt(externalId, token) },
                 isLoading = isLoading
             )
 
@@ -185,7 +171,7 @@ fun MainScreen(viewModel: MainViewModel) {
                 onSimpleClick = { viewModel.sendNotification(NotificationType.SIMPLE) },
                 onImageClick = { viewModel.sendNotification(NotificationType.WITH_IMAGE) },
                 onSoundClick = { viewModel.sendNotification(NotificationType.WITH_SOUND) },
-                onCustomClick = { showCustomNotificationDialog = true },
+                onCustomNotification = { title, body -> viewModel.sendCustomNotification(title, body) },
                 onClearAllClick = { viewModel.clearAllNotifications() },
                 onInfoClick = { showTooltipDialog = "sendPushNotification" }
             )
@@ -205,15 +191,15 @@ fun MainScreen(viewModel: MainViewModel) {
 
             AliasesSection(
                 aliases = aliases,
-                onAddClick = { showAddAliasDialog = true },
-                onAddMultipleClick = { showAddMultipleAliasDialog = true },
+                onAdd = { key, value -> viewModel.addAlias(key, value) },
+                onAddMultiple = { pairs -> viewModel.addAliases(pairs) },
                 onInfoClick = { showTooltipDialog = "aliases" },
                 loading = isLoading
             )
 
             EmailsSection(
                 emails = emails,
-                onAddClick = { showAddEmailDialog = true },
+                onAdd = { viewModel.addEmail(it) },
                 onRemove = { viewModel.removeEmail(it) },
                 onInfoClick = { showTooltipDialog = "emails" },
                 loading = isLoading
@@ -221,7 +207,7 @@ fun MainScreen(viewModel: MainViewModel) {
 
             SmsSection(
                 smsNumbers = smsNumbers,
-                onAddClick = { showAddSmsDialog = true },
+                onAdd = { viewModel.addSms(it) },
                 onRemove = { viewModel.removeSms(it) },
                 onInfoClick = { showTooltipDialog = "sms" },
                 loading = isLoading
@@ -229,31 +215,33 @@ fun MainScreen(viewModel: MainViewModel) {
 
             TagsSection(
                 tags = tags,
-                onAddClick = { showAddTagDialog = true },
-                onAddMultipleClick = { showAddMultipleTagDialog = true },
+                onAdd = { key, value -> viewModel.addTag(key, value) },
+                onAddMultiple = { pairs -> viewModel.addTags(pairs) },
                 onRemove = { viewModel.removeTag(it) },
-                onRemoveSelected = { showRemoveTagsDialog = true },
+                onRemoveSelected = { viewModel.removeSelectedTags(it) },
                 onInfoClick = { showTooltipDialog = "tags" },
                 loading = isLoading
             )
 
             OutcomeSection(
-                onSendOutcome = { showOutcomeDialog = true },
+                onSendNormal = { viewModel.sendOutcome(it) },
+                onSendUnique = { viewModel.sendUniqueOutcome(it) },
+                onSendWithValue = { name, value -> viewModel.sendOutcomeWithValue(name, value) },
                 onInfoClick = { showTooltipDialog = "outcomes" }
             )
 
             TriggersSection(
                 triggers = triggers,
-                onAddClick = { showAddTriggerDialog = true },
-                onAddMultipleClick = { showAddMultipleTriggerDialog = true },
+                onAdd = { key, value -> viewModel.addTrigger(key, value) },
+                onAddMultiple = { pairs -> viewModel.addTriggers(pairs) },
                 onRemove = { viewModel.removeTrigger(it) },
-                onRemoveSelected = { showRemoveTriggersDialog = true },
+                onRemoveSelected = { viewModel.removeSelectedTriggers(it) },
                 onClearAll = { viewModel.clearTriggers() },
                 onInfoClick = { showTooltipDialog = "triggers" }
             )
 
             CustomEventsSection(
-                onTrackClick = { showTrackEventDialog = true },
+                onTrackEvent = { name, properties -> viewModel.trackEvent(name, properties) },
                 onInfoClick = { showTooltipDialog = "customEvents" }
             )
 
@@ -275,196 +263,6 @@ fun MainScreen(viewModel: MainViewModel) {
 
             Spacer(modifier = Modifier.height(24.dp))
         }
-    }
-
-    // === DIALOGS ===
-    if (showLoginDialog) {
-        LoginDialog(
-            onDismiss = { showLoginDialog = false },
-            onConfirm = { userId, jwt ->
-                viewModel.loginUser(userId, jwt)
-                showLoginDialog = false
-            }
-        )
-    }
-
-    if (showUpdateJwtDialog) {
-        PairInputDialog(
-            title = "Update User JWT",
-            keyLabel = "External User Id",
-            valueLabel = "JWT Token",
-            onDismiss = { showUpdateJwtDialog = false },
-            onConfirm = { externalId, token ->
-                viewModel.updateUserJwt(externalId, token)
-                showUpdateJwtDialog = false
-            },
-            keyTestTag = "update_jwt_external_id_input",
-            valueTestTag = "update_jwt_token_input"
-        )
-    }
-
-    if (showAddAliasDialog) {
-        PairInputDialog(
-            title = "Add Alias",
-            keyLabel = "Label",
-            valueLabel = "ID",
-            onDismiss = { showAddAliasDialog = false },
-            onConfirm = { key, value ->
-                viewModel.addAlias(key, value)
-                showAddAliasDialog = false
-            },
-            keyTestTag = "alias_label_input",
-            valueTestTag = "alias_id_input"
-        )
-    }
-
-    if (showAddMultipleAliasDialog) {
-        MultiPairInputDialog(
-            title = "Add Multiple Aliases",
-            keyLabel = "Label",
-            valueLabel = "ID",
-            onDismiss = { showAddMultipleAliasDialog = false },
-            onConfirm = { pairs ->
-                viewModel.addAliases(pairs)
-                showAddMultipleAliasDialog = false
-            }
-        )
-    }
-
-    if (showAddEmailDialog) {
-        SingleInputDialog(
-            title = "Add Email",
-            label = "Email",
-            onDismiss = { showAddEmailDialog = false },
-            onConfirm = { email ->
-                viewModel.addEmail(email)
-                showAddEmailDialog = false
-            },
-            inputTestTag = "email_input"
-        )
-    }
-
-    if (showAddSmsDialog) {
-        SingleInputDialog(
-            title = "Add SMS",
-            label = "Phone Number",
-            onDismiss = { showAddSmsDialog = false },
-            onConfirm = { sms ->
-                viewModel.addSms(sms)
-                showAddSmsDialog = false
-            },
-            inputTestTag = "sms_input"
-        )
-    }
-
-    if (showAddTagDialog) {
-        PairInputDialog(
-            title = "Add Tag",
-            onDismiss = { showAddTagDialog = false },
-            onConfirm = { key, value ->
-                viewModel.addTag(key, value)
-                showAddTagDialog = false
-            },
-            keyTestTag = "tag_key_input",
-            valueTestTag = "tag_value_input"
-        )
-    }
-
-    if (showAddMultipleTagDialog) {
-        MultiPairInputDialog(
-            title = "Add Multiple Tags",
-            onDismiss = { showAddMultipleTagDialog = false },
-            onConfirm = { pairs ->
-                viewModel.addTags(pairs)
-                showAddMultipleTagDialog = false
-            }
-        )
-    }
-
-    if (showRemoveTagsDialog && tags.isNotEmpty()) {
-        MultiSelectRemoveDialog(
-            title = "Remove Tags",
-            items = tags,
-            onDismiss = { showRemoveTagsDialog = false },
-            onConfirm = { keys ->
-                viewModel.removeSelectedTags(keys)
-                showRemoveTagsDialog = false
-            }
-        )
-    }
-
-    if (showAddTriggerDialog) {
-        PairInputDialog(
-            title = "Add Trigger",
-            onDismiss = { showAddTriggerDialog = false },
-            onConfirm = { key, value ->
-                viewModel.addTrigger(key, value)
-                showAddTriggerDialog = false
-            },
-            keyTestTag = "trigger_key_input",
-            valueTestTag = "trigger_value_input"
-        )
-    }
-
-    if (showAddMultipleTriggerDialog) {
-        MultiPairInputDialog(
-            title = "Add Multiple Triggers",
-            onDismiss = { showAddMultipleTriggerDialog = false },
-            onConfirm = { pairs ->
-                viewModel.addTriggers(pairs)
-                showAddMultipleTriggerDialog = false
-            }
-        )
-    }
-
-    if (showRemoveTriggersDialog && triggers.isNotEmpty()) {
-        MultiSelectRemoveDialog(
-            title = "Remove Triggers",
-            items = triggers,
-            onDismiss = { showRemoveTriggersDialog = false },
-            onConfirm = { keys ->
-                viewModel.removeSelectedTriggers(keys)
-                showRemoveTriggersDialog = false
-            }
-        )
-    }
-
-    if (showOutcomeDialog) {
-        OutcomeDialog(
-            onDismiss = { showOutcomeDialog = false },
-            onSendNormal = { name ->
-                viewModel.sendOutcome(name)
-                showOutcomeDialog = false
-            },
-            onSendUnique = { name ->
-                viewModel.sendUniqueOutcome(name)
-                showOutcomeDialog = false
-            },
-            onSendWithValue = { name, value ->
-                viewModel.sendOutcomeWithValue(name, value)
-                showOutcomeDialog = false
-            }
-        )
-    }
-
-    if (showTrackEventDialog) {
-        TrackEventDialog(
-            onDismiss = { showTrackEventDialog = false },
-            onConfirm = { name, properties ->
-                viewModel.trackEvent(name, properties)
-                showTrackEventDialog = false
-            }
-        )
-    }
-
-    if (showCustomNotificationDialog) {
-        CustomNotificationDialog(
-            onDismiss = { showCustomNotificationDialog = false },
-            onConfirm = { title, body ->
-                viewModel.sendCustomNotification(title, body)
-                showCustomNotificationDialog = false
-            }
-        )
     }
 
     showTooltipDialog?.let { key ->
