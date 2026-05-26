@@ -29,7 +29,6 @@ jobs:
         uses: ./.github/actions/setup-demo
         with:
           onesignal-app-id: ${{ vars.APPIUM_ONESIGNAL_APP_ID }}
-          onesignal-api-key: ${{ secrets.APPIUM_ONESIGNAL_API_KEY }}
 
       - name: Resolve OneSignal Android SDK version
         id: android-sdk-version

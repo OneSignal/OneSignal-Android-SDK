@@ -4,9 +4,6 @@ inputs:
   onesignal-app-id:
     description: 'OneSignal App ID written into examples/demo/local.properties'
     required: true
-  onesignal-api-key:
-    description: 'OneSignal REST API key written into examples/demo/local.properties'
-    required: true
 runs:
   using: 'composite'
   steps:
@@ -44,10 +41,8 @@ runs:
       working-directory: examples/demo
       env:
         ONESIGNAL_APP_ID: ${{ inputs.onesignal-app-id }}
-        ONESIGNAL_API_KEY: ${{ inputs.onesignal-api-key }}
       run: |
         {
           echo "ONESIGNAL_APP_ID=${ONESIGNAL_APP_ID}"
-          echo "ONESIGNAL_API_KEY=${ONESIGNAL_API_KEY}"
           echo "ONESIGNAL_ANDROID_CHANNEL_ID=7ec2ece9-c538-4656-9516-1316f48a005c"
         } > local.properties
