@@ -19,9 +19,6 @@ import com.onesignal.user.subscriptions.IPushSubscriptionObserver
 import com.onesignal.user.subscriptions.PushSubscriptionChangedState
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -91,13 +88,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
     // Identity Verification toggle (demo app only, controls alias used for API calls)
     private val _useIdentityVerification = MutableLiveData<Boolean>()
     val useIdentityVerification: LiveData<Boolean> = _useIdentityVerification
-
-    // Toast messages. Channel (not LiveData) so identical messages emitted in
-    // quick succession aren't collapsed by structural equality, and so callers
-    // on any thread (e.g. IUserJwtInvalidatedListener fires on a background
-    // dispatcher) can post safely without a main-thread assertion.
-    private val _toastMessages = Channel<String>(capacity = Channel.BUFFERED)
-    val toastMessages: Flow<String> = _toastMessages.receiveAsFlow()
 
     // Loading state
     private val _isLoading = MutableLiveData<Boolean>()
@@ -558,21 +548,21 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
     fun sendOutcome(name: String) {
         viewModelScope.launch(Dispatchers.IO) {
             repository.sendOutcome(name)
-            withContext(Dispatchers.Main) { showToast("Outcome sent: $name") }
+            withContext(Dispatchers.Main) { Log.i(TAG, "Outcome sent: $name") }
         }
     }
 
     fun sendUniqueOutcome(name: String) {
         viewModelScope.launch(Dispatchers.IO) {
             repository.sendUniqueOutcome(name)
-            withContext(Dispatchers.Main) { showToast("Unique outcome sent: $name") }
+            withContext(Dispatchers.Main) { Log.i(TAG, "Unique outcome sent: $name") }
         }
     }
 
     fun sendOutcomeWithValue(name: String, value: Float) {
         viewModelScope.launch(Dispatchers.IO) {
             repository.sendOutcomeWithValue(name, value)
-            withContext(Dispatchers.Main) { showToast("Outcome sent: $name = $value") }
+            withContext(Dispatchers.Main) { Log.i(TAG, "Outcome sent: $name = $value") }
         }
     }
 
@@ -580,7 +570,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
     fun trackEvent(name: String, properties: Map<String, Any?>?) {
         viewModelScope.launch(Dispatchers.IO) {
             repository.trackEvent(name, properties)
-            withContext(Dispatchers.Main) { showToast("Event tracked: $name") }
+            withContext(Dispatchers.Main) { Log.i(TAG, "Event tracked: $name") }
         }
     }
 
@@ -629,8 +619,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
         Log.i(TAG, if (shared) "Location sharing enabled" else "Location sharing disabled")
     }
 
-    fun checkLocationShared() {
-        showToast("Location shared: ${repository.isLocationShared()}")
+    fun checkLocationShared(): Boolean {
+        val shared = repository.isLocationShared()
+        Log.i(TAG, "Location shared: $shared")
+        return shared
     }
 
     fun promptLocation() {
@@ -686,11 +678,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
         }
     }
 
-    private fun showToast(message: String) {
-        _toastMessages.trySend(message)
-        Log.i(TAG, message)
-    }
-
     private fun logError(message: String) = Log.e(TAG, message)
     private fun logDebug(message: String) = Log.d(TAG, message)
 
@@ -701,7 +688,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
 
     override fun onUserJwtInvalidated(event: UserJwtInvalidatedEvent) {
         Log.w(TAG, "JWT invalidated for externalId: ${event.externalId}")
-        showToast("JWT invalidated for: ${event.externalId}")
     }
 
     override fun onCleared() {

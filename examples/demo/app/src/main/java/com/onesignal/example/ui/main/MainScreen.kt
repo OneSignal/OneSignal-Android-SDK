@@ -17,12 +17,12 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Snackbar
-import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import com.onesignal.example.ui.components.DemoAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
@@ -39,14 +39,13 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.onesignal.example.R
 import com.onesignal.example.data.model.NotificationType
+import com.onesignal.example.ui.components.LocalSnackbarController
 import com.onesignal.example.ui.components.PrimaryButton
 import com.onesignal.example.ui.components.TooltipDialog
+import com.onesignal.example.ui.components.rememberSnackbarController
 import com.onesignal.example.ui.secondary.SecondaryActivity
 import com.onesignal.example.ui.theme.DemoLayout
 import com.onesignal.example.util.TooltipHelper
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -77,22 +76,7 @@ fun MainScreen(viewModel: MainViewModel) {
     }
 
     val snackbarHostState = remember { SnackbarHostState() }
-
-    LaunchedEffect(Unit) {
-        var dismissJob: Job? = null
-        viewModel.toastMessages.collect { message ->
-            dismissJob?.cancel()
-            snackbarHostState.currentSnackbarData?.dismiss()
-            dismissJob = launch {
-                delay(DemoLayout.toastDurationMs)
-                snackbarHostState.currentSnackbarData?.dismiss()
-            }
-            snackbarHostState.showSnackbar(
-                message = message,
-                duration = SnackbarDuration.Indefinite,
-            )
-        }
-    }
+    val snackbarController = rememberSnackbarController(snackbarHostState)
 
     Scaffold(
         topBar = {
@@ -129,139 +113,141 @@ fun MainScreen(viewModel: MainViewModel) {
             }
         }
     ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .background(MaterialTheme.colorScheme.background)
-                .verticalScroll(rememberScrollState())
-                .testTag("main_scroll_view")
-        ) {
-            AppSection(
-                appId = appId,
-                consentRequired = consentRequired,
-                onConsentRequiredChange = { viewModel.setConsentRequired(it) },
-                privacyConsentGiven = privacyConsentGiven,
-                onConsentChange = { viewModel.setPrivacyConsent(it) },
-                onGetKeysClick = {
-                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://onesignal.com")))
-                }
-            )
+        CompositionLocalProvider(LocalSnackbarController provides snackbarController) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .background(MaterialTheme.colorScheme.background)
+                    .verticalScroll(rememberScrollState())
+                    .testTag("main_scroll_view")
+            ) {
+                AppSection(
+                    appId = appId,
+                    consentRequired = consentRequired,
+                    onConsentRequiredChange = { viewModel.setConsentRequired(it) },
+                    privacyConsentGiven = privacyConsentGiven,
+                    onConsentChange = { viewModel.setPrivacyConsent(it) },
+                    onGetKeysClick = {
+                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://onesignal.com")))
+                    }
+                )
 
-            UserSection(
-                externalUserId = externalUserId,
-                useIdentityVerification = useIdentityVerification,
-                onUseIdentityVerificationChange = { viewModel.setUseIdentityVerification(it) },
-                onLogin = { userId, jwt -> viewModel.loginUser(userId, jwt) },
-                onLogout = { viewModel.logoutUser() },
-                onUpdateJwt = { externalId, token -> viewModel.updateUserJwt(externalId, token) },
-                isLoading = isLoading
-            )
+                UserSection(
+                    externalUserId = externalUserId,
+                    useIdentityVerification = useIdentityVerification,
+                    onUseIdentityVerificationChange = { viewModel.setUseIdentityVerification(it) },
+                    onLogin = { userId, jwt -> viewModel.loginUser(userId, jwt) },
+                    onLogout = { viewModel.logoutUser() },
+                    onUpdateJwt = { externalId, token -> viewModel.updateUserJwt(externalId, token) },
+                    isLoading = isLoading
+                )
 
-            PushSection(
-                pushSubscriptionId = pushSubscriptionId,
-                pushEnabled = pushEnabled,
-                hasPermission = hasNotificationPermission,
-                onEnabledChange = { viewModel.setPushEnabled(it) },
-                onPromptPush = { viewModel.promptPush() },
-                onInfoClick = { showTooltipDialog = "push" }
-            )
+                PushSection(
+                    pushSubscriptionId = pushSubscriptionId,
+                    pushEnabled = pushEnabled,
+                    hasPermission = hasNotificationPermission,
+                    onEnabledChange = { viewModel.setPushEnabled(it) },
+                    onPromptPush = { viewModel.promptPush() },
+                    onInfoClick = { showTooltipDialog = "push" }
+                )
 
-            SendPushSection(
-                onSimpleClick = { viewModel.sendNotification(NotificationType.SIMPLE) },
-                onImageClick = { viewModel.sendNotification(NotificationType.WITH_IMAGE) },
-                onSoundClick = { viewModel.sendNotification(NotificationType.WITH_SOUND) },
-                onCustomNotification = { title, body -> viewModel.sendCustomNotification(title, body) },
-                onClearAllClick = { viewModel.clearAllNotifications() },
-                onInfoClick = { showTooltipDialog = "sendPushNotification" }
-            )
+                SendPushSection(
+                    onSimpleClick = { viewModel.sendNotification(NotificationType.SIMPLE) },
+                    onImageClick = { viewModel.sendNotification(NotificationType.WITH_IMAGE) },
+                    onSoundClick = { viewModel.sendNotification(NotificationType.WITH_SOUND) },
+                    onCustomNotification = { title, body -> viewModel.sendCustomNotification(title, body) },
+                    onClearAllClick = { viewModel.clearAllNotifications() },
+                    onInfoClick = { showTooltipDialog = "sendPushNotification" }
+                )
 
-            InAppMessagingSection(
-                isPaused = inAppMessagesPaused,
-                onPausedChange = { viewModel.setInAppMessagesPaused(it) },
-                onInfoClick = { showTooltipDialog = "inAppMessaging" }
-            )
+                InAppMessagingSection(
+                    isPaused = inAppMessagesPaused,
+                    onPausedChange = { viewModel.setInAppMessagesPaused(it) },
+                    onInfoClick = { showTooltipDialog = "inAppMessaging" }
+                )
 
-            SendInAppMessageSection(
-                onSendMessage = { type ->
-                    viewModel.sendInAppMessage(type.title, type.triggerKey, type.triggerValue)
-                },
-                onInfoClick = { showTooltipDialog = "sendInAppMessage" }
-            )
+                SendInAppMessageSection(
+                    onSendMessage = { type ->
+                        viewModel.sendInAppMessage(type.title, type.triggerKey, type.triggerValue)
+                    },
+                    onInfoClick = { showTooltipDialog = "sendInAppMessage" }
+                )
 
-            AliasesSection(
-                aliases = aliases,
-                onAdd = { key, value -> viewModel.addAlias(key, value) },
-                onAddMultiple = { pairs -> viewModel.addAliases(pairs) },
-                onInfoClick = { showTooltipDialog = "aliases" },
-                loading = isLoading
-            )
+                AliasesSection(
+                    aliases = aliases,
+                    onAdd = { key, value -> viewModel.addAlias(key, value) },
+                    onAddMultiple = { pairs -> viewModel.addAliases(pairs) },
+                    onInfoClick = { showTooltipDialog = "aliases" },
+                    loading = isLoading
+                )
 
-            EmailsSection(
-                emails = emails,
-                onAdd = { viewModel.addEmail(it) },
-                onRemove = { viewModel.removeEmail(it) },
-                onInfoClick = { showTooltipDialog = "emails" },
-                loading = isLoading
-            )
+                EmailsSection(
+                    emails = emails,
+                    onAdd = { viewModel.addEmail(it) },
+                    onRemove = { viewModel.removeEmail(it) },
+                    onInfoClick = { showTooltipDialog = "emails" },
+                    loading = isLoading
+                )
 
-            SmsSection(
-                smsNumbers = smsNumbers,
-                onAdd = { viewModel.addSms(it) },
-                onRemove = { viewModel.removeSms(it) },
-                onInfoClick = { showTooltipDialog = "sms" },
-                loading = isLoading
-            )
+                SmsSection(
+                    smsNumbers = smsNumbers,
+                    onAdd = { viewModel.addSms(it) },
+                    onRemove = { viewModel.removeSms(it) },
+                    onInfoClick = { showTooltipDialog = "sms" },
+                    loading = isLoading
+                )
 
-            TagsSection(
-                tags = tags,
-                onAdd = { key, value -> viewModel.addTag(key, value) },
-                onAddMultiple = { pairs -> viewModel.addTags(pairs) },
-                onRemove = { viewModel.removeTag(it) },
-                onRemoveSelected = { viewModel.removeSelectedTags(it) },
-                onInfoClick = { showTooltipDialog = "tags" },
-                loading = isLoading
-            )
+                TagsSection(
+                    tags = tags,
+                    onAdd = { key, value -> viewModel.addTag(key, value) },
+                    onAddMultiple = { pairs -> viewModel.addTags(pairs) },
+                    onRemove = { viewModel.removeTag(it) },
+                    onRemoveSelected = { viewModel.removeSelectedTags(it) },
+                    onInfoClick = { showTooltipDialog = "tags" },
+                    loading = isLoading
+                )
 
-            OutcomeSection(
-                onSendNormal = { viewModel.sendOutcome(it) },
-                onSendUnique = { viewModel.sendUniqueOutcome(it) },
-                onSendWithValue = { name, value -> viewModel.sendOutcomeWithValue(name, value) },
-                onInfoClick = { showTooltipDialog = "outcomes" }
-            )
+                OutcomeSection(
+                    onSendNormal = { viewModel.sendOutcome(it) },
+                    onSendUnique = { viewModel.sendUniqueOutcome(it) },
+                    onSendWithValue = { name, value -> viewModel.sendOutcomeWithValue(name, value) },
+                    onInfoClick = { showTooltipDialog = "outcomes" }
+                )
 
-            TriggersSection(
-                triggers = triggers,
-                onAdd = { key, value -> viewModel.addTrigger(key, value) },
-                onAddMultiple = { pairs -> viewModel.addTriggers(pairs) },
-                onRemove = { viewModel.removeTrigger(it) },
-                onRemoveSelected = { viewModel.removeSelectedTriggers(it) },
-                onClearAll = { viewModel.clearTriggers() },
-                onInfoClick = { showTooltipDialog = "triggers" }
-            )
+                TriggersSection(
+                    triggers = triggers,
+                    onAdd = { key, value -> viewModel.addTrigger(key, value) },
+                    onAddMultiple = { pairs -> viewModel.addTriggers(pairs) },
+                    onRemove = { viewModel.removeTrigger(it) },
+                    onRemoveSelected = { viewModel.removeSelectedTriggers(it) },
+                    onClearAll = { viewModel.clearTriggers() },
+                    onInfoClick = { showTooltipDialog = "triggers" }
+                )
 
-            CustomEventsSection(
-                onTrackEvent = { name, properties -> viewModel.trackEvent(name, properties) },
-                onInfoClick = { showTooltipDialog = "customEvents" }
-            )
+                CustomEventsSection(
+                    onTrackEvent = { name, properties -> viewModel.trackEvent(name, properties) },
+                    onInfoClick = { showTooltipDialog = "customEvents" }
+                )
 
-            LocationSection(
-                locationShared = locationShared,
-                onLocationSharedChange = { viewModel.setLocationShared(it) },
-                onCheckLocationShared = { viewModel.checkLocationShared() },
-                onPromptLocation = { viewModel.promptLocation() },
-                onInfoClick = { showTooltipDialog = "location" }
-            )
+                LocationSection(
+                    locationShared = locationShared,
+                    onLocationSharedChange = { viewModel.setLocationShared(it) },
+                    onCheckLocationShared = { viewModel.checkLocationShared() },
+                    onPromptLocation = { viewModel.promptLocation() },
+                    onInfoClick = { showTooltipDialog = "location" }
+                )
 
-            PrimaryButton(
-                text = "NEXT SCREEN",
-                onClick = {
-                    context.startActivity(Intent(context, SecondaryActivity::class.java))
-                },
-                testTag = "next_screen_button"
-            )
+                PrimaryButton(
+                    text = "NEXT SCREEN",
+                    onClick = {
+                        context.startActivity(Intent(context, SecondaryActivity::class.java))
+                    },
+                    testTag = "next_screen_button"
+                )
 
-            Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(24.dp))
+            }
         }
     }
 

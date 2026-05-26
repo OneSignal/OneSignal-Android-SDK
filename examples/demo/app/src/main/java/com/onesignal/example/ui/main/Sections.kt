@@ -37,6 +37,7 @@ import com.onesignal.example.ui.components.CollapsibleSingleList
 import com.onesignal.example.ui.components.CustomNotificationDialog
 import com.onesignal.example.ui.components.DemoSection
 import com.onesignal.example.ui.components.DestructiveButton
+import com.onesignal.example.ui.components.LocalSnackbarController
 import com.onesignal.example.ui.components.LoginDialog
 import com.onesignal.example.ui.components.MultiPairInputDialog
 import com.onesignal.example.ui.components.MultiSelectRemoveDialog
@@ -562,6 +563,7 @@ fun OutcomeSection(
     onInfoClick: () -> Unit,
 ) {
     var open by remember { mutableStateOf(false) }
+    val snackbar = LocalSnackbarController.current
 
     DemoSection {
         SectionCard(
@@ -579,14 +581,17 @@ fun OutcomeSection(
             onDismiss = { open = false },
             onSendNormal = { name ->
                 onSendNormal(name)
+                snackbar.show("Outcome sent: $name")
                 open = false
             },
             onSendUnique = { name ->
                 onSendUnique(name)
+                snackbar.show("Unique outcome sent: $name")
                 open = false
             },
             onSendWithValue = { name, value ->
                 onSendWithValue(name, value)
+                snackbar.show("Outcome sent: $name = $value")
                 open = false
             },
         )
@@ -681,6 +686,7 @@ fun CustomEventsSection(
     onInfoClick: () -> Unit,
 ) {
     var open by remember { mutableStateOf(false) }
+    val snackbar = LocalSnackbarController.current
 
     DemoSection {
         SectionCard(
@@ -698,6 +704,7 @@ fun CustomEventsSection(
             onDismiss = { open = false },
             onConfirm = { name, properties ->
                 onTrackEvent(name, properties)
+                snackbar.show("Event tracked: $name")
                 open = false
             },
         )
@@ -708,10 +715,12 @@ fun CustomEventsSection(
 fun LocationSection(
     locationShared: Boolean,
     onLocationSharedChange: (Boolean) -> Unit,
-    onCheckLocationShared: () -> Unit,
+    onCheckLocationShared: () -> Boolean,
     onPromptLocation: () -> Unit,
     onInfoClick: () -> Unit,
 ) {
+    val snackbar = LocalSnackbarController.current
+
     DemoSection {
         SectionCard(title = "Location", sectionKey = "location", onInfoClick = onInfoClick) {
             ToggleRow(
@@ -725,6 +734,13 @@ fun LocationSection(
         }
         Spacer(modifier = Modifier.height(DemoLayout.gap))
         PrimaryButton(text = "PROMPT LOCATION", onClick = onPromptLocation, testTag = "prompt_location_button")
-        PrimaryButton(text = "CHECK LOCATION", onClick = onCheckLocationShared, testTag = "check_location_button")
+        PrimaryButton(
+            text = "CHECK LOCATION",
+            onClick = {
+                val shared = onCheckLocationShared()
+                snackbar.show("Location shared: $shared")
+            },
+            testTag = "check_location_button",
+        )
     }
 }
