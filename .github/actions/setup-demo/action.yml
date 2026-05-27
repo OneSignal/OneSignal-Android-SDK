@@ -25,7 +25,9 @@ runs:
         path: |
           ~/.gradle/caches
           ~/.gradle/wrapper
-        key: ${{ runner.os }}-gradle-demo-${{ hashFiles('examples/demo/**/*.gradle*', 'examples/demo/**/gradle-wrapper.properties') }}
+        # `*.gradle*` matches `build.gradle{,.kts}` etc. but NOT `gradle.properties`
+        # (no literal `.gradle` substring), so list `gradle.properties` explicitly.
+        key: ${{ runner.os }}-gradle-demo-${{ hashFiles('examples/demo/**/*.gradle*', 'examples/demo/**/gradle.properties', 'examples/demo/**/gradle-wrapper.properties') }}
         restore-keys: |
           ${{ runner.os }}-gradle-demo-
           ${{ runner.os }}-gradle-
