@@ -79,6 +79,21 @@ android {
 }
 ```
 
+#### Build types
+
+- `release` -- `isMinifyEnabled = true`, `isShrinkResources = true`, consumes the SDK's published ProGuard rules.
+- `profileable` -- declared via `create("profileable") { initWith(release); ... }` so it inherits R8/shrinker settings while staying profileable on-device (used for Macrobenchmark / Android Studio profiling).
+- `flavorDimensions += "default"` with `gms` and `huawei` flavors (see table above).
+- BuildConfig fields: `ONESIGNAL_APP_ID` and `ONESIGNAL_ANDROID_CHANNEL_ID`, both populated through the `demoOverride(...)` helper (`-P` -> `local.properties` -> default).
+
+#### Root Gradle toolchain
+
+The root `examples/demo/build.gradle.kts` pins:
+
+- Android Gradle Plugin `8.8.2`
+- Kotlin `1.9.25`
+- Huawei AGCP classpath (`com.huawei.agconnect:agcp`) so the `huawei` flavor can apply `com.huawei.agconnect` at configuration time.
+
 ### Build & run scripts
 
 ```bash
@@ -94,7 +109,7 @@ android {
 
 ### Compose stack
 
-The demo is 100% Jetpack Compose (no XML layouts). Dependencies are pulled via the Compose BOM (`2024.02.00`) with `material3`, `material-icons-extended` (used for the Send-IAM icons that the shared guide references), `runtime-livedata` (so `LiveData` integrates with Compose's `observeAsState`), and `activity-compose` + `lifecycle-*-compose` for the Compose entry point.
+The demo is 100% Jetpack Compose (no XML layouts). Dependencies are pulled via the Compose BOM (`2024.02.00`) with `material3`, `material-icons-extended`, `runtime-livedata` (so `LiveData` integrates with Compose's `observeAsState`), and `activity-compose` + `lifecycle-*-compose` for the Compose entry point.
 
 ---
 
@@ -104,11 +119,15 @@ The Android demo **overrides the shared guide's "no repository wrapper" rule**. 
 
 - `MainApplication.kt` — initializes the SDK before any UI renders, restores cached consent + IAM-paused + location-shared state, and registers `IInAppMessageLifecycleListener`, `IInAppMessageClickListener`, `INotificationClickListener`, and `INotificationLifecycleListener` (with `event.preventDefault()` so async display can be exercised).
 - `MainViewModel : AndroidViewModel` — central state with `LiveData<T>` for every UI value. Implements `IPushSubscriptionObserver`, `IPermissionObserver`, `IUserStateObserver`, and `IUserJwtInvalidatedListener`. Holds a monotonic `private var fetchRequestSequence = 0L` that maps to the shared guide's `requestSequence` for stale-result protection in `fetchUserDataFromApi`.
-- `OneSignalRepository.kt` — thin coroutine wrapper that bounces every SDK call onto `Dispatchers.IO`. Exists so the ViewModel can stay on the main dispatcher and individual SDK call sites don't have to repeat `withContext`.
+- `OneSignalRepository.kt` — only some methods are `suspend` + `withContext(Dispatchers.IO)`; many are synchronous wrappers and the ViewModel wraps calls in `viewModelScope.launch(Dispatchers.IO)` itself.
 - `OneSignalService.kt` (`object`) — REST API client described in the shared guide's Prompt 1.4.
 - `SharedPreferenceUtil.kt` — backs the shared guide's PreferencesService (consent required, privacy consent, external user id, location shared, IAM paused, cached JWT token, cached identity-verification toggle).
 
-`fetchUserDataFromApi` follows the shared guide exactly: bump `++fetchRequestSequence`, capture as `requestId`, flip `_isLoading.value = true`, then after every suspend point bail with `return@withContext` when `requestId != fetchRequestSequence`. Same guard wraps the catch branch and the final `_isLoading.value = false`.
+`fetchUserDataFromApi` loading sequence: the sequence is incremented first, then early returns may set `_isLoading = false` before `_isLoading = true` is set (see `MainViewModel.kt` lines ~167–192). Stale-fetch guards themselves are correct -- results are dropped when `requestId != fetchRequestSequence`, and the same guard wraps the catch branch and the final `_isLoading.value = false`.
+
+#### `MainApplication` observer
+
+Both `MainApplication` and `MainViewModel` register `IUserStateObserver`. The Application's observer only logs (no UI side effects) and exists so user-state changes are captured even before the first `MainActivity` is created.
 
 ---
 
@@ -124,23 +143,40 @@ Inline only — no full-screen overlay. The four list sections (Aliases, Emails,
 
 ### Snackbar / Toast
 
-Compose's `SnackbarHostState`, mounted in `MainScreen`'s `Scaffold(snackbarHost = { SnackbarHost(...) })`. The `Snackbar` applies `Modifier.testTag("snackbar_toast")` so the shared Appium suite finds it.
-
-`MainViewModel` exposes `toastMessages: Flow<String>` backed by a buffered `Channel<String>` (not `LiveData`) so identical messages emitted in quick succession are not collapsed by structural equality, and so listeners that fire on a background dispatcher (e.g. `IUserJwtInvalidatedListener`) can post without violating LiveData's `@MainThread` contract. `MainScreen` collects the flow inside `LaunchedEffect(Unit) { viewModel.toastMessages.collect { snackbarHostState.showSnackbar(it) } }`. The host is the only feedback surface — there is no `android.widget.Toast` bridge in `MainActivity`. Snackbar usage matches the shared guide's allowed set (login/logout, outcomes, custom event, location check, JWT invalidation); every other action only writes to `android.util.Log.i(TAG, ...)`, matching the shared guide's "use the platform's built-in logging primitive directly" rule.
-
-### Send In-App Message icons
-
-Use `androidx.compose.material.icons.filled.*` from `material-icons-extended`: `VerticalAlignTop`, `VerticalAlignBottom`, `CropSquare`, `Fullscreen`. Icons sit on the LEFT of each red full-width button per the shared guide.
+- `SnackbarController` (`ui/components/SnackbarController.kt`) wraps Compose's `SnackbarHostState` and exposes a `show(message)` method with replace-on-show behavior.
+- `MainScreen` creates `val snackbarController = rememberSnackbarController(snackbarHostState)` and exposes it down the tree via `CompositionLocalProvider(LocalSnackbarController provides snackbarController) { ... }` wrapping the sections column. The host is mounted on `Scaffold(snackbarHost = { SnackbarHost(snackbarHostState) })`. The `Snackbar` applies `Modifier.testTag("snackbar_toast")` so the shared Appium suite finds it.
+- Section composables read the controller with `val snackbar = LocalSnackbarController.current` and call `snackbar.show(...)` from action callbacks. Only Outcomes, Custom Events, and Location check trigger the snackbar.
+- Most other actions write to `android.util.Log.i(TAG, ...)` in `MainViewModel` (add/remove aliases/tags/emails/SMS/triggers, toggles, send push/IAM, etc.). Login and logout are intentionally silent — no snackbar and no `Log.i`. The User section reflects auth state via `externalUserId` LiveData ("Logged In" / "Anonymous"), matching the other wrapper demos.
+- Replace-on-show: `show(...)` cancels any in-flight `showJob` and `dismissJob`, dismisses `hostState.currentSnackbarData`, then launches a new pair where the dismiss coroutine runs `delay(DemoLayout.toastDurationMs)` and the show coroutine calls `hostState.showSnackbar(message, duration = SnackbarDuration.Indefinite)`.
+- Duration is the shared constant `DemoLayout.toastDurationMs = 3_000L` (milliseconds).
+- `MainViewModel` must not hold any toast state, expose a `Channel<String>`/`Flow<String>` of toast messages, or own a `showToast` helper. There is no `android.widget.Toast` bridge in `MainActivity` either -- the snackbar host is the only feedback surface.
 
 ### Modals
 
-`Dialogs.kt` defines AlertDialog-based composables: `SingleInputDialog`, `PairInputDialog`, `MultiPairInputDialog`, `MultiSelectRemoveDialog`, `LoginDialog`, `OutcomeDialog`, `TrackEventDialog`, `CustomNotificationDialog`, `TooltipDialog`.
+- `MainScreen` owns layout + the tooltip dialog only (`var showTooltipDialog by remember { mutableStateOf<String?>(null) }` + `TooltipDialog`). Each section's `onInfoClick` callback sets the tooltip key.
+- Sections own action dialog state via `var *Open by remember { mutableStateOf(false) }` and render shared dialog composables (from `ui/components/Dialogs.kt`) inside the section. Dialog confirm handlers call SDK methods through callbacks passed from `MainScreen`, then close the dialog; for snackbar-emitting actions they also call `LocalSnackbarController.current.show(...)`.
+- `MainViewModel` must not hold any action dialog visibility flags or input drafts.
+- Shared composables in `ui/components/Dialogs.kt`: `SingleInputDialog`, `MultiSelectRemoveDialog`, `LoginDialog`, `OutcomeDialog`, `TrackEventDialog`, `CustomNotificationDialog`, `TooltipDialog` use `AlertDialog`. `PairInputDialog` and `MultiPairInputDialog` use `Dialog` + `Surface` (for the wider two-column layout).
+- Dialog state naming: `OutcomeSection` and `CustomEventsSection` use `var open by remember { mutableStateOf(false) }` (singular `open`) because each owns a single dialog. Other sections name their flags per dialog (`loginOpen`, `addOpen`, etc.).
 
 ### Accessibility (Appium)
 
-Apply test ids via `Modifier.testTag("...")`. A small `Modifier.applyTestTag(tag: String?)` extension noops when the tag is null, so reusable components (`SectionCard`, `ToggleRow`, `ActionButton`, the list widgets, every dialog) take a nullable tag parameter.
+Apply test ids via `Modifier.testTag("...")`. `Modifier.applyTestTag(tag: String?)` exists as private duplicate helpers in `Dialogs.kt` and `ActionButton.kt` (each ~5 lines) that noop when the tag is null -- not a single shared module-level utility today. `ToggleRow`, `SectionCard`, and `ListComponents` apply `testTag` inline.
 
 All identifiers match the shared guide's table exactly (`login_user_button`, `consent_required_toggle`, `snackbar_toast`, etc.). The dynamic patterns from the shared guide (`{sectionKey}_section`, `{sectionKey}_info_icon`, `{sectionKey}_pair_key_{key}`, `{sectionKey}_loading`, `{sectionKey}_empty`, `{sectionKey}_remove_{key}`) are driven by `SectionCard(sectionKey = "...")` and the list composables in `ListComponents.kt`.
+
+#### Test-tag patterns
+
+Patterns used by this demo beyond the shared guide's table:
+
+- `{sectionKey}_pair_key_{key}` and `{sectionKey}_pair_value_{key}` -- two-column rows expose both halves so Appium can assert key and value independently.
+- `{sectionKey}_value_{value}` -- list rows whose key is implicit (single-column lists).
+- `main_scroll_view` -- the root scrollable `Column` (`verticalScroll(rememberScrollState())`) in `MainScreen`, used by Appium swipe gestures.
+
+#### Appium / UiAutomator: `testTagsAsResourceId`
+
+- `MainActivity` sets `semantics(mergeDescendants = false) { testTagsAsResourceId = true }` on the root `Surface` so Appium `id=` selectors map onto Compose `testTag` values (`MainActivity.kt` lines ~41–43).
+- `Dialogs.kt` re-applies the same via an `exposeTestTagsAsResourceId()` helper inside each dialog because Compose dialogs render in a separate window -- required for dialog-scoped test tags to be visible to UiAutomator.
 
 ### SDK log forwarding
 
@@ -155,20 +191,30 @@ The Android demo exercises a few SDK features that are not described in the shar
 - **Identity Verification toggle** (`UserSection`, `testTag = "identity_verification_toggle"`) — persisted via `SharedPreferenceUtil.cacheIdentityVerification(...)`. When ON, `fetchUserDataFromApi` uses the cached external_id + JWT; when OFF it falls back to the onesignal_id endpoint.
 - **JWT field in `LoginDialog`** — optional `"JWT Token (optional)"` input under the external-user-id field. `testTag = "login_user_jwt_input"`. `MainViewModel.loginUser(externalUserId, jwtToken)` threads the token into `OneSignal.login(externalUserId, jwtToken)` and caches it via `SharedPreferenceUtil.cacheJwtToken(...)`.
 - **UPDATE USER JWT button** (`UserSection`, `testTag = "update_user_jwt_button"`) — opens a `PairInputDialog` (External User Id + JWT Token) and calls `viewModel.updateUserJwt(...)` → `OneSignal.updateUserJwt(...)`.
-- **`IUserJwtInvalidatedListener`** — registered by `MainViewModel`; surfaces a snackbar + log entry when the SDK reports an invalidated JWT.
+- **`IUserJwtInvalidatedListener`** — registered by `MainViewModel`; surfaces a log entry via `Log.w(TAG, ...)` when the SDK reports an invalidated JWT. Per Prompt 7.6 the snackbar is no longer fired from this listener.
 
 ---
 
 ## Platform Config
 
-### Permissions (`src/main/AndroidManifest.xml`)
+### Permissions
 
-```xml
-<uses-permission android:name="android.permission.INTERNET" />
-<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
-<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
-<uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-```
+Declared in `app/src/main/AndroidManifest.xml`:
+
+- `android.permission.ACCESS_COARSE_LOCATION`
+- `android.permission.ACCESS_FINE_LOCATION`
+- `android.permission.ACCESS_BACKGROUND_LOCATION`
+- `com.android.vending.BILLING`
+- `android.permission.WAKE_LOCK`
+- ADM / Amazon push wiring (`com.amazon.device.messaging.permission.RECEIVE`, plus the app-scoped `com.onesignal.example.permission.RECEIVE_ADM_MESSAGE` and matching intent category).
+
+Contributed via manifest merge from the OneSignal SDK:
+
+- `android.permission.INTERNET`
+- `android.permission.POST_NOTIFICATIONS`
+- FCM-related permissions (e.g. `com.google.android.c2dm.permission.RECEIVE`)
+- Badge permissions (Samsung / Sony / HTC / etc.)
+- `android.permission.RECEIVE_BOOT_COMPLETED` and other SDK-side wiring
 
 The ADM permission name and intent category use the application's package, so they reference `com.onesignal.example` (not the SDK's package).
 
@@ -199,35 +245,47 @@ If the package changes you must regenerate these from the Firebase / Huawei AppG
 ## File Structure
 
 ```
-examples/demo/
-├── build.gradle.kts                       # root project, plugin classpath
-├── settings.gradle.kts
-├── gradle.properties
-├── build.md                               # this file
-└── app/
-    ├── build.gradle.kts                   # namespace = com.onesignal.example, gms/huawei flavors
-    ├── google-services.json               # package_name = com.onesignal.example
-    ├── agconnect-services.json            # package_name = com.onesignal.example
-    └── src/
-        ├── main/
-        │   ├── AndroidManifest.xml
-        │   ├── java/com/onesignal/example/
-        │   │   ├── application/MainApplication.kt
-        │   │   ├── data/
-        │   │   │   ├── model/{NotificationType,InAppMessageType}.kt
-        │   │   │   ├── network/OneSignalService.kt
-        │   │   │   └── repository/OneSignalRepository.kt
-        │   │   ├── ui/
-        │   │   │   ├── components/        # SectionCard, ToggleRow, ActionButton,
-        │   │   │   │                      # ListComponents, Dialogs
-        │   │   │   ├── main/              # MainActivity, MainScreen, Sections, MainViewModel
-        │   │   │   ├── secondary/SecondaryActivity.kt
-        │   │   │   └── theme/Theme.kt
-        │   │   └── util/                  # SharedPreferenceUtil, TooltipHelper
-        │   └── res/values/{strings,colors,styles}.xml
-        └── huawei/
-            ├── AndroidManifest.xml
-            └── java/com/onesignal/example/notification/HmsMessageServiceAppLevel.kt
+examples/
+├── build.md                                   # this file
+└── demo/
+    ├── build.gradle.kts                       # root project, plugin classpath
+    ├── settings.gradle.kts
+    ├── gradle.properties
+    ├── gradlew
+    ├── gradlew.bat
+    ├── local.properties.example               # template for local.properties
+    └── app/
+        ├── build.gradle.kts                   # namespace = com.onesignal.example, gms/huawei flavors
+        ├── proguard-rules.pro
+        ├── google-services.json               # package_name = com.onesignal.example
+        ├── agconnect-services.json            # package_name = com.onesignal.example
+        └── src/
+            ├── main/
+            │   ├── AndroidManifest.xml
+            │   ├── java/com/onesignal/example/
+            │   │   ├── application/MainApplication.kt
+            │   │   ├── data/
+            │   │   │   ├── model/{NotificationType,InAppMessageType}.kt
+            │   │   │   ├── network/OneSignalService.kt
+            │   │   │   └── repository/OneSignalRepository.kt
+            │   │   ├── ui/
+            │   │   │   ├── components/        # SectionCard (with DemoSection),
+            │   │   │   │                      # ToggleRow, ActionButton, ListComponents,
+            │   │   │   │                      # CardKvRow, DemoAppBar, Dialogs,
+            │   │   │   │                      # SnackbarController
+            │   │   │   ├── main/              # MainActivity, MainScreen, Sections, MainViewModel
+            │   │   │   ├── secondary/SecondaryActivity.kt
+            │   │   │   └── theme/             # Theme.kt, DemoLayout.kt
+            │   │   └── util/                  # SharedPreferenceUtil, TooltipHelper
+            │   └── res/
+            │       ├── values/{strings,colors,styles}.xml
+            │       ├── raw/                   # vine_boom.wav
+            │       ├── mipmap-*/              # launcher icons (hdpi..xxxhdpi)
+            │       ├── drawable-*/            # density-bucketed drawables (hdpi..xxxhdpi)
+            │       └── drawable-nodpi/onesignal_rectangle.png
+            └── huawei/
+                ├── AndroidManifest.xml
+                └── java/com/onesignal/example/notification/HmsMessageServiceAppLevel.kt
 ```
 
 ---

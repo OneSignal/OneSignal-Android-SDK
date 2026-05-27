@@ -2,43 +2,45 @@ package com.onesignal.example.ui.main
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.onesignal.example.data.model.InAppMessageType
 import com.onesignal.example.ui.components.CardKvRow
 import com.onesignal.example.ui.components.CollapsibleSingleList
+import com.onesignal.example.ui.components.CustomNotificationDialog
 import com.onesignal.example.ui.components.DemoSection
 import com.onesignal.example.ui.components.DestructiveButton
+import com.onesignal.example.ui.components.LocalSnackbarController
+import com.onesignal.example.ui.components.LoginDialog
+import com.onesignal.example.ui.components.MultiPairInputDialog
+import com.onesignal.example.ui.components.MultiSelectRemoveDialog
+import com.onesignal.example.ui.components.OutcomeDialog
 import com.onesignal.example.ui.components.OutlineButton
+import com.onesignal.example.ui.components.PairInputDialog
 import com.onesignal.example.ui.components.PairList
 import com.onesignal.example.ui.components.PrimaryButton
 import com.onesignal.example.ui.components.SectionCard
+import com.onesignal.example.ui.components.SingleInputDialog
 import com.onesignal.example.ui.components.ToggleRow
+import com.onesignal.example.ui.components.TrackEventDialog
 import com.onesignal.example.ui.theme.DemoLayout
 import com.onesignal.example.ui.theme.OsCardBorder
 import com.onesignal.example.ui.theme.OsDivider
@@ -130,12 +132,14 @@ fun UserSection(
     externalUserId: String?,
     useIdentityVerification: Boolean,
     onUseIdentityVerificationChange: (Boolean) -> Unit,
-    onLoginClick: () -> Unit,
-    onLogoutClick: () -> Unit,
-    onUpdateJwtClick: () -> Unit,
+    onLogin: (String, String?) -> Unit,
+    onLogout: () -> Unit,
+    onUpdateJwt: (String, String) -> Unit,
     isLoading: Boolean = false,
 ) {
     val isLoggedIn = !externalUserId.isNullOrEmpty()
+    var loginOpen by remember { mutableStateOf(false) }
+    var updateJwtOpen by remember { mutableStateOf(false) }
 
     DemoSection {
         SectionCard(title = "User", sectionKey = "user") {
@@ -167,7 +171,7 @@ fun UserSection(
 
         PrimaryButton(
             text = if (isLoggedIn) "SWITCH USER" else "LOGIN USER",
-            onClick = onLoginClick,
+            onClick = { loginOpen = true },
             enabled = !isLoading,
             testTag = "login_user_button",
         )
@@ -175,7 +179,7 @@ fun UserSection(
         if (isLoggedIn) {
             OutlineButton(
                 text = "LOGOUT USER",
-                onClick = onLogoutClick,
+                onClick = onLogout,
                 enabled = !isLoading,
                 testTag = "logout_user_button",
             )
@@ -183,8 +187,33 @@ fun UserSection(
 
         OutlineButton(
             text = "UPDATE USER JWT",
-            onClick = onUpdateJwtClick,
+            onClick = { updateJwtOpen = true },
             testTag = "update_user_jwt_button",
+        )
+    }
+
+    if (loginOpen) {
+        LoginDialog(
+            onDismiss = { loginOpen = false },
+            onConfirm = { userId, jwt ->
+                onLogin(userId, jwt)
+                loginOpen = false
+            },
+        )
+    }
+
+    if (updateJwtOpen) {
+        PairInputDialog(
+            title = "Update User JWT",
+            keyLabel = "External User Id",
+            valueLabel = "JWT Token",
+            onDismiss = { updateJwtOpen = false },
+            onConfirm = { externalId, token ->
+                onUpdateJwt(externalId, token)
+                updateJwtOpen = false
+            },
+            keyTestTag = "update_jwt_external_id_input",
+            valueTestTag = "update_jwt_token_input",
         )
     }
 }
@@ -229,10 +258,12 @@ fun SendPushSection(
     onSimpleClick: () -> Unit,
     onImageClick: () -> Unit,
     onSoundClick: () -> Unit,
-    onCustomClick: () -> Unit,
+    onCustomNotification: (String, String) -> Unit,
     onClearAllClick: () -> Unit,
     onInfoClick: () -> Unit,
 ) {
+    var customOpen by remember { mutableStateOf(false) }
+
     DemoSection {
         SectionCard(
             title = "Send Push Notification",
@@ -243,9 +274,19 @@ fun SendPushSection(
             PrimaryButton(text = "SIMPLE", onClick = onSimpleClick, testTag = "send_simple_button")
             PrimaryButton(text = "WITH IMAGE", onClick = onImageClick, testTag = "send_image_button")
             PrimaryButton(text = "WITH SOUND", onClick = onSoundClick, testTag = "send_sound_button")
-            PrimaryButton(text = "CUSTOM", onClick = onCustomClick, testTag = "send_custom_button")
+            PrimaryButton(text = "CUSTOM", onClick = { customOpen = true }, testTag = "send_custom_button")
             OutlineButton(text = "CLEAR ALL", onClick = onClearAllClick, testTag = "clear_all_button")
         }
+    }
+
+    if (customOpen) {
+        CustomNotificationDialog(
+            onDismiss = { customOpen = false },
+            onConfirm = { title, body ->
+                onCustomNotification(title, body)
+                customOpen = false
+            },
+        )
     }
 }
 
@@ -283,9 +324,8 @@ fun SendInAppMessageSection(
         ) {
             InAppMessageType.entries.forEach { type ->
                 val typeTag = type.name.lowercase()
-                IamActionButton(
+                PrimaryButton(
                     text = type.title,
-                    icon = type.icon,
                     onClick = { onSendMessage(type) },
                     testTag = "send_iam_${typeTag}_button",
                 )
@@ -295,46 +335,16 @@ fun SendInAppMessageSection(
 }
 
 @Composable
-private fun IamActionButton(
-    text: String,
-    icon: ImageVector,
-    onClick: () -> Unit,
-    testTag: String,
-) {
-    Button(
-        onClick = onClick,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = DemoLayout.pagePadding, vertical = 4.dp)
-            .height(DemoLayout.buttonHeight)
-            .testTag(testTag),
-        colors = ButtonDefaults.buttonColors(containerColor = OsPrimary),
-        shape = RoundedCornerShape(DemoLayout.buttonRadius),
-        elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp, pressedElevation = 0.dp),
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(imageVector = icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
-            Spacer(modifier = Modifier.width(DemoLayout.gap))
-            Text(
-                text = text,
-                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
-                color = Color.White,
-            )
-        }
-    }
-}
-
-@Composable
 fun AliasesSection(
     aliases: List<Pair<String, String>>,
-    onAddClick: () -> Unit,
-    onAddMultipleClick: () -> Unit,
+    onAdd: (String, String) -> Unit,
+    onAddMultiple: (List<Pair<String, String>>) -> Unit,
     onInfoClick: () -> Unit,
     loading: Boolean = false,
 ) {
+    var addOpen by remember { mutableStateOf(false) }
+    var addMultipleOpen by remember { mutableStateOf(false) }
+
     DemoSection {
         SectionCard(title = "Aliases", sectionKey = "aliases", onInfoClick = onInfoClick) {
             PairList(
@@ -345,19 +355,53 @@ fun AliasesSection(
             )
         }
         Spacer(modifier = Modifier.height(DemoLayout.gap))
-        PrimaryButton(text = "ADD ALIAS", onClick = onAddClick, testTag = "add_alias_button")
-        PrimaryButton(text = "ADD MULTIPLE ALIASES", onClick = onAddMultipleClick, testTag = "add_multiple_aliases_button")
+        PrimaryButton(text = "ADD ALIAS", onClick = { addOpen = true }, testTag = "add_alias_button")
+        PrimaryButton(
+            text = "ADD MULTIPLE ALIASES",
+            onClick = { addMultipleOpen = true },
+            testTag = "add_multiple_aliases_button",
+        )
+    }
+
+    if (addOpen) {
+        PairInputDialog(
+            title = "Add Alias",
+            keyLabel = "Label",
+            valueLabel = "ID",
+            onDismiss = { addOpen = false },
+            onConfirm = { key, value ->
+                onAdd(key, value)
+                addOpen = false
+            },
+            keyTestTag = "alias_label_input",
+            valueTestTag = "alias_id_input",
+        )
+    }
+
+    if (addMultipleOpen) {
+        MultiPairInputDialog(
+            title = "Add Multiple Aliases",
+            keyLabel = "Label",
+            valueLabel = "ID",
+            onDismiss = { addMultipleOpen = false },
+            onConfirm = { pairs ->
+                onAddMultiple(pairs)
+                addMultipleOpen = false
+            },
+        )
     }
 }
 
 @Composable
 fun EmailsSection(
     emails: List<String>,
-    onAddClick: () -> Unit,
+    onAdd: (String) -> Unit,
     onRemove: (String) -> Unit,
     onInfoClick: () -> Unit,
     loading: Boolean = false,
 ) {
+    var addOpen by remember { mutableStateOf(false) }
+
     DemoSection {
         SectionCard(title = "Emails", sectionKey = "emails", onInfoClick = onInfoClick) {
             CollapsibleSingleList(
@@ -369,18 +413,33 @@ fun EmailsSection(
             )
         }
         Spacer(modifier = Modifier.height(DemoLayout.gap))
-        PrimaryButton(text = "ADD EMAIL", onClick = onAddClick, testTag = "add_email_button")
+        PrimaryButton(text = "ADD EMAIL", onClick = { addOpen = true }, testTag = "add_email_button")
+    }
+
+    if (addOpen) {
+        SingleInputDialog(
+            title = "Add Email",
+            label = "Email",
+            onDismiss = { addOpen = false },
+            onConfirm = { email ->
+                onAdd(email)
+                addOpen = false
+            },
+            inputTestTag = "email_input",
+        )
     }
 }
 
 @Composable
 fun SmsSection(
     smsNumbers: List<String>,
-    onAddClick: () -> Unit,
+    onAdd: (String) -> Unit,
     onRemove: (String) -> Unit,
     onInfoClick: () -> Unit,
     loading: Boolean = false,
 ) {
+    var addOpen by remember { mutableStateOf(false) }
+
     DemoSection {
         SectionCard(title = "SMS", sectionKey = "sms", onInfoClick = onInfoClick) {
             CollapsibleSingleList(
@@ -392,20 +451,37 @@ fun SmsSection(
             )
         }
         Spacer(modifier = Modifier.height(DemoLayout.gap))
-        PrimaryButton(text = "ADD SMS", onClick = onAddClick, testTag = "add_sms_button")
+        PrimaryButton(text = "ADD SMS", onClick = { addOpen = true }, testTag = "add_sms_button")
+    }
+
+    if (addOpen) {
+        SingleInputDialog(
+            title = "Add SMS",
+            label = "Phone Number",
+            onDismiss = { addOpen = false },
+            onConfirm = { sms ->
+                onAdd(sms)
+                addOpen = false
+            },
+            inputTestTag = "sms_input",
+        )
     }
 }
 
 @Composable
 fun TagsSection(
     tags: List<Pair<String, String>>,
-    onAddClick: () -> Unit,
-    onAddMultipleClick: () -> Unit,
+    onAdd: (String, String) -> Unit,
+    onAddMultiple: (List<Pair<String, String>>) -> Unit,
     onRemove: (String) -> Unit,
-    onRemoveSelected: () -> Unit,
+    onRemoveSelected: (List<String>) -> Unit,
     onInfoClick: () -> Unit,
     loading: Boolean = false,
 ) {
+    var addOpen by remember { mutableStateOf(false) }
+    var addMultipleOpen by remember { mutableStateOf(false) }
+    var removeOpen by remember { mutableStateOf(false) }
+
     DemoSection {
         SectionCard(title = "Tags", sectionKey = "tags", onInfoClick = onInfoClick) {
             PairList(
@@ -417,24 +493,69 @@ fun TagsSection(
             )
         }
         Spacer(modifier = Modifier.height(DemoLayout.gap))
-        PrimaryButton(text = "ADD TAG", onClick = onAddClick, testTag = "add_tag_button")
-        PrimaryButton(text = "ADD MULTIPLE TAGS", onClick = onAddMultipleClick, testTag = "add_multiple_tags_button")
+        PrimaryButton(text = "ADD TAG", onClick = { addOpen = true }, testTag = "add_tag_button")
+        PrimaryButton(
+            text = "ADD MULTIPLE TAGS",
+            onClick = { addMultipleOpen = true },
+            testTag = "add_multiple_tags_button",
+        )
 
         if (tags.isNotEmpty()) {
             DestructiveButton(
-                text = "REMOVE SELECTED",
-                onClick = onRemoveSelected,
+                text = "REMOVE TAGS",
+                onClick = { removeOpen = true },
                 testTag = "remove_tags_button",
             )
         }
+    }
+
+    if (addOpen) {
+        PairInputDialog(
+            title = "Add Tag",
+            onDismiss = { addOpen = false },
+            onConfirm = { key, value ->
+                onAdd(key, value)
+                addOpen = false
+            },
+            keyTestTag = "tag_key_input",
+            valueTestTag = "tag_value_input",
+        )
+    }
+
+    if (addMultipleOpen) {
+        MultiPairInputDialog(
+            title = "Add Multiple Tags",
+            onDismiss = { addMultipleOpen = false },
+            onConfirm = { pairs ->
+                onAddMultiple(pairs)
+                addMultipleOpen = false
+            },
+        )
+    }
+
+    if (removeOpen && tags.isNotEmpty()) {
+        MultiSelectRemoveDialog(
+            title = "Remove Tags",
+            items = tags,
+            onDismiss = { removeOpen = false },
+            onConfirm = { keys ->
+                onRemoveSelected(keys.toList())
+                removeOpen = false
+            },
+        )
     }
 }
 
 @Composable
 fun OutcomeSection(
-    onSendOutcome: () -> Unit,
+    onSendNormal: (String) -> Unit,
+    onSendUnique: (String) -> Unit,
+    onSendWithValue: (String, Float) -> Unit,
     onInfoClick: () -> Unit,
 ) {
+    var open by remember { mutableStateOf(false) }
+    val snackbar = LocalSnackbarController.current
+
     DemoSection {
         SectionCard(
             title = "Outcome Events",
@@ -442,21 +563,46 @@ fun OutcomeSection(
             sectionKey = "outcomes",
             onInfoClick = onInfoClick,
         ) {
-            PrimaryButton(text = "SEND OUTCOME", onClick = onSendOutcome, testTag = "send_outcome_button")
+            PrimaryButton(text = "SEND OUTCOME", onClick = { open = true }, testTag = "send_outcome_button")
         }
+    }
+
+    if (open) {
+        OutcomeDialog(
+            onDismiss = { open = false },
+            onSendNormal = { name ->
+                onSendNormal(name)
+                snackbar.show("Outcome sent: $name")
+                open = false
+            },
+            onSendUnique = { name ->
+                onSendUnique(name)
+                snackbar.show("Unique outcome sent: $name")
+                open = false
+            },
+            onSendWithValue = { name, value ->
+                onSendWithValue(name, value)
+                snackbar.show("Outcome sent: $name = $value")
+                open = false
+            },
+        )
     }
 }
 
 @Composable
 fun TriggersSection(
     triggers: List<Pair<String, String>>,
-    onAddClick: () -> Unit,
-    onAddMultipleClick: () -> Unit,
+    onAdd: (String, String) -> Unit,
+    onAddMultiple: (List<Pair<String, String>>) -> Unit,
     onRemove: (String) -> Unit,
-    onRemoveSelected: () -> Unit,
+    onRemoveSelected: (List<String>) -> Unit,
     onClearAll: () -> Unit,
     onInfoClick: () -> Unit,
 ) {
+    var addOpen by remember { mutableStateOf(false) }
+    var addMultipleOpen by remember { mutableStateOf(false) }
+    var removeOpen by remember { mutableStateOf(false) }
+
     DemoSection {
         SectionCard(title = "Triggers", sectionKey = "triggers", onInfoClick = onInfoClick) {
             PairList(
@@ -467,33 +613,72 @@ fun TriggersSection(
             )
         }
         Spacer(modifier = Modifier.height(DemoLayout.gap))
-        PrimaryButton(text = "ADD TRIGGER", onClick = onAddClick, testTag = "add_trigger_button")
+        PrimaryButton(text = "ADD TRIGGER", onClick = { addOpen = true }, testTag = "add_trigger_button")
         PrimaryButton(
             text = "ADD MULTIPLE TRIGGERS",
-            onClick = onAddMultipleClick,
+            onClick = { addMultipleOpen = true },
             testTag = "add_multiple_triggers_button",
         )
 
         if (triggers.isNotEmpty()) {
             DestructiveButton(
-                text = "REMOVE SELECTED",
-                onClick = onRemoveSelected,
+                text = "REMOVE TRIGGERS",
+                onClick = { removeOpen = true },
                 testTag = "remove_triggers_button",
             )
             DestructiveButton(
-                text = "CLEAR ALL",
+                text = "CLEAR ALL TRIGGERS",
                 onClick = onClearAll,
                 testTag = "clear_triggers_button",
             )
         }
     }
+
+    if (addOpen) {
+        PairInputDialog(
+            title = "Add Trigger",
+            onDismiss = { addOpen = false },
+            onConfirm = { key, value ->
+                onAdd(key, value)
+                addOpen = false
+            },
+            keyTestTag = "trigger_key_input",
+            valueTestTag = "trigger_value_input",
+        )
+    }
+
+    if (addMultipleOpen) {
+        MultiPairInputDialog(
+            title = "Add Multiple Triggers",
+            onDismiss = { addMultipleOpen = false },
+            onConfirm = { pairs ->
+                onAddMultiple(pairs)
+                addMultipleOpen = false
+            },
+        )
+    }
+
+    if (removeOpen && triggers.isNotEmpty()) {
+        MultiSelectRemoveDialog(
+            title = "Remove Triggers",
+            items = triggers,
+            onDismiss = { removeOpen = false },
+            onConfirm = { keys ->
+                onRemoveSelected(keys.toList())
+                removeOpen = false
+            },
+        )
+    }
 }
 
 @Composable
 fun CustomEventsSection(
-    onTrackClick: () -> Unit,
+    onTrackEvent: (String, Map<String, Any>?) -> Unit,
     onInfoClick: () -> Unit,
 ) {
+    var open by remember { mutableStateOf(false) }
+    val snackbar = LocalSnackbarController.current
+
     DemoSection {
         SectionCard(
             title = "Custom Events",
@@ -501,8 +686,19 @@ fun CustomEventsSection(
             sectionKey = "custom_events",
             onInfoClick = onInfoClick,
         ) {
-            PrimaryButton(text = "TRACK EVENT", onClick = onTrackClick, testTag = "track_event_button")
+            PrimaryButton(text = "TRACK EVENT", onClick = { open = true }, testTag = "track_event_button")
         }
+    }
+
+    if (open) {
+        TrackEventDialog(
+            onDismiss = { open = false },
+            onConfirm = { name, properties ->
+                onTrackEvent(name, properties)
+                snackbar.show("Event tracked: $name")
+                open = false
+            },
+        )
     }
 }
 
@@ -510,10 +706,12 @@ fun CustomEventsSection(
 fun LocationSection(
     locationShared: Boolean,
     onLocationSharedChange: (Boolean) -> Unit,
-    onCheckLocationShared: () -> Unit,
+    onCheckLocationShared: () -> Boolean,
     onPromptLocation: () -> Unit,
     onInfoClick: () -> Unit,
 ) {
+    val snackbar = LocalSnackbarController.current
+
     DemoSection {
         SectionCard(title = "Location", sectionKey = "location", onInfoClick = onInfoClick) {
             ToggleRow(
@@ -527,6 +725,13 @@ fun LocationSection(
         }
         Spacer(modifier = Modifier.height(DemoLayout.gap))
         PrimaryButton(text = "PROMPT LOCATION", onClick = onPromptLocation, testTag = "prompt_location_button")
-        PrimaryButton(text = "CHECK LOCATION", onClick = onCheckLocationShared, testTag = "check_location_button")
+        PrimaryButton(
+            text = "CHECK LOCATION",
+            onClick = {
+                val shared = onCheckLocationShared()
+                snackbar.show("Location shared: $shared")
+            },
+            testTag = "check_location_button",
+        )
     }
 }

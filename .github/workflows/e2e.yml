@@ -1,0 +1,93 @@
+name: E2E Tests
+
+on:
+  push:
+    branches:
+      - rel/**
+  workflow_dispatch:
+    inputs:
+      sdk-version:
+        description: 'OneSignal Android SDK version to wait for and build against (defaults to OneSignalSDK/gradle.properties).'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Fail fast on unset var. Otherwise `demoOverride()` collapses "" to
+      # null and the build silently uses the hardcoded default app ID.
+      - name: Validate APPIUM_ONESIGNAL_APP_ID
+        env:
+          ONESIGNAL_APP_ID: ${{ vars.APPIUM_ONESIGNAL_APP_ID }}
+        run: |
+          if [ -z "$ONESIGNAL_APP_ID" ]; then
+            echo "::error::APPIUM_ONESIGNAL_APP_ID is not set"
+            exit 1
+          fi
+
+      - name: Set up demo
+        uses: ./.github/actions/setup-demo
+        with:
+          onesignal-app-id: ${{ vars.APPIUM_ONESIGNAL_APP_ID }}
+
+      - name: Resolve OneSignal Android SDK version
+        id: android-sdk-version
+        env:
+          INPUT_VERSION: ${{ github.event.inputs.sdk-version }}
+        run: |
+          if [ -n "$INPUT_VERSION" ]; then
+            VERSION="$INPUT_VERSION"
+          else
+            VERSION=$(grep -E '^SDK_VERSION=' OneSignalSDK/gradle.properties | cut -d '=' -f2)
+          fi
+          if [ -z "$VERSION" ]; then
+            echo "::error::Could not resolve OneSignal Android SDK version"
+            exit 1
+          fi
+          echo "Resolved OneSignal Android SDK version: $VERSION"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Wait for OneSignal Android SDK on Maven Central
+        uses: OneSignal/sdk-shared/.github/actions/wait-for-maven-artifact@main
+        with:
+          version: ${{ steps.android-sdk-version.outputs.version }}
+
+      # gms+debug: BrowserStack devices have GMS, debug enables UiAutomator2
+      # attach. -PSDK_VERSION pins the Maven dep to the version we waited
+      # for. SDK_VERSION flows through env: to avoid script injection
+      # (workflow_dispatch input is user-controlled).
+      - name: Build debug APK
+        working-directory: examples/demo
+        env:
+          SDK_VERSION: ${{ steps.android-sdk-version.outputs.version }}
+        run: ./gradlew :app:assembleGmsDebug "-PSDK_VERSION=$SDK_VERSION" --console=plain --warning-mode=summary
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: demo-apk
+          path: examples/demo/app/build/outputs/apk/gms/debug/app-gms-debug.apk
+          retention-days: 1
+          compression-level: 0
+
+  e2e-android:
+    needs: build-android
+    uses: OneSignal/sdk-shared/.github/workflows/appium-e2e.yml@main
+    secrets: inherit
+    with:
+      platform: android
+      app-artifact: demo-apk
+      app-filename: app-gms-debug.apk
+      sdk-type: android
+      build-name: android-${{ github.ref_name }}-${{ github.run_number }}
