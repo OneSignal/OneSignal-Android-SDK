@@ -171,7 +171,7 @@ Patterns used by this demo beyond the shared guide's table:
 
 - `{sectionKey}_pair_key_{key}` and `{sectionKey}_pair_value_{key}` -- two-column rows expose both halves so Appium can assert key and value independently.
 - `{sectionKey}_value_{value}` -- list rows whose key is implicit (single-column lists).
-- `main_scroll_view` -- the root `LazyColumn` in `MainScreen`, used by Appium swipe gestures.
+- `main_scroll_view` -- the root scrollable `Column` (`verticalScroll(rememberScrollState())`) in `MainScreen`, used by Appium swipe gestures.
 
 #### Appium / UiAutomator: `testTagsAsResourceId`
 
@@ -191,7 +191,7 @@ The Android demo exercises a few SDK features that are not described in the shar
 - **Identity Verification toggle** (`UserSection`, `testTag = "identity_verification_toggle"`) — persisted via `SharedPreferenceUtil.cacheIdentityVerification(...)`. When ON, `fetchUserDataFromApi` uses the cached external_id + JWT; when OFF it falls back to the onesignal_id endpoint.
 - **JWT field in `LoginDialog`** — optional `"JWT Token (optional)"` input under the external-user-id field. `testTag = "login_user_jwt_input"`. `MainViewModel.loginUser(externalUserId, jwtToken)` threads the token into `OneSignal.login(externalUserId, jwtToken)` and caches it via `SharedPreferenceUtil.cacheJwtToken(...)`.
 - **UPDATE USER JWT button** (`UserSection`, `testTag = "update_user_jwt_button"`) — opens a `PairInputDialog` (External User Id + JWT Token) and calls `viewModel.updateUserJwt(...)` → `OneSignal.updateUserJwt(...)`.
-- **`IUserJwtInvalidatedListener`** — registered by `MainViewModel`; surfaces a log entry via `Log.i(TAG, ...)` when the SDK reports an invalidated JWT. Per Prompt 7.6 the snackbar is no longer fired from this listener.
+- **`IUserJwtInvalidatedListener`** — registered by `MainViewModel`; surfaces a log entry via `Log.w(TAG, ...)` when the SDK reports an invalidated JWT. Per Prompt 7.6 the snackbar is no longer fired from this listener.
 
 ---
 
