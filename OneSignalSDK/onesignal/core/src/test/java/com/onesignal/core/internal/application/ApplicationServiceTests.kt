@@ -11,6 +11,7 @@ import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import io.mockk.every
 import io.mockk.spyk
 import io.mockk.verify
 import kotlinx.coroutines.delay
@@ -309,6 +310,45 @@ class ApplicationServiceTests : FunSpec({
         // Then: the reference count does not underflow and focus is retained.
         applicationService.current shouldBe mainActivity
         verify(exactly = 0) { handler.onUnfocused() }
+    }
+
+    test("configuration change recreation does not inflate the reference count") {
+        // Given
+        val firstController = Robolectric.buildActivity(Activity::class.java)
+        firstController.setup()
+        val firstInstance = firstController.get()
+
+        val recreatedController = Robolectric.buildActivity(Activity::class.java)
+        recreatedController.setup()
+        val recreatedInstance = recreatedController.get()
+
+        val handler = spyk<IApplicationLifecycleHandler>()
+        val applicationService = ApplicationService()
+        applicationService.addApplicationLifecycleHandler(handler)
+
+        // current is established for the first instance, reference count is 1.
+        applicationService.start(firstInstance)
+
+        // When: a config change (e.g. rotation) destroys the old instance and starts a new one.
+        // The old instance's stop reports isChangingConfigurations = true.
+        val rotatingOldInstance = spyk(firstInstance)
+        every { rotatingOldInstance.isChangingConfigurations } returns true
+        applicationService.onActivityPaused(rotatingOldInstance)
+        applicationService.onActivityStopped(rotatingOldInstance)
+        applicationService.onActivityStarted(recreatedInstance)
+        applicationService.onActivityResumed(recreatedInstance)
+
+        // Then: focus is retained throughout, current points at the recreated instance.
+        applicationService.current shouldBe recreatedInstance
+        verify(exactly = 0) { handler.onUnfocused() }
+
+        // When: the app is now genuinely backgrounded (single, non-config stop).
+        applicationService.onActivityPaused(recreatedInstance)
+        applicationService.onActivityStopped(recreatedInstance)
+
+        // Then: focus is lost exactly once — the count never climbed during rotation.
+        applicationService.current shouldBe null
+        verify(exactly = 1) { handler.onUnfocused() }
     }
 }) {
     companion object {

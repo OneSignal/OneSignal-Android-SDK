@@ -232,6 +232,11 @@ class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, On
             return
         }
 
+        // Set by the preceding onActivityStopped when an activity is recreated for a config change
+        // (e.g. rotation). That stop skipped the decrement, so this replacement start must not
+        // increment — otherwise the reference count climbs on every rotation and focus is never lost.
+        val recreatedAfterConfigChange = isActivityChangingConfigurations
+
         current = activity
 
         val isNewlyStarted = startedActivities.add(activity)
@@ -242,6 +247,8 @@ class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, On
             startedActivities.add(activity)
             activityReferences = 1
             handleFocus()
+        } else if (recreatedAfterConfigChange) {
+            isActivityChangingConfigurations = false
         } else if (isNewlyStarted) {
             activityReferences++
         }
