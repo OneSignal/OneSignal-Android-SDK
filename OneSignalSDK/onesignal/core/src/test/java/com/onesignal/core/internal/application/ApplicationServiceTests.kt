@@ -363,6 +363,48 @@ class ApplicationServiceTests : FunSpec({
         verify(exactly = 1) { handler.onUnfocused() }
     }
 
+    test("foreground tap that resumes the same host instance keeps focus tracking intact") {
+        // Given: the host is foregrounded.
+        val hostController = Robolectric.buildActivity(Activity::class.java)
+        hostController.setup()
+        val host = hostController.get()
+
+        val trampolineController = Robolectric.buildActivity(InternalTrampolineActivity::class.java)
+        trampolineController.setup()
+        val trampoline = trampolineController.get()
+
+        val handler = spyk<IApplicationLifecycleHandler>()
+        val applicationService = ApplicationService()
+
+        applicationService.start(host)
+        applicationService.addApplicationLifecycleHandler(handler)
+
+        // When: a notification tap resumes the SAME host instance (launcher-style open intent:
+        // NEW_TASK | RESET_TASK_IF_NEEDED). The real Android ordering: the host stops while the
+        // trampoline is on top, the same host instance is re-started, then the trampoline stops.
+        applicationService.onActivityPaused(host)
+        applicationService.onActivityStarted(trampoline)
+        applicationService.onActivityResumed(trampoline)
+        applicationService.onActivityStopped(host)
+        applicationService.onActivityStarted(host)
+        applicationService.onActivityResumed(host)
+        applicationService.onActivityStopped(trampoline)
+
+        // Then: no spurious unfocus, the host stays current, and it was re-counted (the start was not
+        // swallowed by the current == activity early return now that the stop had removed it).
+        applicationService.current shouldBe host
+        applicationService.entryState shouldBe AppEntryAction.APP_OPEN
+        verify(exactly = 0) { handler.onUnfocused() }
+
+        // When: the app is genuinely backgrounded later, focus is lost exactly once — the host stop is
+        // counted rather than skipped as !wasCounted.
+        applicationService.onActivityPaused(host)
+        applicationService.onActivityStopped(host)
+
+        applicationService.current shouldBe null
+        verify(exactly = 1) { handler.onUnfocused() }
+    }
+
     test("foreground tap on a URL notification that opens a browser drops and restores focus") {
         // Given: the host is foregrounded.
         val hostController = Robolectric.buildActivity(Activity::class.java)

@@ -224,7 +224,13 @@ class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, On
     override fun onActivityStarted(activity: Activity) {
         Logging.debug("ApplicationService.onActivityStarted($activityReferences,$entryState): $activity")
 
-        if (current == activity) {
+        // Re-entrant start for the activity that is already current and still counted: nothing to do.
+        // The membership check is essential: a notification-open trampoline can briefly stop the host
+        // and then resume the *same* host instance. That stop removed the host from startedActivities
+        // (decrementing the count) without clearing current, so this start must fall through to
+        // re-count it. Returning here would leave the count permanently short — every later host stop
+        // would see !wasCounted and onUnfocused would never fire again.
+        if (current == activity && startedActivities.contains(activity)) {
             return
         }
 
