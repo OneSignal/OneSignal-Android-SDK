@@ -104,6 +104,17 @@ class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, On
     private val startedActivities: MutableSet<Activity> =
         Collections.synchronizedSet(Collections.newSetFromMap(WeakHashMap()))
 
+    /**
+     * Started SDK-internal activities ([OneSignalInternalActivity], e.g. notification-open
+     * trampolines). These are tracked separately from [startedActivities]: they never become
+     * [current], take focus, or change entry state, but while one is on top a real activity's stop
+     * is treated as transient (the trampoline often lives in its own task, briefly stopping the
+     * host that resumes once the trampoline finishes). Weak references so a forgotten activity is
+     * not retained.
+     */
+    private val startedInternalActivities: MutableSet<Activity> =
+        Collections.synchronizedSet(Collections.newSetFromMap(WeakHashMap()))
+
     /** True once the activity lifecycle observer has been registered with the [Application]. */
     private var lifecycleObserverInstalled = false
 
@@ -225,6 +236,11 @@ class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, On
         Logging.debug("ApplicationService.onActivityStarted($activityReferences,$entryState): $activity")
 
         if (activity is OneSignalInternalActivity) {
+            // A transient SDK activity (notification-open trampoline), frequently launched into its
+            // own task. Track it so a real activity's stop while it is on top can be treated as
+            // transient, but never let it become current, take focus, or change entry state — those
+            // are owned by real activities and the notification module.
+            startedInternalActivities.add(activity)
             return
         }
 
@@ -294,9 +310,21 @@ class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, On
     override fun onActivityStopped(activity: Activity) {
         Logging.debug("ApplicationService.onActivityStopped($activityReferences,$entryState): $activity")
 
-        if (activity !is OneSignalInternalActivity) {
+        if (activity is OneSignalInternalActivity) {
+            startedInternalActivities.remove(activity)
+            // If the trampoline finished without a real activity ever becoming current (e.g. a URL
+            // notification that opens a browser and never launches the host), the notification
+            // module's NOTIFICATION_CLICK entry state would otherwise remain set and mis-attribute a
+            // later organic open. Clear it now that nothing is in the foreground.
+            if (startedInternalActivities.isEmpty() &&
+                current == null &&
+                entryState == AppEntryAction.NOTIFICATION_CLICK
+            ) {
+                entryState = AppEntryAction.APP_CLOSE
+            }
+        } else {
             isActivityChangingConfigurations = activity.isChangingConfigurations
-            if (!isActivityChangingConfigurations) {
+            if (!isActivityChangingConfigurations && startedInternalActivities.isEmpty()) {
                 // Only decrement for an activity whose start we previously counted. A late-init SDK
                 // can observe a transient activity's stop without ever seeing its start; counting
                 // that would underflow the reference count and falsely drop app focus.
@@ -307,6 +335,8 @@ class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, On
                     handleLostFocus()
                 }
             }
+            // When a trampoline is on top the host's stop is transient — it resumes once the
+            // trampoline finishes — so the reference count and focus are intentionally left intact.
         }
 
         activityLifecycleNotifier.fire { it.onActivityStopped(activity) }

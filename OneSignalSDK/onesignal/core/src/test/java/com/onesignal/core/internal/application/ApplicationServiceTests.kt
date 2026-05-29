@@ -250,7 +250,7 @@ class ApplicationServiceTests : FunSpec({
         response shouldBe true
     }
 
-    test("internal trampoline activity does not affect focus, current, or entry state") {
+    test("internal trampoline activity does not become current or take focus") {
         // Given
         val mainController = Robolectric.buildActivity(Activity::class.java)
         mainController.setup()
@@ -270,21 +270,82 @@ class ApplicationServiceTests : FunSpec({
         applicationService.start(appContext)
         applicationService.entryState = AppEntryAction.NOTIFICATION_CLICK
 
-        // When: the trampoline runs its full lifecycle.
+        // When: the trampoline starts and resumes, it must not become current or take focus.
+        applicationService.onActivityStarted(trampoline)
+        applicationService.onActivityResumed(trampoline)
+
+        applicationService.current shouldBe null
+        applicationService.entryState shouldBe AppEntryAction.NOTIFICATION_CLICK
+
+        // When: the host launches before the trampoline finishes (the real Android ordering: a new
+        // activity starts before the previous one stops).
+        applicationService.onActivityStarted(mainActivity)
+        applicationService.onActivityResumed(mainActivity)
+        applicationService.onActivityStopped(trampoline)
+
+        // Then: focus is established on the host and the NOTIFICATION_CLICK entry state is retained.
+        applicationService.current shouldBe mainActivity
+        applicationService.entryState shouldBe AppEntryAction.NOTIFICATION_CLICK
+        verify(exactly = 0) { handler.onUnfocused() }
+        verify(exactly = 1) { handler.onFocus(false) }
+    }
+
+    test("trampoline that finishes without launching an activity resets the notification entry state") {
+        // Given: the app is backgrounded (no current activity).
+        val trampolineController = Robolectric.buildActivity(InternalTrampolineActivity::class.java)
+        trampolineController.setup()
+        val trampoline = trampolineController.get()
+
+        val handler = spyk<IApplicationLifecycleHandler>()
+        val applicationService = ApplicationService()
+        applicationService.addApplicationLifecycleHandler(handler)
+
+        val appContext = ApplicationProvider.getApplicationContext<Context>()
+        applicationService.start(appContext)
+
+        // When: a URL notification is tapped — the module sets NOTIFICATION_CLICK, the trampoline
+        // opens a browser and finishes without ever launching the host.
+        applicationService.entryState = AppEntryAction.NOTIFICATION_CLICK
         applicationService.onActivityStarted(trampoline)
         applicationService.onActivityResumed(trampoline)
         applicationService.onActivityStopped(trampoline)
 
-        // Then: it is fully ignored — entry state is preserved and no focus is taken.
-        applicationService.entryState shouldBe AppEntryAction.NOTIFICATION_CLICK
+        // Then: the stale notification entry state is cleared so a later organic open is not
+        // mis-attributed as a direct notification session.
         applicationService.current shouldBe null
+        applicationService.entryState shouldBe AppEntryAction.APP_CLOSE
+    }
 
-        // When: the real activity starts after the trampoline finishes.
-        applicationService.onActivityStarted(mainActivity)
+    test("notification tap while the host is foregrounded does not drop focus or change entry state") {
+        // Given: the host is foregrounded.
+        val hostController = Robolectric.buildActivity(Activity::class.java)
+        hostController.setup()
+        val host = hostController.get()
 
-        // Then: focus is established but the NOTIFICATION_CLICK entry state is retained.
-        applicationService.current shouldBe mainActivity
-        applicationService.entryState shouldBe AppEntryAction.NOTIFICATION_CLICK
+        val trampolineController = Robolectric.buildActivity(InternalTrampolineActivity::class.java)
+        trampolineController.setup()
+        val trampoline = trampolineController.get()
+
+        val handler = spyk<IApplicationLifecycleHandler>()
+        val applicationService = ApplicationService()
+
+        applicationService.start(host)
+        applicationService.addApplicationLifecycleHandler(handler)
+
+        // When: a notification is tapped while the host is foreground. The trampoline launches in
+        // its own task, so the host stops while it is on top and resumes when it finishes.
+        applicationService.onActivityPaused(host)
+        applicationService.onActivityStarted(trampoline)
+        applicationService.onActivityResumed(trampoline)
+        applicationService.onActivityStopped(host)
+        applicationService.onActivityStopped(trampoline)
+        applicationService.onActivityStarted(host)
+        applicationService.onActivityResumed(host)
+
+        // Then: no spurious unfocus/focus cycle, entry state stays APP_OPEN (the foreground tap is
+        // not a direct notification session), and the host remains current.
+        applicationService.current shouldBe host
+        applicationService.entryState shouldBe AppEntryAction.APP_OPEN
         verify(exactly = 0) { handler.onUnfocused() }
     }
 
