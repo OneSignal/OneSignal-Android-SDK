@@ -166,6 +166,12 @@ class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, On
             // provider was disabled, or in unit tests). Seed focus state from the init context so
             // late initialization still establishes the current activity and entry state.
             seedFocusFromInitContext(context)
+        } else if (current == null) {
+            // The observer was installed at process start but no non-internal activity has been
+            // observed yet (e.g. cold start from a notification, where only the internal trampoline
+            // has run). Treat the next activity start as the first foreground entry so onFocus fires
+            // even when the notification module has already set entryState to NOTIFICATION_CLICK.
+            nextResumeIsFirstActivity = true
         }
 
         Logging.debug("ApplicationService.init: entryState=$entryState")

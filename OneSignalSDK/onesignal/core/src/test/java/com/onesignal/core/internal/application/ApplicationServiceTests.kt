@@ -1,6 +1,7 @@
 package com.onesignal.core.internal.application
 
 import android.app.Activity
+import android.app.Application
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
@@ -310,6 +311,38 @@ class ApplicationServiceTests : FunSpec({
         // Then: the reference count does not underflow and focus is retained.
         applicationService.current shouldBe mainActivity
         verify(exactly = 0) { handler.onUnfocused() }
+    }
+
+    test("cold start from notification fires focus when lifecycle observer is installed at process start") {
+        // Given: the production path where androidx.startup registered the observer at process start.
+        val application = ApplicationProvider.getApplicationContext<Application>()
+
+        val mainController = Robolectric.buildActivity(Activity::class.java)
+        mainController.setup()
+        val mainActivity = mainController.get()
+
+        val handler = spyk<IApplicationLifecycleHandler>()
+        val applicationService = ApplicationService()
+
+        // The observer is attached before init runs (no activity observed yet — only the internal
+        // trampoline, which is ignored).
+        applicationService.attachToApplication(application)
+
+        // Late init from a non-activity (trampoline) context.
+        applicationService.start(application)
+        applicationService.addApplicationLifecycleHandler(handler)
+
+        // The notification module classifies the entry before the host activity launches.
+        applicationService.entryState = AppEntryAction.NOTIFICATION_CLICK
+
+        // When: the host activity launches.
+        applicationService.onActivityStarted(mainActivity)
+        applicationService.onActivityResumed(mainActivity)
+
+        // Then: focus is delivered exactly once and the notification entry state is preserved.
+        verify(exactly = 1) { handler.onFocus(false) }
+        applicationService.current shouldBe mainActivity
+        applicationService.entryState shouldBe AppEntryAction.NOTIFICATION_CLICK
     }
 
     test("configuration change recreation does not inflate the reference count") {
