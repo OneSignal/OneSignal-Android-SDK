@@ -166,12 +166,6 @@ class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, On
             // provider was disabled, or in unit tests). Seed focus state from the init context so
             // late initialization still establishes the current activity and entry state.
             seedFocusFromInitContext(context)
-        } else if (current == null) {
-            // The observer was installed at process start but no non-internal activity has been
-            // observed yet (e.g. cold start from a notification, where only the internal trampoline
-            // has run). Treat the next activity start as the first foreground entry so onFocus fires
-            // even when the notification module has already set entryState to NOTIFICATION_CLICK.
-            nextResumeIsFirstActivity = true
         }
 
         Logging.debug("ApplicationService.init: entryState=$entryState")
@@ -242,6 +236,15 @@ class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, On
         // (e.g. rotation). That stop skipped the decrement, so this replacement start must not
         // increment — otherwise the reference count climbs on every rotation and focus is never lost.
         val recreatedAfterConfigChange = isActivityChangingConfigurations
+
+        if (current == null && !recreatedAfterConfigChange) {
+            // No foreground activity was present: a cold start, or a warm start after the app was
+            // backgrounded. This first non-internal activity start is a foreground entry, so arm the
+            // first-activity flag. This forces wasInBackground true even when the notification module
+            // has already set entryState to NOTIFICATION_CLICK (which otherwise reads as foreground),
+            // ensuring onFocus fires. handleFocus preserves the NOTIFICATION_CLICK entry state.
+            nextResumeIsFirstActivity = true
+        }
 
         current = activity
 

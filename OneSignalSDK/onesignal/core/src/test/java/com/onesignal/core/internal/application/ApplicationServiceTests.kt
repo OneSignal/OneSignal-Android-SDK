@@ -345,6 +345,41 @@ class ApplicationServiceTests : FunSpec({
         applicationService.entryState shouldBe AppEntryAction.NOTIFICATION_CLICK
     }
 
+    test("warm start from notification fires focus after the app was backgrounded") {
+        // Given: an initialized, foregrounded app (SDK already started, so start() will not run again).
+        val firstController = Robolectric.buildActivity(Activity::class.java)
+        firstController.setup()
+        val firstActivity = firstController.get()
+
+        val notifController = Robolectric.buildActivity(Activity::class.java)
+        notifController.setup()
+        val notifActivity = notifController.get()
+
+        val handler = spyk<IApplicationLifecycleHandler>()
+        val applicationService = ApplicationService()
+
+        applicationService.start(firstActivity)
+        applicationService.addApplicationLifecycleHandler(handler)
+
+        // The app is backgrounded: focus is lost and current is cleared.
+        applicationService.onActivityPaused(firstActivity)
+        applicationService.onActivityStopped(firstActivity)
+
+        applicationService.current shouldBe null
+        verify(exactly = 1) { handler.onUnfocused() }
+
+        // When: the user taps a notification. The module classifies the entry before the host
+        // activity launches; no start() runs because the SDK is already initialized.
+        applicationService.entryState = AppEntryAction.NOTIFICATION_CLICK
+        applicationService.onActivityStarted(notifActivity)
+        applicationService.onActivityResumed(notifActivity)
+
+        // Then: focus fires again for the warm start and the notification entry state is preserved.
+        applicationService.current shouldBe notifActivity
+        applicationService.entryState shouldBe AppEntryAction.NOTIFICATION_CLICK
+        verify(exactly = 1) { handler.onFocus(false) }
+    }
+
     test("configuration change recreation does not inflate the reference count") {
         // Given
         val firstController = Robolectric.buildActivity(Activity::class.java)
