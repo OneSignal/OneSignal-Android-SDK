@@ -325,16 +325,20 @@ class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, On
 
         activityReferences = 0
 
-        if (!isInternal) {
+        if (!isInternal || current != null) {
+            // Either a real activity was the last counted one to stop, or a trampoline finished while
+            // a real host was still current. The latter happens on a foreground tap of a URL/
+            // suppressed notification: the open launches a browser (or nothing) instead of the host,
+            // so the host stops while the trampoline is on top (its decrement deferred) and current
+            // is never cleared. The app is genuinely backgrounded now, so drop focus.
             current = null
             handleLostFocus()
             return
         }
 
-        // The trampoline finished without a real activity ever taking focus (e.g. a URL
-        // notification that opens a browser and never launches the host). Reset a stale
-        // NOTIFICATION_CLICK so a later organic open is not mis-attributed, but do not fire
-        // onUnfocused — no focus was ever held.
+        // The trampoline ran without any real activity ever taking focus (e.g. a URL notification
+        // tapped from the background). Reset a stale NOTIFICATION_CLICK so a later organic open is
+        // not mis-attributed, but do not fire onUnfocused — no focus was ever held.
         if (entryState == AppEntryAction.NOTIFICATION_CLICK) {
             entryState = AppEntryAction.APP_CLOSE
         }

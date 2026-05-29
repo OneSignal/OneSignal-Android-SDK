@@ -363,6 +363,48 @@ class ApplicationServiceTests : FunSpec({
         verify(exactly = 1) { handler.onUnfocused() }
     }
 
+    test("foreground tap on a URL notification that opens a browser drops and restores focus") {
+        // Given: the host is foregrounded.
+        val hostController = Robolectric.buildActivity(Activity::class.java)
+        hostController.setup()
+        val host = hostController.get()
+
+        val trampolineController = Robolectric.buildActivity(InternalTrampolineActivity::class.java)
+        trampolineController.setup()
+        val trampoline = trampolineController.get()
+
+        val handler = spyk<IApplicationLifecycleHandler>()
+        val applicationService = ApplicationService()
+
+        applicationService.start(host)
+        applicationService.addApplicationLifecycleHandler(handler)
+
+        // When: a URL (or otherwise suppressed) notification is tapped while the host is foreground.
+        // The open launches a browser instead of the host, so no real activity is started: the host
+        // stops while the trampoline is on top, then the trampoline stops. The foreground guard kept
+        // the entry state at APP_OPEN (no NOTIFICATION_CLICK promotion).
+        applicationService.onActivityPaused(host)
+        applicationService.onActivityStarted(trampoline)
+        applicationService.onActivityResumed(trampoline)
+        applicationService.onActivityStopped(host)
+        applicationService.onActivityStopped(trampoline)
+
+        // Then: the app is recognized as backgrounded (browser is foreground) — focus is lost exactly
+        // once and current is cleared, rather than being left stale.
+        applicationService.current shouldBe null
+        verify(exactly = 1) { handler.onUnfocused() }
+
+        // When: the user returns from the browser to the host.
+        applicationService.onActivityStarted(host)
+        applicationService.onActivityResumed(host)
+
+        // Then: focus is restored — the host start is not swallowed by a stale current reference.
+        // (The initial foreground was delivered via addApplicationLifecycleHandler's onFocus(true)
+        // before the handler subscribed, so this return is the first onFocus(false) it observes.)
+        applicationService.current shouldBe host
+        verify(exactly = 1) { handler.onFocus(false) }
+    }
+
     test("stopping an activity whose start was never counted does not drop focus") {
         // Given
         val mainController = Robolectric.buildActivity(Activity::class.java)
