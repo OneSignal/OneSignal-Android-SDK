@@ -104,17 +104,6 @@ class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, On
     private val startedActivities: MutableSet<Activity> =
         Collections.synchronizedSet(Collections.newSetFromMap(WeakHashMap()))
 
-    /**
-     * Started SDK-internal activities ([OneSignalInternalActivity], e.g. notification-open
-     * trampolines). These are tracked separately from [startedActivities]: they never become
-     * [current], take focus, or change entry state, but while one is on top a real activity's stop
-     * is treated as transient (the trampoline often lives in its own task, briefly stopping the
-     * host that resumes once the trampoline finishes). Weak references so a forgotten activity is
-     * not retained.
-     */
-    private val startedInternalActivities: MutableSet<Activity> =
-        Collections.synchronizedSet(Collections.newSetFromMap(WeakHashMap()))
-
     /** True once the activity lifecycle observer has been registered with the [Application]. */
     private var lifecycleObserverInstalled = false
 
@@ -235,44 +224,43 @@ class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, On
     override fun onActivityStarted(activity: Activity) {
         Logging.debug("ApplicationService.onActivityStarted($activityReferences,$entryState): $activity")
 
-        if (activity is OneSignalInternalActivity) {
-            // A transient SDK activity (notification-open trampoline), frequently launched into its
-            // own task. Track it so a real activity's stop while it is on top can be treated as
-            // transient, but never let it become current, take focus, or change entry state — those
-            // are owned by real activities and the notification module.
-            startedInternalActivities.add(activity)
-            return
-        }
-
         if (current == activity) {
             return
         }
+
+        // SDK-internal activities (notification-open trampolines) are counted toward
+        // activityReferences so the count stays balanced (a trampoline often lives in its own task,
+        // briefly stopping the host), but they must never become current, take focus, or change
+        // entry state — those are owned by real activities and the notification module.
+        val isInternal = activity is OneSignalInternalActivity
 
         // Set by the preceding onActivityStopped when an activity is recreated for a config change
         // (e.g. rotation). That stop skipped the decrement, so this replacement start must not
         // increment — otherwise the reference count climbs on every rotation and focus is never lost.
         val recreatedAfterConfigChange = isActivityChangingConfigurations
 
-        if (current == null && !recreatedAfterConfigChange) {
+        if (!isInternal && current == null && !recreatedAfterConfigChange) {
             // No foreground activity was present: a cold start, or a warm start after the app was
-            // backgrounded. This first non-internal activity start is a foreground entry, so arm the
+            // backgrounded. This first real activity start is a foreground entry, so arm the
             // first-activity flag. This forces wasInBackground true even when the notification module
             // has already set entryState to NOTIFICATION_CLICK (which otherwise reads as foreground),
             // ensuring onFocus fires. handleFocus preserves the NOTIFICATION_CLICK entry state.
             nextResumeIsFirstActivity = true
         }
 
-        current = activity
+        if (!isInternal) {
+            current = activity
+        }
 
         val isNewlyStarted = startedActivities.add(activity)
 
-        if (wasInBackground && !isActivityChangingConfigurations) {
+        if (!isInternal && wasInBackground && !isActivityChangingConfigurations) {
             // Real entry into the foreground; re-baseline the counter against this activity.
             startedActivities.clear()
             startedActivities.add(activity)
             activityReferences = 1
             handleFocus()
-        } else if (recreatedAfterConfigChange) {
+        } else if (!isInternal && recreatedAfterConfigChange) {
             isActivityChangingConfigurations = false
         } else if (isNewlyStarted) {
             activityReferences++
@@ -310,36 +298,46 @@ class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, On
     override fun onActivityStopped(activity: Activity) {
         Logging.debug("ApplicationService.onActivityStopped($activityReferences,$entryState): $activity")
 
-        if (activity is OneSignalInternalActivity) {
-            startedInternalActivities.remove(activity)
-            // If the trampoline finished without a real activity ever becoming current (e.g. a URL
-            // notification that opens a browser and never launches the host), the notification
-            // module's NOTIFICATION_CLICK entry state would otherwise remain set and mis-attribute a
-            // later organic open. Clear it now that nothing is in the foreground.
-            if (startedInternalActivities.isEmpty() &&
-                current == null &&
-                entryState == AppEntryAction.NOTIFICATION_CLICK
-            ) {
-                entryState = AppEntryAction.APP_CLOSE
-            }
-        } else {
+        val isInternal = activity is OneSignalInternalActivity
+
+        if (!isInternal) {
             isActivityChangingConfigurations = activity.isChangingConfigurations
-            if (!isActivityChangingConfigurations && startedInternalActivities.isEmpty()) {
-                // Only decrement for an activity whose start we previously counted. A late-init SDK
-                // can observe a transient activity's stop without ever seeing its start; counting
-                // that would underflow the reference count and falsely drop app focus.
-                val wasCounted = startedActivities.remove(activity)
-                if (wasCounted && --activityReferences <= 0) {
-                    current = null
-                    activityReferences = 0
-                    handleLostFocus()
-                }
-            }
-            // When a trampoline is on top the host's stop is transient — it resumes once the
-            // trampoline finishes — so the reference count and focus are intentionally left intact.
+        }
+
+        if (isInternal || !isActivityChangingConfigurations) {
+            decrementStartedActivity(activity, isInternal)
         }
 
         activityLifecycleNotifier.fire { it.onActivityStopped(activity) }
+    }
+
+    private fun decrementStartedActivity(
+        activity: Activity,
+        isInternal: Boolean,
+    ) {
+        // Only decrement for an activity whose start we previously counted. A late-init SDK can
+        // observe a transient activity's stop without ever seeing its start; counting that would
+        // underflow the reference count and falsely drop app focus.
+        val wasCounted = startedActivities.remove(activity)
+        if (!wasCounted || --activityReferences > 0) {
+            return
+        }
+
+        activityReferences = 0
+
+        if (!isInternal) {
+            current = null
+            handleLostFocus()
+            return
+        }
+
+        // The trampoline finished without a real activity ever taking focus (e.g. a URL
+        // notification that opens a browser and never launches the host). Reset a stale
+        // NOTIFICATION_CLICK so a later organic open is not mis-attributed, but do not fire
+        // onUnfocused — no focus was ever held.
+        if (entryState == AppEntryAction.NOTIFICATION_CLICK) {
+            entryState = AppEntryAction.APP_CLOSE
+        }
     }
 
     override fun onActivitySaveInstanceState(

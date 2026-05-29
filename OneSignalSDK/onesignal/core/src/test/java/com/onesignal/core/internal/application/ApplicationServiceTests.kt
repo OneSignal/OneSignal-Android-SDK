@@ -316,11 +316,17 @@ class ApplicationServiceTests : FunSpec({
         applicationService.entryState shouldBe AppEntryAction.APP_CLOSE
     }
 
-    test("notification tap while the host is foregrounded does not drop focus or change entry state") {
+    test("notification tap while the host is foregrounded does not drop focus, and a later background still unfocuses") {
         // Given: the host is foregrounded.
         val hostController = Robolectric.buildActivity(Activity::class.java)
         hostController.setup()
         val host = hostController.get()
+
+        // The notification open launches a fresh host instance (the real Android behavior observed
+        // on device: the previous instance is stopped/destroyed and a new one is created).
+        val relaunchedHostController = Robolectric.buildActivity(Activity::class.java)
+        relaunchedHostController.setup()
+        val relaunchedHost = relaunchedHostController.get()
 
         val trampolineController = Robolectric.buildActivity(InternalTrampolineActivity::class.java)
         trampolineController.setup()
@@ -333,20 +339,28 @@ class ApplicationServiceTests : FunSpec({
         applicationService.addApplicationLifecycleHandler(handler)
 
         // When: a notification is tapped while the host is foreground. The trampoline launches in
-        // its own task, so the host stops while it is on top and resumes when it finishes.
+        // its own task, a new host instance starts, then the old host and the trampoline stop.
         applicationService.onActivityPaused(host)
         applicationService.onActivityStarted(trampoline)
         applicationService.onActivityResumed(trampoline)
+        applicationService.onActivityStarted(relaunchedHost)
+        applicationService.onActivityResumed(relaunchedHost)
         applicationService.onActivityStopped(host)
         applicationService.onActivityStopped(trampoline)
-        applicationService.onActivityStarted(host)
-        applicationService.onActivityResumed(host)
 
         // Then: no spurious unfocus/focus cycle, entry state stays APP_OPEN (the foreground tap is
-        // not a direct notification session), and the host remains current.
-        applicationService.current shouldBe host
+        // not a direct notification session), and the new host instance is current.
+        applicationService.current shouldBe relaunchedHost
         applicationService.entryState shouldBe AppEntryAction.APP_OPEN
         verify(exactly = 0) { handler.onUnfocused() }
+
+        // When: the app is genuinely backgrounded later, focus is lost exactly once — the trampoline
+        // counting did not leave a phantom reference that would suppress the real background.
+        applicationService.onActivityPaused(relaunchedHost)
+        applicationService.onActivityStopped(relaunchedHost)
+
+        applicationService.current shouldBe null
+        verify(exactly = 1) { handler.onUnfocused() }
     }
 
     test("stopping an activity whose start was never counted does not drop focus") {
