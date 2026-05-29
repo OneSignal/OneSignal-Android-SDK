@@ -22,11 +22,38 @@ import com.onesignal.core.internal.application.AppEntryAction
 import com.onesignal.core.internal.application.IActivityLifecycleHandler
 import com.onesignal.core.internal.application.IApplicationLifecycleHandler
 import com.onesignal.core.internal.application.IApplicationService
+import com.onesignal.core.internal.application.OneSignalInternalActivity
 import com.onesignal.debug.internal.logging.Logging
 import kotlinx.coroutines.delay
 import java.lang.ref.WeakReference
+import java.util.Collections
+import java.util.WeakHashMap
 
 class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, OnGlobalLayoutListener {
+    companion object {
+        @Volatile
+        private var sharedInstance: ApplicationService? = null
+
+        /**
+         * Process-wide instance shared between [ActivityLifecycleInitializer] (which registers
+         * lifecycle observation at process start) and dependency injection (which resolves the
+         * service later, during SDK init). Both must reference the same object so the activity
+         * lifecycle observed before init is visible to the running SDK.
+         */
+        fun getInstance(): ApplicationService =
+            sharedInstance ?: synchronized(this) {
+                sharedInstance ?: ApplicationService().also { sharedInstance = it }
+            }
+
+        /**
+         * The process-wide instance only if [ActivityLifecycleInitializer] already created one;
+         * never creates it. Dependency injection uses this so that when the startup initializer did
+         * not run (its provider was disabled, or unit tests), each SDK init gets its own instance
+         * rather than a leaked process-wide one.
+         */
+        fun getInstanceOrNull(): ApplicationService? = sharedInstance
+    }
+
     private val activityLifecycleNotifier = EventProducer<IActivityLifecycleHandler>()
     private val applicationLifecycleNotifier = EventProducer<IApplicationLifecycleHandler>()
     private val systemConditionNotifier = EventProducer<ISystemConditionHandler>()
@@ -67,8 +94,58 @@ class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, On
     private var activityReferences = 0
     private var isActivityChangingConfigurations = false
 
+    /**
+     * Activities whose [onActivityStarted] we have counted toward [activityReferences] and have not
+     * yet stopped. Stored as weak references so a forgotten activity cannot be retained by the SDK.
+     * Guards [onActivityStopped] from decrementing for an activity whose start was never observed,
+     * which happens when the SDK initializes late (after the first activity is already running) or
+     * when a transient trampoline stops without its start having been counted.
+     */
+    private val startedActivities: MutableSet<Activity> =
+        Collections.synchronizedSet(Collections.newSetFromMap(WeakHashMap()))
+
+    /** True once the activity lifecycle observer has been registered with the [Application]. */
+    private var lifecycleObserverInstalled = false
+
+    private val componentCallbacks =
+        object : ComponentCallbacks {
+            override fun onConfigurationChanged(newConfig: Configuration) {
+                // If Activity contains the configChanges orientation flag, re-create the view this way
+                if (current != null &&
+                    AndroidUtils.hasConfigChangeFlag(
+                        current!!,
+                        ActivityInfo.CONFIG_ORIENTATION,
+                    )
+                ) {
+                    onOrientationChanged(newConfig.orientation, current!!)
+                }
+            }
+
+            override fun onLowMemory() {}
+        }
+
     private val wasInBackground: Boolean
         get() = !isInForeground || nextResumeIsFirstActivity
+
+    /**
+     * Register activity lifecycle observation with the [Application]. Safe to call multiple times;
+     * only the first call registers. Invoked at process start by [ActivityLifecycleInitializer] so
+     * the SDK observes the first activity's full lifecycle regardless of when [start] is later
+     * called.
+     */
+    fun attachToApplication(application: Application) {
+        if (lifecycleObserverInstalled) {
+            return
+        }
+        lifecycleObserverInstalled = true
+
+        if (_appContext == null) {
+            _appContext = application
+        }
+
+        application.registerActivityLifecycleCallbacks(this)
+        application.registerComponentCallbacks(componentCallbacks)
+    }
 
     /**
      * Call to "start" this service, expected to be called during initialization of the SDK.
@@ -76,37 +153,34 @@ class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, On
      * @param context The context the SDK has been initialized under.
      */
     fun start(context: Context) {
+        val needsFallbackSeeding = !lifecycleObserverInstalled
+
+        // The runtime init context wins for appContext (callers, including tests, may pass a
+        // wrapping context). The pre-init observer only needs the Application for registration.
         _appContext = context
 
-        val application = context.applicationContext as Application
-        application.registerActivityLifecycleCallbacks(this)
+        attachToApplication(context.applicationContext as Application)
 
-        val configuration =
-            object : ComponentCallbacks {
-                override fun onConfigurationChanged(newConfig: Configuration) {
-                    // If Activity contains the configChanges orientation flag, re-create the view this way
-                    if (current != null &&
-                        AndroidUtils.hasConfigChangeFlag(
-                            current!!,
-                            ActivityInfo.CONFIG_ORIENTATION,
-                        )
-                    ) {
-                        onOrientationChanged(newConfig.orientation, current!!)
-                    }
-                }
+        if (needsFallbackSeeding) {
+            // The lifecycle observer was not installed at process start (e.g. the androidx.startup
+            // provider was disabled, or in unit tests). Seed focus state from the init context so
+            // late initialization still establishes the current activity and entry state.
+            seedFocusFromInitContext(context)
+        }
 
-                override fun onLowMemory() {}
-            }
+        Logging.debug("ApplicationService.init: entryState=$entryState")
+    }
 
-        application.registerComponentCallbacks(configuration)
-
+    private fun seedFocusFromInitContext(context: Context) {
         val isContextActivity = context is Activity
         val isCurrentActivityNull = current == null
 
         if (!isCurrentActivityNull || isContextActivity) {
             entryState = AppEntryAction.APP_OPEN
             if (isCurrentActivityNull && isContextActivity) {
-                current = context as Activity?
+                val activity = context as Activity
+                current = activity
+                startedActivities.add(activity)
                 activityReferences = 1
                 nextResumeIsFirstActivity = false
             }
@@ -114,8 +188,6 @@ class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, On
             nextResumeIsFirstActivity = true
             entryState = AppEntryAction.APP_CLOSE
         }
-
-        Logging.debug("ApplicationService.init: entryState=$entryState")
     }
 
     override fun addApplicationLifecycleHandler(handler: IApplicationLifecycleHandler) {
@@ -152,22 +224,35 @@ class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, On
     override fun onActivityStarted(activity: Activity) {
         Logging.debug("ApplicationService.onActivityStarted($activityReferences,$entryState): $activity")
 
+        if (activity is OneSignalInternalActivity) {
+            return
+        }
+
         if (current == activity) {
             return
         }
 
         current = activity
 
+        val isNewlyStarted = startedActivities.add(activity)
+
         if (wasInBackground && !isActivityChangingConfigurations) {
+            // Real entry into the foreground; re-baseline the counter against this activity.
+            startedActivities.clear()
+            startedActivities.add(activity)
             activityReferences = 1
             handleFocus()
-        } else {
+        } else if (isNewlyStarted) {
             activityReferences++
         }
     }
 
     override fun onActivityResumed(activity: Activity) {
         Logging.debug("ApplicationService.onActivityResumed($activityReferences,$entryState): $activity")
+
+        if (activity is OneSignalInternalActivity) {
+            return
+        }
 
         // When an activity has something shown above it, it will be paused allowing
         // the new activity to be started (where current is set).  However when that
@@ -179,6 +264,8 @@ class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, On
         }
 
         if (wasInBackground && !isActivityChangingConfigurations) {
+            startedActivities.clear()
+            startedActivities.add(activity)
             activityReferences = 1
             handleFocus()
         }
@@ -191,11 +278,19 @@ class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, On
     override fun onActivityStopped(activity: Activity) {
         Logging.debug("ApplicationService.onActivityStopped($activityReferences,$entryState): $activity")
 
-        isActivityChangingConfigurations = activity.isChangingConfigurations
-        if (!isActivityChangingConfigurations && --activityReferences <= 0) {
-            current = null
-            activityReferences = 0
-            handleLostFocus()
+        if (activity !is OneSignalInternalActivity) {
+            isActivityChangingConfigurations = activity.isChangingConfigurations
+            if (!isActivityChangingConfigurations) {
+                // Only decrement for an activity whose start we previously counted. A late-init SDK
+                // can observe a transient activity's stop without ever seeing its start; counting
+                // that would underflow the reference count and falsely drop app focus.
+                val wasCounted = startedActivities.remove(activity)
+                if (wasCounted && --activityReferences <= 0) {
+                    current = null
+                    activityReferences = 0
+                    handleLostFocus()
+                }
+            }
         }
 
         activityLifecycleNotifier.fire { it.onActivityStopped(activity) }

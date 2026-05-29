@@ -32,9 +32,16 @@ import android.os.Bundle
 import com.onesignal.OneSignal
 import com.onesignal.common.AndroidUtils
 import com.onesignal.common.threading.suspendifyOnDefault
+import com.onesignal.core.internal.application.OneSignalInternalActivity
 import com.onesignal.notifications.internal.open.INotificationOpenedProcessor
 
-abstract class NotificationOpenedActivityBase : Activity() {
+/**
+ * Base for the transient activities the SDK launches to handle a notification open. Implements
+ * [OneSignalInternalActivity] so it is excluded from app focus / foreground tracking.
+ */
+abstract class NotificationOpenedActivityBase :
+    Activity(),
+    OneSignalInternalActivity {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         processIntent()

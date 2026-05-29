@@ -31,6 +31,7 @@ import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
 import com.onesignal.common.threading.suspendifyOnDefault
+import com.onesignal.core.internal.application.OneSignalInternalActivity
 import com.onesignal.notifications.internal.open.INotificationOpenedProcessorHMS
 
 // HMS Core creates a notification with an Intent when opened to start this Activity.
@@ -55,7 +56,13 @@ import com.onesignal.notifications.internal.open.INotificationOpenedProcessorHMS
 //   Some developer want to process the click in the background without bring the app to the foreground.
 //   The launcher Activity is started in OneSignal.java:startOrResumeApp if the developer does want the app
 //     to be opened.
-class NotificationOpenedActivityHMS : Activity() {
+/**
+ * Transient activity HMS launches when a notification is opened. Implements
+ * [OneSignalInternalActivity] so it is excluded from app focus / foreground tracking.
+ */
+class NotificationOpenedActivityHMS :
+    Activity(),
+    OneSignalInternalActivity {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         processIntent()

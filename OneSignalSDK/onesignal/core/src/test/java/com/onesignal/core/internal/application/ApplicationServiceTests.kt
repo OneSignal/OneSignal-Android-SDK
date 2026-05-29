@@ -247,6 +247,69 @@ class ApplicationServiceTests : FunSpec({
         // Then
         response shouldBe true
     }
+
+    test("internal trampoline activity does not affect focus, current, or entry state") {
+        // Given
+        val mainController = Robolectric.buildActivity(Activity::class.java)
+        mainController.setup()
+        val mainActivity = mainController.get()
+
+        val trampolineController = Robolectric.buildActivity(InternalTrampolineActivity::class.java)
+        trampolineController.setup()
+        val trampoline = trampolineController.get()
+
+        val handler = spyk<IApplicationLifecycleHandler>()
+        val applicationService = ApplicationService()
+        applicationService.addApplicationLifecycleHandler(handler)
+
+        // Simulate late cold-start init from a non-activity context, with the notification
+        // module having classified entry as NOTIFICATION_CLICK.
+        val appContext = ApplicationProvider.getApplicationContext<Context>()
+        applicationService.start(appContext)
+        applicationService.entryState = AppEntryAction.NOTIFICATION_CLICK
+
+        // When: the trampoline runs its full lifecycle.
+        applicationService.onActivityStarted(trampoline)
+        applicationService.onActivityResumed(trampoline)
+        applicationService.onActivityStopped(trampoline)
+
+        // Then: it is fully ignored — entry state is preserved and no focus is taken.
+        applicationService.entryState shouldBe AppEntryAction.NOTIFICATION_CLICK
+        applicationService.current shouldBe null
+
+        // When: the real activity starts after the trampoline finishes.
+        applicationService.onActivityStarted(mainActivity)
+
+        // Then: focus is established but the NOTIFICATION_CLICK entry state is retained.
+        applicationService.current shouldBe mainActivity
+        applicationService.entryState shouldBe AppEntryAction.NOTIFICATION_CLICK
+        verify(exactly = 0) { handler.onUnfocused() }
+    }
+
+    test("stopping an activity whose start was never counted does not drop focus") {
+        // Given
+        val mainController = Robolectric.buildActivity(Activity::class.java)
+        mainController.setup()
+        val mainActivity = mainController.get()
+
+        val unseenController = Robolectric.buildActivity(Activity::class.java)
+        unseenController.setup()
+        val unseen = unseenController.get()
+
+        val handler = spyk<IApplicationLifecycleHandler>()
+        val applicationService = ApplicationService()
+        applicationService.addApplicationLifecycleHandler(handler)
+
+        // current is established for mainActivity, reference count is 1.
+        applicationService.start(mainActivity)
+
+        // When: an activity the SDK never observed starting now stops (late-init trampoline).
+        applicationService.onActivityStopped(unseen)
+
+        // Then: the reference count does not underflow and focus is retained.
+        applicationService.current shouldBe mainActivity
+        verify(exactly = 0) { handler.onUnfocused() }
+    }
 }) {
     companion object {
         fun pushActivity(
@@ -279,3 +342,8 @@ class ApplicationServiceTests : FunSpec({
         }
     }
 }
+
+/** Stands in for an SDK-internal trampoline (e.g. NotificationOpenedActivity) in tests. */
+class InternalTrampolineActivity :
+    Activity(),
+    OneSignalInternalActivity
