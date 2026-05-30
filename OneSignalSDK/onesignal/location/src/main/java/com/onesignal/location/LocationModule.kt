@@ -1,5 +1,6 @@
 package com.onesignal.location
 
+import com.onesignal.common.modules.IModule
 import com.onesignal.common.services.ServiceBuilder
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.background.IBackgroundService
@@ -19,7 +20,6 @@ import com.onesignal.location.internal.controller.impl.NullLocationController
 import com.onesignal.location.internal.permissions.LocationPermissionController
 import com.onesignal.location.internal.preferences.ILocationPreferencesService
 import com.onesignal.location.internal.preferences.impl.LocationPreferencesService
-import com.onesignalcommon.modules.IModule
 
 internal class LocationModule : IModule {
     override fun register(builder: ServiceBuilder) {
