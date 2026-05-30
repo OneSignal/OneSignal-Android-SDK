@@ -326,6 +326,11 @@ class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, On
         // underflow the reference count and falsely drop app focus.
         val wasCounted = startedActivities.remove(activity)
         if (!wasCounted || --activityReferences > 0) {
+            // An internal trampoline can reach onStop without its onStart ever being counted — e.g. a
+            // wrapper SDK that disabled the process-start initializer, so the trampoline started
+            // before the lifecycle observer attached. If it finishes with nothing in the foreground,
+            // the NOTIFICATION_CLICK reset below would otherwise be skipped, leaving entry state stale.
+            resetStaleNotificationEntryIfBackgrounded(isInternal)
             return
         }
 
@@ -342,10 +347,18 @@ class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, On
             return
         }
 
-        // The trampoline ran without any real activity ever taking focus (e.g. a URL notification
-        // tapped from the background). Reset a stale NOTIFICATION_CLICK so a later organic open is
-        // not mis-attributed, but do not fire onUnfocused — no focus was ever held.
-        if (entryState == AppEntryAction.NOTIFICATION_CLICK) {
+        resetStaleNotificationEntryIfBackgrounded(isInternal)
+    }
+
+    /**
+     * Reset a stale [AppEntryAction.NOTIFICATION_CLICK] left by an internal trampoline that finished
+     * without a real activity ever taking focus (e.g. a URL notification that opened a browser).
+     * Guarded on [current] being null so a foregrounded real activity is never affected. Does not
+     * fire onUnfocused — no focus was ever held — so a later organic open is not mis-attributed as a
+     * direct notification session.
+     */
+    private fun resetStaleNotificationEntryIfBackgrounded(isInternal: Boolean) {
+        if (isInternal && current == null && entryState == AppEntryAction.NOTIFICATION_CLICK) {
             entryState = AppEntryAction.APP_CLOSE
         }
     }

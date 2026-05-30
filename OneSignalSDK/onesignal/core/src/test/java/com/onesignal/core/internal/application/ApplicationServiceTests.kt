@@ -316,6 +316,33 @@ class ApplicationServiceTests : FunSpec({
         applicationService.entryState shouldBe AppEntryAction.APP_CLOSE
     }
 
+    test("trampoline stop without a counted start still clears stale notification entry state") {
+        // Given: a wrapper SDK disabled the process-start initializer, so a URL notification's
+        // trampoline started before the lifecycle observer attached — its onStart was never counted.
+        // The app is backgrounded (no current activity) and the open processor classified entry as
+        // NOTIFICATION_CLICK.
+        val trampolineController = Robolectric.buildActivity(InternalTrampolineActivity::class.java)
+        trampolineController.setup()
+        val trampoline = trampolineController.get()
+
+        val handler = spyk<IApplicationLifecycleHandler>()
+        val applicationService = ApplicationService()
+        applicationService.addApplicationLifecycleHandler(handler)
+
+        val appContext = ApplicationProvider.getApplicationContext<Context>()
+        applicationService.start(appContext)
+        applicationService.entryState = AppEntryAction.NOTIFICATION_CLICK
+
+        // When: only the trampoline's stop is observed (its start was missed, so it was never counted).
+        applicationService.onActivityStopped(trampoline)
+
+        // Then: the stale entry state is cleared despite the uncounted start, without firing
+        // onUnfocused (no focus was ever held).
+        applicationService.current shouldBe null
+        applicationService.entryState shouldBe AppEntryAction.APP_CLOSE
+        verify(exactly = 0) { handler.onUnfocused() }
+    }
+
     test("notification tap while the host is foregrounded does not drop focus, and a later background still unfocuses") {
         // Given: the host is foregrounded.
         val hostController = Robolectric.buildActivity(Activity::class.java)
