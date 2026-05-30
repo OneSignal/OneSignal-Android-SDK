@@ -215,6 +215,14 @@ object PreferenceOneSignalKeys {
      */
     const val PREFS_OS_USER_RESOLVED_PERMISSION_PREFIX = "USER_RESOLVED_PERMISSION_"
 
+    /**
+     * (Boolean) A prefix key recording that OneSignal has requested this permission at least
+     * once. Used to distinguish a never-requested permission from one the OS has already moved
+     * into the permanently-denied state, so the settings fallback can recover even when the
+     * exact rationale transition was never observed.
+     */
+    const val PREFS_OS_PROMPTED_PERMISSION_PREFIX = "PROMPTED_PERMISSION_"
+
     // HTTP
 
     /**
