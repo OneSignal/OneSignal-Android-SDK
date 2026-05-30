@@ -23,6 +23,7 @@ import androidx.compose.material3.Text
 import com.onesignal.example.ui.components.DemoAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
@@ -69,6 +70,10 @@ fun MainScreen(viewModel: MainViewModel) {
     val isLoading by viewModel.isLoading.observeAsState(false)
 
     var showTooltipDialog by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(Unit) {
+        viewModel.autoPromptPushOnce()
+    }
 
     val snackbarHostState = remember { SnackbarHostState() }
     val snackbarController = rememberSnackbarController(snackbarHostState)

@@ -592,6 +592,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
         }
     }
 
+    // Auto-prompt is fired from a LaunchedEffect that re-runs on every
+    // composition (rotation/theme/font-scale). Gate it to once per VM lifetime
+    // so config changes don't re-trigger the OS prompt or the SDK's settings
+    // prepompt while the manual `prompt_push_button` remains the fallback.
+    private var hasAutoPrompted = false
+    fun autoPromptPushOnce() {
+        if (hasAutoPrompted) return
+        hasAutoPrompted = true
+        promptPush()
+    }
+
     // In-App Messages
     fun setInAppMessagesPaused(paused: Boolean) {
         repository.setInAppMessagesPaused(paused)
