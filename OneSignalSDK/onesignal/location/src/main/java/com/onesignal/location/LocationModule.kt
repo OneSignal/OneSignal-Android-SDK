@@ -1,6 +1,5 @@
 package com.onesignal.location
 
-import com.onesignal.common.modules.IModule
 import com.onesignal.common.services.ServiceBuilder
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.background.IBackgroundService
@@ -20,34 +19,38 @@ import com.onesignal.location.internal.controller.impl.NullLocationController
 import com.onesignal.location.internal.permissions.LocationPermissionController
 import com.onesignal.location.internal.preferences.ILocationPreferencesService
 import com.onesignal.location.internal.preferences.impl.LocationPreferencesService
+import com.onesignalcommon.modules.IModule
 
 internal class LocationModule : IModule {
     override fun register(builder: ServiceBuilder) {
-        builder.register<LocationPermissionController>()
+        builder
+            .register<LocationPermissionController>()
             .provides<LocationPermissionController>()
             .provides<IStartableService>()
 
         builder.register<FusedLocationApiWrapperImpl>().provides<IFusedLocationApiWrapper>()
-        builder.register {
-            val deviceService = it.getService(IDeviceService::class.java)
-            val service =
-                if (deviceService.isAndroidDeviceType && LocationUtils.hasGMSLocationLibrary()) {
-                    GmsLocationController(
-                        it.getService(IApplicationService::class.java),
-                        it.getService(IFusedLocationApiWrapper::class.java),
-                    )
-                } else if (deviceService.isHuaweiDeviceType && LocationUtils.hasHMSLocationLibrary()) {
-                    HmsLocationController(it.getService(IApplicationService::class.java))
-                } else {
-                    NullLocationController()
-                }
-            return@register service
-        }.provides<ILocationController>()
+        builder
+            .register {
+                val deviceService = it.getService(IDeviceService::class.java)
+                val service =
+                    if (deviceService.isAndroidDeviceType && LocationUtils.hasGMSLocationLibrary()) {
+                        GmsLocationController(
+                            it.getService(IApplicationService::class.java),
+                            it.getService(IFusedLocationApiWrapper::class.java),
+                        )
+                    } else if (deviceService.isHuaweiDeviceType && LocationUtils.hasHMSLocationLibrary()) {
+                        HmsLocationController(it.getService(IApplicationService::class.java))
+                    } else {
+                        NullLocationController()
+                    }
+                return@register service
+            }.provides<ILocationController>()
 
         builder.register<LocationPreferencesService>().provides<ILocationPreferencesService>()
         builder.register<LocationCapturer>().provides<ILocationCapturer>()
         builder.register<LocationBackgroundService>().provides<IBackgroundService>()
-        builder.register<LocationManager>()
+        builder
+            .register<LocationManager>()
             .provides<ILocationManager>()
             .provides<IStartableService>()
     }
