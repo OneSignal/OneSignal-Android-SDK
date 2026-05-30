@@ -38,21 +38,10 @@ import com.onesignal.debug.internal.logging.Logging
  * A singleton helper which will display the fallback-to-settings alert dialog.
  */
 object AlertDialogPrepromptForAndroidSettings {
-    private var currentDialog: AlertDialog? = null
-
     interface Callback {
         fun onAccept()
 
         fun onDecline()
-    }
-
-    /**
-     * Dismiss the current dialog if it exists.
-     * This should be called when the Activity is destroyed to prevent WindowLeaked errors.
-     */
-    fun dismissCurrentDialog() {
-        currentDialog?.dismiss()
-        currentDialog = null
     }
 
     fun show(
@@ -79,26 +68,22 @@ object AlertDialogPrepromptForAndroidSettings {
 
         // Try displaying the dialog while handling cases where execution is not possible.
         try {
-            val dialog =
-                AlertDialog.Builder(activity)
-                    .setTitle(title)
-                    .setMessage(message)
-                    .setPositiveButton(R.string.permission_not_available_open_settings_option) { _, _ ->
-                        callback.onAccept()
-                    }
-                    .setNegativeButton(android.R.string.no) { _, _ ->
-                        callback.onDecline()
-                    }
-                    .setOnCancelListener {
-                        callback.onDecline()
-                    }
-                    .setOnDismissListener {
-                        currentDialog = null
-                        dismissCallback?.invoke()
-                    }
-                    .show()
-
-            currentDialog = dialog
+            AlertDialog.Builder(activity)
+                .setTitle(title)
+                .setMessage(message)
+                .setPositiveButton(R.string.permission_not_available_open_settings_option) { _, _ ->
+                    callback.onAccept()
+                }
+                .setNegativeButton(android.R.string.no) { _, _ ->
+                    callback.onDecline()
+                }
+                .setOnCancelListener {
+                    callback.onDecline()
+                }
+                .setOnDismissListener {
+                    dismissCallback?.invoke()
+                }
+                .show()
         } catch (ex: BadTokenException) {
             // If Android is unable to display the dialog, trigger the onDecline callback to maintain
             // consistency with the behavior when the dialog is canceled or dismissed without a response.
