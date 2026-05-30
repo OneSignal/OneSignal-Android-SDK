@@ -136,6 +136,15 @@ class PermissionsViewModel : ViewModel() {
                 } else {
                     showSettings = shouldShowSettings(permission, shouldShowRationaleAfter)
                 }
+
+                // Record that OneSignal has now requested this permission at least once. This
+                // must be persisted after shouldShowSettings() reads it so the recovery path
+                // only considers requests prior to the current one.
+                preferenceService.saveBool(
+                    PreferenceStores.ONESIGNAL,
+                    "${PreferenceOneSignalKeys.PREFS_OS_PROMPTED_PERMISSION_PREFIX}$permission",
+                    true,
+                )
             }
 
             // Execute the callback
@@ -189,28 +198,36 @@ class PermissionsViewModel : ViewModel() {
             return false
         }
 
+        val resolvedKey = "${PreferenceOneSignalKeys.PREFS_OS_USER_RESOLVED_PERMISSION_PREFIX}$permission"
+        val rationaleBefore = requestPermissionService.shouldShowRequestPermissionRationaleBeforeRequest
+
         // We want to show settings after the user has clicked "Don't Allow" 2 times.
         // After the first time shouldShowRequestPermissionRationale becomes true, after
         // the second time shouldShowRequestPermissionRationale becomes false again. We
         // look for the change from `true` -> `false`. When this happens we remember this
         // rejection, as the user will never be prompted again.
-        if (requestPermissionService.shouldShowRequestPermissionRationaleBeforeRequest) {
-            if (!shouldShowRationaleAfter) {
-                // The rationale changed from true -> false, meaning permanent denial
-                preferenceService.saveBool(
-                    PreferenceStores.ONESIGNAL,
-                    "${PreferenceOneSignalKeys.PREFS_OS_USER_RESOLVED_PERMISSION_PREFIX}$permission",
-                    true,
-                )
-                return false
-            }
+        if (rationaleBefore && !shouldShowRationaleAfter) {
+            preferenceService.saveBool(PreferenceStores.ONESIGNAL, resolvedKey, true)
+            return false
         }
 
-        return preferenceService.getBool(
-            PreferenceStores.ONESIGNAL,
-            "${PreferenceOneSignalKeys.PREFS_OS_USER_RESOLVED_PERMISSION_PREFIX}$permission",
-            false,
-        ) ?: false
+        // Recovery path for an already permanently-denied permission. If the OS won't surface
+        // its prompt (rationale is false before and after a denied request) but OneSignal has
+        // requested this permission before, the permission is permanently blocked even though
+        // we never witnessed the true -> false transition (e.g. it was denied across a prior
+        // session or outside OneSignal's flow). Remember it so the fallback is no longer stuck.
+        val hasPromptedBefore =
+            preferenceService.getBool(
+                PreferenceStores.ONESIGNAL,
+                "${PreferenceOneSignalKeys.PREFS_OS_PROMPTED_PERMISSION_PREFIX}$permission",
+                false,
+            ) ?: false
+        if (hasPromptedBefore && !rationaleBefore && !shouldShowRationaleAfter) {
+            preferenceService.saveBool(PreferenceStores.ONESIGNAL, resolvedKey, true)
+            return true
+        }
+
+        return preferenceService.getBool(PreferenceStores.ONESIGNAL, resolvedKey, false) ?: false
     }
 
     override fun onCleared() {
