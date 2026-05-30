@@ -509,6 +509,135 @@ class PermissionsViewModelTests : FunSpec({
         }
     }
 
+    test("onRequestPermissionsResult shows settings when permanently blocked and previously prompted") {
+        runTest {
+            // Given - permission is in the OS permanently-blocked state (rationale false before
+            // and after a denial) and OneSignal has requested it before, but the resolved-denial
+            // preference was never written (the true -> false transition was never observed).
+            val viewModel = PermissionsViewModel()
+            val activity = mockk<Activity>(relaxed = true)
+            val mockCallback = mockk<IRequestPermissionService.PermissionCallback>(relaxed = true)
+
+            coEvery { OneSignal.initWithContext(any()) } returns true
+            every { mockRequestService.getCallback(permissionType) } returns mockCallback
+            every { mockRequestService.fallbackToSettings } returns true
+            every { mockRequestService.shouldShowRequestPermissionRationaleBeforeRequest } returns false
+            every {
+                mockPrefService.getBool(
+                    PreferenceStores.ONESIGNAL,
+                    "${PreferenceOneSignalKeys.PREFS_OS_PROMPTED_PERMISSION_PREFIX}$androidPermission",
+                    false,
+                )
+            } returns true
+            every {
+                mockPrefService.getBool(
+                    PreferenceStores.ONESIGNAL,
+                    "${PreferenceOneSignalKeys.PREFS_OS_USER_RESOLVED_PERMISSION_PREFIX}$androidPermission",
+                    false,
+                )
+            } returns false
+
+            viewModel.initialize(activity, permissionType, androidPermission)
+
+            // When - permission is denied with rationale false both before and after
+            viewModel.onRequestPermissionsResult(
+                arrayOf(androidPermission),
+                intArrayOf(PackageManager.PERMISSION_DENIED),
+                false,
+            )
+
+            advanceTimeBy(callbackDelay)
+
+            // Then - the recovery path should route to settings and persist the denial
+            verify { mockCallback.onReject(true) }
+            verify {
+                mockPrefService.saveBool(
+                    PreferenceStores.ONESIGNAL,
+                    "${PreferenceOneSignalKeys.PREFS_OS_USER_RESOLVED_PERMISSION_PREFIX}$androidPermission",
+                    true,
+                )
+            }
+            viewModel.shouldFinish.first() shouldBe true
+        }
+    }
+
+    test("onRequestPermissionsResult does not show settings on first denial when never prompted before") {
+        runTest {
+            // Given - permission has never been requested before and there is no recorded denial
+            val viewModel = PermissionsViewModel()
+            val activity = mockk<Activity>(relaxed = true)
+            val mockCallback = mockk<IRequestPermissionService.PermissionCallback>(relaxed = true)
+
+            coEvery { OneSignal.initWithContext(any()) } returns true
+            every { mockRequestService.getCallback(permissionType) } returns mockCallback
+            every { mockRequestService.fallbackToSettings } returns true
+            every { mockRequestService.shouldShowRequestPermissionRationaleBeforeRequest } returns false
+            every {
+                mockPrefService.getBool(
+                    PreferenceStores.ONESIGNAL,
+                    "${PreferenceOneSignalKeys.PREFS_OS_PROMPTED_PERMISSION_PREFIX}$androidPermission",
+                    false,
+                )
+            } returns false
+            every {
+                mockPrefService.getBool(
+                    PreferenceStores.ONESIGNAL,
+                    "${PreferenceOneSignalKeys.PREFS_OS_USER_RESOLVED_PERMISSION_PREFIX}$androidPermission",
+                    false,
+                )
+            } returns false
+
+            viewModel.initialize(activity, permissionType, androidPermission)
+
+            // When - permission is denied with rationale false both before and after
+            viewModel.onRequestPermissionsResult(
+                arrayOf(androidPermission),
+                intArrayOf(PackageManager.PERMISSION_DENIED),
+                false,
+            )
+
+            advanceTimeBy(callbackDelay)
+
+            // Then - no settings fallback, since we cannot yet distinguish this from a
+            // never-requested permission
+            verify { mockCallback.onReject(false) }
+            viewModel.shouldFinish.first() shouldBe true
+        }
+    }
+
+    test("onRequestPermissionsResult records that the permission was prompted") {
+        runTest {
+            // Given - ViewModel is initialized
+            val viewModel = PermissionsViewModel()
+            val activity = mockk<Activity>(relaxed = true)
+            val mockCallback = mockk<IRequestPermissionService.PermissionCallback>(relaxed = true)
+
+            coEvery { OneSignal.initWithContext(any()) } returns true
+            every { mockRequestService.getCallback(permissionType) } returns mockCallback
+            every { mockRequestService.fallbackToSettings } returns false
+
+            viewModel.initialize(activity, permissionType, androidPermission)
+
+            // When - a permission request completes (denied)
+            viewModel.onRequestPermissionsResult(
+                arrayOf(androidPermission),
+                intArrayOf(PackageManager.PERMISSION_DENIED),
+                false,
+            )
+
+            advanceTimeBy(callbackDelay)
+
+            // Then - the prompted-before flag is persisted for the recovery path
+            verify {
+                mockPrefService.saveBool(
+                    PreferenceStores.ONESIGNAL,
+                    "${PreferenceOneSignalKeys.PREFS_OS_PROMPTED_PERMISSION_PREFIX}$androidPermission",
+                    true,
+                )
+            }
+        }
+    }
+
     test("onRequestPermissionsResult resets waiting state") {
         runTest {
             // Given - ViewModel is initialized and waiting
