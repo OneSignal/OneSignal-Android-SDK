@@ -199,13 +199,46 @@ internal class NotificationPermissionController(
 
     // Returns true if the dialog was shown or will be shown once a host activity is available
     private fun showFallbackAlertDialog(): Boolean {
+        fun present(activity: Activity) {
+            AlertDialogPrepromptForAndroidSettings.show(
+                activity,
+                activity.getString(R.string.notification_permission_name_for_title),
+                activity.getString(R.string.notification_permission_settings_message),
+                object : AlertDialogPrepromptForAndroidSettings.Callback {
+                    override fun onAccept() {
+                        // wait for focus to be regained, and check the current permission status.
+                        _applicationService.addApplicationLifecycleHandler(
+                            object : ApplicationLifecycleHandlerBase() {
+                                override fun onFocus(firedOnSubscribe: Boolean) {
+                                    // Triggered by subscribing, wait for lifecycle callback
+                                    if (firedOnSubscribe) {
+                                        return
+                                    }
+                                    super.onFocus(false)
+                                    _applicationService.removeApplicationLifecycleHandler(this)
+                                    val hasPermission = AndroidUtils.hasPermission(ANDROID_PERMISSION_STRING, true, _applicationService)
+                                    permissionPromptCompleted(hasPermission)
+                                }
+                            },
+                        )
+                        NavigateToAndroidSettingsForNotifications.show(activity)
+                    }
+
+                    override fun onDecline() {
+                        permissionPromptCompleted(false)
+                    }
+                },
+            )
+        }
+
         val current = _application.current
 
         // The PermissionsActivity that hosted the OS prompt finishes immediately after this
         // callback, and a dialog parented to it would be torn down with it. If it is still in
         // the foreground, wait for the host activity to return before showing the settings prompt.
         if (current != null && current !is PermissionsActivity) {
-            return showSettingsAlertDialog(current)
+            present(current)
+            return true
         }
 
         _application.addActivityLifecycleHandler(
@@ -215,44 +248,10 @@ internal class NotificationPermissionController(
                         return
                     }
                     _application.removeActivityLifecycleHandler(this)
-                    showSettingsAlertDialog(activity)
+                    present(activity)
                 }
 
                 override fun onActivityStopped(activity: Activity) {}
-            },
-        )
-        return true
-    }
-
-    // Returns true if dialog was shown
-    private fun showSettingsAlertDialog(activity: Activity): Boolean {
-        AlertDialogPrepromptForAndroidSettings.show(
-            activity,
-            activity.getString(R.string.notification_permission_name_for_title),
-            activity.getString(R.string.notification_permission_settings_message),
-            object : AlertDialogPrepromptForAndroidSettings.Callback {
-                override fun onAccept() {
-                    // wait for focus to be regained, and check the current permission status.
-                    _applicationService.addApplicationLifecycleHandler(
-                        object : ApplicationLifecycleHandlerBase() {
-                            override fun onFocus(firedOnSubscribe: Boolean) {
-                                // Triggered by subscribing, wait for lifecycle callback
-                                if (firedOnSubscribe) {
-                                    return
-                                }
-                                super.onFocus(false)
-                                _applicationService.removeApplicationLifecycleHandler(this)
-                                val hasPermission = AndroidUtils.hasPermission(ANDROID_PERMISSION_STRING, true, _applicationService)
-                                permissionPromptCompleted(hasPermission)
-                            }
-                        },
-                    )
-                    NavigateToAndroidSettingsForNotifications.show(activity)
-                }
-
-                override fun onDecline() {
-                    permissionPromptCompleted(false)
-                }
             },
         )
         return true
