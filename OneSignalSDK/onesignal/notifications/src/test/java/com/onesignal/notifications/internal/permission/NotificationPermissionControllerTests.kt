@@ -1,11 +1,15 @@
 package com.onesignal.notifications.internal.permission
 
+import android.app.Activity
 import androidx.test.core.app.ApplicationProvider
 import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
 import com.onesignal.common.threading.OneSignalDispatchers
 import com.onesignal.common.threading.runOnSerialIOIfBackgroundThreading
+import com.onesignal.core.activities.PermissionsActivity
+import com.onesignal.core.internal.application.IActivityLifecycleHandler
 import com.onesignal.core.internal.application.IApplicationLifecycleHandler
 import com.onesignal.core.internal.application.IApplicationService
+import com.onesignal.core.internal.permissions.AlertDialogPrepromptForAndroidSettings
 import com.onesignal.core.internal.permissions.IRequestPermissionService
 import com.onesignal.core.internal.preferences.IPreferencesService
 import com.onesignal.debug.LogLevel
@@ -22,6 +26,7 @@ import io.mockk.mockk
 import io.mockk.mockkObject
 import io.mockk.mockkStatic
 import io.mockk.runs
+import io.mockk.slot
 import io.mockk.unmockkObject
 import io.mockk.unmockkStatic
 import io.mockk.verify
@@ -123,6 +128,137 @@ class NotificationPermissionControllerTests : FunSpec({
         // Then
         // permissionChanged Event should not fire
         handlerFired shouldBe false
+    }
+
+    test("onReject with fallback waits for host activity before showing settings dialog") {
+        mockkObject(AlertDialogPrepromptForAndroidSettings)
+
+        try {
+            val mockRequestPermissionService = mockk<IRequestPermissionService>()
+            every { mockRequestPermissionService.registerAsCallback(any(), any()) } just runs
+            val mockPreferenceService = mockk<IPreferencesService>()
+            val activityHandlers = mutableListOf<IActivityLifecycleHandler>()
+            val mockAppService = mockk<IApplicationService>()
+            val permissionsActivity = mockk<PermissionsActivity>(relaxed = true)
+            val hostActivity = mockk<Activity>(relaxed = true)
+            val callbackSlot = slot<AlertDialogPrepromptForAndroidSettings.Callback>()
+
+            every { hostActivity.getString(any()) } returns "Notifications"
+            every { mockAppService.current } returns permissionsActivity
+            every { mockAppService.appContext } returns ApplicationProvider.getApplicationContext()
+            every { mockAppService.addApplicationLifecycleHandler(any()) } just runs
+            every { mockAppService.addActivityLifecycleHandler(any()) } answers {
+                activityHandlers.add(firstArg<IActivityLifecycleHandler>())
+            }
+            every { mockAppService.removeActivityLifecycleHandler(any()) } just runs
+            every {
+                AlertDialogPrepromptForAndroidSettings.show(
+                    hostActivity,
+                    any(),
+                    any(),
+                    capture(callbackSlot),
+                )
+            } just runs
+
+            var notificationPermissionChanged: Boolean? = null
+            val notificationPermissionController =
+                NotificationPermissionController(
+                    mockAppService,
+                    mockRequestPermissionService,
+                    mockAppService,
+                    mockPreferenceService,
+                    MockHelper.configModelStore(),
+                )
+            notificationPermissionController.subscribe(
+                object : INotificationPermissionChangedHandler {
+                    override fun onNotificationPermissionChanged(enabled: Boolean) {
+                        notificationPermissionChanged = enabled
+                    }
+                },
+            )
+
+            notificationPermissionController.onReject(true)
+
+            verify(exactly = 0) {
+                AlertDialogPrepromptForAndroidSettings.show(any<Activity>(), any(), any(), any())
+            }
+            activityHandlers.last().onActivityAvailable(permissionsActivity)
+            verify(exactly = 0) {
+                AlertDialogPrepromptForAndroidSettings.show(any<Activity>(), any(), any(), any())
+            }
+
+            activityHandlers.last().onActivityAvailable(hostActivity)
+
+            verify(exactly = 1) {
+                AlertDialogPrepromptForAndroidSettings.show(hostActivity, any(), any(), any())
+            }
+            verify(exactly = 1) { mockAppService.removeActivityLifecycleHandler(activityHandlers.last()) }
+            notificationPermissionChanged shouldBe null
+
+            callbackSlot.captured.onDecline()
+
+            notificationPermissionChanged shouldBe false
+        } finally {
+            unmockkObject(AlertDialogPrepromptForAndroidSettings)
+        }
+    }
+
+    test("onReject with fallback shows settings dialog immediately when a host activity is already foreground") {
+        mockkObject(AlertDialogPrepromptForAndroidSettings)
+
+        try {
+            val mockRequestPermissionService = mockk<IRequestPermissionService>()
+            every { mockRequestPermissionService.registerAsCallback(any(), any()) } just runs
+            val mockPreferenceService = mockk<IPreferencesService>()
+            val mockAppService = mockk<IApplicationService>()
+            val hostActivity = mockk<Activity>(relaxed = true)
+            val callbackSlot = slot<AlertDialogPrepromptForAndroidSettings.Callback>()
+
+            every { hostActivity.getString(any()) } returns "Notifications"
+            every { mockAppService.current } returns hostActivity
+            every { mockAppService.appContext } returns ApplicationProvider.getApplicationContext()
+            every { mockAppService.addApplicationLifecycleHandler(any()) } just runs
+            every {
+                AlertDialogPrepromptForAndroidSettings.show(
+                    hostActivity,
+                    any(),
+                    any(),
+                    capture(callbackSlot),
+                )
+            } just runs
+
+            var notificationPermissionChanged: Boolean? = null
+            val notificationPermissionController =
+                NotificationPermissionController(
+                    mockAppService,
+                    mockRequestPermissionService,
+                    mockAppService,
+                    mockPreferenceService,
+                    MockHelper.configModelStore(),
+                )
+            notificationPermissionController.subscribe(
+                object : INotificationPermissionChangedHandler {
+                    override fun onNotificationPermissionChanged(enabled: Boolean) {
+                        notificationPermissionChanged = enabled
+                    }
+                },
+            )
+
+            notificationPermissionController.onReject(true)
+
+            // No deferral: the dialog is shown right away on the foreground host activity.
+            verify(exactly = 0) { mockAppService.addActivityLifecycleHandler(any()) }
+            verify(exactly = 1) {
+                AlertDialogPrepromptForAndroidSettings.show(hostActivity, any(), any(), any())
+            }
+            notificationPermissionChanged shouldBe null
+
+            callbackSlot.captured.onDecline()
+
+            notificationPermissionChanged shouldBe false
+        } finally {
+            unmockkObject(AlertDialogPrepromptForAndroidSettings)
+        }
     }
 
     test("onFocus dispatches polling-interval update + waker through runOnSerialIOIfBackgroundThreading (SDK-4507)") {
