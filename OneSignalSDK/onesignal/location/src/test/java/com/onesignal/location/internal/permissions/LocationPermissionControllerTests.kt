@@ -202,6 +202,71 @@ class LocationPermissionControllerTests : FunSpec({
         }
     }
 
+    test("onReject with fallback waits for host activity when no activity is foreground") {
+        mockkObject(AlertDialogPrepromptForAndroidSettings)
+
+        try {
+            val mockRequestPermissionService = mockk<IRequestPermissionService>()
+            val activityHandlers = mutableListOf<IActivityLifecycleHandler>()
+            val mockAppService = mockk<IApplicationService>()
+            val hostActivity = mockk<Activity>(relaxed = true)
+            val callbackSlot = slot<AlertDialogPrepromptForAndroidSettings.Callback>()
+
+            every { hostActivity.getString(any()) } returns "Location"
+            every { mockAppService.current } returns null
+            every { mockAppService.appContext } returns ApplicationProvider.getApplicationContext()
+            every { mockAppService.addActivityLifecycleHandler(any()) } answers {
+                activityHandlers.add(firstArg<IActivityLifecycleHandler>())
+            }
+            every { mockAppService.removeActivityLifecycleHandler(any()) } just runs
+            every { mockAppService.addApplicationLifecycleHandler(any()) } just runs
+            every { mockAppService.removeApplicationLifecycleHandler(any()) } just runs
+            every {
+                AlertDialogPrepromptForAndroidSettings.show(
+                    hostActivity,
+                    any(),
+                    any(),
+                    capture(callbackSlot),
+                )
+            } just runs
+
+            var locationPermissionChanged: Boolean? = null
+            val locationPermissionController =
+                LocationPermissionController(
+                    mockRequestPermissionService,
+                    mockAppService,
+                )
+            locationPermissionController.subscribe(
+                object : ILocationPermissionChangedHandler {
+                    override fun onLocationPermissionChanged(enabled: Boolean) {
+                        locationPermissionChanged = enabled
+                    }
+                },
+            )
+
+            locationPermissionController.onReject(true)
+
+            verify(exactly = 1) { mockAppService.addActivityLifecycleHandler(any()) }
+            verify(exactly = 0) {
+                AlertDialogPrepromptForAndroidSettings.show(any<Activity>(), any(), any(), any())
+            }
+            locationPermissionChanged shouldBe null
+
+            activityHandlers.last().onActivityAvailable(hostActivity)
+
+            verify(exactly = 1) {
+                AlertDialogPrepromptForAndroidSettings.show(hostActivity, any(), any(), any())
+            }
+            verify(exactly = 1) { mockAppService.removeActivityLifecycleHandler(activityHandlers.last()) }
+
+            callbackSlot.captured.onDecline()
+
+            locationPermissionChanged shouldBe false
+        } finally {
+            unmockkObject(AlertDialogPrepromptForAndroidSettings)
+        }
+    }
+
     test("onReject with fallback shows settings dialog immediately when a host activity is already foreground") {
         mockkObject(AlertDialogPrepromptForAndroidSettings)
 
