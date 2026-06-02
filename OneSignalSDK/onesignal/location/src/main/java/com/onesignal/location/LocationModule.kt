@@ -23,31 +23,34 @@ import com.onesignal.location.internal.preferences.impl.LocationPreferencesServi
 
 internal class LocationModule : IModule {
     override fun register(builder: ServiceBuilder) {
-        builder.register<LocationPermissionController>()
+        builder
+            .register<LocationPermissionController>()
             .provides<LocationPermissionController>()
             .provides<IStartableService>()
 
         builder.register<FusedLocationApiWrapperImpl>().provides<IFusedLocationApiWrapper>()
-        builder.register {
-            val deviceService = it.getService(IDeviceService::class.java)
-            val service =
-                if (deviceService.isAndroidDeviceType && LocationUtils.hasGMSLocationLibrary()) {
-                    GmsLocationController(
-                        it.getService(IApplicationService::class.java),
-                        it.getService(IFusedLocationApiWrapper::class.java),
-                    )
-                } else if (deviceService.isHuaweiDeviceType && LocationUtils.hasHMSLocationLibrary()) {
-                    HmsLocationController(it.getService(IApplicationService::class.java))
-                } else {
-                    NullLocationController()
-                }
-            return@register service
-        }.provides<ILocationController>()
+        builder
+            .register {
+                val deviceService = it.getService(IDeviceService::class.java)
+                val service =
+                    if (deviceService.isAndroidDeviceType && LocationUtils.hasGMSLocationLibrary()) {
+                        GmsLocationController(
+                            it.getService(IApplicationService::class.java),
+                            it.getService(IFusedLocationApiWrapper::class.java),
+                        )
+                    } else if (deviceService.isHuaweiDeviceType && LocationUtils.hasHMSLocationLibrary()) {
+                        HmsLocationController(it.getService(IApplicationService::class.java))
+                    } else {
+                        NullLocationController()
+                    }
+                return@register service
+            }.provides<ILocationController>()
 
         builder.register<LocationPreferencesService>().provides<ILocationPreferencesService>()
         builder.register<LocationCapturer>().provides<ILocationCapturer>()
         builder.register<LocationBackgroundService>().provides<IBackgroundService>()
-        builder.register<LocationManager>()
+        builder
+            .register<LocationManager>()
             .provides<ILocationManager>()
             .provides<IStartableService>()
     }

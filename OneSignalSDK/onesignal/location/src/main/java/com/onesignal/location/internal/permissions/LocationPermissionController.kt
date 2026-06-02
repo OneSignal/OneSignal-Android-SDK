@@ -27,11 +27,14 @@
 
 package com.onesignal.location.internal.permissions
 
+import android.app.Activity
 import com.onesignal.common.AndroidUtils
 import com.onesignal.common.events.EventProducer
 import com.onesignal.common.events.IEventNotifier
 import com.onesignal.common.threading.WaiterWithValue
+import com.onesignal.core.activities.PermissionsActivity
 import com.onesignal.core.internal.application.ApplicationLifecycleHandlerBase
+import com.onesignal.core.internal.application.IActivityLifecycleHandler
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.permissions.AlertDialogPrepromptForAndroidSettings
 import com.onesignal.core.internal.permissions.IRequestPermissionService
@@ -96,37 +99,63 @@ internal class LocationPermissionController(
         }
     }
 
+    // Returns true if the dialog was shown or will be shown once a host activity is available
     private fun showFallbackAlertDialog(): Boolean {
-        val activity = _applicationService.current ?: return false
-        AlertDialogPrepromptForAndroidSettings.show(
-            activity,
-            activity.getString(R.string.location_permission_name_for_title),
-            activity.getString(R.string.location_permission_settings_message),
-            object : AlertDialogPrepromptForAndroidSettings.Callback {
-                override fun onAccept() {
-                    // wait for focus to be regained, and check the current permission status.
-                    _applicationService.addApplicationLifecycleHandler(
-                        object : ApplicationLifecycleHandlerBase() {
-                            override fun onFocus(firedOnSubscribe: Boolean) {
-                                // Triggered by subscribing, wait for lifecycle callback
-                                if (firedOnSubscribe) {
-                                    return
+        fun present(activity: Activity) {
+            AlertDialogPrepromptForAndroidSettings.show(
+                activity,
+                activity.getString(R.string.location_permission_name_for_title),
+                activity.getString(R.string.location_permission_settings_message),
+                object : AlertDialogPrepromptForAndroidSettings.Callback {
+                    override fun onAccept() {
+                        // wait for focus to be regained, and check the current permission status.
+                        _applicationService.addApplicationLifecycleHandler(
+                            object : ApplicationLifecycleHandlerBase() {
+                                override fun onFocus(firedOnSubscribe: Boolean) {
+                                    // Triggered by subscribing, wait for lifecycle callback
+                                    if (firedOnSubscribe) {
+                                        return
+                                    }
+                                    super.onFocus(false)
+                                    _applicationService.removeApplicationLifecycleHandler(this)
+                                    val hasPermission = AndroidUtils.hasPermission(currPermission, true, _applicationService)
+                                    waiter.wake(hasPermission)
+                                    events.fire { it.onLocationPermissionChanged(hasPermission) }
                                 }
-                                super.onFocus(false)
-                                _applicationService.removeApplicationLifecycleHandler(this)
-                                val hasPermission = AndroidUtils.hasPermission(currPermission, true, _applicationService)
-                                waiter.wake(hasPermission)
-                                events.fire { it.onLocationPermissionChanged(hasPermission) }
-                            }
-                        },
-                    )
-                    NavigateToAndroidSettingsForLocation.show(activity)
+                            },
+                        )
+                        NavigateToAndroidSettingsForLocation.show(activity)
+                    }
+
+                    override fun onDecline() {
+                        waiter.wake(false)
+                        events.fire { it.onLocationPermissionChanged(false) }
+                    }
+                },
+            )
+        }
+
+        val current = _applicationService.current
+
+        // The PermissionsActivity that hosted the OS prompt finishes immediately after this
+        // callback, and a dialog parented to it would be torn down with it. If it is still in
+        // the foreground, wait for the host activity to return before showing the settings prompt.
+        if (current != null && current !is PermissionsActivity) {
+            present(current)
+            return true
+        }
+
+        _applicationService.addActivityLifecycleHandler(
+            object : IActivityLifecycleHandler {
+                override fun onActivityAvailable(activity: Activity) {
+                    if (activity is PermissionsActivity) {
+                        return
+                    }
+                    _applicationService.removeActivityLifecycleHandler(this)
+                    present(activity)
                 }
 
-                override fun onDecline() {
-                    waiter.wake(false)
-                    events.fire { it.onLocationPermissionChanged(false) }
-                }
+                override fun onActivityStopped(activity: Activity) {}
             },
         )
         return true
