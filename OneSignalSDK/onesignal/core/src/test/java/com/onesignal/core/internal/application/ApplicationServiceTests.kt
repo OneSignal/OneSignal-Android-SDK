@@ -401,10 +401,12 @@ class ApplicationServiceTests : FunSpec({
         val trampoline = trampolineController.get()
 
         val handler = spyk<IApplicationLifecycleHandler>()
+        val activityHandler = spyk<IActivityLifecycleHandler>()
         val applicationService = ApplicationService()
 
         applicationService.start(host)
         applicationService.addApplicationLifecycleHandler(handler)
+        applicationService.addActivityLifecycleHandler(activityHandler)
 
         // When: a notification tap resumes the SAME host instance (launcher-style open intent:
         // NEW_TASK | RESET_TASK_IF_NEEDED). The real Android ordering: the host stops while the
@@ -422,6 +424,7 @@ class ApplicationServiceTests : FunSpec({
         applicationService.current shouldBe host
         applicationService.entryState shouldBe AppEntryAction.APP_OPEN
         verify(exactly = 0) { handler.onUnfocused() }
+        verify(exactly = 1) { activityHandler.onActivityAvailable(host) }
 
         // When: the app is genuinely backgrounded later, focus is lost exactly once — the host stop is
         // counted rather than skipped as !wasCounted.

@@ -254,7 +254,7 @@ class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, On
             nextResumeIsFirstActivity = true
         }
 
-        if (!isInternal) {
+        if (!isInternal && current != activity) {
             current = activity
         }
 
