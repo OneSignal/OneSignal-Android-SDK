@@ -56,7 +56,11 @@ internal class CoreModule : IModule {
             .provides<IStartableService>()
         builder.register<HttpConnectionFactory>().provides<IHttpConnectionFactory>()
         builder.register<HttpClient>().provides<IHttpClient>()
-        builder.register<ApplicationService>().provides<IApplicationService>()
+        // Reuse the process-wide instance shared with ActivityLifecycleInitializer (so the activity
+        // lifecycle observed before SDK init is visible) when the startup initializer ran; otherwise
+        // create a fresh instance for this init.
+        builder.register { ApplicationService.getInstanceOrNull() ?: ApplicationService() }
+            .provides<IApplicationService>()
         builder.register<DeviceService>().provides<IDeviceService>()
         builder.register<Time>().provides<ITime>()
         builder.register<DatabaseProvider>().provides<IDatabaseProvider>()

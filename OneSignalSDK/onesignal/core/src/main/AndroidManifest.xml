@@ -25,6 +25,19 @@
         <activity android:name="com.onesignal.core.activities.PermissionsActivity"
                   android:theme="@android:style/Theme.Translucent.NoTitleBar"
                   android:exported="false" />
+
+        <!-- Observe the activity lifecycle from process start so late SDK init (wrapper SDKs)
+             still sees the first activity's full lifecycle. Merges into the app's androidx.startup
+             provider; hosts that disable it fall back to lifecycle registration at init time. -->
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:authorities="${applicationId}.androidx-startup"
+            android:exported="false"
+            tools:node="merge">
+            <meta-data
+                android:name="com.onesignal.core.internal.application.impl.ActivityLifecycleInitializer"
+                android:value="androidx.startup" />
+        </provider>
     </application>
 
     <!-- NOTE: See release version for tags with placeholders -->
