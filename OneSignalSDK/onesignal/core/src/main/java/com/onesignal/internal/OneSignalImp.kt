@@ -28,9 +28,14 @@ import com.onesignal.debug.IDebugManager
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.DebugManager
 import com.onesignal.debug.internal.logging.Logging
+import com.onesignal.inAppMessages.IInAppMessageClickListener
+import com.onesignal.inAppMessages.IInAppMessageLifecycleListener
 import com.onesignal.inAppMessages.IInAppMessagesManager
 import com.onesignal.location.ILocationManager
+import com.onesignal.notifications.INotificationClickListener
+import com.onesignal.notifications.INotificationLifecycleListener
 import com.onesignal.notifications.INotificationsManager
+import com.onesignal.notifications.IPermissionObserver
 import com.onesignal.session.ISessionManager
 import com.onesignal.session.SessionModule
 import com.onesignal.user.IUserManager
@@ -43,6 +48,9 @@ import com.onesignal.user.internal.jwt.JwtTokenStore
 import com.onesignal.user.internal.properties.PropertiesModelStore
 import com.onesignal.user.internal.resolveAppId
 import com.onesignal.user.internal.subscriptions.SubscriptionModelStore
+import com.onesignal.user.state.IUserStateObserver
+import com.onesignal.user.subscriptions.IPushSubscription
+import com.onesignal.user.subscriptions.IPushSubscriptionObserver
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -123,23 +131,23 @@ internal class OneSignalImp(
 
     override val session: ISessionManager
         get() =
-            getServiceWithFeatureGate { services.getService() }
+            getServiceWithFeatureGate(deferredSessionManager) { services.getService() }
 
     override val notifications: INotificationsManager
         get() =
-            getServiceWithFeatureGate { services.getService() }
+            getServiceWithFeatureGate(deferredNotificationsManager) { services.getService() }
 
     override val location: ILocationManager
         get() =
-            getServiceWithFeatureGate { services.getService() }
+            getServiceWithFeatureGate(deferredLocationManager) { services.getService() }
 
     override val inAppMessages: IInAppMessagesManager
         get() =
-            getServiceWithFeatureGate { services.getService() }
+            getServiceWithFeatureGate(deferredInAppMessagesManager) { services.getService() }
 
     override val user: IUserManager
         get() =
-            getServiceWithFeatureGate { services.getService() }
+            getServiceWithFeatureGate(deferredUserManager) { services.getService() }
 
     // Services required by this class
     // WARNING: OperationRepo depends on OperationModelStore which in-turn depends
@@ -205,6 +213,12 @@ internal class OneSignalImp(
     private val initLock: Any = Any()
     private val loginLogoutLock: Any = Any()
     private val applicationServiceLock: Any = Any()
+    private val deferredNotificationsManager = DeferredNotificationsManager()
+    private val deferredInAppMessagesManager = DeferredInAppMessagesManager()
+    private val deferredUserManager = DeferredUserManager()
+    private val deferredPushSubscription = DeferredPushSubscription()
+    private val deferredSessionManager = DeferredSessionManager()
+    private val deferredLocationManager = DeferredLocationManager()
 
     @Volatile
     private var applicationServiceStarted: Boolean = false
@@ -651,6 +665,7 @@ internal class OneSignalImp(
      *
      * @param operationName Optional operation name to include in error messages (e.g., "login", "logout")
      */
+    @Suppress("LongMethod", "ThrowsCount")
     private suspend fun waitUntilInitInternal(operationName: String? = null) {
         // Local-capture state + deferred under initLock so we await on the same generation
         // we observed (a concurrent retry-after-FAILED can replace `suspendCompletion`).
@@ -724,7 +739,40 @@ internal class OneSignalImp(
         return getter()
     }
 
-    private fun <T> getServiceWithFeatureGate(getter: () -> T): T {
+    @Suppress("TooGenericExceptionCaught")
+    private fun shouldUseDeferredMainThreadAccess(): Boolean {
+        if (initState != InitState.IN_PROGRESS) return false
+        return try {
+            AndroidUtils.isRunningOnMainThread()
+        } catch (e: RuntimeException) {
+            Logging.debug("Could not determine main-thread status for deferred accessor: ${e.message}")
+            false
+        }
+    }
+
+    @Suppress("TooGenericExceptionCaught")
+    private fun enqueueAfterInit(
+        operationName: String,
+        block: () -> Unit,
+    ) {
+        OneSignalDispatchers.launchOnSerialIO {
+            try {
+                suspendUntilInit(operationName)
+                block()
+            } catch (e: Exception) {
+                Logging.error("OneSignal: deferred '$operationName' failed after initialization.", e)
+            }
+        }
+    }
+
+    @Suppress("ReturnCount")
+    private fun <T> getServiceWithFeatureGate(
+        deferredMainThreadValue: T,
+        getter: () -> T,
+    ): T {
+        if (shouldUseDeferredMainThreadAccess()) {
+            return deferredMainThreadValue
+        }
         if (isBackgroundThreadingEnabled) {
             return waitAndReturn(getter)
         }
@@ -746,6 +794,200 @@ internal class OneSignalImp(
             InitState.NOT_STARTED -> {
                 throw IllegalStateException("Must call 'initWithContext' before use")
             }
+        }
+    }
+
+    private inner class DeferredNotificationsManager : INotificationsManager {
+        override val permission: Boolean
+            get() = false
+
+        override val canRequestPermission: Boolean
+            get() = false
+
+        override suspend fun requestPermission(fallbackToSettings: Boolean): Boolean {
+            suspendUntilInit("requestPermission")
+            return notifications.requestPermission(fallbackToSettings)
+        }
+
+        override fun removeNotification(id: Int) =
+            enqueueAfterInit("removeNotification") { notifications.removeNotification(id) }
+
+        override fun removeGroupedNotifications(group: String) =
+            enqueueAfterInit("removeGroupedNotifications") { notifications.removeGroupedNotifications(group) }
+
+        override fun clearAllNotifications() =
+            enqueueAfterInit("clearAllNotifications") { notifications.clearAllNotifications() }
+
+        override fun addPermissionObserver(observer: IPermissionObserver) =
+            enqueueAfterInit("addPermissionObserver") { notifications.addPermissionObserver(observer) }
+
+        override fun removePermissionObserver(observer: IPermissionObserver) =
+            enqueueAfterInit("removePermissionObserver") { notifications.removePermissionObserver(observer) }
+
+        override fun addForegroundLifecycleListener(listener: INotificationLifecycleListener) =
+            enqueueAfterInit("addForegroundLifecycleListener") { notifications.addForegroundLifecycleListener(listener) }
+
+        override fun removeForegroundLifecycleListener(listener: INotificationLifecycleListener) =
+            enqueueAfterInit("removeForegroundLifecycleListener") { notifications.removeForegroundLifecycleListener(listener) }
+
+        override fun addClickListener(listener: INotificationClickListener) =
+            enqueueAfterInit("addClickListener") { notifications.addClickListener(listener) }
+
+        override fun removeClickListener(listener: INotificationClickListener) =
+            enqueueAfterInit("removeClickListener") { notifications.removeClickListener(listener) }
+    }
+
+    private inner class DeferredInAppMessagesManager : IInAppMessagesManager {
+        override var paused: Boolean
+            get() = false
+            set(value) {
+                enqueueAfterInit("setInAppMessagesPaused") { inAppMessages.paused = value }
+            }
+
+        override fun addTrigger(
+            key: String,
+            value: String,
+        ) = enqueueAfterInit("addTrigger") { inAppMessages.addTrigger(key, value) }
+
+        override fun addTriggers(triggers: Map<String, String>) =
+            enqueueAfterInit("addTriggers") { inAppMessages.addTriggers(triggers) }
+
+        override fun removeTrigger(key: String) =
+            enqueueAfterInit("removeTrigger") { inAppMessages.removeTrigger(key) }
+
+        override fun removeTriggers(keys: Collection<String>) =
+            enqueueAfterInit("removeTriggers") { inAppMessages.removeTriggers(keys) }
+
+        override fun clearTriggers() =
+            enqueueAfterInit("clearTriggers") { inAppMessages.clearTriggers() }
+
+        override fun addLifecycleListener(listener: IInAppMessageLifecycleListener) =
+            enqueueAfterInit("addInAppMessageLifecycleListener") { inAppMessages.addLifecycleListener(listener) }
+
+        override fun removeLifecycleListener(listener: IInAppMessageLifecycleListener) =
+            enqueueAfterInit("removeInAppMessageLifecycleListener") { inAppMessages.removeLifecycleListener(listener) }
+
+        override fun addClickListener(listener: IInAppMessageClickListener) =
+            enqueueAfterInit("addInAppMessageClickListener") { inAppMessages.addClickListener(listener) }
+
+        override fun removeClickListener(listener: IInAppMessageClickListener) =
+            enqueueAfterInit("removeInAppMessageClickListener") { inAppMessages.removeClickListener(listener) }
+    }
+
+    @Suppress("TooManyFunctions")
+    private inner class DeferredUserManager : IUserManager {
+        override val pushSubscription: IPushSubscription
+            get() = deferredPushSubscription
+
+        override val onesignalId: String
+            get() = ""
+
+        override val externalId: String
+            get() = ""
+
+        override fun setLanguage(value: String) =
+            enqueueAfterInit("setLanguage") { user.setLanguage(value) }
+
+        override fun addAlias(
+            label: String,
+            id: String,
+        ) = enqueueAfterInit("addAlias") { user.addAlias(label, id) }
+
+        override fun addAliases(aliases: Map<String, String>) =
+            enqueueAfterInit("addAliases") { user.addAliases(aliases) }
+
+        override fun removeAlias(label: String) =
+            enqueueAfterInit("removeAlias") { user.removeAlias(label) }
+
+        override fun removeAliases(labels: Collection<String>) =
+            enqueueAfterInit("removeAliases") { user.removeAliases(labels) }
+
+        override fun addEmail(email: String) =
+            enqueueAfterInit("addEmail") { user.addEmail(email) }
+
+        override fun removeEmail(email: String) =
+            enqueueAfterInit("removeEmail") { user.removeEmail(email) }
+
+        override fun addSms(sms: String) =
+            enqueueAfterInit("addSms") { user.addSms(sms) }
+
+        override fun removeSms(sms: String) =
+            enqueueAfterInit("removeSms") { user.removeSms(sms) }
+
+        override fun addTag(
+            key: String,
+            value: String,
+        ) = enqueueAfterInit("addTag") { user.addTag(key, value) }
+
+        override fun addTags(tags: Map<String, String>) =
+            enqueueAfterInit("addTags") { user.addTags(tags) }
+
+        override fun removeTag(key: String) =
+            enqueueAfterInit("removeTag") { user.removeTag(key) }
+
+        override fun removeTags(keys: Collection<String>) =
+            enqueueAfterInit("removeTags") { user.removeTags(keys) }
+
+        override fun getTags(): Map<String, String> = emptyMap()
+
+        override fun addObserver(observer: IUserStateObserver) =
+            enqueueAfterInit("addUserObserver") { user.addObserver(observer) }
+
+        override fun removeObserver(observer: IUserStateObserver) =
+            enqueueAfterInit("removeUserObserver") { user.removeObserver(observer) }
+
+        override fun trackEvent(
+            name: String,
+            properties: Map<String, Any?>?,
+        ) = enqueueAfterInit("trackEvent") { user.trackEvent(name, properties) }
+    }
+
+    private inner class DeferredPushSubscription : IPushSubscription {
+        override val id: String
+            get() = ""
+
+        override val token: String
+            get() = ""
+
+        override val optedIn: Boolean
+            get() = false
+
+        override fun optIn() =
+            enqueueAfterInit("pushSubscriptionOptIn") { user.pushSubscription.optIn() }
+
+        override fun optOut() =
+            enqueueAfterInit("pushSubscriptionOptOut") { user.pushSubscription.optOut() }
+
+        override fun addObserver(observer: IPushSubscriptionObserver) =
+            enqueueAfterInit("addPushSubscriptionObserver") { user.pushSubscription.addObserver(observer) }
+
+        override fun removeObserver(observer: IPushSubscriptionObserver) =
+            enqueueAfterInit("removePushSubscriptionObserver") { user.pushSubscription.removeObserver(observer) }
+    }
+
+    private inner class DeferredSessionManager : ISessionManager {
+        override fun addOutcome(name: String) =
+            enqueueAfterInit("addOutcome") { session.addOutcome(name) }
+
+        override fun addUniqueOutcome(name: String) =
+            enqueueAfterInit("addUniqueOutcome") { session.addUniqueOutcome(name) }
+
+        override fun addOutcomeWithValue(
+            name: String,
+            value: Float,
+        ) = enqueueAfterInit("addOutcomeWithValue") { session.addOutcomeWithValue(name, value) }
+    }
+
+    private inner class DeferredLocationManager : ILocationManager {
+        override var isShared: Boolean
+            get() = false
+            set(value) {
+                enqueueAfterInit("setLocationShared") { location.isShared = value }
+            }
+
+        override suspend fun requestPermission(): Boolean {
+            suspendUntilInit("requestLocationPermission")
+            return location.requestPermission()
         }
     }
 

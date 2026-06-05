@@ -8,17 +8,19 @@ import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
 import com.onesignal.common.AndroidUtils
 import com.onesignal.common.threading.ThreadingMode
 import com.onesignal.core.internal.preferences.PreferenceOneSignalKeys.PREFS_LEGACY_APP_ID
-import com.onesignal.debug.ILogListener
 import com.onesignal.debug.LogLevel
-import com.onesignal.debug.OneSignalLogEvent
 import com.onesignal.debug.internal.logging.Logging
+import com.onesignal.inAppMessages.IInAppMessageLifecycleListener
 import com.onesignal.internal.OneSignalImp
+import com.onesignal.notifications.IPermissionObserver
+import com.onesignal.user.subscriptions.IPushSubscriptionObserver
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.maps.shouldContain
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.mockk.every
+import io.mockk.mockk
 import io.mockk.mockkObject
 import io.mockk.unmockkObject
 import kotlinx.coroutines.Dispatchers
@@ -519,67 +521,101 @@ class SDKInitTests : FunSpec({
         waitForInitialization(os)
     }
 
-    test("legacy mode logs guidance when accessor on main thread blocks during in-progress init") {
-        // Given (FF-off): initWithContext on a background thread is parked inside
-        // runBlocking { internalInit } waiting on shared-prefs access. A *concurrent* call on
-        // the main thread (mocked) — accessor or login/logout — falls into the IN_PROGRESS
-        // branch of getServiceWithFeatureGate / requireInitForOperation and would block on
-        // runBlocking { suspendCompletion.await() }. Before that block, warnIfBlockingOnMainThread
-        // logs a warning so the ANR-risk shape is visible. The common case (init + accessor on
-        // the same thread) doesn't hit this — initWithContext blocks the caller, so by the time
-        // any accessor runs init is already SUCCESS or FAILED.
+    test("main-thread accessors do not block while initialization is in progress") {
         val trigger = CountDownLatch(1)
         val context = getApplicationContext<Context>()
         val blockingPrefContext = BlockingPrefsContext(context, trigger)
         val os = OneSignalImp()
-        val warnings = mutableListOf<String>()
-        val listener =
-            ILogListener { event: OneSignalLogEvent ->
-                if (event.level == LogLevel.WARN) warnings.add(event.entry)
-            }
 
         mockkObject(AndroidUtils)
         every { AndroidUtils.isAndroidUserUnlocked(any()) } returns true
         every { AndroidUtils.isRunningOnMainThread() } returns true
 
-        os.debug.addLogListener(listener)
         try {
-            // initWithContext runs on a background thread under FF-off so it doesn't block this
-            // test thread; it parks inside runBlocking on BlockingPrefsContext.unblockTrigger.
             val initThread =
                 Thread {
                     os.initWithContext(blockingPrefContext, "appId")
                 }
             initThread.start()
-            // Give the init thread time to enter runBlocking and stall on the prefs read.
             Thread.sleep(100)
             os.isInitialized shouldBe false
 
-            // Concurrent accessor on a "main" thread (isRunningOnMainThread mocked to true) hits
-            // the IN_PROGRESS branch and the warning fires.
             val accessorThread =
                 Thread {
-                    runCatching { os.user.onesignalId }
+                    val notifications = os.notifications
+                    notifications.permission shouldBe false
+                    notifications.addPermissionObserver(mockk<IPermissionObserver>(relaxed = true))
+                    runBlocking {
+                        withTimeoutOrNull(200) {
+                            notifications.requestPermission(fallbackToSettings = false)
+                        } shouldBe null
+                    }
+
+                    val inAppMessages = os.inAppMessages
+                    inAppMessages.paused shouldBe false
+                    inAppMessages.addLifecycleListener(mockk<IInAppMessageLifecycleListener>(relaxed = true))
+
+                    val user = os.user
+                    user.onesignalId shouldBe ""
+                    user.addTags(mapOf("early" to "tag"))
+                    user.pushSubscription.addObserver(mockk<IPushSubscriptionObserver>(relaxed = true))
                 }
             accessorThread.start()
-            // Let warnIfBlockingOnMainThread log before we tear down.
-            Thread.sleep(100)
 
-            // Release prefs so init + accessor unwind cleanly.
-            trigger.countDown()
-            initThread.join(2_000)
-            accessorThread.join(2_000)
-            initThread.isAlive shouldBe false
+            accessorThread.join(500)
             accessorThread.isAlive shouldBe false
 
-            // Then: a warning must have been emitted with actionable guidance.
-            val match = warnings.firstOrNull { it.contains("OneSignal initialization is still in progress") }
-            match shouldNotBe null
-            (match!!.contains("main thread")) shouldBe true
-            (match.contains("suspend API")) shouldBe true
+            trigger.countDown()
+            initThread.join(2_000)
+            initThread.isAlive shouldBe false
         } finally {
-            os.debug.removeLogListener(listener)
-            // Ensure any waiter is released even if assertions failed early.
+            if (trigger.count > 0) trigger.countDown()
+            unmockkObject(AndroidUtils)
+        }
+    }
+
+    test("main-thread user mutations during in-progress init replay after initialization") {
+        val trigger = CountDownLatch(1)
+        val context = getApplicationContext<Context>()
+        val blockingPrefContext = BlockingPrefsContext(context, trigger)
+        val os = OneSignalImp()
+        val tagKey = "deferred"
+        val tagValue = "tag"
+
+        mockkObject(AndroidUtils)
+        every { AndroidUtils.isAndroidUserUnlocked(any()) } returns true
+        every { AndroidUtils.isRunningOnMainThread() } returns true
+
+        try {
+            val initThread =
+                Thread {
+                    os.initWithContext(blockingPrefContext, "appId")
+                }
+            initThread.start()
+            Thread.sleep(100)
+            os.isInitialized shouldBe false
+
+            val mutationThread =
+                Thread {
+                    os.user.addTags(mapOf(tagKey to tagValue))
+                }
+            mutationThread.start()
+            mutationThread.join(500)
+            mutationThread.isAlive shouldBe false
+
+            trigger.countDown()
+            initThread.join(2_000)
+            initThread.isAlive shouldBe false
+            waitForInitialization(os)
+
+            var attempts = 0
+            while (os.user.getTags()[tagKey] != tagValue && attempts < 100) {
+                Thread.sleep(20)
+                attempts++
+            }
+
+            os.user.getTags() shouldContain (tagKey to tagValue)
+        } finally {
             if (trigger.count > 0) trigger.countDown()
             unmockkObject(AndroidUtils)
         }
