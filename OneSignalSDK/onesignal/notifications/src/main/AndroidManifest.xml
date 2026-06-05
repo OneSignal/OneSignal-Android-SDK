@@ -70,7 +70,7 @@
             android:name="com.onesignal.NotificationOpenedActivityHMS"
             android:noHistory="true"
             android:theme="@android:style/Theme.Translucent.NoTitleBar"
-            android:exported="false">
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
             </intent-filter>
