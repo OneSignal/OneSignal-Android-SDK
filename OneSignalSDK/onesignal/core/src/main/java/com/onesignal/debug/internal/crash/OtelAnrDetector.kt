@@ -104,7 +104,7 @@ internal class OtelAnrDetector(
 
         // Only report if enough time has passed since last report (avoid duplicates)
         if (timeSinceLastReport > MIN_TIME_BETWEEN_ANR_REPORTS_MS) {
-            logger.warn("$TAG: ⚠️ ANR detected! Main thread unresponsive for ${timeSinceLastResponse}ms")
+            logger.info("$TAG: ⚠️ ANR detected! Main thread unresponsive for ${timeSinceLastResponse}ms")
             lastAnrReportTime.set(now)
             reportAnr(timeSinceLastResponse)
         } else {
