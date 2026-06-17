@@ -56,6 +56,10 @@ internal class GmsLocationController(
                             setLocationAndFire(localLastLocation)
                         }
                     }
+                    // Retry the subscription in case the first attempt failed because
+                    // permission was not yet granted, otherwise it would only recover on
+                    // the next app focus change.
+                    locationUpdateListener?.refreshRequest()
                     wasSuccessful = true
                 } else {
                     try {
@@ -193,7 +197,7 @@ internal class GmsLocationController(
             }
         }
 
-        private fun refreshRequest() {
+        internal fun refreshRequest() {
             if (!googleApiClient.isConnected) {
                 Logging.warn("Attempt to refresh location request but not currently connected!")
                 return
@@ -217,8 +221,7 @@ internal class GmsLocationController(
                     .setMaxWaitTime((updateInterval * 1.5).toLong())
                     .setPriority(LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY)
             Logging.debug("GMSLocationController GoogleApiClient requestLocationUpdates!")
-            _fusedLocationApiWrapper.requestLocationUpdates(googleApiClient, locationRequest, this)
-            hasExistingRequest = true
+            hasExistingRequest = _fusedLocationApiWrapper.requestLocationUpdates(googleApiClient, locationRequest, this)
         }
 
         override fun onLocationChanged(location: Location) {

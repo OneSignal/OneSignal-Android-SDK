@@ -173,4 +173,55 @@ class GmsLocationControllerTests : FunSpec({
             )
         }
     }
+
+    // Regression: when isShared is enabled before location permission is granted, the
+    // GoogleApiClient connects (which does not require permission) but the first
+    // requestLocationUpdates fails. A later start() (e.g. triggered by the permission grant)
+    // previously short-circuited and only fired a one-shot last location, leaving the live
+    // subscription dead until the next app focus change. It must now re-arm on that start().
+    test("start re-arms the live location subscription on a subsequent start") {
+        // Given
+        val location = Location("TEST_PROVIDER")
+        location.latitude = 123.45
+        location.longitude = 678.91
+        val fusedLocationApiWrapperMock = FusedLocationApiWrapperMock(listOf(location))
+
+        val applicationService = AndroidMockHelper.applicationService()
+        every { applicationService.isInForeground } returns true
+        val gmsLocationController = GmsLocationController(applicationService, fusedLocationApiWrapperMock)
+
+        // When
+        val response1 = gmsLocationController.start()
+        val response2 = gmsLocationController.start()
+
+        // Then
+        response1 shouldBe true
+        response2 shouldBe true
+        // Once on the initial init, and again when the second start re-arms the subscription.
+        fusedLocationApiWrapperMock.requestLocationUpdatesCallCount shouldBe 2
+    }
+
+    // Regression: a requestLocationUpdates that fails (e.g. a swallowed SecurityException
+    // when permission is missing) must not be recorded as an active request, otherwise
+    // close()/refresh would try to cancel a subscription that never existed.
+    test("a failed requestLocationUpdates is not treated as an active subscription") {
+        // Given
+        val location = Location("TEST_PROVIDER")
+        location.latitude = 123.45
+        location.longitude = 678.91
+        val fusedLocationApiWrapperMock = FusedLocationApiWrapperMock(listOf(location))
+        fusedLocationApiWrapperMock.requestLocationUpdatesResult = false
+
+        val applicationService = AndroidMockHelper.applicationService()
+        every { applicationService.isInForeground } returns true
+        val gmsLocationController = GmsLocationController(applicationService, fusedLocationApiWrapperMock)
+
+        // When
+        gmsLocationController.start()
+        gmsLocationController.stop()
+
+        // Then
+        fusedLocationApiWrapperMock.requestLocationUpdatesCallCount shouldBe 1
+        fusedLocationApiWrapperMock.cancelLocationUpdatesCallCount shouldBe 0
+    }
 })
