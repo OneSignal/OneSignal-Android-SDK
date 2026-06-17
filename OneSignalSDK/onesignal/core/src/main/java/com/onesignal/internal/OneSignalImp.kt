@@ -72,6 +72,13 @@ internal class OneSignalImp(
     override val isInitialized: Boolean
         get() = initState == InitState.SUCCESS
 
+    @Deprecated(
+        message =
+            "Accessing this property may block the calling thread until the SDK is initialized and " +
+                "cause ANRs when called on the main thread. Use the suspend functions getConsentRequired() " +
+                "and setConsentRequired(required) instead.",
+        replaceWith = ReplaceWith("getConsentRequired()"),
+    )
     override var consentRequired: Boolean
         get() =
             if (isInitialized) {
@@ -86,6 +93,13 @@ internal class OneSignalImp(
             }
         }
 
+    @Deprecated(
+        message =
+            "Accessing this property may block the calling thread until the SDK is initialized and " +
+                "cause ANRs when called on the main thread. Use the suspend functions getConsentGiven() " +
+                "and setConsentGiven(value) instead.",
+        replaceWith = ReplaceWith("getConsentGiven()"),
+    )
     override var consentGiven: Boolean
         get() =
             if (isInitialized) {
@@ -104,6 +118,13 @@ internal class OneSignalImp(
             }
         }
 
+    @Deprecated(
+        message =
+            "Accessing this property may block the calling thread until the SDK is initialized and " +
+                "cause ANRs when called on the main thread. Use the suspend functions getDisableGMSMissingPrompt() " +
+                "and setDisableGMSMissingPrompt(value) instead.",
+        replaceWith = ReplaceWith("getDisableGMSMissingPrompt()"),
+    )
     override var disableGMSMissingPrompt: Boolean
         get() =
             if (isInitialized) {
@@ -121,22 +142,52 @@ internal class OneSignalImp(
     // we hardcode the DebugManager implementation so it can be used prior to calling `initWithContext`
     override val debug: IDebugManager = DebugManager()
 
+    @Deprecated(
+        message =
+            "Accessing this property may block the calling thread until the SDK is initialized and " +
+                "cause ANRs when called on the main thread. Use the suspend function getSession() instead.",
+        replaceWith = ReplaceWith("getSession()"),
+    )
     override val session: ISessionManager
         get() =
             getServiceWithFeatureGate { services.getService() }
 
+    @Deprecated(
+        message =
+            "Accessing this property may block the calling thread until the SDK is initialized and " +
+                "cause ANRs when called on the main thread. Use the suspend function getNotifications() instead.",
+        replaceWith = ReplaceWith("getNotifications()"),
+    )
     override val notifications: INotificationsManager
         get() =
             getServiceWithFeatureGate { services.getService() }
 
+    @Deprecated(
+        message =
+            "Accessing this property may block the calling thread until the SDK is initialized and " +
+                "cause ANRs when called on the main thread. Use the suspend function getLocation() instead.",
+        replaceWith = ReplaceWith("getLocation()"),
+    )
     override val location: ILocationManager
         get() =
             getServiceWithFeatureGate { services.getService() }
 
+    @Deprecated(
+        message =
+            "Accessing this property may block the calling thread until the SDK is initialized and " +
+                "cause ANRs when called on the main thread. Use the suspend function getInAppMessages() instead.",
+        replaceWith = ReplaceWith("getInAppMessages()"),
+    )
     override val inAppMessages: IInAppMessagesManager
         get() =
             getServiceWithFeatureGate { services.getService() }
 
+    @Deprecated(
+        message =
+            "Accessing this property may block the calling thread until the SDK is initialized and " +
+                "cause ANRs when called on the main thread. Use the suspend function getUser() instead.",
+        replaceWith = ReplaceWith("getUser()"),
+    )
     override val user: IUserManager
         get() =
             getServiceWithFeatureGate { services.getService() }
@@ -304,12 +355,21 @@ internal class OneSignalImp(
         return startupService
     }
 
+    @Deprecated(
+        message =
+            "This blocking method may block the calling thread and cause ANRs when called on the " +
+                "main thread. Use the suspend function initWithContextSuspend(context, appId) instead.",
+        replaceWith = ReplaceWith("initWithContextSuspend(context, appId)"),
+    )
     @Suppress("ReturnCount", "TooGenericExceptionCaught")
     override fun initWithContext(
         context: Context,
         appId: String,
     ): Boolean {
-        Logging.log(LogLevel.DEBUG, "Calling deprecated initWithContext(context: $context, appId: $appId)")
+        Logging.warn(
+            "initWithContext(context, appId) is deprecated and should no longer be used. " +
+                "Use the suspend function initWithContextSuspend(context, appId) instead.",
+        )
 
         // Warm OneSignalDispatchers on a dedicated daemon thread so the first production caller
         // of suspendifyOnIO / launchOnSerialIO doesn't pay the ThreadPoolExecutor + dispatcher +
@@ -446,11 +506,20 @@ internal class OneSignalImp(
         }
     }
 
+    @Deprecated(
+        message =
+            "This blocking method may block the calling thread and cause ANRs when called on the " +
+                "main thread. Use the suspend function loginSuspend(externalId, jwtBearerToken) instead.",
+        replaceWith = ReplaceWith("loginSuspend(externalId, jwtBearerToken)"),
+    )
     override fun login(
         externalId: String,
         jwtBearerToken: String?,
     ) {
-        Logging.log(LogLevel.DEBUG, "Calling deprecated login(externalId: $externalId, jwtBearerToken: ...${jwtBearerToken?.takeLast(8)})")
+        Logging.warn(
+            "login(externalId, jwtBearerToken) is deprecated and should no longer be used. " +
+                "Use the suspend function loginSuspend(externalId, jwtBearerToken) instead.",
+        )
 
         if (isBackgroundThreadingEnabled) {
             waitForInit(operationName = "login")
@@ -471,8 +540,17 @@ internal class OneSignalImp(
         }
     }
 
+    @Deprecated(
+        message =
+            "This blocking method may block the calling thread and cause ANRs when called on the " +
+                "main thread. Use the suspend function logoutSuspend() instead.",
+        replaceWith = ReplaceWith("logoutSuspend()"),
+    )
     override fun logout() {
-        Logging.log(LogLevel.DEBUG, "Calling deprecated logout()")
+        Logging.warn(
+            "logout() is deprecated and should no longer be used. " +
+                "Use the suspend function logoutSuspend() instead.",
+        )
 
         if (isBackgroundThreadingEnabled) {
             waitForInit(operationName = "logout")
@@ -493,11 +571,20 @@ internal class OneSignalImp(
         }
     }
 
+    @Deprecated(
+        message =
+            "This blocking method may block the calling thread and cause ANRs when called on the " +
+                "main thread. Use the suspend function updateUserJwtSuspend(externalId, token) instead.",
+        replaceWith = ReplaceWith("updateUserJwtSuspend(externalId, token)"),
+    )
     override fun updateUserJwt(
         externalId: String,
         token: String,
     ) {
-        Logging.log(LogLevel.DEBUG, "updateUserJwt(externalId: $externalId, token: ...${token.takeLast(8)})")
+        Logging.warn(
+            "updateUserJwt(externalId, token) is deprecated and should no longer be used. " +
+                "Use the suspend function updateUserJwtSuspend(externalId, token) instead.",
+        )
 
         if (isBackgroundThreadingEnabled) {
             waitForInit(operationName = "updateUserJwt")
