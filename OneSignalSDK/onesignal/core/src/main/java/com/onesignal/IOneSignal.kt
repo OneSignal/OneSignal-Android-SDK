@@ -184,6 +184,12 @@ interface IOneSignal {
         jwtBearerToken: String? = null,
     )
 
+    /**
+     * Login to OneSignal under the user identified by the [externalId] provided, without a JWT
+     * bearer token. Convenience overload of [login] equivalent to calling it with a `null` token.
+     *
+     * @param externalId The external ID of the user that is to be logged in.
+     */
     @Deprecated(
         message =
         "This blocking method may block the calling thread and cause ANRs when called on the " +
