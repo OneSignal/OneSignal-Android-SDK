@@ -74,9 +74,9 @@ internal class OneSignalImp(
 
     @Deprecated(
         message =
-            "Accessing this property may block the calling thread until the SDK is initialized and " +
-                "cause ANRs when called on the main thread. Use the suspend functions getConsentRequired() " +
-                "and setConsentRequired(required) instead.",
+        "Accessing this property may block the calling thread until the SDK is initialized and " +
+            "cause ANRs when called on the main thread. Use the suspend functions getConsentRequired() " +
+            "and setConsentRequired(required) instead.",
         replaceWith = ReplaceWith("getConsentRequired()"),
     )
     override var consentRequired: Boolean
@@ -95,9 +95,9 @@ internal class OneSignalImp(
 
     @Deprecated(
         message =
-            "Accessing this property may block the calling thread until the SDK is initialized and " +
-                "cause ANRs when called on the main thread. Use the suspend functions getConsentGiven() " +
-                "and setConsentGiven(value) instead.",
+        "Accessing this property may block the calling thread until the SDK is initialized and " +
+            "cause ANRs when called on the main thread. Use the suspend functions getConsentGiven() " +
+            "and setConsentGiven(value) instead.",
         replaceWith = ReplaceWith("getConsentGiven()"),
     )
     override var consentGiven: Boolean
@@ -120,9 +120,9 @@ internal class OneSignalImp(
 
     @Deprecated(
         message =
-            "Accessing this property may block the calling thread until the SDK is initialized and " +
-                "cause ANRs when called on the main thread. Use the suspend functions getDisableGMSMissingPrompt() " +
-                "and setDisableGMSMissingPrompt(value) instead.",
+        "Accessing this property may block the calling thread until the SDK is initialized and " +
+            "cause ANRs when called on the main thread. Use the suspend functions getDisableGMSMissingPrompt() " +
+            "and setDisableGMSMissingPrompt(value) instead.",
         replaceWith = ReplaceWith("getDisableGMSMissingPrompt()"),
     )
     override var disableGMSMissingPrompt: Boolean
@@ -144,8 +144,8 @@ internal class OneSignalImp(
 
     @Deprecated(
         message =
-            "Accessing this property may block the calling thread until the SDK is initialized and " +
-                "cause ANRs when called on the main thread. Use the suspend function getSession() instead.",
+        "Accessing this property may block the calling thread until the SDK is initialized and " +
+            "cause ANRs when called on the main thread. Use the suspend function getSession() instead.",
         replaceWith = ReplaceWith("getSession()"),
     )
     override val session: ISessionManager
@@ -154,8 +154,8 @@ internal class OneSignalImp(
 
     @Deprecated(
         message =
-            "Accessing this property may block the calling thread until the SDK is initialized and " +
-                "cause ANRs when called on the main thread. Use the suspend function getNotifications() instead.",
+        "Accessing this property may block the calling thread until the SDK is initialized and " +
+            "cause ANRs when called on the main thread. Use the suspend function getNotifications() instead.",
         replaceWith = ReplaceWith("getNotifications()"),
     )
     override val notifications: INotificationsManager
@@ -164,8 +164,8 @@ internal class OneSignalImp(
 
     @Deprecated(
         message =
-            "Accessing this property may block the calling thread until the SDK is initialized and " +
-                "cause ANRs when called on the main thread. Use the suspend function getLocation() instead.",
+        "Accessing this property may block the calling thread until the SDK is initialized and " +
+            "cause ANRs when called on the main thread. Use the suspend function getLocation() instead.",
         replaceWith = ReplaceWith("getLocation()"),
     )
     override val location: ILocationManager
@@ -174,8 +174,8 @@ internal class OneSignalImp(
 
     @Deprecated(
         message =
-            "Accessing this property may block the calling thread until the SDK is initialized and " +
-                "cause ANRs when called on the main thread. Use the suspend function getInAppMessages() instead.",
+        "Accessing this property may block the calling thread until the SDK is initialized and " +
+            "cause ANRs when called on the main thread. Use the suspend function getInAppMessages() instead.",
         replaceWith = ReplaceWith("getInAppMessages()"),
     )
     override val inAppMessages: IInAppMessagesManager
@@ -184,8 +184,8 @@ internal class OneSignalImp(
 
     @Deprecated(
         message =
-            "Accessing this property may block the calling thread until the SDK is initialized and " +
-                "cause ANRs when called on the main thread. Use the suspend function getUser() instead.",
+        "Accessing this property may block the calling thread until the SDK is initialized and " +
+            "cause ANRs when called on the main thread. Use the suspend function getUser() instead.",
         replaceWith = ReplaceWith("getUser()"),
     )
     override val user: IUserManager
@@ -357,8 +357,8 @@ internal class OneSignalImp(
 
     @Deprecated(
         message =
-            "This blocking method may block the calling thread and cause ANRs when called on the " +
-                "main thread. Use the suspend function initWithContextSuspend(context, appId) instead.",
+        "This blocking method may block the calling thread and cause ANRs when called on the " +
+            "main thread. Use the suspend function initWithContextSuspend(context, appId) instead.",
         replaceWith = ReplaceWith("initWithContextSuspend(context, appId)"),
     )
     @Suppress("ReturnCount", "TooGenericExceptionCaught")
@@ -508,8 +508,8 @@ internal class OneSignalImp(
 
     @Deprecated(
         message =
-            "This blocking method may block the calling thread and cause ANRs when called on the " +
-                "main thread. Use the suspend function loginSuspend(externalId, jwtBearerToken) instead.",
+        "This blocking method may block the calling thread and cause ANRs when called on the " +
+            "main thread. Use the suspend function loginSuspend(externalId, jwtBearerToken) instead.",
         replaceWith = ReplaceWith("loginSuspend(externalId, jwtBearerToken)"),
     )
     override fun login(
@@ -542,8 +542,8 @@ internal class OneSignalImp(
 
     @Deprecated(
         message =
-            "This blocking method may block the calling thread and cause ANRs when called on the " +
-                "main thread. Use the suspend function logoutSuspend() instead.",
+        "This blocking method may block the calling thread and cause ANRs when called on the " +
+            "main thread. Use the suspend function logoutSuspend() instead.",
         replaceWith = ReplaceWith("logoutSuspend()"),
     )
     override fun logout() {
@@ -573,8 +573,8 @@ internal class OneSignalImp(
 
     @Deprecated(
         message =
-            "This blocking method may block the calling thread and cause ANRs when called on the " +
-                "main thread. Use the suspend function updateUserJwtSuspend(externalId, token) instead.",
+        "This blocking method may block the calling thread and cause ANRs when called on the " +
+            "main thread. Use the suspend function updateUserJwtSuspend(externalId, token) instead.",
         replaceWith = ReplaceWith("updateUserJwtSuspend(externalId, token)"),
     )
     override fun updateUserJwt(

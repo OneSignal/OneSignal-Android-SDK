@@ -44,8 +44,8 @@ object OneSignal {
     @JvmStatic
     @Deprecated(
         message =
-            "Accessing this property may block the calling thread until the SDK is initialized and " +
-                "cause ANRs when called on the main thread. Use the suspend function getUserSuspend() instead.",
+        "Accessing this property may block the calling thread until the SDK is initialized and " +
+            "cause ANRs when called on the main thread. Use the suspend function getUserSuspend() instead.",
         replaceWith = ReplaceWith("getUserSuspend()"),
     )
     @Suppress("DEPRECATION")
@@ -59,8 +59,8 @@ object OneSignal {
     @JvmStatic
     @Deprecated(
         message =
-            "Accessing this property may block the calling thread until the SDK is initialized and " +
-                "cause ANRs when called on the main thread. Use the suspend function getSessionSuspend() instead.",
+        "Accessing this property may block the calling thread until the SDK is initialized and " +
+            "cause ANRs when called on the main thread. Use the suspend function getSessionSuspend() instead.",
         replaceWith = ReplaceWith("getSessionSuspend()"),
     )
     @Suppress("DEPRECATION")
@@ -74,8 +74,8 @@ object OneSignal {
     @JvmStatic
     @Deprecated(
         message =
-            "Accessing this property may block the calling thread until the SDK is initialized and " +
-                "cause ANRs when called on the main thread. Use the suspend function getNotificationsSuspend() instead.",
+        "Accessing this property may block the calling thread until the SDK is initialized and " +
+            "cause ANRs when called on the main thread. Use the suspend function getNotificationsSuspend() instead.",
         replaceWith = ReplaceWith("getNotificationsSuspend()"),
     )
     @Suppress("DEPRECATION")
@@ -89,8 +89,8 @@ object OneSignal {
     @JvmStatic
     @Deprecated(
         message =
-            "Accessing this property may block the calling thread until the SDK is initialized and " +
-                "cause ANRs when called on the main thread. Use the suspend function getLocationSuspend() instead.",
+        "Accessing this property may block the calling thread until the SDK is initialized and " +
+            "cause ANRs when called on the main thread. Use the suspend function getLocationSuspend() instead.",
         replaceWith = ReplaceWith("getLocationSuspend()"),
     )
     @Suppress("DEPRECATION")
@@ -104,8 +104,8 @@ object OneSignal {
     @JvmStatic
     @Deprecated(
         message =
-            "Accessing this property may block the calling thread until the SDK is initialized and " +
-                "cause ANRs when called on the main thread. Use the suspend function getInAppMessagesSuspend() instead.",
+        "Accessing this property may block the calling thread until the SDK is initialized and " +
+            "cause ANRs when called on the main thread. Use the suspend function getInAppMessagesSuspend() instead.",
         replaceWith = ReplaceWith("getInAppMessagesSuspend()"),
     )
     @Suppress("DEPRECATION")
@@ -131,9 +131,9 @@ object OneSignal {
     @JvmStatic
     @Deprecated(
         message =
-            "Accessing this property may block the calling thread until the SDK is initialized and " +
-                "cause ANRs when called on the main thread. Use the suspend functions getConsentRequiredSuspend() " +
-                "and setConsentRequiredSuspend(required) instead.",
+        "Accessing this property may block the calling thread until the SDK is initialized and " +
+            "cause ANRs when called on the main thread. Use the suspend functions getConsentRequiredSuspend() " +
+            "and setConsentRequiredSuspend(required) instead.",
         replaceWith = ReplaceWith("getConsentRequiredSuspend()"),
     )
     @Suppress("DEPRECATION")
@@ -150,9 +150,9 @@ object OneSignal {
     @JvmStatic
     @Deprecated(
         message =
-            "Accessing this property may block the calling thread until the SDK is initialized and " +
-                "cause ANRs when called on the main thread. Use the suspend functions getConsentGivenSuspend() " +
-                "and setConsentGivenSuspend(value) instead.",
+        "Accessing this property may block the calling thread until the SDK is initialized and " +
+            "cause ANRs when called on the main thread. Use the suspend functions getConsentGivenSuspend() " +
+            "and setConsentGivenSuspend(value) instead.",
         replaceWith = ReplaceWith("getConsentGivenSuspend()"),
     )
     @Suppress("DEPRECATION")
@@ -168,9 +168,9 @@ object OneSignal {
     @JvmStatic
     @Deprecated(
         message =
-            "Accessing this property may block the calling thread until the SDK is initialized and " +
-                "cause ANRs when called on the main thread. Use the suspend functions getDisableGMSMissingPromptSuspend() " +
-                "and setDisableGMSMissingPromptSuspend(value) instead.",
+        "Accessing this property may block the calling thread until the SDK is initialized and " +
+            "cause ANRs when called on the main thread. Use the suspend functions getDisableGMSMissingPromptSuspend() " +
+            "and setDisableGMSMissingPromptSuspend(value) instead.",
         replaceWith = ReplaceWith("getDisableGMSMissingPromptSuspend()"),
     )
     @Suppress("DEPRECATION")
@@ -189,8 +189,8 @@ object OneSignal {
     @JvmStatic
     @Deprecated(
         message =
-            "This blocking method may block the calling thread and cause ANRs when called on the " +
-                "main thread. Use the suspend function initWithContextSuspend(context, appId) instead.",
+        "This blocking method may block the calling thread and cause ANRs when called on the " +
+            "main thread. Use the suspend function initWithContextSuspend(context, appId) instead.",
         replaceWith = ReplaceWith("initWithContextSuspend(context, appId)"),
     )
     @Suppress("DEPRECATION")
@@ -373,8 +373,8 @@ object OneSignal {
     @JvmStatic
     @Deprecated(
         message =
-            "This blocking method may block the calling thread and cause ANRs when called on the " +
-                "main thread. Use the suspend function loginSuspend(externalId) instead.",
+        "This blocking method may block the calling thread and cause ANRs when called on the " +
+            "main thread. Use the suspend function loginSuspend(externalId) instead.",
         replaceWith = ReplaceWith("loginSuspend(externalId)"),
     )
     @Suppress("DEPRECATION")
@@ -404,8 +404,8 @@ object OneSignal {
     @JvmStatic
     @Deprecated(
         message =
-            "This blocking method may block the calling thread and cause ANRs when called on the " +
-                "main thread. Use the suspend function loginSuspend(externalId, jwtBearerToken) instead.",
+        "This blocking method may block the calling thread and cause ANRs when called on the " +
+            "main thread. Use the suspend function loginSuspend(externalId, jwtBearerToken) instead.",
         replaceWith = ReplaceWith("loginSuspend(externalId, jwtBearerToken)"),
     )
     @Suppress("DEPRECATION")
@@ -423,8 +423,8 @@ object OneSignal {
     @JvmStatic
     @Deprecated(
         message =
-            "This blocking method may block the calling thread and cause ANRs when called on the " +
-                "main thread. Use the suspend function logoutSuspend() instead.",
+        "This blocking method may block the calling thread and cause ANRs when called on the " +
+            "main thread. Use the suspend function logoutSuspend() instead.",
         replaceWith = ReplaceWith("logoutSuspend()"),
     )
     @Suppress("DEPRECATION")
@@ -442,8 +442,8 @@ object OneSignal {
     @JvmStatic
     @Deprecated(
         message =
-            "This blocking method may block the calling thread and cause ANRs when called on the " +
-                "main thread. Use the suspend function updateUserJwtSuspend(externalId, token) instead.",
+        "This blocking method may block the calling thread and cause ANRs when called on the " +
+            "main thread. Use the suspend function updateUserJwtSuspend(externalId, token) instead.",
         replaceWith = ReplaceWith("updateUserJwtSuspend(externalId, token)"),
     )
     @Suppress("DEPRECATION")

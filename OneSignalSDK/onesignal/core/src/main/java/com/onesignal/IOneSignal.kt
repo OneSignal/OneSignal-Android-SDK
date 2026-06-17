@@ -25,8 +25,8 @@ interface IOneSignal {
      */
     @Deprecated(
         message =
-            "Accessing this property may block the calling thread until the SDK is initialized and " +
-                "cause ANRs when called on the main thread. Use the suspend function getUser() instead.",
+        "Accessing this property may block the calling thread until the SDK is initialized and " +
+            "cause ANRs when called on the main thread. Use the suspend function getUser() instead.",
         replaceWith = ReplaceWith("getUser()"),
     )
     val user: IUserManager
@@ -36,8 +36,8 @@ interface IOneSignal {
      */
     @Deprecated(
         message =
-            "Accessing this property may block the calling thread until the SDK is initialized and " +
-                "cause ANRs when called on the main thread. Use the suspend function getSession() instead.",
+        "Accessing this property may block the calling thread until the SDK is initialized and " +
+            "cause ANRs when called on the main thread. Use the suspend function getSession() instead.",
         replaceWith = ReplaceWith("getSession()"),
     )
     val session: ISessionManager
@@ -48,8 +48,8 @@ interface IOneSignal {
      */
     @Deprecated(
         message =
-            "Accessing this property may block the calling thread until the SDK is initialized and " +
-                "cause ANRs when called on the main thread. Use the suspend function getNotifications() instead.",
+        "Accessing this property may block the calling thread until the SDK is initialized and " +
+            "cause ANRs when called on the main thread. Use the suspend function getNotifications() instead.",
         replaceWith = ReplaceWith("getNotifications()"),
     )
     val notifications: INotificationsManager
@@ -60,8 +60,8 @@ interface IOneSignal {
      */
     @Deprecated(
         message =
-            "Accessing this property may block the calling thread until the SDK is initialized and " +
-                "cause ANRs when called on the main thread. Use the suspend function getLocation() instead.",
+        "Accessing this property may block the calling thread until the SDK is initialized and " +
+            "cause ANRs when called on the main thread. Use the suspend function getLocation() instead.",
         replaceWith = ReplaceWith("getLocation()"),
     )
     val location: ILocationManager
@@ -72,8 +72,8 @@ interface IOneSignal {
      */
     @Deprecated(
         message =
-            "Accessing this property may block the calling thread until the SDK is initialized and " +
-                "cause ANRs when called on the main thread. Use the suspend function getInAppMessages() instead.",
+        "Accessing this property may block the calling thread until the SDK is initialized and " +
+            "cause ANRs when called on the main thread. Use the suspend function getInAppMessages() instead.",
         replaceWith = ReplaceWith("getInAppMessages()"),
     )
     val inAppMessages: IInAppMessagesManager
@@ -94,9 +94,9 @@ interface IOneSignal {
      */
     @Deprecated(
         message =
-            "Accessing this property may block the calling thread until the SDK is initialized and " +
-                "cause ANRs when called on the main thread. Use the suspend functions getConsentRequired() " +
-                "and setConsentRequired(required) instead.",
+        "Accessing this property may block the calling thread until the SDK is initialized and " +
+            "cause ANRs when called on the main thread. Use the suspend functions getConsentRequired() " +
+            "and setConsentRequired(required) instead.",
         replaceWith = ReplaceWith("getConsentRequired()"),
     )
     var consentRequired: Boolean
@@ -107,9 +107,9 @@ interface IOneSignal {
      */
     @Deprecated(
         message =
-            "Accessing this property may block the calling thread until the SDK is initialized and " +
-                "cause ANRs when called on the main thread. Use the suspend functions getConsentGiven() " +
-                "and setConsentGiven(value) instead.",
+        "Accessing this property may block the calling thread until the SDK is initialized and " +
+            "cause ANRs when called on the main thread. Use the suspend functions getConsentGiven() " +
+            "and setConsentGiven(value) instead.",
         replaceWith = ReplaceWith("getConsentGiven()"),
     )
     var consentGiven: Boolean
@@ -119,9 +119,9 @@ interface IOneSignal {
      */
     @Deprecated(
         message =
-            "Accessing this property may block the calling thread until the SDK is initialized and " +
-                "cause ANRs when called on the main thread. Use the suspend functions getDisableGMSMissingPrompt() " +
-                "and setDisableGMSMissingPrompt(value) instead.",
+        "Accessing this property may block the calling thread until the SDK is initialized and " +
+            "cause ANRs when called on the main thread. Use the suspend functions getDisableGMSMissingPrompt() " +
+            "and setDisableGMSMissingPrompt(value) instead.",
         replaceWith = ReplaceWith("getDisableGMSMissingPrompt()"),
     )
     var disableGMSMissingPrompt: Boolean
@@ -136,8 +136,8 @@ interface IOneSignal {
      */
     @Deprecated(
         message =
-            "This blocking method may block the calling thread and cause ANRs when called on the " +
-                "main thread. Use the suspend function initWithContextSuspend(context, appId) instead.",
+        "This blocking method may block the calling thread and cause ANRs when called on the " +
+            "main thread. Use the suspend function initWithContextSuspend(context, appId) instead.",
         replaceWith = ReplaceWith("initWithContextSuspend(context, appId)"),
     )
     fun initWithContext(
@@ -175,8 +175,8 @@ interface IOneSignal {
      */
     @Deprecated(
         message =
-            "This blocking method may block the calling thread and cause ANRs when called on the " +
-                "main thread. Use the suspend function loginSuspend(externalId, jwtBearerToken) instead.",
+        "This blocking method may block the calling thread and cause ANRs when called on the " +
+            "main thread. Use the suspend function loginSuspend(externalId, jwtBearerToken) instead.",
         replaceWith = ReplaceWith("loginSuspend(externalId, jwtBearerToken)"),
     )
     fun login(
@@ -186,8 +186,8 @@ interface IOneSignal {
 
     @Deprecated(
         message =
-            "This blocking method may block the calling thread and cause ANRs when called on the " +
-                "main thread. Use the suspend function loginSuspend(externalId) instead.",
+        "This blocking method may block the calling thread and cause ANRs when called on the " +
+            "main thread. Use the suspend function loginSuspend(externalId) instead.",
         replaceWith = ReplaceWith("loginSuspend(externalId)"),
     )
     @Suppress("DEPRECATION")
@@ -201,8 +201,8 @@ interface IOneSignal {
      */
     @Deprecated(
         message =
-            "This blocking method may block the calling thread and cause ANRs when called on the " +
-                "main thread. Use the suspend function logoutSuspend() instead.",
+        "This blocking method may block the calling thread and cause ANRs when called on the " +
+            "main thread. Use the suspend function logoutSuspend() instead.",
         replaceWith = ReplaceWith("logoutSuspend()"),
     )
     fun logout()
@@ -218,8 +218,8 @@ interface IOneSignal {
      */
     @Deprecated(
         message =
-            "This blocking method may block the calling thread and cause ANRs when called on the " +
-                "main thread. Use the suspend function updateUserJwtSuspend(externalId, token) instead.",
+        "This blocking method may block the calling thread and cause ANRs when called on the " +
+            "main thread. Use the suspend function updateUserJwtSuspend(externalId, token) instead.",
         replaceWith = ReplaceWith("updateUserJwtSuspend(externalId, token)"),
     )
     fun updateUserJwt(
