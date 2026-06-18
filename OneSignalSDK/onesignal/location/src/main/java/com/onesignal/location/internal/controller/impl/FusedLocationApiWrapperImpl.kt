@@ -42,8 +42,12 @@ internal class FusedLocationApiWrapperImpl : IFusedLocationApiWrapper {
     }
 
     override fun getLastLocation(googleApiClient: GoogleApiClient): Location? {
-        if (googleApiClient.isConnected) {
-            return LocationServices.FusedLocationApi.getLastLocation(googleApiClient)
+        try {
+            if (googleApiClient.isConnected) {
+                return LocationServices.FusedLocationApi.getLastLocation(googleApiClient)
+            }
+        } catch (t: Throwable) {
+            Logging.warn("FusedLocationApi.getLastLocation failed!", t)
         }
         return null
     }
