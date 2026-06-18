@@ -92,12 +92,15 @@ interface IOneSignal {
      * should be set to `true` prior to the invocation of
      * [initWithContext] to ensure compliance.
      */
-    @Deprecated(
+    @get:Deprecated(
         message =
-        "Accessing this property may block the calling thread until the SDK is initialized and " +
-            "cause ANRs when called on the main thread. Use the suspend functions getConsentRequired() " +
-            "and setConsentRequired(required) instead.",
+            "Reading this property may block the calling thread until the SDK is initialized and " +
+                "cause ANRs when called on the main thread. Use the suspend function getConsentRequired() instead.",
         replaceWith = ReplaceWith("getConsentRequired()"),
+    )
+    @set:Deprecated(
+        message = "Use the suspend function setConsentRequired(required) instead.",
+        replaceWith = ReplaceWith("setConsentRequired(required)"),
     )
     var consentRequired: Boolean
 
@@ -105,24 +108,30 @@ interface IOneSignal {
      * Indicates whether privacy consent has been granted. This field is only relevant when
      * the application has opted into data privacy protections. See [consentRequired].
      */
-    @Deprecated(
+    @get:Deprecated(
         message =
-        "Accessing this property may block the calling thread until the SDK is initialized and " +
-            "cause ANRs when called on the main thread. Use the suspend functions getConsentGiven() " +
-            "and setConsentGiven(value) instead.",
+            "Reading this property may block the calling thread until the SDK is initialized and " +
+                "cause ANRs when called on the main thread. Use the suspend function getConsentGiven() instead.",
         replaceWith = ReplaceWith("getConsentGiven()"),
+    )
+    @set:Deprecated(
+        message = "Use the suspend function setConsentGiven(value) instead.",
+        replaceWith = ReplaceWith("setConsentGiven(value)"),
     )
     var consentGiven: Boolean
 
     /**
      * Whether to disable the "GMS is missing" prompt to the user.
      */
-    @Deprecated(
+    @get:Deprecated(
         message =
-        "Accessing this property may block the calling thread until the SDK is initialized and " +
-            "cause ANRs when called on the main thread. Use the suspend functions getDisableGMSMissingPrompt() " +
-            "and setDisableGMSMissingPrompt(value) instead.",
+            "Reading this property may block the calling thread until the SDK is initialized and " +
+                "cause ANRs when called on the main thread. Use the suspend function getDisableGMSMissingPrompt() instead.",
         replaceWith = ReplaceWith("getDisableGMSMissingPrompt()"),
+    )
+    @set:Deprecated(
+        message = "Use the suspend function setDisableGMSMissingPrompt(value) instead.",
+        replaceWith = ReplaceWith("setDisableGMSMissingPrompt(value)"),
     )
     var disableGMSMissingPrompt: Boolean
 

@@ -129,12 +129,15 @@ object OneSignal {
      * [initWithContext] to ensure compliance.
      */
     @JvmStatic
-    @Deprecated(
+    @get:Deprecated(
         message =
-        "Accessing this property may block the calling thread until the SDK is initialized and " +
-            "cause ANRs when called on the main thread. Use the suspend functions getConsentRequiredSuspend() " +
-            "and setConsentRequiredSuspend(required) instead.",
+            "Reading this property may block the calling thread until the SDK is initialized and " +
+                "cause ANRs when called on the main thread. Use the suspend function getConsentRequiredSuspend() instead.",
         replaceWith = ReplaceWith("getConsentRequiredSuspend()"),
+    )
+    @set:Deprecated(
+        message = "Use the suspend function setConsentRequiredSuspend(required) instead.",
+        replaceWith = ReplaceWith("setConsentRequiredSuspend(required)"),
     )
     @Suppress("DEPRECATION")
     var consentRequired: Boolean
@@ -148,12 +151,15 @@ object OneSignal {
      * the application has opted into data privacy protections. See [requiresPrivacyConsent].
      */
     @JvmStatic
-    @Deprecated(
+    @get:Deprecated(
         message =
-        "Accessing this property may block the calling thread until the SDK is initialized and " +
-            "cause ANRs when called on the main thread. Use the suspend functions getConsentGivenSuspend() " +
-            "and setConsentGivenSuspend(value) instead.",
+            "Reading this property may block the calling thread until the SDK is initialized and " +
+                "cause ANRs when called on the main thread. Use the suspend function getConsentGivenSuspend() instead.",
         replaceWith = ReplaceWith("getConsentGivenSuspend()"),
+    )
+    @set:Deprecated(
+        message = "Use the suspend function setConsentGivenSuspend(value) instead.",
+        replaceWith = ReplaceWith("setConsentGivenSuspend(value)"),
     )
     @Suppress("DEPRECATION")
     var consentGiven: Boolean
@@ -166,12 +172,15 @@ object OneSignal {
      * Whether to disable the "GMS is missing" prompt to the user.
      */
     @JvmStatic
-    @Deprecated(
+    @get:Deprecated(
         message =
-        "Accessing this property may block the calling thread until the SDK is initialized and " +
-            "cause ANRs when called on the main thread. Use the suspend functions getDisableGMSMissingPromptSuspend() " +
-            "and setDisableGMSMissingPromptSuspend(value) instead.",
+            "Reading this property may block the calling thread until the SDK is initialized and " +
+                "cause ANRs when called on the main thread. Use the suspend function getDisableGMSMissingPromptSuspend() instead.",
         replaceWith = ReplaceWith("getDisableGMSMissingPromptSuspend()"),
+    )
+    @set:Deprecated(
+        message = "Use the suspend function setDisableGMSMissingPromptSuspend(value) instead.",
+        replaceWith = ReplaceWith("setDisableGMSMissingPromptSuspend(value)"),
     )
     @Suppress("DEPRECATION")
     var disableGMSMissingPrompt: Boolean

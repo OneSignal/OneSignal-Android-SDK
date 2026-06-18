@@ -72,12 +72,15 @@ internal class OneSignalImp(
     override val isInitialized: Boolean
         get() = initState == InitState.SUCCESS
 
-    @Deprecated(
+    @get:Deprecated(
         message =
-        "Accessing this property may block the calling thread until the SDK is initialized and " +
-            "cause ANRs when called on the main thread. Use the suspend functions getConsentRequired() " +
-            "and setConsentRequired(required) instead.",
+            "Reading this property may block the calling thread until the SDK is initialized and " +
+                "cause ANRs when called on the main thread. Use the suspend function getConsentRequired() instead.",
         replaceWith = ReplaceWith("getConsentRequired()"),
+    )
+    @set:Deprecated(
+        message = "Use the suspend function setConsentRequired(required) instead.",
+        replaceWith = ReplaceWith("setConsentRequired(required)"),
     )
     override var consentRequired: Boolean
         get() =
@@ -93,12 +96,15 @@ internal class OneSignalImp(
             }
         }
 
-    @Deprecated(
+    @get:Deprecated(
         message =
-        "Accessing this property may block the calling thread until the SDK is initialized and " +
-            "cause ANRs when called on the main thread. Use the suspend functions getConsentGiven() " +
-            "and setConsentGiven(value) instead.",
+            "Reading this property may block the calling thread until the SDK is initialized and " +
+                "cause ANRs when called on the main thread. Use the suspend function getConsentGiven() instead.",
         replaceWith = ReplaceWith("getConsentGiven()"),
+    )
+    @set:Deprecated(
+        message = "Use the suspend function setConsentGiven(value) instead.",
+        replaceWith = ReplaceWith("setConsentGiven(value)"),
     )
     override var consentGiven: Boolean
         get() =
@@ -118,12 +124,15 @@ internal class OneSignalImp(
             }
         }
 
-    @Deprecated(
+    @get:Deprecated(
         message =
-        "Accessing this property may block the calling thread until the SDK is initialized and " +
-            "cause ANRs when called on the main thread. Use the suspend functions getDisableGMSMissingPrompt() " +
-            "and setDisableGMSMissingPrompt(value) instead.",
+            "Reading this property may block the calling thread until the SDK is initialized and " +
+                "cause ANRs when called on the main thread. Use the suspend function getDisableGMSMissingPrompt() instead.",
         replaceWith = ReplaceWith("getDisableGMSMissingPrompt()"),
+    )
+    @set:Deprecated(
+        message = "Use the suspend function setDisableGMSMissingPrompt(value) instead.",
+        replaceWith = ReplaceWith("setDisableGMSMissingPrompt(value)"),
     )
     override var disableGMSMissingPrompt: Boolean
         get() =
@@ -509,6 +518,20 @@ internal class OneSignalImp(
     @Deprecated(
         message =
         "This blocking method may block the calling thread and cause ANRs when called on the " +
+            "main thread. Use the suspend function loginSuspend(externalId) instead.",
+        replaceWith = ReplaceWith("loginSuspend(externalId)"),
+    )
+    override fun login(externalId: String) {
+        Logging.warn(
+            "login(externalId) is deprecated and should no longer be used. " +
+                "Use the suspend function loginSuspend(externalId) instead.",
+        )
+        loginInternal(externalId, null)
+    }
+
+    @Deprecated(
+        message =
+        "This blocking method may block the calling thread and cause ANRs when called on the " +
             "main thread. Use the suspend function loginSuspend(externalId, jwtBearerToken) instead.",
         replaceWith = ReplaceWith("loginSuspend(externalId, jwtBearerToken)"),
     )
@@ -520,7 +543,13 @@ internal class OneSignalImp(
             "login(externalId, jwtBearerToken) is deprecated and should no longer be used. " +
                 "Use the suspend function loginSuspend(externalId, jwtBearerToken) instead.",
         )
+        loginInternal(externalId, jwtBearerToken)
+    }
 
+    private fun loginInternal(
+        externalId: String,
+        jwtBearerToken: String?,
+    ) {
         if (isBackgroundThreadingEnabled) {
             waitForInit(operationName = "login")
         } else {
