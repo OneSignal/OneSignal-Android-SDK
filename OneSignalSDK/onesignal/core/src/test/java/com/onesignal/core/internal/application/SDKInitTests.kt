@@ -8,6 +8,8 @@ import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
 import com.onesignal.common.AndroidUtils
 import com.onesignal.common.threading.OneSignalDispatchers
 import com.onesignal.common.threading.ThreadingMode
+import com.onesignal.core.internal.config.ConfigModelStore
+import com.onesignal.core.internal.features.FeatureFlag
 import com.onesignal.core.internal.preferences.PreferenceOneSignalKeys.PREFS_LEGACY_APP_ID
 import com.onesignal.debug.ILogListener
 import com.onesignal.debug.LogLevel
@@ -21,7 +23,6 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.mockk.every
 import io.mockk.mockkObject
-import io.mockk.spyk
 import io.mockk.unmockkObject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -46,6 +47,11 @@ class SDKInitTests : FunSpec({
             attempts++
         }
         oneSignalImp.isInitialized shouldBe true
+    }
+
+    fun enableBackgroundThreadingBeforeInit(oneSignalImp: OneSignalImp) {
+        oneSignalImp.getService(ConfigModelStore::class.java).model.sdkRemoteFeatureFlags =
+            listOf(FeatureFlag.SDK_BACKGROUND_THREADING.key)
     }
 
     beforeAny {
@@ -600,16 +606,14 @@ class SDKInitTests : FunSpec({
         // workers, then assert the accessor still returns. With the fix it answers synchronously;
         // without it the accessor thread would still be parked when we check.
         val context = getApplicationContext<Context>()
-        // recordPrivateCalls so the private FF gate can be stubbed and intercepted on internal
-        // self-calls inside getServiceWithFeatureGate.
-        val os = spyk(OneSignalImp(), recordPrivateCalls = true)
+        val os = OneSignalImp()
 
-        // Initialize on the legacy (FF-off) path so init completes deterministically (and uses
-        // the injected Dispatchers.IO, leaving OneSignalDispatchers.IO idle for us to saturate),
-        // then flip the SDK onto the FF-on accessor branch.
+        // SDK_BACKGROUND_THREADING is APP_STARTUP-latched, so seed it before init first resolves
+        // FeatureManager. This exercises the real FF-on branch without spying on OneSignalImp.
+        enableBackgroundThreadingBeforeInit(os)
         os.initWithContext(context, "appId")
         waitForInitialization(os)
-        every { os getProperty "isBackgroundThreadingEnabled" } returns true
+        ThreadingMode.useBackgroundThreading shouldBe true
 
         // Saturate OneSignalDispatchers.IO. The backing ThreadPoolExecutor has a core pool of 2
         // and a large queue, so two long-running tasks occupy every concurrently-running worker;
@@ -649,13 +653,14 @@ class SDKInitTests : FunSpec({
         // waitForInit -> runBlocking(OneSignalDispatchers.IO) even after init reached SUCCESS, so a
         // saturated IO pool would park the caller indefinitely.
         val context = getApplicationContext<Context>()
-        val os = spyk(OneSignalImp(), recordPrivateCalls = true)
+        val os = OneSignalImp()
 
-        // Initialize on the legacy (FF-off) path so init completes deterministically and leaves
-        // OneSignalDispatchers.IO idle for us to saturate, then flip onto the FF-on path.
+        // SDK_BACKGROUND_THREADING is APP_STARTUP-latched, so seed it before init first resolves
+        // FeatureManager. This exercises the real FF-on branch without spying on OneSignalImp.
+        enableBackgroundThreadingBeforeInit(os)
         os.initWithContext(context, "appId")
         waitForInitialization(os)
-        every { os getProperty "isBackgroundThreadingEnabled" } returns true
+        ThreadingMode.useBackgroundThreading shouldBe true
 
         // Saturate OneSignalDispatchers.IO so any post-fix runBlocking continuation would queue
         // forever behind the busy workers.

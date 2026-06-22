@@ -39,6 +39,19 @@ class OneSignalImpTests : FunSpec({
         exception.message shouldBe "Must call 'initWithContext' before 'logout'"
     }
 
+    test("waitForInit returns synchronously when initState is SUCCESS") {
+        val os = OneSignalImp()
+        val initStateField = OneSignalImp::class.java.getDeclaredField("initState")
+        initStateField.isAccessible = true
+        initStateField.set(os, InitState.SUCCESS)
+
+        val waitForInit = OneSignalImp::class.java.getDeclaredMethod("waitForInit", String::class.java)
+        waitForInit.isAccessible = true
+        waitForInit.invoke(os, null as String?)
+
+        os.isInitialized shouldBe true
+    }
+
     // Comprehensive tests for deprecated properties that should work before and after initialization
     context("consentRequired property") {
         context("before initWithContext") {
