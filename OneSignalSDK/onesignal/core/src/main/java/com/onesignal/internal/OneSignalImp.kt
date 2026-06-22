@@ -609,6 +609,19 @@ internal class OneSignalImp(
      * @param operationName Optional operation name to include in error messages (e.g., "login", "logout")
      */
     private fun waitForInit(operationName: String? = null) {
+        // Fast-path: once init reaches SUCCESS the state is terminal and never flips back (a
+        // re-initWithContext short-circuits on initState.isSDKAccessible(); only FAILED ->
+        // IN_PROGRESS retries exist), so there is nothing to await. Return synchronously instead
+        // of hopping onto the (cold-start-contended) IO dispatcher via runBlocking, which parks
+        // the calling thread -- e.g. Flutter's main-thread lifecycleInit -- and is the ANR in
+        // OneSignal-Flutter-SDK#1163. Centralizing the fast-path here covers every blocking entry
+        // point (service accessors via waitAndReturn, plus login / logout / updateUserJwt /
+        // add|removeUserJwtInvalidatedListener). The non-terminal states (IN_PROGRESS / FAILED /
+        // NOT_STARTED) still go through waitUntilInitInternal, preserving block-until-ready / throw
+        // semantics. initState is @Volatile, so the read is safe and lock-free.
+        if (initState == InitState.SUCCESS) {
+            return
+        }
         runBlocking(runtimeIoDispatcher) {
             waitUntilInitInternal(operationName)
         }
@@ -726,14 +739,9 @@ internal class OneSignalImp(
 
     private fun <T> getServiceWithFeatureGate(getter: () -> T): T {
         if (isBackgroundThreadingEnabled) {
-            // Once init reaches SUCCESS the state is terminal and never flips back, so the
-            // requested service is already constructable. Answer synchronously instead of
-            // hopping onto the (cold-start-contended) IO dispatcher via runBlocking, which
-            // parks the calling thread -- e.g. Flutter's main-thread lifecycleInit -- and is
-            // the ANR in OneSignal-Flutter-SDK#1163. Only the genuinely-not-yet-ready states
-            // (IN_PROGRESS / FAILED / NOT_STARTED) need waitAndReturn, which preserves the
-            // existing block-or-throw semantics.
-            return if (initState == InitState.SUCCESS) getter() else waitAndReturn(getter)
+            // waitAndReturn -> waitForInit short-circuits synchronously once init is SUCCESS
+            // (see waitForInit), so this no longer parks the caller on the IO dispatcher.
+            return waitAndReturn(getter)
         }
         return when (initState) {
             InitState.SUCCESS -> {

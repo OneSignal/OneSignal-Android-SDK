@@ -593,7 +593,7 @@ class SDKInitTests : FunSpec({
         // waitAndReturn -> waitForInit -> runBlocking(OneSignalDispatchers.IO), even after init
         // had already reached SUCCESS. On Flutter's main-thread lifecycleInit that parks the UI
         // thread on a cold-start-contended IO pool (OneSignal-Flutter-SDK#1163). The fix adds a
-        // lock-free SUCCESS fast-path.
+        // lock-free SUCCESS fast-path, centralized in waitForInit().
         //
         // We reproduce the contention faithfully: saturate OneSignalDispatchers.IO so that the
         // pre-fix runBlocking(OneSignalDispatchers.IO) would park indefinitely behind the busy
@@ -637,6 +637,49 @@ class SDKInitTests : FunSpec({
             // runBlocking(OneSignalDispatchers.IO) path would still be parked here.
             accessorThread.isAlive shouldBe false
             result[0] shouldNotBe null
+        } finally {
+            release.countDown()
+        }
+    }
+
+    test("FF-on login returns once init is SUCCESS even when the IO dispatcher is saturated (OneSignal-Flutter-SDK#1163)") {
+        // Companion regression test proving the SUCCESS fast-path is centralized in waitForInit(),
+        // so it covers the operation paths (login / logout / updateUserJwt / JWT listeners), not
+        // just the service accessors. Under SDK_BACKGROUND_THREADING, login() used to route through
+        // waitForInit -> runBlocking(OneSignalDispatchers.IO) even after init reached SUCCESS, so a
+        // saturated IO pool would park the caller indefinitely.
+        val context = getApplicationContext<Context>()
+        val os = spyk(OneSignalImp(), recordPrivateCalls = true)
+
+        // Initialize on the legacy (FF-off) path so init completes deterministically and leaves
+        // OneSignalDispatchers.IO idle for us to saturate, then flip onto the FF-on path.
+        os.initWithContext(context, "appId")
+        waitForInitialization(os)
+        every { os getProperty "isBackgroundThreadingEnabled" } returns true
+
+        // Saturate OneSignalDispatchers.IO so any post-fix runBlocking continuation would queue
+        // forever behind the busy workers.
+        val running = CountDownLatch(2)
+        val release = CountDownLatch(1)
+        repeat(4) {
+            OneSignalDispatchers.launchOnIO {
+                running.countDown()
+                release.await(30, TimeUnit.SECONDS)
+            }
+        }
+        running.await(5, TimeUnit.SECONDS) shouldBe true
+
+        try {
+            // When: login() is invoked while the IO pool is fully saturated. waitForInit must
+            // short-circuit (the subsequent enqueue is fire-and-forget via suspendifyOnIO and does
+            // not block the caller).
+            val loginThread = Thread { os.login("externalId") }
+            loginThread.start()
+            loginThread.join(2_000)
+
+            // Then: the fast-path answered synchronously and the call returned. The pre-fix
+            // runBlocking(OneSignalDispatchers.IO) path would still be parked here.
+            loginThread.isAlive shouldBe false
         } finally {
             release.countDown()
         }
