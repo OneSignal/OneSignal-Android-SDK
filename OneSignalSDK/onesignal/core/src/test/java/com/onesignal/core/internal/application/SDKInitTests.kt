@@ -30,6 +30,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicReference
 
 @RobolectricTest
 class SDKInitTests : FunSpec({
@@ -52,6 +53,41 @@ class SDKInitTests : FunSpec({
     fun enableBackgroundThreadingBeforeInit(oneSignalImp: OneSignalImp) {
         oneSignalImp.getService(ConfigModelStore::class.java).model.sdkRemoteFeatureFlags =
             listOf(FeatureFlag.SDK_BACKGROUND_THREADING.key)
+    }
+
+    fun withSaturatedOneSignalIo(block: () -> Unit) {
+        val running = CountDownLatch(2)
+        val release = CountDownLatch(1)
+        repeat(4) {
+            OneSignalDispatchers.launchOnIO {
+                running.countDown()
+                release.await(30, TimeUnit.SECONDS)
+            }
+        }
+
+        try {
+            running.await(5, TimeUnit.SECONDS) shouldBe true
+            block()
+        } finally {
+            release.countDown()
+        }
+    }
+
+    fun runOnThreadAndWait(block: () -> Unit) {
+        val error = AtomicReference<Throwable?>(null)
+        val thread =
+            Thread {
+                try {
+                    block()
+                } catch (t: Throwable) {
+                    error.set(t)
+                }
+            }
+        thread.start()
+        thread.join(2_000)
+
+        thread.isAlive shouldBe false
+        error.get() shouldBe null
     }
 
     beforeAny {
@@ -615,34 +651,14 @@ class SDKInitTests : FunSpec({
         waitForInitialization(os)
         ThreadingMode.useBackgroundThreading shouldBe true
 
-        // Saturate OneSignalDispatchers.IO. The backing ThreadPoolExecutor has a core pool of 2
-        // and a large queue, so two long-running tasks occupy every concurrently-running worker;
-        // anything dispatched afterwards (e.g. a runBlocking continuation) just queues and never
-        // runs until we release.
-        val running = CountDownLatch(2)
-        val release = CountDownLatch(1)
-        repeat(4) {
-            OneSignalDispatchers.launchOnIO {
-                running.countDown()
-                // Bounded await so a missed release can't wedge the shared pool for the suite.
-                release.await(30, TimeUnit.SECONDS)
-            }
-        }
-        running.await(5, TimeUnit.SECONDS) shouldBe true
-
-        try {
+        withSaturatedOneSignalIo {
             // When: a SUCCESS-state accessor is read while the IO pool is fully saturated.
             val result = arrayOfNulls<Any>(1)
-            val accessorThread = Thread { result[0] = os.user }
-            accessorThread.start()
-            accessorThread.join(2_000)
+            runOnThreadAndWait { result[0] = os.user }
 
             // Then: the fast-path answered synchronously and the thread finished. The pre-fix
             // runBlocking(OneSignalDispatchers.IO) path would still be parked here.
-            accessorThread.isAlive shouldBe false
             result[0] shouldNotBe null
-        } finally {
-            release.countDown()
         }
     }
 
@@ -662,31 +678,35 @@ class SDKInitTests : FunSpec({
         waitForInitialization(os)
         ThreadingMode.useBackgroundThreading shouldBe true
 
-        // Saturate OneSignalDispatchers.IO so any post-fix runBlocking continuation would queue
-        // forever behind the busy workers.
-        val running = CountDownLatch(2)
-        val release = CountDownLatch(1)
-        repeat(4) {
-            OneSignalDispatchers.launchOnIO {
-                running.countDown()
-                release.await(30, TimeUnit.SECONDS)
-            }
-        }
-        running.await(5, TimeUnit.SECONDS) shouldBe true
-
-        try {
+        withSaturatedOneSignalIo {
             // When: login() is invoked while the IO pool is fully saturated. waitForInit must
             // short-circuit (the subsequent enqueue is fire-and-forget via suspendifyOnIO and does
             // not block the caller).
-            val loginThread = Thread { os.login("externalId") }
-            loginThread.start()
-            loginThread.join(2_000)
+            runOnThreadAndWait { os.login("externalId") }
 
             // Then: the fast-path answered synchronously and the call returned. The pre-fix
             // runBlocking(OneSignalDispatchers.IO) path would still be parked here.
-            loginThread.isAlive shouldBe false
-        } finally {
-            release.countDown()
+        }
+    }
+
+    test("FF-on consent getters return once init is SUCCESS even when the IO dispatcher is saturated") {
+        val context = getApplicationContext<Context>()
+        val os = OneSignalImp()
+
+        enableBackgroundThreadingBeforeInit(os)
+        os.initWithContext(context, "appId")
+        waitForInitialization(os)
+        ThreadingMode.useBackgroundThreading shouldBe true
+
+        withSaturatedOneSignalIo {
+            val results = arrayOfNulls<Boolean>(3)
+            runOnThreadAndWait {
+                results[0] = os.consentRequired
+                results[1] = os.consentGiven
+                results[2] = os.disableGMSMissingPrompt
+            }
+
+            results.toList() shouldBe listOf(false, false, false)
         }
     }
 

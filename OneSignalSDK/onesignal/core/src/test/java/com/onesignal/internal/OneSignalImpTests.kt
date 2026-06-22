@@ -52,6 +52,19 @@ class OneSignalImpTests : FunSpec({
         os.isInitialized shouldBe true
     }
 
+    test("blockingGet returns synchronously when initState is SUCCESS") {
+        val os = OneSignalImp()
+        val initStateField = OneSignalImp::class.java.getDeclaredField("initState")
+        initStateField.isAccessible = true
+        initStateField.set(os, InitState.SUCCESS)
+
+        val blockingGet = OneSignalImp::class.java.getDeclaredMethod("blockingGet", Function0::class.java)
+        blockingGet.isAccessible = true
+
+        val getter = { "value" }
+        blockingGet.invoke(os, getter) shouldBe "value"
+    }
+
     // Comprehensive tests for deprecated properties that should work before and after initialization
     context("consentRequired property") {
         context("before initWithContext") {

@@ -609,16 +609,7 @@ internal class OneSignalImp(
      * @param operationName Optional operation name to include in error messages (e.g., "login", "logout")
      */
     private fun waitForInit(operationName: String? = null) {
-        // Fast-path: once init reaches SUCCESS the state is terminal and never flips back (a
-        // re-initWithContext short-circuits on initState.isSDKAccessible(); only FAILED ->
-        // IN_PROGRESS retries exist), so there is nothing to await. Return synchronously instead
-        // of hopping onto the (cold-start-contended) IO dispatcher via runBlocking, which parks
-        // the calling thread -- e.g. Flutter's main-thread lifecycleInit -- and is the ANR in
-        // OneSignal-Flutter-SDK#1163. Centralizing the fast-path here covers every blocking entry
-        // point (service accessors via waitAndReturn, plus login / logout / updateUserJwt /
-        // add|removeUserJwtInvalidatedListener). The non-terminal states (IN_PROGRESS / FAILED /
-        // NOT_STARTED) still go through waitUntilInitInternal, preserving block-until-ready / throw
-        // semantics. initState is @Volatile, so the read is safe and lock-free.
+        // SUCCESS is terminal, so initialized callers can return without parking behind the IO dispatcher.
         if (initState == InitState.SUCCESS) {
             return
         }
@@ -739,8 +730,6 @@ internal class OneSignalImp(
 
     private fun <T> getServiceWithFeatureGate(getter: () -> T): T {
         if (isBackgroundThreadingEnabled) {
-            // waitAndReturn -> waitForInit short-circuits synchronously once init is SUCCESS
-            // (see waitForInit), so this no longer parks the caller on the IO dispatcher.
             return waitAndReturn(getter)
         }
         return when (initState) {
@@ -774,6 +763,10 @@ internal class OneSignalImp(
             // because Looper.getMainLooper() is not mocked. This is safe to ignore.
             Logging.debug("Could not check main thread status (likely in test environment): ${e.message}")
         }
+        if (initState == InitState.SUCCESS) {
+            return getter()
+        }
+
         // Call suspendAndReturn directly to avoid nested runBlocking (waitAndReturn -> waitForInit -> runBlocking)
         return runBlocking(runtimeIoDispatcher) {
             suspendAndReturn(getter)
