@@ -6,6 +6,7 @@ import android.content.SharedPreferences
 import androidx.test.core.app.ApplicationProvider.getApplicationContext
 import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
 import com.onesignal.common.AndroidUtils
+import com.onesignal.common.threading.OneSignalDispatchers
 import com.onesignal.common.threading.ThreadingMode
 import com.onesignal.core.internal.preferences.PreferenceOneSignalKeys.PREFS_LEGACY_APP_ID
 import com.onesignal.debug.ILogListener
@@ -20,6 +21,7 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.mockk.every
 import io.mockk.mockkObject
+import io.mockk.spyk
 import io.mockk.unmockkObject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -582,6 +584,61 @@ class SDKInitTests : FunSpec({
             // Ensure any waiter is released even if assertions failed early.
             if (trigger.count > 0) trigger.countDown()
             unmockkObject(AndroidUtils)
+        }
+    }
+
+    test("FF-on accessor returns once init is SUCCESS even when the IO dispatcher is saturated (OneSignal-Flutter-SDK#1163)") {
+        // Regression test for the Flutter main-thread ANR. Under SDK_BACKGROUND_THREADING,
+        // getServiceWithFeatureGate used to ALWAYS route through
+        // waitAndReturn -> waitForInit -> runBlocking(OneSignalDispatchers.IO), even after init
+        // had already reached SUCCESS. On Flutter's main-thread lifecycleInit that parks the UI
+        // thread on a cold-start-contended IO pool (OneSignal-Flutter-SDK#1163). The fix adds a
+        // lock-free SUCCESS fast-path.
+        //
+        // We reproduce the contention faithfully: saturate OneSignalDispatchers.IO so that the
+        // pre-fix runBlocking(OneSignalDispatchers.IO) would park indefinitely behind the busy
+        // workers, then assert the accessor still returns. With the fix it answers synchronously;
+        // without it the accessor thread would still be parked when we check.
+        val context = getApplicationContext<Context>()
+        // recordPrivateCalls so the private FF gate can be stubbed and intercepted on internal
+        // self-calls inside getServiceWithFeatureGate.
+        val os = spyk(OneSignalImp(), recordPrivateCalls = true)
+
+        // Initialize on the legacy (FF-off) path so init completes deterministically (and uses
+        // the injected Dispatchers.IO, leaving OneSignalDispatchers.IO idle for us to saturate),
+        // then flip the SDK onto the FF-on accessor branch.
+        os.initWithContext(context, "appId")
+        waitForInitialization(os)
+        every { os getProperty "isBackgroundThreadingEnabled" } returns true
+
+        // Saturate OneSignalDispatchers.IO. The backing ThreadPoolExecutor has a core pool of 2
+        // and a large queue, so two long-running tasks occupy every concurrently-running worker;
+        // anything dispatched afterwards (e.g. a runBlocking continuation) just queues and never
+        // runs until we release.
+        val running = CountDownLatch(2)
+        val release = CountDownLatch(1)
+        repeat(4) {
+            OneSignalDispatchers.launchOnIO {
+                running.countDown()
+                // Bounded await so a missed release can't wedge the shared pool for the suite.
+                release.await(30, TimeUnit.SECONDS)
+            }
+        }
+        running.await(5, TimeUnit.SECONDS) shouldBe true
+
+        try {
+            // When: a SUCCESS-state accessor is read while the IO pool is fully saturated.
+            val result = arrayOfNulls<Any>(1)
+            val accessorThread = Thread { result[0] = os.user }
+            accessorThread.start()
+            accessorThread.join(2_000)
+
+            // Then: the fast-path answered synchronously and the thread finished. The pre-fix
+            // runBlocking(OneSignalDispatchers.IO) path would still be parked here.
+            accessorThread.isAlive shouldBe false
+            result[0] shouldNotBe null
+        } finally {
+            release.countDown()
         }
     }
 
