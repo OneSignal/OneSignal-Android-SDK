@@ -726,7 +726,14 @@ internal class OneSignalImp(
 
     private fun <T> getServiceWithFeatureGate(getter: () -> T): T {
         if (isBackgroundThreadingEnabled) {
-            return waitAndReturn(getter)
+            // Once init reaches SUCCESS the state is terminal and never flips back, so the
+            // requested service is already constructable. Answer synchronously instead of
+            // hopping onto the (cold-start-contended) IO dispatcher via runBlocking, which
+            // parks the calling thread -- e.g. Flutter's main-thread lifecycleInit -- and is
+            // the ANR in OneSignal-Flutter-SDK#1163. Only the genuinely-not-yet-ready states
+            // (IN_PROGRESS / FAILED / NOT_STARTED) need waitAndReturn, which preserves the
+            // existing block-or-throw semantics.
+            return if (initState == InitState.SUCCESS) getter() else waitAndReturn(getter)
         }
         return when (initState) {
             InitState.SUCCESS -> {
