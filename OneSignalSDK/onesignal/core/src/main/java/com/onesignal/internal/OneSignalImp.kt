@@ -609,13 +609,11 @@ internal class OneSignalImp(
      * @param operationName Optional operation name to include in error messages (e.g., "login", "logout")
      */
     private fun waitForInit(operationName: String? = null) {
-        // SUCCESS is terminal, so initialized callers can return without parking behind the IO dispatcher.
         if (initState == InitState.SUCCESS) {
             return
         }
-        // Wait on the caller's own runBlocking event loop, not OneSignalDispatchers.IO: the body
-        // only awaits the init-completion signal, so coupling it to a saturated IO pool can park
-        // the caller even after init finishes (OneSignal-Flutter-SDK#1163).
+        // Intentionally dispatcher-less: wait on the calling thread's own event loop so resuming
+        // when init completes never depends on a free worker in a busy pool.
         runBlocking {
             waitUntilInitInternal(operationName)
         }
@@ -770,7 +768,7 @@ internal class OneSignalImp(
             return getter()
         }
 
-        // Wait on the caller's own runBlocking event loop, not OneSignalDispatchers.IO (see waitForInit).
+        // Intentionally dispatcher-less (see waitForInit).
         return runBlocking {
             suspendAndReturn(getter)
         }
