@@ -217,6 +217,7 @@ object OneSignalDispatchers {
      * When adding a new cold-start entry point (receiver, job, activity trampoline, push bridge),
      * call [prewarm] at the top of it before the first dispatch.
      */
+    @Suppress("TooGenericExceptionCaught")
     fun prewarm() {
         if (prewarmStarted) return
         synchronized(prewarmLock) {
