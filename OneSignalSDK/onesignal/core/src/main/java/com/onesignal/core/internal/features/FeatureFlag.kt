@@ -38,6 +38,10 @@ enum class FeatureFlag(
     ),
     ;
 
+    /**
+     * Whether this flag's [key] is present in [enabledKeys] (the set of enabled feature keys
+     * resolved from remote config / local overrides).
+     */
     fun isEnabledIn(enabledKeys: Set<String>): Boolean {
         return enabledKeys.contains(key)
     }

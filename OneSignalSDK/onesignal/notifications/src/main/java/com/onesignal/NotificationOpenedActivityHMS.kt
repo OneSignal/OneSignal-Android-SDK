@@ -30,6 +30,7 @@ package com.onesignal
 import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
+import com.onesignal.common.threading.OneSignalDispatchers
 import com.onesignal.common.threading.suspendifyOnDefault
 import com.onesignal.core.internal.application.OneSignalInternalActivity
 import com.onesignal.notifications.internal.open.INotificationOpenedProcessorHMS
@@ -79,6 +80,9 @@ class NotificationOpenedActivityHMS :
     }
 
     private fun processOpen(intent: Intent?) {
+        // HMS notification-open trampoline runs on the main thread and can cold-start the process;
+        // warm dispatchers before the first suspendifyOnDefault dispatch.
+        OneSignalDispatchers.prewarm()
         suspendifyOnDefault {
             if (!OneSignal.initWithContext(applicationContext)) {
                 return@suspendifyOnDefault
