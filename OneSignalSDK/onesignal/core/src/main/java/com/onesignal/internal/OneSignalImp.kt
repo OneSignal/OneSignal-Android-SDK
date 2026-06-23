@@ -613,7 +613,10 @@ internal class OneSignalImp(
         if (initState == InitState.SUCCESS) {
             return
         }
-        runBlocking(runtimeIoDispatcher) {
+        // Wait on the caller's own runBlocking event loop, not OneSignalDispatchers.IO: the body
+        // only awaits the init-completion signal, so coupling it to a saturated IO pool can park
+        // the caller even after init finishes (OneSignal-Flutter-SDK#1163).
+        runBlocking {
             waitUntilInitInternal(operationName)
         }
     }
@@ -767,8 +770,8 @@ internal class OneSignalImp(
             return getter()
         }
 
-        // Call suspendAndReturn directly to avoid nested runBlocking (waitAndReturn -> waitForInit -> runBlocking)
-        return runBlocking(runtimeIoDispatcher) {
+        // Wait on the caller's own runBlocking event loop, not OneSignalDispatchers.IO (see waitForInit).
+        return runBlocking {
             suspendAndReturn(getter)
         }
     }

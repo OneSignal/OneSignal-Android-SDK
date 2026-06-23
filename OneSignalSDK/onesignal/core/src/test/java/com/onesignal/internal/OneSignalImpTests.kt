@@ -5,7 +5,11 @@ import com.onesignal.debug.internal.logging.Logging
 import io.kotest.assertions.throwables.shouldThrowUnit
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineDispatcher
+import java.lang.reflect.InvocationTargetException
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import kotlin.coroutines.CoroutineContext
 
 class OneSignalImpTests : FunSpec({
@@ -27,6 +31,16 @@ class OneSignalImpTests : FunSpec({
         val initStateField = OneSignalImp::class.java.getDeclaredField("initState")
         initStateField.isAccessible = true
         initStateField.set(os, InitState.SUCCESS)
+    }
+
+    fun setPrivateField(
+        os: OneSignalImp,
+        name: String,
+        value: Any,
+    ) {
+        val field = OneSignalImp::class.java.getDeclaredField(name)
+        field.isAccessible = true
+        field.set(os, value)
     }
 
     test("attempting login before initWithContext throws exception") {
@@ -77,6 +91,41 @@ class OneSignalImpTests : FunSpec({
 
         val getter = { "value" }
         blockingGet.invoke(os, getter) shouldBe "value"
+    }
+
+    test("waitForInit at IN_PROGRESS awaits the completion signal without dispatching to the IO dispatcher") {
+        // Under FF-off, runtimeIoDispatcher == ioDispatcher (the throwing dispatcher). Pre-fix the
+        // IN_PROGRESS wait ran runBlocking(runtimeIoDispatcher) { ... }, coupling it to a dispatcher
+        // that can never run the body (models a saturated IO pool). Post-fix the wait runs on the
+        // caller's own event loop and resumes off the completion signal alone (#1163).
+        val os = OneSignalImp(ioDispatcher = throwingDispatcher)
+        setPrivateField(os, "initState", InitState.IN_PROGRESS)
+        val deferred = CompletableDeferred<Unit>()
+        setPrivateField(os, "suspendCompletion", deferred)
+
+        val waitForInit = OneSignalImp::class.java.getDeclaredMethod("waitForInit", String::class.java)
+        waitForInit.isAccessible = true
+
+        val failure = arrayOfNulls<Throwable>(1)
+        val finished = CountDownLatch(1)
+        Thread {
+            try {
+                waitForInit.invoke(os, null as String?)
+            } catch (t: InvocationTargetException) {
+                failure[0] = t.targetException
+            } finally {
+                finished.countDown()
+            }
+        }.start()
+
+        // Still parked on the not-yet-completed signal (pre-fix it would throw/finish immediately).
+        finished.await(300, TimeUnit.MILLISECONDS) shouldBe false
+
+        setPrivateField(os, "initState", InitState.SUCCESS)
+        deferred.complete(Unit)
+
+        finished.await(2, TimeUnit.SECONDS) shouldBe true
+        failure[0] shouldBe null
     }
 
     // Comprehensive tests for deprecated properties that should work before and after initialization
