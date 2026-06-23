@@ -204,7 +204,14 @@ object OneSignalDispatchers {
      * dispatches immediately afterward can still win the lazy-init race and pay construction on
      * its own thread. The fix relies on placing [prewarm] at cold-start entry points where there
      * is meaningful lead time (e.g. a `goAsync()` handoff or `initWithContext` work) before the
-     * first `suspendify*` / `launchOn*` dispatch. The known main-thread cold-start entry points:
+     * first `suspendify*` / `launchOn*` dispatch.
+     *
+     * [suspendifyOnIO], [suspendifyOnDefault], [launchOnIO], and [launchOnDefault] route through
+     * [IO] / [Default] only when [ThreadingMode.useBackgroundThreading] is true. With that mode
+     * off, they use `Dispatchers.IO` / `Dispatchers.Default`, so [prewarm] mainly benefits future
+     * calls after the mode flips; [suspendifyOnSerialIO] always routes through [SerialIO].
+     *
+     * The known main-thread cold-start entry points:
      * | Entry point | Class |
      * |---|---|
      * | `initWithContext` / `initWithContextSuspend` | `OneSignalImp` |
@@ -235,7 +242,8 @@ object OneSignalDispatchers {
                         launchOnDefault { /* warm DefaultScope + defaultExecutor */ }
                         launchOnSerialIO { /* warm SerialIOScope + serialIOExecutor */ }
                     } catch (e: Throwable) {
-                        Logging.warn("OneSignalDispatchers.prewarm failed: ${e.message}")
+                        synchronized(prewarmLock) { prewarmStarted = false }
+                        Logging.warn("OneSignalDispatchers.prewarm failed: ${e.message}", e)
                     }
                 },
                 "$BASE_THREAD_NAME-prewarm",
@@ -252,7 +260,7 @@ object OneSignalDispatchers {
             // cost of a failed prewarm is that the first real dispatch pays the original
             // construction cost.
             synchronized(prewarmLock) { prewarmStarted = false }
-            Logging.warn("OneSignalDispatchers.prewarm failed to start daemon: ${t.message}")
+            Logging.warn("OneSignalDispatchers.prewarm failed to start daemon: ${t.message}", t)
         }
     }
 
