@@ -99,8 +99,8 @@ interface IOneSignal {
         replaceWith = ReplaceWith("getConsentRequired()"),
     )
     @set:Deprecated(
-        message = "Use the suspend function setConsentRequired(required) instead.",
-        replaceWith = ReplaceWith("setConsentRequired(required)"),
+        message = "Use the suspend function setConsentRequired(value) instead.",
+        replaceWith = ReplaceWith("setConsentRequired(value)"),
     )
     var consentRequired: Boolean
 

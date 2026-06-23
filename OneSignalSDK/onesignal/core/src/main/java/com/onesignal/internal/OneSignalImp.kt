@@ -79,8 +79,8 @@ internal class OneSignalImp(
         replaceWith = ReplaceWith("getConsentRequired()"),
     )
     @set:Deprecated(
-        message = "Use the suspend function setConsentRequired(required) instead.",
-        replaceWith = ReplaceWith("setConsentRequired(required)"),
+        message = "Use the suspend function setConsentRequired(value) instead.",
+        replaceWith = ReplaceWith("setConsentRequired(value)"),
     )
     override var consentRequired: Boolean
         get() =

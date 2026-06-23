@@ -136,8 +136,8 @@ object OneSignal {
         replaceWith = ReplaceWith("getConsentRequiredSuspend()"),
     )
     @set:Deprecated(
-        message = "Use the suspend function setConsentRequiredSuspend(required) instead.",
-        replaceWith = ReplaceWith("setConsentRequiredSuspend(required)"),
+        message = "Use the suspend function setConsentRequiredSuspend(value) instead.",
+        replaceWith = ReplaceWith("setConsentRequiredSuspend(value)"),
     )
     @Suppress("DEPRECATION")
     var consentRequired: Boolean
