@@ -13,10 +13,14 @@ internal class FusedLocationApiWrapperImpl : IFusedLocationApiWrapper {
         googleApiClient: GoogleApiClient,
         locationListener: LocationListener,
     ) {
-        if (googleApiClient.isConnected) {
-            LocationServices.FusedLocationApi.removeLocationUpdates(googleApiClient, locationListener)
-        } else {
-            Logging.warn("GoogleApiClient is not connected. Unable to cancel location updates.")
+        try {
+            if (googleApiClient.isConnected) {
+                LocationServices.FusedLocationApi.removeLocationUpdates(googleApiClient, locationListener)
+            } else {
+                Logging.warn("GoogleApiClient is not connected. Unable to cancel location updates.")
+            }
+        } catch (t: Throwable) {
+            Logging.warn("FusedLocationApi.cancelLocationUpdates failed!", t)
         }
     }
 
@@ -38,8 +42,12 @@ internal class FusedLocationApiWrapperImpl : IFusedLocationApiWrapper {
     }
 
     override fun getLastLocation(googleApiClient: GoogleApiClient): Location? {
-        if (googleApiClient.isConnected) {
-            return LocationServices.FusedLocationApi.getLastLocation(googleApiClient)
+        try {
+            if (googleApiClient.isConnected) {
+                return LocationServices.FusedLocationApi.getLastLocation(googleApiClient)
+            }
+        } catch (t: Throwable) {
+            Logging.warn("FusedLocationApi.getLastLocation failed!", t)
         }
         return null
     }
