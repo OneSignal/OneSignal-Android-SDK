@@ -174,12 +174,8 @@ class GmsLocationControllerTests : FunSpec({
         }
     }
 
-    // Regression: when isShared is enabled before location permission is granted, the
-    // GoogleApiClient connects (which does not require permission) but the first
-    // requestLocationUpdates fails. A later start() (e.g. triggered by the permission grant)
-    // previously short-circuited and only fired a one-shot last location, leaving the live
-    // subscription dead until the next app focus change. It must now re-arm on that start().
-    test("start re-arms the live location subscription on a subsequent start") {
+    // Repeated start() on a healthy request must not cancel + re-register it (which resets the interval).
+    test("start does not re-register an already-active request") {
         // Given
         val location = Location("TEST_PROVIDER")
         location.latitude = 123.45
@@ -194,11 +190,11 @@ class GmsLocationControllerTests : FunSpec({
         val response1 = gmsLocationController.start()
         val response2 = gmsLocationController.start()
 
-        // Then
+        // Then the active request is left alone: not re-registered, not cancelled
         response1 shouldBe true
         response2 shouldBe true
-        // Once on the initial init, and again when the second start re-arms the subscription.
-        fusedLocationApiWrapperMock.requestLocationUpdatesCallCount shouldBe 2
+        fusedLocationApiWrapperMock.requestLocationUpdatesCallCount shouldBe 1
+        fusedLocationApiWrapperMock.cancelLocationUpdatesCallCount shouldBe 0
     }
 
     // Regression: a requestLocationUpdates that fails (e.g. a swallowed SecurityException
