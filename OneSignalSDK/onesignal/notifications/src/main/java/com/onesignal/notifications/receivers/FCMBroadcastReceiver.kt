@@ -31,12 +31,12 @@ class FCMBroadcastReceiver : BroadcastReceiver() {
         // likely to be warm by the time the suspendifyOnIO below submits its work.
         OneSignalDispatchers.prewarm()
 
-        val pendingResult = goAsync()
+        val pendingResult: BroadcastReceiver.PendingResult? = goAsync()
         // process in background
         suspendifyOnIO {
             if (!OneSignal.initWithContext(context.applicationContext)) {
                 Logging.warn("FCMBroadcastReceiver skipped due to failed OneSignal init")
-                pendingResult.finish()
+                pendingResult?.finish()
                 return@suspendifyOnIO
             }
 
@@ -44,7 +44,7 @@ class FCMBroadcastReceiver : BroadcastReceiver() {
 
             if (!isFCMMessage(intent)) {
                 setSuccessfulResultCode()
-                pendingResult.finish()
+                pendingResult?.finish()
                 return@suspendifyOnIO
             }
 
@@ -53,12 +53,12 @@ class FCMBroadcastReceiver : BroadcastReceiver() {
             // Prevent other FCM receivers from firing if work manager is processing the notification
             if (processedResult?.isWorkManagerProcessing == true) {
                 setAbort()
-                pendingResult.finish()
+                pendingResult?.finish()
                 return@suspendifyOnIO
             }
 
             setSuccessfulResultCode()
-            pendingResult.finish()
+            pendingResult?.finish()
         }
     }
 

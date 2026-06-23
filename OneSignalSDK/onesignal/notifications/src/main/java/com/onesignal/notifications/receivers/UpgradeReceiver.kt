@@ -53,19 +53,19 @@ class UpgradeReceiver : BroadcastReceiver() {
         // goAsync() so the daemon has lead time before the first suspendifyOnIO dispatch.
         OneSignalDispatchers.prewarm()
 
-        val pendingResult = goAsync()
+        val pendingResult: BroadcastReceiver.PendingResult? = goAsync()
 
         // init OneSignal and enqueue restore work in background
         suspendifyOnIO {
             if (!OneSignal.initWithContext(context.applicationContext)) {
                 Logging.warn("UpgradeReceiver skipped due to failed OneSignal init")
-                pendingResult.finish()
+                pendingResult?.finish()
                 return@suspendifyOnIO
             }
 
             val restoreWorkManager = OneSignal.getService<INotificationRestoreWorkManager>()
             restoreWorkManager.beginEnqueueingWork(context, true)
-            pendingResult.finish()
+            pendingResult?.finish()
         }
     }
 }

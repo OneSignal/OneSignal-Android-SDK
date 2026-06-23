@@ -44,12 +44,12 @@ class NotificationDismissReceiver : BroadcastReceiver() {
         // goAsync() so the daemon has lead time before the first suspendifyOnIO dispatch.
         OneSignalDispatchers.prewarm()
 
-        val pendingResult = goAsync()
+        val pendingResult: BroadcastReceiver.PendingResult? = goAsync()
 
         suspendifyOnIO {
             if (!OneSignal.initWithContext(context.applicationContext)) {
                 Logging.warn("NotificationOpenedReceiver skipped due to failed OneSignal init")
-                pendingResult.finish()
+                pendingResult?.finish()
                 return@suspendifyOnIO
             }
 
@@ -59,7 +59,7 @@ class NotificationDismissReceiver : BroadcastReceiver() {
             withContext(Dispatchers.Main) {
                 notificationOpenedProcessor.processFromContext(context, intent)
             }
-            pendingResult.finish()
+            pendingResult?.finish()
         }
     }
 }
