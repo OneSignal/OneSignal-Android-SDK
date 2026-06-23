@@ -2,6 +2,7 @@ package com.onesignal.core.services
 
 import android.app.job.JobParameters
 import com.onesignal.OneSignal
+import com.onesignal.common.threading.OneSignalDispatchers
 import com.onesignal.core.internal.background.IBackgroundManager
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
@@ -38,6 +39,16 @@ class SyncJobServiceTests : FunSpec({
 
     afterAny {
         unmockkAll()
+    }
+
+    test("onStartJob calls prewarm before suspendifyOnIO (SDK-4794)") {
+        mockkObject(OneSignalDispatchers)
+        every { OneSignalDispatchers.prewarm() } returns Unit
+        coEvery { OneSignal.initWithContext(any()) } returns false
+
+        mocks.syncJobService.onStartJob(mocks.jobParameters)
+
+        verify(exactly = 1) { OneSignalDispatchers.prewarm() }
     }
 
     test("onStartJob returns true when initWithContext fails") {

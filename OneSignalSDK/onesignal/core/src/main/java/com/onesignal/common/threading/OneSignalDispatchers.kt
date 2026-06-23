@@ -199,6 +199,23 @@ object OneSignalDispatchers {
      * on the caller. Failures are logged and swallowed because the executors retain their
      * existing fallback paths (e.g. `Dispatchers.IO.limitedParallelism(1)` for [SerialIO]) and a
      * failed prewarm will simply mean the first production caller pays the original cost.
+     *
+     * **Best-effort, not a hard guarantee.** Because [prewarm] is fire-and-forget, a caller that
+     * dispatches immediately afterward can still win the lazy-init race and pay construction on
+     * its own thread. The fix relies on placing [prewarm] at cold-start entry points where there
+     * is meaningful lead time (e.g. a `goAsync()` handoff or `initWithContext` work) before the
+     * first `suspendify*` / `launchOn*` dispatch. The known main-thread cold-start entry points:
+     * | Entry point | Class |
+     * |---|---|
+     * | `initWithContext` / `initWithContextSuspend` | `OneSignalImp` |
+     * | `onStartJob` | `core.services.SyncJobService` |
+     * | `onReceive` | `FCMBroadcastReceiver`, `NotificationDismissReceiver`, `BootUpReceiver`, `UpgradeReceiver` |
+     * | `onMessage` / registration callbacks | `ADMMessageHandler`, `ADMMessageHandlerJob` |
+     * | `onNewToken` / `onMessageReceived` | `OneSignalHmsEventBridge` |
+     * | `processIntent` / `processOpen` | `NotificationOpenedActivityBase`, `NotificationOpenedActivityHMS` |
+     *
+     * When adding a new cold-start entry point (receiver, job, activity trampoline, push bridge),
+     * call [prewarm] at the top of it before the first dispatch.
      */
     fun prewarm() {
         if (prewarmStarted) return

@@ -3,6 +3,7 @@ package com.onesignal.notifications.services
 import android.content.Intent
 import com.amazon.device.messaging.ADMMessageHandlerBase
 import com.onesignal.OneSignal
+import com.onesignal.common.threading.OneSignalDispatchers
 import com.onesignal.common.threading.suspendifyOnIO
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.notifications.internal.bundle.INotificationBundleProcessor
@@ -15,6 +16,8 @@ class ADMMessageHandler : ADMMessageHandlerBase("ADMMessageHandler") {
         val context = applicationContext
         val bundle = intent.extras ?: return
 
+        // ADM can cold-start the process before initWithContext; warm dispatchers first.
+        OneSignalDispatchers.prewarm()
         suspendifyOnIO {
             if (!OneSignal.initWithContext(context)) {
                 Logging.warn("onMessage skipped due to failed OneSignal init")
@@ -29,6 +32,7 @@ class ADMMessageHandler : ADMMessageHandlerBase("ADMMessageHandler") {
     override fun onRegistered(newRegistrationId: String) {
         Logging.info("ADM registration ID: $newRegistrationId")
 
+        OneSignalDispatchers.prewarm()
         suspendifyOnIO {
             val registerer = OneSignal.getService<IPushRegistratorCallback>()
             registerer.fireCallback(newRegistrationId)
@@ -44,6 +48,7 @@ class ADMMessageHandler : ADMMessageHandlerBase("ADMMessageHandler") {
             )
         }
 
+        OneSignalDispatchers.prewarm()
         suspendifyOnIO {
             val registerer = OneSignal.getService<IPushRegistratorCallback>()
             registerer.fireCallback(null)
