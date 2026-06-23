@@ -85,10 +85,10 @@ object IOMockHelper : BeforeSpecListener, AfterSpecListener, BeforeTestListener,
         // OneSignalDispatchers = object that contains launchOnIO and launchOnDefault
         mockkObject(OneSignalDispatchers)
 
-        // ThreadUtils' FF-gated helpers (and several entry points) now call prewarm() eagerly.
-        // We mock launch* below to run blocks inline, so the real prewarm()'s background daemon
-        // is pure overhead in tests — stub it to a no-op so specs don't spawn OneSignal-prewarm
-        // threads on every suspendify*/launchOn* call.
+        // Cold-start entry points (receivers, activities, push bridges, JobService) call prewarm()
+        // before dispatching. We mock launch*/suspendify* below to run blocks inline, so the real
+        // prewarm()'s background daemon is pure overhead in tests — stub it to a no-op so specs
+        // don't spawn OneSignal-prewarm threads through that entry-point code.
         every { OneSignalDispatchers.prewarm() } returns Unit
 
         // Helper function to track async work (suspendifyOnIO, launchOnIO, launchOnDefault)

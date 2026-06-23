@@ -6,36 +6,41 @@ import androidx.test.core.app.ApplicationProvider
 import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
 import com.onesignal.OneSignal
 import com.onesignal.common.threading.OneSignalDispatchers
+import com.onesignal.common.threading.suspendifyOnIO
 import com.onesignal.mocks.IOMockHelper
 import io.kotest.core.spec.style.FunSpec
+import io.mockk.clearMocks
 import io.mockk.coEvery
-import io.mockk.every
-import io.mockk.just
 import io.mockk.mockkObject
-import io.mockk.runs
-import io.mockk.unmockkAll
+import io.mockk.unmockkObject
 import io.mockk.verify
+import io.mockk.verifyOrder
 
 @RobolectricTest
 class FCMBroadcastReceiverTests : FunSpec({
     listener(IOMockHelper)
 
     beforeAny {
-        mockkObject(OneSignalDispatchers)
-        every { OneSignalDispatchers.prewarm() } just runs
+        // IOMockHelper owns the OneSignalDispatchers object mock (incl. the prewarm() stub) for the
+        // whole spec. Clear only its recorded calls so each test's prewarm() count starts at zero,
+        // while keeping IOMockHelper's stubbed answers (answers = false).
+        clearMocks(OneSignalDispatchers, answers = false)
         mockkObject(OneSignal)
         coEvery { OneSignal.initWithContext(any()) } returns false
     }
 
     afterAny {
-        unmockkAll()
+        // Tear down only the mock this spec owns. OneSignalDispatchers and the ThreadUtils statics
+        // are owned by IOMockHelper and torn down in its afterSpec — unmockkAll() here would strip
+        // them mid-spec and break the remaining tests.
+        unmockkObject(OneSignal)
     }
 
-    test("FCMBroadcastReceiver.onReceive makes the explicit prewarm() head-start call for a normal push") {
+    test("FCMBroadcastReceiver.onReceive makes the explicit prewarm() head-start call before dispatch for a normal push") {
         // Scope of this test: it asserts the explicit `OneSignalDispatchers.prewarm()` call in
-        // onReceive (the goAsync() head start). IOMockHelper stubs `suspendifyOnIO` and prewarm()
-        // is mocked, so the exactly=1 count is the receiver's own call — this verifies placement,
-        // not end-to-end cold-init behavior.
+        // onReceive (the goAsync() head start) happens before the suspendifyOnIO dispatch.
+        // IOMockHelper stubs `suspendifyOnIO` (run inline) and prewarm(), so this verifies
+        // placement/ordering, not end-to-end cold-init behavior.
         val context = ApplicationProvider.getApplicationContext<Context>()
         val intent =
             Intent("com.google.android.c2dm.intent.RECEIVE").apply {
@@ -46,6 +51,10 @@ class FCMBroadcastReceiverTests : FunSpec({
         FCMBroadcastReceiver().onReceive(context, intent)
 
         verify(exactly = 1) { OneSignalDispatchers.prewarm() }
+        verifyOrder {
+            OneSignalDispatchers.prewarm()
+            suspendifyOnIO(any<suspend () -> Unit>())
+        }
     }
 
     test("FCMBroadcastReceiver.onReceive skips prewarm for token update intents") {
