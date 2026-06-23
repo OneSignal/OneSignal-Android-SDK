@@ -92,17 +92,10 @@ class SDKInitTests : FunSpec({
 
     beforeAny {
         Logging.logLevel = LogLevel.NONE
-        // FF-off (legacy mode) is the default; tests in this file exercise that contract.
-        // FF-on coverage of [initWithContext] (async dispatch via [suspendifyOnIO]) lives
-        // upstream of this PR and isn't repeated here — exercising it cleanly requires more
-        // setup than is in scope: OneSignalImp reads the FF via `featureManager.isEnabled(...)`,
-        // backed by `featureStates`, which is itself populated from
-        // `configModelStore.model.sdkRemoteFeatureFlags`. To flip the FF on we'd have to plant
-        // the cached ConfigModel JSON in SharedPreferences before [OneSignalImp] is constructed,
-        // and that conflicts with [BlockingPrefsContext] (used for the does-not-block /
-        // recovery shapes) because the FF check itself reads prefs synchronously through the
-        // lazy chain. The FF-on path is exercised in production usage; the regression we
-        // protect against here is the FF-off blocking contract pinned below.
+        // FF-off (legacy mode) is the default; most tests in this file exercise that contract.
+        // FF-on tests opt in per-test via [enableBackgroundThreadingBeforeInit], which seeds the
+        // flag straight onto `configModelStore.model.sdkRemoteFeatureFlags` (no SharedPreferences
+        // planting), so `featureManager.isEnabled(SDK_BACKGROUND_THREADING)` resolves true.
         ThreadingMode.useBackgroundThreading = false
     }
 
