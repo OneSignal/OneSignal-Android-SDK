@@ -74,8 +74,8 @@ internal class OneSignalImp(
 
     @get:Deprecated(
         message =
-            "Reading this property may block the calling thread until the SDK is initialized and " +
-                "cause ANRs when called on the main thread. Use the suspend function getConsentRequired() instead.",
+        "Reading this property may block the calling thread until the SDK is initialized and " +
+            "cause ANRs when called on the main thread. Use the suspend function getConsentRequired() instead.",
         replaceWith = ReplaceWith("getConsentRequired()"),
     )
     @set:Deprecated(
@@ -98,8 +98,8 @@ internal class OneSignalImp(
 
     @get:Deprecated(
         message =
-            "Reading this property may block the calling thread until the SDK is initialized and " +
-                "cause ANRs when called on the main thread. Use the suspend function getConsentGiven() instead.",
+        "Reading this property may block the calling thread until the SDK is initialized and " +
+            "cause ANRs when called on the main thread. Use the suspend function getConsentGiven() instead.",
         replaceWith = ReplaceWith("getConsentGiven()"),
     )
     @set:Deprecated(
@@ -126,8 +126,8 @@ internal class OneSignalImp(
 
     @get:Deprecated(
         message =
-            "Reading this property may block the calling thread until the SDK is initialized and " +
-                "cause ANRs when called on the main thread. Use the suspend function getDisableGMSMissingPrompt() instead.",
+        "Reading this property may block the calling thread until the SDK is initialized and " +
+            "cause ANRs when called on the main thread. Use the suspend function getDisableGMSMissingPrompt() instead.",
         replaceWith = ReplaceWith("getDisableGMSMissingPrompt()"),
     )
     @set:Deprecated(

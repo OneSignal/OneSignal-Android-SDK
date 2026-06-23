@@ -131,8 +131,8 @@ object OneSignal {
     @JvmStatic
     @get:Deprecated(
         message =
-            "Reading this property may block the calling thread until the SDK is initialized and " +
-                "cause ANRs when called on the main thread. Use the suspend function getConsentRequiredSuspend() instead.",
+        "Reading this property may block the calling thread until the SDK is initialized and " +
+            "cause ANRs when called on the main thread. Use the suspend function getConsentRequiredSuspend() instead.",
         replaceWith = ReplaceWith("getConsentRequiredSuspend()"),
     )
     @set:Deprecated(
@@ -153,8 +153,8 @@ object OneSignal {
     @JvmStatic
     @get:Deprecated(
         message =
-            "Reading this property may block the calling thread until the SDK is initialized and " +
-                "cause ANRs when called on the main thread. Use the suspend function getConsentGivenSuspend() instead.",
+        "Reading this property may block the calling thread until the SDK is initialized and " +
+            "cause ANRs when called on the main thread. Use the suspend function getConsentGivenSuspend() instead.",
         replaceWith = ReplaceWith("getConsentGivenSuspend()"),
     )
     @set:Deprecated(
@@ -174,8 +174,8 @@ object OneSignal {
     @JvmStatic
     @get:Deprecated(
         message =
-            "Reading this property may block the calling thread until the SDK is initialized and " +
-                "cause ANRs when called on the main thread. Use the suspend function getDisableGMSMissingPromptSuspend() instead.",
+        "Reading this property may block the calling thread until the SDK is initialized and " +
+            "cause ANRs when called on the main thread. Use the suspend function getDisableGMSMissingPromptSuspend() instead.",
         replaceWith = ReplaceWith("getDisableGMSMissingPromptSuspend()"),
     )
     @set:Deprecated(
