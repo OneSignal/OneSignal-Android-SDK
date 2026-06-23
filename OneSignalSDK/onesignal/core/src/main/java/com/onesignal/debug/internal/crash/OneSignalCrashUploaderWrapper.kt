@@ -2,14 +2,12 @@ package com.onesignal.debug.internal.crash
 
 import com.onesignal.common.threading.OneSignalDispatchers
 import com.onesignal.core.internal.application.IApplicationService
-import com.onesignal.core.internal.features.FeatureFlag
 import com.onesignal.core.internal.features.IFeatureManager
 import com.onesignal.core.internal.startup.IStartableService
 import com.onesignal.debug.internal.logging.otel.android.AndroidOtelLogger
 import com.onesignal.debug.internal.logging.otel.android.createAndroidOtelPlatformProvider
 import com.onesignal.otel.OtelFactory
 import com.onesignal.otel.crash.OtelCrashUploader
-import kotlinx.coroutines.runBlocking
 
 /**
  * Android-specific wrapper for OtelCrashUploader that implements IStartableService.
@@ -51,29 +49,15 @@ internal class OneSignalCrashUploaderWrapper(
     @Suppress("TooGenericExceptionCaught")
     override fun start() {
         if (!OtelSdkSupport.isSupported) return
-        if (featureManager.isEnabled(FeatureFlag.SDK_BACKGROUND_THREADING)) {
-            OneSignalDispatchers.launchOnIO {
-                try {
-                    uploader.start()
-                } catch (t: Throwable) {
-                    com.onesignal.debug.internal.logging.Logging.warn(
-                        "OneSignal: Crash uploader failed to start: ${t.message}",
-                        t,
-                    )
-                }
-            }
-            return
-        }
-
-        Thread {
+        OneSignalDispatchers.launchOnIO {
             try {
-                runBlocking { uploader.start() }
+                uploader.start()
             } catch (t: Throwable) {
                 com.onesignal.debug.internal.logging.Logging.warn(
                     "OneSignal: Crash uploader failed to start: ${t.message}",
                     t,
                 )
             }
-        }.start()
+        }
     }
 }

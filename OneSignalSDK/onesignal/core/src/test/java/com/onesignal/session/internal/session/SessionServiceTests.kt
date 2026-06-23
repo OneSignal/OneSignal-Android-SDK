@@ -1,7 +1,7 @@
 package com.onesignal.session.internal.session
 
 import com.onesignal.common.threading.OneSignalDispatchers
-import com.onesignal.common.threading.runOnSerialIOIfBackgroundThreading
+import com.onesignal.common.threading.runOnSerialIO
 import com.onesignal.mocks.MockHelper
 import com.onesignal.session.internal.session.impl.SessionService
 import io.kotest.core.spec.style.FunSpec
@@ -175,12 +175,12 @@ class SessionServiceTests : FunSpec({
         verify(exactly = 0) { mocks.spyCallback.onSessionEnded(any()) }
     }
 
-    test("onFocus dispatches the session-mutation body through runOnSerialIOIfBackgroundThreading (SDK-4508)") {
+    test("onFocus dispatches the session-mutation body through runOnSerialIO (SDK-4508)") {
         // SDK-4508: SessionService.onFocus runs on the main thread via
         // ApplicationService.handleFocus -> applicationLifecycleNotifier.fire. Its body fires
         // session lifecycle handlers (operation repo, IAM trigger eval, etc.) which can in turn
         // touch OneSignalDispatchers' cold-init chain. The fix wraps the body in
-        // runOnSerialIOIfBackgroundThreading; this test pins down the dispatch contract.
+        // runOnSerialIO; this test pins down the dispatch contract.
         //
         // Stub the helper as a pass-through so the underlying state mutations still happen
         // (`startTime`, `focusTime`, lifecycle-handler fires) and the existing assertions
@@ -188,7 +188,7 @@ class SessionServiceTests : FunSpec({
         val threadUtilsPath = "com.onesignal.common.threading.ThreadUtilsKt"
         mockkStatic(threadUtilsPath)
         mockkObject(OneSignalDispatchers)
-        every { runOnSerialIOIfBackgroundThreading(any<() -> Unit>()) } answers {
+        every { runOnSerialIO(any<() -> Unit>()) } answers {
             firstArg<() -> Unit>().invoke()
         }
         every { OneSignalDispatchers.launchOnSerialIO(any<suspend () -> Unit>()) } returns mockk<Job>(relaxed = true)
@@ -202,18 +202,18 @@ class SessionServiceTests : FunSpec({
 
             sessionService.onFocus(firedOnSubscribe = false)
 
-            verify(exactly = 1) { runOnSerialIOIfBackgroundThreading(any<() -> Unit>()) }
+            verify(exactly = 1) { runOnSerialIO(any<() -> Unit>()) }
         } finally {
             unmockkObject(OneSignalDispatchers)
             unmockkStatic(threadUtilsPath)
         }
     }
 
-    test("onUnfocused dispatches the activeDuration update through runOnSerialIOIfBackgroundThreading (SDK-4508)") {
+    test("onUnfocused dispatches the activeDuration update through runOnSerialIO (SDK-4508)") {
         val threadUtilsPath = "com.onesignal.common.threading.ThreadUtilsKt"
         mockkStatic(threadUtilsPath)
         mockkObject(OneSignalDispatchers)
-        every { runOnSerialIOIfBackgroundThreading(any<() -> Unit>()) } answers {
+        every { runOnSerialIO(any<() -> Unit>()) } answers {
             firstArg<() -> Unit>().invoke()
         }
         every { OneSignalDispatchers.launchOnSerialIO(any<suspend () -> Unit>()) } returns mockk<Job>(relaxed = true)
@@ -230,23 +230,23 @@ class SessionServiceTests : FunSpec({
 
             sessionService.onUnfocused()
 
-            verify(exactly = 1) { runOnSerialIOIfBackgroundThreading(any<() -> Unit>()) }
+            verify(exactly = 1) { runOnSerialIO(any<() -> Unit>()) }
         } finally {
             unmockkObject(OneSignalDispatchers)
             unmockkStatic(threadUtilsPath)
         }
     }
 
-    test("rapid onUnfocused -> onFocus burst dispatches each event through the gated helper in submission order (SDK-4508)") {
+    test("rapid onUnfocused -> onFocus burst dispatches each event through the serial IO helper in submission order (SDK-4508)") {
         // Mirrors the SDK-4505 BackgroundManager burst test. Real-world scenario: the user
         // backgrounds then immediately re-foregrounds the app on the main thread. Both lifecycle
-        // events must route through the same gated helper in submission order so the serial IO
+        // events must route through the same serial IO helper in submission order so the serial IO
         // worker sees focusTime / activeDuration mutations in main-thread arrival order. If they
         // ever raced across the IO pool, activeDuration accounting could drift.
         val threadUtilsPath = "com.onesignal.common.threading.ThreadUtilsKt"
         mockkStatic(threadUtilsPath)
         mockkObject(OneSignalDispatchers)
-        every { runOnSerialIOIfBackgroundThreading(any<() -> Unit>()) } just runs
+        every { runOnSerialIO(any<() -> Unit>()) } just runs
         every { OneSignalDispatchers.launchOnSerialIO(any<suspend () -> Unit>()) } returns mockk<Job>(relaxed = true)
 
         try {
@@ -259,10 +259,10 @@ class SessionServiceTests : FunSpec({
             sessionService.onUnfocused()
             sessionService.onFocus(firedOnSubscribe = false)
 
-            verify(exactly = 2) { runOnSerialIOIfBackgroundThreading(any<() -> Unit>()) }
+            verify(exactly = 2) { runOnSerialIO(any<() -> Unit>()) }
             verifyOrder {
-                runOnSerialIOIfBackgroundThreading(any<() -> Unit>())
-                runOnSerialIOIfBackgroundThreading(any<() -> Unit>())
+                runOnSerialIO(any<() -> Unit>())
+                runOnSerialIO(any<() -> Unit>())
             }
         } finally {
             unmockkObject(OneSignalDispatchers)

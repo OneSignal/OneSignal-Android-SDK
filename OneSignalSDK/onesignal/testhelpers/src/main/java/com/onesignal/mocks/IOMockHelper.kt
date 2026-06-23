@@ -1,7 +1,7 @@
 package com.onesignal.mocks
 
 import com.onesignal.common.threading.OneSignalDispatchers
-import com.onesignal.common.threading.runOnSerialIOIfBackgroundThreading
+import com.onesignal.common.threading.runOnSerialIO
 import com.onesignal.common.threading.suspendifyOnIO
 import com.onesignal.common.threading.suspendifyOnMain
 import com.onesignal.common.threading.suspendifyOnSerialIO
@@ -34,7 +34,7 @@ import java.util.concurrent.atomic.AtomicInteger
  *
  * This helper avoids that by:
  *  - Mocking `suspendifyOnIO`, `suspendifyOnSerialIO`, `suspendifyOnMain`,
- *    `runOnSerialIOIfBackgroundThreading`, and
+ *    `runOnSerialIO`, and
  *    `OneSignalDispatchers.launchOnIO` / `launchOnSerialIO` / `launchOnDefault` so their
  *    blocks run immediately
  *  - Completing a `CompletableDeferred` when the async block finishes
@@ -135,11 +135,10 @@ object IOMockHelper : BeforeSpecListener, AfterSpecListener, BeforeTestListener,
             trackAsyncWork(block)
         }
 
-        // Run the block inline on the test thread so callers see the same observable behavior
-        // as the FF-off branch in production. Tests that need to exercise the FF-on branch can
-        // override this with their own `every { runOnSerialIOIfBackgroundThreading(...) }`
-        // (e.g. routing through `suspendifyOnSerialIO` + `trackAsyncWork`).
-        every { runOnSerialIOIfBackgroundThreading(any<() -> Unit>()) } answers {
+        // Run the block inline on the test thread so async dispatch is deterministic. Tests that
+        // need to observe the real serial-IO dispatch can override this with their own
+        // `every { runOnSerialIO(...) }` (e.g. routing through `suspendifyOnSerialIO` + `trackAsyncWork`).
+        every { runOnSerialIO(any<() -> Unit>()) } answers {
             val block = firstArg<() -> Unit>()
             block()
         }

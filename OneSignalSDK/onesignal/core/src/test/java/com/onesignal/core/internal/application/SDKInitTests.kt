@@ -7,13 +7,8 @@ import androidx.test.core.app.ApplicationProvider.getApplicationContext
 import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
 import com.onesignal.common.AndroidUtils
 import com.onesignal.common.threading.OneSignalDispatchers
-import com.onesignal.common.threading.ThreadingMode
-import com.onesignal.core.internal.config.ConfigModelStore
-import com.onesignal.core.internal.features.FeatureFlag
 import com.onesignal.core.internal.preferences.PreferenceOneSignalKeys.PREFS_LEGACY_APP_ID
-import com.onesignal.debug.ILogListener
 import com.onesignal.debug.LogLevel
-import com.onesignal.debug.OneSignalLogEvent
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.internal.OneSignalImp
 import io.kotest.assertions.throwables.shouldThrow
@@ -48,11 +43,6 @@ class SDKInitTests : FunSpec({
             attempts++
         }
         oneSignalImp.isInitialized shouldBe true
-    }
-
-    fun enableBackgroundThreadingBeforeInit(oneSignalImp: OneSignalImp) {
-        oneSignalImp.getService(ConfigModelStore::class.java).model.sdkRemoteFeatureFlags =
-            listOf(FeatureFlag.SDK_BACKGROUND_THREADING.key)
     }
 
     fun withSaturatedOneSignalIo(block: () -> Unit) {
@@ -92,17 +82,9 @@ class SDKInitTests : FunSpec({
 
     beforeAny {
         Logging.logLevel = LogLevel.NONE
-        // FF-off (legacy mode) is the default; most tests in this file exercise that contract.
-        // FF-on tests opt in per-test via [enableBackgroundThreadingBeforeInit], which seeds the
-        // flag straight onto `configModelStore.model.sdkRemoteFeatureFlags` (no SharedPreferences
-        // planting), so `featureManager.isEnabled(SDK_BACKGROUND_THREADING)` resolves true.
-        ThreadingMode.useBackgroundThreading = false
     }
 
     afterAny {
-        // Reset FF state so a test setting it to true can't leak into the next test.
-        ThreadingMode.useBackgroundThreading = false
-
         val context = getApplicationContext<Context>()
         val prefs = context.getSharedPreferences("OneSignal", Context.MODE_PRIVATE)
         prefs.edit()
@@ -173,7 +155,11 @@ class SDKInitTests : FunSpec({
         os.initWithContext(context, "appId")
 
         // Then
-        // returns gracefully but isInitialized should be false
+        // Init runs asynchronously and fails the locked-storage check, transitioning to FAILED.
+        // Reading an accessor blocks until that terminal state and surfaces the failure.
+        shouldThrow<IllegalStateException> {
+            os.user.onesignalId
+        }
         os.isInitialized shouldBe false
 
         unmockkObject(AndroidUtils)
@@ -199,12 +185,8 @@ class SDKInitTests : FunSpec({
 
     test("initWithContext with no appId succeeds when configModel has appId") {
         // Given
-        // block SharedPreference before calling init
-        val trigger = CountDownLatch(1)
         val context = getApplicationContext<Context>()
-        val blockingPrefContext = BlockingPrefsContext(context, trigger)
         val os = OneSignalImp()
-        var initSuccess = true
 
         // Clear any existing appId from previous tests by clearing SharedPreferences
         val prefs = context.getSharedPreferences("OneSignal", Context.MODE_PRIVATE)
@@ -218,59 +200,29 @@ class SDKInitTests : FunSpec({
             .putString(PREFS_LEGACY_APP_ID, "testAppId") // Set legacy appId
             .commit()
 
-        // When
-        val accessorThread =
-            Thread {
-                // this will block until after SharedPreferences is released
-                runBlocking {
-                    initSuccess = os.initWithContext(blockingPrefContext)
-                }
-            }
+        // When - no appId passed; resolved from the legacy SharedPreferences value.
+        os.initWithContext(context)
 
-        accessorThread.start()
-        accessorThread.join(500)
-
-        accessorThread.isAlive shouldBe true
-
-        // release SharedPreferences
-        trigger.countDown()
-
-        accessorThread.join(500)
-        accessorThread.isAlive shouldBe false
-
-        // Should return true because configModel already has an appId from previous tests
-        initSuccess shouldBe true
+        // Then - init completes successfully because an appId was resolvable.
+        waitForInitialization(os)
         os.isInitialized shouldBe true
     }
 
-    test("initWithContext blocks caller until init completes when SDK_BACKGROUND_THREADING is off") {
-        // FF-off contract (matches main pre-#2605): initWithContext runs internalInit on the
-        // caller thread via runBlocking and only returns once init reaches a terminal state.
-        // Pinned so future restructures don't silently flip legacy callers to the async shape
-        // without an explicit FF flip.
-        ThreadingMode.useBackgroundThreading shouldBe false // belt-and-suspenders w/ beforeAny
-
+    test("initWithContext returns immediately and completes init asynchronously") {
+        // Background-threaded init is the default: initWithContext dispatches internalInit to a
+        // background dispatcher and returns immediately, even while internalInit is parked on a
+        // slow SharedPreferences read. isInitialized only flips to true once init completes.
         val trigger = CountDownLatch(1)
         val context = getApplicationContext<Context>()
         val blockingPrefContext = BlockingPrefsContext(context, trigger)
         val os = OneSignalImp()
 
-        val initThread =
-            Thread {
-                os.initWithContext(blockingPrefContext, "appId")
-            }
-        initThread.start()
-        initThread.join(500)
-
-        // initWithContext is parked inside runBlocking { internalInit } waiting on
-        // BlockingPrefsContext.unblockTrigger.await() — proves the legacy synchronous path is
-        // active.
-        initThread.isAlive shouldBe true
+        // Returns right away despite the blocked prefs read happening on the background worker.
+        os.initWithContext(blockingPrefContext, "appId") shouldBe true
         os.isInitialized shouldBe false
 
         trigger.countDown()
-        initThread.join(2_000)
-        initThread.isAlive shouldBe false
+        waitForInitialization(os)
         os.isInitialized shouldBe true
     }
 
@@ -556,79 +508,12 @@ class SDKInitTests : FunSpec({
         waitForInitialization(os)
     }
 
-    test("legacy mode logs guidance when accessor on main thread blocks during in-progress init") {
-        // Given (FF-off): initWithContext on a background thread is parked inside
-        // runBlocking { internalInit } waiting on shared-prefs access. A *concurrent* call on
-        // the main thread (mocked) — accessor or login/logout — falls into the IN_PROGRESS
-        // branch of getServiceWithFeatureGate / requireInitForOperation and would block on
-        // runBlocking { suspendCompletion.await() }. Before that block, warnIfBlockingOnMainThread
-        // logs a warning so the ANR-risk shape is visible. The common case (init + accessor on
-        // the same thread) doesn't hit this — initWithContext blocks the caller, so by the time
-        // any accessor runs init is already SUCCESS or FAILED.
-        val trigger = CountDownLatch(1)
-        val context = getApplicationContext<Context>()
-        val blockingPrefContext = BlockingPrefsContext(context, trigger)
-        val os = OneSignalImp()
-        val warnings = mutableListOf<String>()
-        val listener =
-            ILogListener { event: OneSignalLogEvent ->
-                if (event.level == LogLevel.WARN) warnings.add(event.entry)
-            }
-
-        mockkObject(AndroidUtils)
-        every { AndroidUtils.isAndroidUserUnlocked(any()) } returns true
-        every { AndroidUtils.isRunningOnMainThread() } returns true
-
-        os.debug.addLogListener(listener)
-        try {
-            // initWithContext runs on a background thread under FF-off so it doesn't block this
-            // test thread; it parks inside runBlocking on BlockingPrefsContext.unblockTrigger.
-            val initThread =
-                Thread {
-                    os.initWithContext(blockingPrefContext, "appId")
-                }
-            initThread.start()
-            // Give the init thread time to enter runBlocking and stall on the prefs read.
-            Thread.sleep(100)
-            os.isInitialized shouldBe false
-
-            // Concurrent accessor on a "main" thread (isRunningOnMainThread mocked to true) hits
-            // the IN_PROGRESS branch and the warning fires.
-            val accessorThread =
-                Thread {
-                    runCatching { os.user.onesignalId }
-                }
-            accessorThread.start()
-            // Let warnIfBlockingOnMainThread log before we tear down.
-            Thread.sleep(100)
-
-            // Release prefs so init + accessor unwind cleanly.
-            trigger.countDown()
-            initThread.join(2_000)
-            accessorThread.join(2_000)
-            initThread.isAlive shouldBe false
-            accessorThread.isAlive shouldBe false
-
-            // Then: a warning must have been emitted with actionable guidance.
-            val match = warnings.firstOrNull { it.contains("OneSignal initialization is still in progress") }
-            match shouldNotBe null
-            (match!!.contains("main thread")) shouldBe true
-            (match.contains("suspend API")) shouldBe true
-        } finally {
-            os.debug.removeLogListener(listener)
-            // Ensure any waiter is released even if assertions failed early.
-            if (trigger.count > 0) trigger.countDown()
-            unmockkObject(AndroidUtils)
-        }
-    }
-
-    test("FF-on accessor returns once init is SUCCESS even when the IO dispatcher is saturated (OneSignal-Flutter-SDK#1163)") {
-        // Regression test for the Flutter main-thread ANR. Under SDK_BACKGROUND_THREADING,
-        // getServiceWithFeatureGate used to ALWAYS route through
-        // waitAndReturn -> waitForInit -> runBlocking(OneSignalDispatchers.IO), even after init
-        // had already reached SUCCESS. On Flutter's main-thread lifecycleInit that parks the UI
-        // thread on a cold-start-contended IO pool (OneSignal-Flutter-SDK#1163). The fix adds a
-        // lock-free SUCCESS fast-path, centralized in waitForInit().
+    test("accessor returns once init is SUCCESS even when the IO dispatcher is saturated (OneSignal-Flutter-SDK#1163)") {
+        // Regression test for the Flutter main-thread ANR. getServiceWithFeatureGate used to
+        // ALWAYS route through waitAndReturn -> waitForInit -> runBlocking(OneSignalDispatchers.IO),
+        // even after init had already reached SUCCESS. On Flutter's main-thread lifecycleInit that
+        // parks the UI thread on a cold-start-contended IO pool (OneSignal-Flutter-SDK#1163). The
+        // fix adds a lock-free SUCCESS fast-path, centralized in waitForInit().
         //
         // We reproduce the contention faithfully: saturate OneSignalDispatchers.IO so that the
         // pre-fix runBlocking(OneSignalDispatchers.IO) would park indefinitely behind the busy
@@ -637,12 +522,8 @@ class SDKInitTests : FunSpec({
         val context = getApplicationContext<Context>()
         val os = OneSignalImp()
 
-        // SDK_BACKGROUND_THREADING is APP_STARTUP-latched, so seed it before init first resolves
-        // FeatureManager. This exercises the real FF-on branch without spying on OneSignalImp.
-        enableBackgroundThreadingBeforeInit(os)
         os.initWithContext(context, "appId")
         waitForInitialization(os)
-        ThreadingMode.useBackgroundThreading shouldBe true
 
         withSaturatedOneSignalIo {
             // When: a SUCCESS-state accessor is read while the IO pool is fully saturated.
@@ -655,21 +536,17 @@ class SDKInitTests : FunSpec({
         }
     }
 
-    test("FF-on login returns once init is SUCCESS even when the IO dispatcher is saturated (OneSignal-Flutter-SDK#1163)") {
+    test("login returns once init is SUCCESS even when the IO dispatcher is saturated (OneSignal-Flutter-SDK#1163)") {
         // Companion regression test proving the SUCCESS fast-path is centralized in waitForInit(),
         // so it covers the operation paths (login / logout / updateUserJwt / JWT listeners), not
-        // just the service accessors. Under SDK_BACKGROUND_THREADING, login() used to route through
+        // just the service accessors. login() used to route through
         // waitForInit -> runBlocking(OneSignalDispatchers.IO) even after init reached SUCCESS, so a
         // saturated IO pool would park the caller indefinitely.
         val context = getApplicationContext<Context>()
         val os = OneSignalImp()
 
-        // SDK_BACKGROUND_THREADING is APP_STARTUP-latched, so seed it before init first resolves
-        // FeatureManager. This exercises the real FF-on branch without spying on OneSignalImp.
-        enableBackgroundThreadingBeforeInit(os)
         os.initWithContext(context, "appId")
         waitForInitialization(os)
-        ThreadingMode.useBackgroundThreading shouldBe true
 
         withSaturatedOneSignalIo {
             // When: login() is invoked while the IO pool is fully saturated. waitForInit must
@@ -682,14 +559,12 @@ class SDKInitTests : FunSpec({
         }
     }
 
-    test("FF-on consent getters return once init is SUCCESS even when the IO dispatcher is saturated") {
+    test("consent getters return once init is SUCCESS even when the IO dispatcher is saturated") {
         val context = getApplicationContext<Context>()
         val os = OneSignalImp()
 
-        enableBackgroundThreadingBeforeInit(os)
         os.initWithContext(context, "appId")
         waitForInitialization(os)
-        ThreadingMode.useBackgroundThreading shouldBe true
 
         withSaturatedOneSignalIo {
             val results = arrayOfNulls<Boolean>(3)
@@ -731,7 +606,7 @@ class SDKInitTests : FunSpec({
         exception.message shouldBe "Must call 'initWithContext' before 'logout'"
     }
 
-    // Regression test for the SessionService NPE under SDK_BACKGROUND_THREADING.
+    // Regression test for the SessionService NPE during in-flight background init.
     //
     // Background: when init is in flight, internalInit() has not yet called bootstrapServices(),
     // which means IBootstrapService implementations like SessionService have null model fields.

@@ -2,7 +2,7 @@ package com.onesignal.core.internal.config.impl
 
 import com.onesignal.common.modeling.ModelChangeTags
 import com.onesignal.common.threading.OneSignalDispatchers
-import com.onesignal.common.threading.runOnSerialIOIfBackgroundThreading
+import com.onesignal.common.threading.runOnSerialIO
 import com.onesignal.core.internal.application.IApplicationLifecycleHandler
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.backend.IFeatureFlagsBackendService
@@ -193,12 +193,12 @@ class FeatureFlagsRefreshServiceTests : FunSpec({
         fetchCount() shouldBe 2
     }
 
-    test("onFocus / onUnfocused route through runOnSerialIOIfBackgroundThreading (SDK-4507)") {
+    test("onFocus / onUnfocused route through runOnSerialIO (SDK-4507)") {
         // SDK-4507: the lifecycle handlers run on the main thread via
         // ApplicationService.handleFocus -> applicationLifecycleNotifier.fire. The body of
         // restartForegroundPolling calls OneSignalDispatchers.launchOnIO, which on first cold
         // use pays the executor + dispatcher + scope construction cost on the calling thread.
-        // The fix wraps both handlers in runOnSerialIOIfBackgroundThreading; this test pins
+        // The fix wraps both handlers in runOnSerialIO; this test pins
         // down the dispatch contract.
         //
         // Reset the cumulative call counter on ThreadUtilsKt (IOMockHelper installs the static
@@ -209,7 +209,7 @@ class FeatureFlagsRefreshServiceTests : FunSpec({
         // side effects.
         unmockkStatic("com.onesignal.common.threading.ThreadUtilsKt")
         mockkStatic("com.onesignal.common.threading.ThreadUtilsKt")
-        every { runOnSerialIOIfBackgroundThreading(any<() -> Unit>()) } answers {
+        every { runOnSerialIO(any<() -> Unit>()) } answers {
             firstArg<() -> Unit>().invoke()
         }
         every { OneSignalDispatchers.launchOnIO(any<suspend () -> Unit>()) } returns mockk(relaxed = true)
@@ -230,6 +230,6 @@ class FeatureFlagsRefreshServiceTests : FunSpec({
         service.onFocus(firedOnSubscribe = false)
         service.onUnfocused()
 
-        verify(exactly = 3) { runOnSerialIOIfBackgroundThreading(any<() -> Unit>()) }
+        verify(exactly = 3) { runOnSerialIO(any<() -> Unit>()) }
     }
 })

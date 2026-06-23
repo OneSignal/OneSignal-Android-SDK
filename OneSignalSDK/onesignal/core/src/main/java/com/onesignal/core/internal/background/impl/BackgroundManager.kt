@@ -32,7 +32,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.pm.PackageManager
 import androidx.core.content.ContextCompat
-import com.onesignal.common.threading.runOnSerialIOIfBackgroundThreading
+import com.onesignal.common.threading.runOnSerialIO
 import com.onesignal.core.internal.application.IApplicationLifecycleHandler
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.background.IBackgroundManager
@@ -75,11 +75,11 @@ internal class BackgroundManager(
     // main thread for seconds (SDK-4505). Offload to SerialIO so a rapid unfocus -> focus burst
     // still runs cancel-then-schedule in submission order. FF gates the rollout.
     override fun onFocus(firedOnSubscribe: Boolean) {
-        runOnSerialIOIfBackgroundThreading { cancelSyncTask() }
+        runOnSerialIO { cancelSyncTask() }
     }
 
     override fun onUnfocused() {
-        runOnSerialIOIfBackgroundThreading { scheduleBackground() }
+        runOnSerialIO { scheduleBackground() }
     }
 
     private fun scheduleBackground() {

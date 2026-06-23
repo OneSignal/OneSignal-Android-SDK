@@ -4,7 +4,7 @@ import android.app.Activity
 import androidx.test.core.app.ApplicationProvider
 import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
 import com.onesignal.common.threading.OneSignalDispatchers
-import com.onesignal.common.threading.runOnSerialIOIfBackgroundThreading
+import com.onesignal.common.threading.runOnSerialIO
 import com.onesignal.core.activities.PermissionsActivity
 import com.onesignal.core.internal.application.IActivityLifecycleHandler
 import com.onesignal.core.internal.application.IApplicationLifecycleHandler
@@ -330,22 +330,20 @@ class NotificationPermissionControllerTests : FunSpec({
         }
     }
 
-    test("onFocus dispatches polling-interval update + waker through runOnSerialIOIfBackgroundThreading (SDK-4507)") {
+    test("onFocus dispatches polling-interval update + waker through runOnSerialIO (SDK-4507)") {
         // SDK-4507: the lifecycle-registered onFocus handler reads ConfigModel and calls
         // Waiter.wake(), the latter of which dispatches a coroutine resume into the IO pool.
         // On cold start this is the SDK's first OneSignalDispatchers consumer in the process,
         // and the executor + dispatcher + scope lazy chain pinned the main thread for many
-        // seconds under sdk_background_threading. The fix routes through
-        // runOnSerialIOIfBackgroundThreading; verify that contract here.
+        // seconds. The fix routes through runOnSerialIO; verify that contract here.
         //
         // We stub the helper so the wrapped block does not run (we don't want a real
-        // pollingWaiter.wake() to spawn a real coroutine from this test). The FF branches of
-        // the helper itself are covered in :core's ThreadUtilsFeatureFlagTests, which has
-        // direct access to the internal ThreadingMode flag.
+        // pollingWaiter.wake() to spawn a real coroutine from this test). The helper itself
+        // is covered in :core's ThreadUtilsDispatchTests.
         val threadUtilsPath = "com.onesignal.common.threading.ThreadUtilsKt"
         mockkStatic(threadUtilsPath)
         mockkObject(OneSignalDispatchers)
-        every { runOnSerialIOIfBackgroundThreading(any<() -> Unit>()) } just runs
+        every { runOnSerialIO(any<() -> Unit>()) } just runs
         every { OneSignalDispatchers.launchOnIO(any<suspend () -> Unit>()) } returns mockk<Job>(relaxed = true)
 
         try {
@@ -373,18 +371,18 @@ class NotificationPermissionControllerTests : FunSpec({
 
             // Only the polling lifecycle listener (registered inside the controller's init)
             // routes through the gated helper, so we assert exactly 1 invocation here.
-            verify(exactly = 1) { runOnSerialIOIfBackgroundThreading(any<() -> Unit>()) }
+            verify(exactly = 1) { runOnSerialIO(any<() -> Unit>()) }
         } finally {
             unmockkObject(OneSignalDispatchers)
             unmockkStatic(threadUtilsPath)
         }
     }
 
-    test("onUnfocused dispatches polling-interval reset through runOnSerialIOIfBackgroundThreading (SDK-4507)") {
+    test("onUnfocused dispatches polling-interval reset through runOnSerialIO (SDK-4507)") {
         val threadUtilsPath = "com.onesignal.common.threading.ThreadUtilsKt"
         mockkStatic(threadUtilsPath)
         mockkObject(OneSignalDispatchers)
-        every { runOnSerialIOIfBackgroundThreading(any<() -> Unit>()) } just runs
+        every { runOnSerialIO(any<() -> Unit>()) } just runs
         every { OneSignalDispatchers.launchOnIO(any<suspend () -> Unit>()) } returns mockk<Job>(relaxed = true)
 
         try {
@@ -410,7 +408,7 @@ class NotificationPermissionControllerTests : FunSpec({
                 focusHandler.onUnfocused()
             }
 
-            verify(exactly = 1) { runOnSerialIOIfBackgroundThreading(any<() -> Unit>()) }
+            verify(exactly = 1) { runOnSerialIO(any<() -> Unit>()) }
         } finally {
             unmockkObject(OneSignalDispatchers)
             unmockkStatic(threadUtilsPath)

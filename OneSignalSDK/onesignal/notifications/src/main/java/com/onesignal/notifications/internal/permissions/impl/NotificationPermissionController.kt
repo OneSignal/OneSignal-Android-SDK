@@ -35,7 +35,7 @@ import com.onesignal.common.events.EventProducer
 import com.onesignal.common.threading.Waiter
 import com.onesignal.common.threading.WaiterWithValue
 import com.onesignal.common.threading.launchOnIO
-import com.onesignal.common.threading.runOnSerialIOIfBackgroundThreading
+import com.onesignal.common.threading.runOnSerialIO
 import com.onesignal.core.activities.PermissionsActivity
 import com.onesignal.core.internal.application.ApplicationLifecycleHandlerBase
 import com.onesignal.core.internal.application.IActivityLifecycleHandler
@@ -93,7 +93,7 @@ internal class NotificationPermissionController(
                 // main thread (SDK-4506).
                 override fun onFocus(firedOnSubscribe: Boolean) {
                     super.onFocus(firedOnSubscribe)
-                    runOnSerialIOIfBackgroundThreading {
+                    runOnSerialIO {
                         pollingWaitInterval = _configModelStore.model.foregroundFetchNotificationPermissionInterval
                         pollingWaiter.wake()
                     }
@@ -101,7 +101,7 @@ internal class NotificationPermissionController(
 
                 override fun onUnfocused() {
                     super.onUnfocused()
-                    runOnSerialIOIfBackgroundThreading {
+                    runOnSerialIO {
                         // Changing the polling interval to 1 day to effectively pause polling
                         pollingWaitInterval = _configModelStore.model.backgroundFetchNotificationPermissionInterval
                     }
