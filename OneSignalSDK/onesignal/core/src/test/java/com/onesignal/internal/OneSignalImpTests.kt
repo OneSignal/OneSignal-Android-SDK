@@ -5,10 +5,28 @@ import com.onesignal.debug.internal.logging.Logging
 import io.kotest.assertions.throwables.shouldThrowUnit
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlin.coroutines.CoroutineContext
 
 class OneSignalImpTests : FunSpec({
     beforeAny {
         Logging.logLevel = LogLevel.NONE
+    }
+
+    val throwingDispatcher =
+        object : CoroutineDispatcher() {
+            override fun dispatch(
+                context: CoroutineContext,
+                block: Runnable,
+            ) {
+                error("SUCCESS fast-path should not dispatch")
+            }
+        }
+
+    fun markInitialized(os: OneSignalImp) {
+        val initStateField = OneSignalImp::class.java.getDeclaredField("initState")
+        initStateField.isAccessible = true
+        initStateField.set(os, InitState.SUCCESS)
     }
 
     test("attempting login before initWithContext throws exception") {
@@ -39,11 +57,9 @@ class OneSignalImpTests : FunSpec({
         exception.message shouldBe "Must call 'initWithContext' before 'logout'"
     }
 
-    test("waitForInit returns synchronously when initState is SUCCESS") {
-        val os = OneSignalImp()
-        val initStateField = OneSignalImp::class.java.getDeclaredField("initState")
-        initStateField.isAccessible = true
-        initStateField.set(os, InitState.SUCCESS)
+    test("waitForInit returns synchronously without dispatching when initState is SUCCESS") {
+        val os = OneSignalImp(ioDispatcher = throwingDispatcher)
+        markInitialized(os)
 
         val waitForInit = OneSignalImp::class.java.getDeclaredMethod("waitForInit", String::class.java)
         waitForInit.isAccessible = true
@@ -52,11 +68,9 @@ class OneSignalImpTests : FunSpec({
         os.isInitialized shouldBe true
     }
 
-    test("blockingGet returns synchronously when initState is SUCCESS") {
-        val os = OneSignalImp()
-        val initStateField = OneSignalImp::class.java.getDeclaredField("initState")
-        initStateField.isAccessible = true
-        initStateField.set(os, InitState.SUCCESS)
+    test("blockingGet returns synchronously without dispatching when initState is SUCCESS") {
+        val os = OneSignalImp(ioDispatcher = throwingDispatcher)
+        markInitialized(os)
 
         val blockingGet = OneSignalImp::class.java.getDeclaredMethod("blockingGet", Function0::class.java)
         blockingGet.isAccessible = true
