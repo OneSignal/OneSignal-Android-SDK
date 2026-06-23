@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
+import com.onesignal.mocks.IOMockHelper
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import org.robolectric.Robolectric
@@ -38,6 +39,10 @@ class TestNotificationOpenedActivity : NotificationOpenedActivityBase() {
 
 @RobolectricTest
 class NotificationOpenedActivityTest : FunSpec({
+    // processIntent() now calls OneSignalDispatchers.prewarm(); IOMockHelper stubs it to a no-op so
+    // setup() doesn't spawn the real OneSignal-prewarm daemon + executors that persist across the JVM.
+    listener(IOMockHelper)
+
     test("finishSafely should be called on main thread") {
         val controller = Robolectric.buildActivity(TestNotificationOpenedActivity::class.java)
         val activity = controller.setup().get()
