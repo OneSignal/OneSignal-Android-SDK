@@ -609,7 +609,12 @@ internal class OneSignalImp(
      * @param operationName Optional operation name to include in error messages (e.g., "login", "logout")
      */
     private fun waitForInit(operationName: String? = null) {
-        runBlocking(runtimeIoDispatcher) {
+        if (initState == InitState.SUCCESS) {
+            return
+        }
+        // Intentionally dispatcher-less: wait on the calling thread's own event loop so resuming
+        // when init completes never depends on a free worker in a busy pool.
+        runBlocking {
             waitUntilInitInternal(operationName)
         }
     }
@@ -759,8 +764,12 @@ internal class OneSignalImp(
             // because Looper.getMainLooper() is not mocked. This is safe to ignore.
             Logging.debug("Could not check main thread status (likely in test environment): ${e.message}")
         }
-        // Call suspendAndReturn directly to avoid nested runBlocking (waitAndReturn -> waitForInit -> runBlocking)
-        return runBlocking(runtimeIoDispatcher) {
+        if (initState == InitState.SUCCESS) {
+            return getter()
+        }
+
+        // Intentionally dispatcher-less (see waitForInit).
+        return runBlocking {
             suspendAndReturn(getter)
         }
     }
