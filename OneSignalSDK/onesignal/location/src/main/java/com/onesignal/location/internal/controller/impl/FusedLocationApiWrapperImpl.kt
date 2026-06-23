@@ -28,16 +28,20 @@ internal class FusedLocationApiWrapperImpl : IFusedLocationApiWrapper {
         googleApiClient: GoogleApiClient,
         locationRequest: LocationRequest,
         locationListener: LocationListener,
-    ) {
-        try {
+    ): Boolean {
+        return try {
             if (Looper.myLooper() == null) {
                 Looper.prepare()
             }
             if (googleApiClient.isConnected) {
                 LocationServices.FusedLocationApi.requestLocationUpdates(googleApiClient, locationRequest, locationListener)
+                true
+            } else {
+                false
             }
         } catch (t: Throwable) {
             Logging.warn("FusedLocationApi.requestLocationUpdates failed!", t)
+            false
         }
     }
 

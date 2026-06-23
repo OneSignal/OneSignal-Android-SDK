@@ -56,6 +56,8 @@ internal class GmsLocationController(
                             setLocationAndFire(localLastLocation)
                         }
                     }
+                    // Re-register here if the first attempt failed
+                    locationUpdateListener?.refreshRequest(onlyIfInactive = true)
                     wasSuccessful = true
                 } else {
                     try {
@@ -164,6 +166,8 @@ internal class GmsLocationController(
         private val googleApiClient: GoogleApiClient,
         private val _fusedLocationApiWrapper: IFusedLocationApiWrapper,
     ) : LocationListener, IApplicationLifecycleHandler, Closeable {
+        // Guards hasExistingRequest and the cancel/register sequence against concurrent threads.
+        private val requestLock = Any()
         private var hasExistingRequest = false
 
         init {
@@ -188,19 +192,18 @@ internal class GmsLocationController(
         override fun close() {
             _applicationService.removeApplicationLifecycleHandler(this)
 
-            if (hasExistingRequest) {
-                _fusedLocationApiWrapper.cancelLocationUpdates(googleApiClient, this)
+            synchronized(requestLock) {
+                if (hasExistingRequest) {
+                    _fusedLocationApiWrapper.cancelLocationUpdates(googleApiClient, this)
+                    hasExistingRequest = false
+                }
             }
         }
 
-        private fun refreshRequest() {
+        internal fun refreshRequest(onlyIfInactive: Boolean = false) {
             if (!googleApiClient.isConnected) {
                 Logging.warn("Attempt to refresh location request but not currently connected!")
                 return
-            }
-
-            if (hasExistingRequest) {
-                _fusedLocationApiWrapper.cancelLocationUpdates(googleApiClient, this)
             }
 
             val updateInterval =
@@ -216,9 +219,17 @@ internal class GmsLocationController(
                     .setInterval(updateInterval)
                     .setMaxWaitTime((updateInterval * 1.5).toLong())
                     .setPriority(LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY)
-            Logging.debug("GMSLocationController GoogleApiClient requestLocationUpdates!")
-            _fusedLocationApiWrapper.requestLocationUpdates(googleApiClient, locationRequest, this)
-            hasExistingRequest = true
+
+            synchronized(requestLock) {
+                if (hasExistingRequest) {
+                    // Don't tear down an already-active request when only recovering a failed one.
+                    if (onlyIfInactive) return@synchronized
+                    _fusedLocationApiWrapper.cancelLocationUpdates(googleApiClient, this)
+                }
+                Logging.debug("GMSLocationController GoogleApiClient requestLocationUpdates!")
+                hasExistingRequest =
+                    _fusedLocationApiWrapper.requestLocationUpdates(googleApiClient, locationRequest, this)
+            }
         }
 
         override fun onLocationChanged(location: Location) {

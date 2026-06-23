@@ -15,7 +15,7 @@ internal interface IFusedLocationApiWrapper {
         googleApiClient: GoogleApiClient,
         locationRequest: LocationRequest,
         locationListener: LocationListener,
-    )
+    ): Boolean
 
     fun getLastLocation(googleApiClient: GoogleApiClient): Location?
 }
