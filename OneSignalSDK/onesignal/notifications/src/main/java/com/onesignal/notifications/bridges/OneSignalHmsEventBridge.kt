@@ -5,6 +5,7 @@ import android.os.Bundle
 import com.huawei.hms.push.RemoteMessage
 import com.onesignal.OneSignal
 import com.onesignal.common.JSONUtils
+import com.onesignal.common.threading.OneSignalDispatchers
 import com.onesignal.common.threading.suspendifyOnDefault
 import com.onesignal.common.threading.suspendifyOnIO
 import com.onesignal.core.internal.time.ITime
@@ -39,6 +40,8 @@ object OneSignalHmsEventBridge {
     ) {
         if (firstToken.compareAndSet(true, false)) {
             Logging.info("OneSignalHmsEventBridge onNewToken - HMS token: $token Bundle: $bundle")
+            // HMS can cold-start the process before initWithContext; warm dispatchers first.
+            OneSignalDispatchers.prewarm()
             suspendifyOnIO {
                 val registerer = OneSignal.getService<IPushRegistratorCallback>()
                 registerer.fireCallback(token)
@@ -64,6 +67,8 @@ object OneSignalHmsEventBridge {
         context: Context,
         message: RemoteMessage,
     ) {
+        // HMS can cold-start the process before initWithContext; warm dispatchers first.
+        OneSignalDispatchers.prewarm()
         suspendifyOnDefault {
             if (!OneSignal.initWithContext(context)) {
                 return@suspendifyOnDefault

@@ -30,16 +30,21 @@ class JwtTokenStore(
     private val internalUpdateListeners = EventProducer<IJwtUpdateListener>()
     private val publicInvalidatedListeners = EventProducer<IUserJwtInvalidatedListener>()
 
+    /** Subscribes an SDK-internal listener notified when a stored JWT changes. */
     fun addInternalUpdateListener(listener: IJwtUpdateListener) = internalUpdateListeners.subscribe(listener)
 
+    /** Unsubscribes a previously added SDK-internal [IJwtUpdateListener]. */
     fun removeInternalUpdateListener(listener: IJwtUpdateListener) = internalUpdateListeners.unsubscribe(listener)
 
+    /** Subscribes a developer-facing listener notified when a JWT is invalidated. */
     fun addUserJwtInvalidatedListener(listener: IUserJwtInvalidatedListener) =
         publicInvalidatedListeners.subscribe(listener)
 
+    /** Unsubscribes a previously added developer-facing [IUserJwtInvalidatedListener]. */
     fun removeUserJwtInvalidatedListener(listener: IUserJwtInvalidatedListener) =
         publicInvalidatedListeners.unsubscribe(listener)
 
+    /** Returns the JWT stored for [externalId], or `null` if none is held. */
     fun getJwt(externalId: String): String? {
         synchronized(tokens) {
             ensureLoaded()

@@ -5,6 +5,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import com.onesignal.OneSignal
+import com.onesignal.common.threading.OneSignalDispatchers
 import com.onesignal.common.threading.suspendifyOnIO
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.notifications.internal.bundle.INotificationBundleProcessor
@@ -24,6 +25,11 @@ class FCMBroadcastReceiver : BroadcastReceiver() {
         if (bundle == null || "google.com/iid" == bundle.getString("from")) {
             return
         }
+
+        // FCM can cold-start the process before initWithContext. Warm dispatchers before goAsync()
+        // so the prewarm daemon gets a head start during the handoff, making the dispatchers more
+        // likely to be warm by the time the suspendifyOnIO below submits its work.
+        OneSignalDispatchers.prewarm()
 
         val pendingResult = goAsync()
         // process in background
