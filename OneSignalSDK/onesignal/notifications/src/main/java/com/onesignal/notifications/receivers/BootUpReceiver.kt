@@ -44,18 +44,18 @@ class BootUpReceiver : BroadcastReceiver() {
         // goAsync() so the daemon has lead time before the first suspendifyOnIO dispatch.
         OneSignalDispatchers.prewarm()
 
-        val pendingResult = goAsync()
+        val pendingResult: BroadcastReceiver.PendingResult? = goAsync()
         // in background, init onesignal and begin enqueueing restore work
         suspendifyOnIO {
             if (!OneSignal.initWithContext(context.applicationContext)) {
                 Logging.warn("NotificationRestoreReceiver skipped due to failed OneSignal init")
-                pendingResult.finish()
+                pendingResult?.finish()
                 return@suspendifyOnIO
             }
 
             val restoreWorkManager = OneSignal.getService<INotificationRestoreWorkManager>()
             restoreWorkManager.beginEnqueueingWork(context, true)
-            pendingResult.finish()
+            pendingResult?.finish()
         }
     }
 }
