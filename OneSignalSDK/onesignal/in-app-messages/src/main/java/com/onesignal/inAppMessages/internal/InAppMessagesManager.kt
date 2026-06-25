@@ -189,6 +189,9 @@ internal class InAppMessagesManager(
 
             if (!value) {
                 suspendifyOnDefault {
+                    // Drain any messages that were queued but blocked from displaying while paused,
+                    // then re-evaluate triggers in case new messages now qualify.
+                    attemptToShowInAppMessage()
                     evaluateInAppMessages()
                 }
             }
