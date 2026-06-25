@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import com.amazon.device.messaging.ADMMessageHandlerJobBase
 import com.onesignal.OneSignal
+import com.onesignal.common.threading.OneSignalDispatchers
 import com.onesignal.common.threading.suspendifyOnIO
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.notifications.internal.bundle.INotificationBundleProcessor
@@ -22,6 +23,8 @@ class ADMMessageHandlerJob : ADMMessageHandlerJobBase() {
 
         val safeContext = context.applicationContext
 
+        // ADM can cold-start the process before initWithContext; warm dispatchers first.
+        OneSignalDispatchers.prewarm()
         suspendifyOnIO {
             if (!OneSignal.initWithContext(safeContext)) {
                 Logging.warn("onMessage skipped due to failed OneSignal init")
@@ -39,6 +42,7 @@ class ADMMessageHandlerJob : ADMMessageHandlerJobBase() {
     ) {
         Logging.info("ADM registration ID: $newRegistrationId")
 
+        OneSignalDispatchers.prewarm()
         suspendifyOnIO {
             val registerer = OneSignal.getService<IPushRegistratorCallback>()
             registerer.fireCallback(newRegistrationId)
@@ -63,6 +67,7 @@ class ADMMessageHandlerJob : ADMMessageHandlerJobBase() {
             )
         }
 
+        OneSignalDispatchers.prewarm()
         suspendifyOnIO {
             val registerer = OneSignal.getService<IPushRegistratorCallback>()
             registerer.fireCallback(null)

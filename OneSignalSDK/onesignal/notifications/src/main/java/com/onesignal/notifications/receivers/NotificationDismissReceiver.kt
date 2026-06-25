@@ -28,6 +28,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import com.onesignal.OneSignal
+import com.onesignal.common.threading.OneSignalDispatchers
 import com.onesignal.common.threading.suspendifyOnIO
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.notifications.internal.open.INotificationOpenedProcessor
@@ -39,12 +40,16 @@ class NotificationDismissReceiver : BroadcastReceiver() {
         context: Context,
         intent: Intent,
     ) {
-        val pendingResult = goAsync()
+        // A dismiss can cold-start the process before initWithContext. Warm dispatchers before
+        // goAsync() so the daemon has lead time before the first suspendifyOnIO dispatch.
+        OneSignalDispatchers.prewarm()
+
+        val pendingResult: BroadcastReceiver.PendingResult? = goAsync()
 
         suspendifyOnIO {
             if (!OneSignal.initWithContext(context.applicationContext)) {
                 Logging.warn("NotificationOpenedReceiver skipped due to failed OneSignal init")
-                pendingResult.finish()
+                pendingResult?.finish()
                 return@suspendifyOnIO
             }
 
@@ -54,7 +59,7 @@ class NotificationDismissReceiver : BroadcastReceiver() {
             withContext(Dispatchers.Main) {
                 notificationOpenedProcessor.processFromContext(context, intent)
             }
-            pendingResult.finish()
+            pendingResult?.finish()
         }
     }
 }

@@ -187,7 +187,7 @@ object OneSignalDispatchers {
      * thread (Activity-lifecycle handler, `JobService.onStartJob`, etc.), the construction cost
      * — which includes a `kotlinx.coroutines.BuildersKt.launch` that hits
      * `ThreadPoolExecutor.execute` and `LinkedBlockingQueue.offer` synchronously — is paid on
-     * the calling thread, blocking the main thread for many seconds on cold start. See SDK-4507.
+     * the calling thread, blocking the main thread for many seconds on cold start.
      *
      * Calling [prewarm] from a non-time-sensitive spot in [com.onesignal.OneSignal.initWithContext]
      * shifts that cost to a dedicated `OneSignal-prewarm` daemon thread, so the first
@@ -199,31 +199,69 @@ object OneSignalDispatchers {
      * on the caller. Failures are logged and swallowed because the executors retain their
      * existing fallback paths (e.g. `Dispatchers.IO.limitedParallelism(1)` for [SerialIO]) and a
      * failed prewarm will simply mean the first production caller pays the original cost.
+     *
+     * **Best-effort, not a hard guarantee.** Because [prewarm] is fire-and-forget, a caller that
+     * dispatches immediately afterward can still win the lazy-init race and pay construction on
+     * its own thread. The fix relies on placing [prewarm] at cold-start entry points where there
+     * is meaningful lead time (e.g. a `goAsync()` handoff or `initWithContext` work) before the
+     * first `suspendify*` / `launchOn*` dispatch.
+     *
+     * [suspendifyOnIO], [suspendifyOnDefault], [launchOnIO], and [launchOnDefault] route through
+     * [IO] / [Default] only when [ThreadingMode.useBackgroundThreading] is true. With that mode
+     * off, they use `Dispatchers.IO` / `Dispatchers.Default`, so [prewarm] mainly benefits future
+     * calls after the mode flips; [suspendifyOnSerialIO] always routes through [SerialIO].
+     *
+     * The known main-thread cold-start entry points:
+     * | Entry point | Class |
+     * |---|---|
+     * | `initWithContext` / `initWithContextSuspend` | `OneSignalImp` |
+     * | `onStartJob` | `core.services.SyncJobService` |
+     * | `onReceive` | `FCMBroadcastReceiver`, `NotificationDismissReceiver`, `BootUpReceiver`, `UpgradeReceiver` |
+     * | `onMessage` / registration callbacks | `ADMMessageHandler`, `ADMMessageHandlerJob` |
+     * | `onNewToken` / `onMessageReceived` | `OneSignalHmsEventBridge` |
+     * | `processIntent` / `processOpen` | `NotificationOpenedActivityBase`, `NotificationOpenedActivityHMS` |
+     *
+     * When adding a new cold-start entry point (receiver, job, activity trampoline, push bridge),
+     * call [prewarm] at the top of it before the first dispatch.
      */
+    @Suppress("TooGenericExceptionCaught")
     fun prewarm() {
         if (prewarmStarted) return
         synchronized(prewarmLock) {
             if (prewarmStarted) return
             prewarmStarted = true
         }
-        val prewarmThread = Thread(
-            {
-                try {
-                    // Each launch* call below triggers the corresponding lazy chain
-                    // (executor -> dispatcher -> scope) and submits an empty coroutine,
-                    // which forces the worker thread(s) to start as well.
-                    launchOnIO { /* warm IOScope + ioExecutor */ }
-                    launchOnDefault { /* warm DefaultScope + defaultExecutor */ }
-                    launchOnSerialIO { /* warm SerialIOScope + serialIOExecutor */ }
-                } catch (e: Exception) {
-                    Logging.warn("OneSignalDispatchers.prewarm failed: ${e.message}")
-                }
-            },
-            "$BASE_THREAD_NAME-prewarm",
-        )
-        prewarmThread.isDaemon = true
-        prewarmThread.priority = Thread.NORM_PRIORITY - 2
-        prewarmThread.start()
+        try {
+            val prewarmThread = Thread(
+                {
+                    try {
+                        // Each launch* call below triggers the corresponding lazy chain
+                        // (executor -> dispatcher -> scope) and submits an empty coroutine,
+                        // which forces the worker thread(s) to start as well.
+                        launchOnIO { /* warm IOScope + ioExecutor */ }
+                        launchOnDefault { /* warm DefaultScope + defaultExecutor */ }
+                        launchOnSerialIO { /* warm SerialIOScope + serialIOExecutor */ }
+                    } catch (e: Throwable) {
+                        synchronized(prewarmLock) { prewarmStarted = false }
+                        Logging.warn("OneSignalDispatchers.prewarm failed: ${e.message}", e)
+                    }
+                },
+                "$BASE_THREAD_NAME-prewarm",
+            )
+            prewarmThread.isDaemon = true
+            prewarmThread.priority = Thread.NORM_PRIORITY - 2
+            prewarmThread.start()
+        } catch (t: Throwable) {
+            // Constructing, configuring, or starting the daemon can itself fail before the body
+            // ever runs (e.g. OutOfMemoryError "unable to create new native thread", a
+            // SecurityManager denial, or InternalError). Swallow it so a prewarm failure never
+            // propagates onto the cold-start entry point's caller thread, and reset the guard so a
+            // later entry point can retry. The dispatchers keep their lazy fallbacks, so the only
+            // cost of a failed prewarm is that the first real dispatch pays the original
+            // construction cost.
+            synchronized(prewarmLock) { prewarmStarted = false }
+            Logging.warn("OneSignalDispatchers.prewarm failed to start daemon: ${t.message}", t)
+        }
     }
 
     /**

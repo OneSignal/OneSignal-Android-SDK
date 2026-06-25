@@ -732,7 +732,12 @@ internal class OneSignalImp(
      * @param operationName Optional operation name to include in error messages (e.g., "login", "logout")
      */
     private fun waitForInit(operationName: String? = null) {
-        runBlocking(runtimeIoDispatcher) {
+        if (initState == InitState.SUCCESS) {
+            return
+        }
+        // Intentionally dispatcher-less: wait on the calling thread's own event loop so resuming
+        // when init completes never depends on a free worker in a busy pool.
+        runBlocking {
             waitUntilInitInternal(operationName)
         }
     }
@@ -785,47 +790,9 @@ internal class OneSignalImp(
         }
 
         when (observedState) {
-            InitState.NOT_STARTED -> {
-                val message =
-                    if (operationName != null) {
-                        "Must call 'initWithContext' before '$operationName'"
-                    } else {
-                        "Must call 'initWithContext' before use"
-                    }
-                throw IllegalStateException(message)
-            }
+            InitState.NOT_STARTED -> throw IllegalStateException(notInitializedMessage(operationName))
 
-            InitState.IN_PROGRESS -> {
-                Logging.debug("Waiting for init to complete...")
-
-                val startTime = System.currentTimeMillis()
-
-                // Wait indefinitely until init actually completes - ensures consistent state
-                // Function only returns when initState is SUCCESS or FAILED
-                // NOTE: This is a suspend function, so it's non-blocking when called from coroutines.
-                // However, if waitForInit() (which uses runBlocking) is called from the main thread,
-                // it will block the main thread indefinitely until init completes, which can cause ANRs.
-                // This is intentional per PR #2412: "ANR is the lesser of two evils and the app can recover,
-                // where an uncaught throw it can not." To avoid ANRs, call SDK methods from background threads
-                // or use the suspend API from coroutines.
-                completionToAwait!!.await()
-
-                // Log how long initialization took
-                val elapsed = System.currentTimeMillis() - startTime
-                val message =
-                    if (operationName != null) {
-                        "OneSignalImp initialization completed before '$operationName' (took ${elapsed}ms)"
-                    } else {
-                        "OneSignalImp initialization completed (took ${elapsed}ms)"
-                    }
-                Logging.debug(message)
-
-                // Re-check state after waiting - init might have failed during the wait
-                if (initState == InitState.FAILED) {
-                    throw initFailureException ?: IllegalStateException("Initialization failed. Cannot proceed.")
-                }
-                // initState is guaranteed to be SUCCESS here - consistent state
-            }
+            InitState.IN_PROGRESS -> awaitInitCompletion(completionToAwait!!, operationName)
 
             InitState.FAILED -> {
                 throw initFailureException ?: IllegalStateException("Initialization failed. Cannot proceed.")
@@ -835,6 +802,48 @@ internal class OneSignalImp(
                 // SUCCESS - already initialized, no need to wait
             }
         }
+    }
+
+    private fun notInitializedMessage(operationName: String?): String =
+        if (operationName != null) {
+            "Must call 'initWithContext' before '$operationName'"
+        } else {
+            "Must call 'initWithContext' before use"
+        }
+
+    private suspend fun awaitInitCompletion(
+        completionToAwait: CompletableDeferred<Unit>,
+        operationName: String?,
+    ) {
+        Logging.debug("Waiting for init to complete...")
+
+        val startTime = System.currentTimeMillis()
+
+        // Wait indefinitely until init actually completes - ensures consistent state
+        // Function only returns when initState is SUCCESS or FAILED
+        // NOTE: This is a suspend function, so it's non-blocking when called from coroutines.
+        // However, if waitForInit() (which uses runBlocking) is called from the main thread,
+        // it will block the main thread indefinitely until init completes, which can cause ANRs.
+        // This is intentional per PR #2412: "ANR is the lesser of two evils and the app can recover,
+        // where an uncaught throw it can not." To avoid ANRs, call SDK methods from background threads
+        // or use the suspend API from coroutines.
+        completionToAwait.await()
+
+        // Log how long initialization took
+        val elapsed = System.currentTimeMillis() - startTime
+        val message =
+            if (operationName != null) {
+                "OneSignalImp initialization completed before '$operationName' (took ${elapsed}ms)"
+            } else {
+                "OneSignalImp initialization completed (took ${elapsed}ms)"
+            }
+        Logging.debug(message)
+
+        // Re-check state after waiting - init might have failed during the wait
+        if (initState == InitState.FAILED) {
+            throw initFailureException ?: IllegalStateException("Initialization failed. Cannot proceed.")
+        }
+        // initState is guaranteed to be SUCCESS here - consistent state
     }
 
     private suspend fun <T> suspendAndReturn(getter: () -> T): T {
@@ -882,8 +891,12 @@ internal class OneSignalImp(
             // because Looper.getMainLooper() is not mocked. This is safe to ignore.
             Logging.debug("Could not check main thread status (likely in test environment): ${e.message}")
         }
-        // Call suspendAndReturn directly to avoid nested runBlocking (waitAndReturn -> waitForInit -> runBlocking)
-        return runBlocking(runtimeIoDispatcher) {
+        if (initState == InitState.SUCCESS) {
+            return getter()
+        }
+
+        // Intentionally dispatcher-less (see waitForInit).
+        return runBlocking {
             suspendAndReturn(getter)
         }
     }

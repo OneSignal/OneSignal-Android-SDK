@@ -30,6 +30,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import com.onesignal.OneSignal
+import com.onesignal.common.threading.OneSignalDispatchers
 import com.onesignal.common.threading.suspendifyOnIO
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.notifications.internal.restoration.INotificationRestoreWorkManager
@@ -39,18 +40,22 @@ class BootUpReceiver : BroadcastReceiver() {
         context: Context,
         intent: Intent,
     ) {
-        val pendingResult = goAsync()
+        // Boot can cold-start the process before initWithContext. Warm dispatchers before
+        // goAsync() so the daemon has lead time before the first suspendifyOnIO dispatch.
+        OneSignalDispatchers.prewarm()
+
+        val pendingResult: BroadcastReceiver.PendingResult? = goAsync()
         // in background, init onesignal and begin enqueueing restore work
         suspendifyOnIO {
             if (!OneSignal.initWithContext(context.applicationContext)) {
                 Logging.warn("NotificationRestoreReceiver skipped due to failed OneSignal init")
-                pendingResult.finish()
+                pendingResult?.finish()
                 return@suspendifyOnIO
             }
 
             val restoreWorkManager = OneSignal.getService<INotificationRestoreWorkManager>()
             restoreWorkManager.beginEnqueueingWork(context, true)
-            pendingResult.finish()
+            pendingResult?.finish()
         }
     }
 }

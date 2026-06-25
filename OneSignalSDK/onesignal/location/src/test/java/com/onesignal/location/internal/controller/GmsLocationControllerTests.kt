@@ -173,4 +173,87 @@ class GmsLocationControllerTests : FunSpec({
             )
         }
     }
+
+    // Repeated start() on a healthy request must not cancel + re-register it (which resets the interval).
+    test("start does not re-register an already-active request") {
+        // Given
+        val location = Location("TEST_PROVIDER")
+        location.latitude = 123.45
+        location.longitude = 678.91
+        val fusedLocationApiWrapperMock = FusedLocationApiWrapperMock(listOf(location))
+
+        val applicationService = AndroidMockHelper.applicationService()
+        every { applicationService.isInForeground } returns true
+        val gmsLocationController = GmsLocationController(applicationService, fusedLocationApiWrapperMock)
+
+        // When
+        val response1 = gmsLocationController.start()
+        val response2 = gmsLocationController.start()
+
+        // Then the active request is left alone: not re-registered, not cancelled
+        response1 shouldBe true
+        response2 shouldBe true
+        fusedLocationApiWrapperMock.requestLocationUpdatesCallCount shouldBe 1
+        fusedLocationApiWrapperMock.cancelLocationUpdatesCallCount shouldBe 0
+    }
+
+    // Regression: a requestLocationUpdates that fails (e.g. a swallowed SecurityException
+    // when permission is missing) must not be recorded as an active request, otherwise
+    // close()/refresh would try to cancel a subscription that never existed.
+    test("a failed requestLocationUpdates is not treated as an active subscription") {
+        // Given
+        val location = Location("TEST_PROVIDER")
+        location.latitude = 123.45
+        location.longitude = 678.91
+        val fusedLocationApiWrapperMock = FusedLocationApiWrapperMock(listOf(location))
+        fusedLocationApiWrapperMock.requestLocationUpdatesResult = false
+
+        val applicationService = AndroidMockHelper.applicationService()
+        every { applicationService.isInForeground } returns true
+        val gmsLocationController = GmsLocationController(applicationService, fusedLocationApiWrapperMock)
+
+        // When
+        gmsLocationController.start()
+        gmsLocationController.stop()
+
+        // Then
+        fusedLocationApiWrapperMock.requestLocationUpdatesCallCount shouldBe 1
+        fusedLocationApiWrapperMock.cancelLocationUpdatesCallCount shouldBe 0
+    }
+
+    // Regression for the full repro: the first requestLocationUpdates fails because permission
+    // is missing (swallowed SecurityException), then a later start() (triggered by the grant)
+    // must re-register. It must not cancel the never-active first attempt, and the now-active
+    // request must be cancelled on stop, proving the re-arm actually took effect.
+    test("start re-registers a previously failed request once it can succeed") {
+        // Given the first requestLocationUpdates fails (permission not yet granted)
+        val location = Location("TEST_PROVIDER")
+        location.latitude = 123.45
+        location.longitude = 678.91
+        val fusedLocationApiWrapperMock = FusedLocationApiWrapperMock(listOf(location))
+        fusedLocationApiWrapperMock.requestLocationUpdatesResult = false
+
+        val applicationService = AndroidMockHelper.applicationService()
+        every { applicationService.isInForeground } returns true
+        val gmsLocationController = GmsLocationController(applicationService, fusedLocationApiWrapperMock)
+
+        // When the first start cannot register for updates
+        gmsLocationController.start()
+
+        // Then the failed request is not recorded as active, so there is nothing to cancel
+        fusedLocationApiWrapperMock.requestLocationUpdatesCallCount shouldBe 1
+        fusedLocationApiWrapperMock.cancelLocationUpdatesCallCount shouldBe 0
+
+        // When permission is granted and start() runs again
+        fusedLocationApiWrapperMock.requestLocationUpdatesResult = true
+        gmsLocationController.start()
+
+        // Then it re-registers without cancelling the never-active first attempt
+        fusedLocationApiWrapperMock.requestLocationUpdatesCallCount shouldBe 2
+        fusedLocationApiWrapperMock.cancelLocationUpdatesCallCount shouldBe 0
+
+        // And the now-active request is cancelled on stop, confirming the re-arm took effect
+        gmsLocationController.stop()
+        fusedLocationApiWrapperMock.cancelLocationUpdatesCallCount shouldBe 1
+    }
 })

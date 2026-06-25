@@ -6,7 +6,10 @@ import android.content.SharedPreferences
 import androidx.test.core.app.ApplicationProvider.getApplicationContext
 import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
 import com.onesignal.common.AndroidUtils
+import com.onesignal.common.threading.OneSignalDispatchers
 import com.onesignal.common.threading.ThreadingMode
+import com.onesignal.core.internal.config.ConfigModelStore
+import com.onesignal.core.internal.features.FeatureFlag
 import com.onesignal.core.internal.preferences.PreferenceOneSignalKeys.PREFS_LEGACY_APP_ID
 import com.onesignal.debug.ILogListener
 import com.onesignal.debug.LogLevel
@@ -27,6 +30,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicReference
 
 @RobolectricTest
 class SDKInitTests : FunSpec({
@@ -46,19 +50,52 @@ class SDKInitTests : FunSpec({
         oneSignalImp.isInitialized shouldBe true
     }
 
+    fun enableBackgroundThreadingBeforeInit(oneSignalImp: OneSignalImp) {
+        oneSignalImp.getService(ConfigModelStore::class.java).model.sdkRemoteFeatureFlags =
+            listOf(FeatureFlag.SDK_BACKGROUND_THREADING.key)
+    }
+
+    fun withSaturatedOneSignalIo(block: () -> Unit) {
+        val running = CountDownLatch(2)
+        val release = CountDownLatch(1)
+        repeat(4) {
+            OneSignalDispatchers.launchOnIO {
+                running.countDown()
+                release.await(30, TimeUnit.SECONDS)
+            }
+        }
+
+        try {
+            running.await(5, TimeUnit.SECONDS) shouldBe true
+            block()
+        } finally {
+            release.countDown()
+        }
+    }
+
+    fun runOnThreadAndWait(block: () -> Unit) {
+        val error = AtomicReference<Throwable?>(null)
+        val thread =
+            Thread {
+                try {
+                    block()
+                } catch (t: Throwable) {
+                    error.set(t)
+                }
+            }
+        thread.start()
+        thread.join(2_000)
+
+        thread.isAlive shouldBe false
+        error.get() shouldBe null
+    }
+
     beforeAny {
         Logging.logLevel = LogLevel.NONE
-        // FF-off (legacy mode) is the default; tests in this file exercise that contract.
-        // FF-on coverage of [initWithContext] (async dispatch via [suspendifyOnIO]) lives
-        // upstream of this PR and isn't repeated here — exercising it cleanly requires more
-        // setup than is in scope: OneSignalImp reads the FF via `featureManager.isEnabled(...)`,
-        // backed by `featureStates`, which is itself populated from
-        // `configModelStore.model.sdkRemoteFeatureFlags`. To flip the FF on we'd have to plant
-        // the cached ConfigModel JSON in SharedPreferences before [OneSignalImp] is constructed,
-        // and that conflicts with [BlockingPrefsContext] (used for the does-not-block /
-        // recovery shapes) because the FF check itself reads prefs synchronously through the
-        // lazy chain. The FF-on path is exercised in production usage; the regression we
-        // protect against here is the FF-off blocking contract pinned below.
+        // FF-off (legacy mode) is the default; most tests in this file exercise that contract.
+        // FF-on tests opt in per-test via [enableBackgroundThreadingBeforeInit], which seeds the
+        // flag straight onto `configModelStore.model.sdkRemoteFeatureFlags` (no SharedPreferences
+        // planting), so `featureManager.isEnabled(SDK_BACKGROUND_THREADING)` resolves true.
         ThreadingMode.useBackgroundThreading = false
     }
 
@@ -582,6 +619,87 @@ class SDKInitTests : FunSpec({
             // Ensure any waiter is released even if assertions failed early.
             if (trigger.count > 0) trigger.countDown()
             unmockkObject(AndroidUtils)
+        }
+    }
+
+    test("FF-on accessor returns once init is SUCCESS even when the IO dispatcher is saturated (OneSignal-Flutter-SDK#1163)") {
+        // Regression test for the Flutter main-thread ANR. Under SDK_BACKGROUND_THREADING,
+        // getServiceWithFeatureGate used to ALWAYS route through
+        // waitAndReturn -> waitForInit -> runBlocking(OneSignalDispatchers.IO), even after init
+        // had already reached SUCCESS. On Flutter's main-thread lifecycleInit that parks the UI
+        // thread on a cold-start-contended IO pool (OneSignal-Flutter-SDK#1163). The fix adds a
+        // lock-free SUCCESS fast-path, centralized in waitForInit().
+        //
+        // We reproduce the contention faithfully: saturate OneSignalDispatchers.IO so that the
+        // pre-fix runBlocking(OneSignalDispatchers.IO) would park indefinitely behind the busy
+        // workers, then assert the accessor still returns. With the fix it answers synchronously;
+        // without it the accessor thread would still be parked when we check.
+        val context = getApplicationContext<Context>()
+        val os = OneSignalImp()
+
+        // SDK_BACKGROUND_THREADING is APP_STARTUP-latched, so seed it before init first resolves
+        // FeatureManager. This exercises the real FF-on branch without spying on OneSignalImp.
+        enableBackgroundThreadingBeforeInit(os)
+        os.initWithContext(context, "appId")
+        waitForInitialization(os)
+        ThreadingMode.useBackgroundThreading shouldBe true
+
+        withSaturatedOneSignalIo {
+            // When: a SUCCESS-state accessor is read while the IO pool is fully saturated.
+            val result = arrayOfNulls<Any>(1)
+            runOnThreadAndWait { result[0] = os.user }
+
+            // Then: the fast-path answered synchronously and the thread finished. The pre-fix
+            // runBlocking(OneSignalDispatchers.IO) path would still be parked here.
+            result[0] shouldNotBe null
+        }
+    }
+
+    test("FF-on login returns once init is SUCCESS even when the IO dispatcher is saturated (OneSignal-Flutter-SDK#1163)") {
+        // Companion regression test proving the SUCCESS fast-path is centralized in waitForInit(),
+        // so it covers the operation paths (login / logout / updateUserJwt / JWT listeners), not
+        // just the service accessors. Under SDK_BACKGROUND_THREADING, login() used to route through
+        // waitForInit -> runBlocking(OneSignalDispatchers.IO) even after init reached SUCCESS, so a
+        // saturated IO pool would park the caller indefinitely.
+        val context = getApplicationContext<Context>()
+        val os = OneSignalImp()
+
+        // SDK_BACKGROUND_THREADING is APP_STARTUP-latched, so seed it before init first resolves
+        // FeatureManager. This exercises the real FF-on branch without spying on OneSignalImp.
+        enableBackgroundThreadingBeforeInit(os)
+        os.initWithContext(context, "appId")
+        waitForInitialization(os)
+        ThreadingMode.useBackgroundThreading shouldBe true
+
+        withSaturatedOneSignalIo {
+            // When: login() is invoked while the IO pool is fully saturated. waitForInit must
+            // short-circuit (the subsequent enqueue is fire-and-forget via suspendifyOnIO and does
+            // not block the caller).
+            runOnThreadAndWait { os.login("externalId") }
+
+            // Then: the fast-path answered synchronously and the call returned. The pre-fix
+            // runBlocking(OneSignalDispatchers.IO) path would still be parked here.
+        }
+    }
+
+    test("FF-on consent getters return once init is SUCCESS even when the IO dispatcher is saturated") {
+        val context = getApplicationContext<Context>()
+        val os = OneSignalImp()
+
+        enableBackgroundThreadingBeforeInit(os)
+        os.initWithContext(context, "appId")
+        waitForInitialization(os)
+        ThreadingMode.useBackgroundThreading shouldBe true
+
+        withSaturatedOneSignalIo {
+            val results = arrayOfNulls<Boolean>(3)
+            runOnThreadAndWait {
+                results[0] = os.consentRequired
+                results[1] = os.consentGiven
+                results[2] = os.disableGMSMissingPrompt
+            }
+
+            results.toList() shouldBe listOf(false, false, false)
         }
     }
 

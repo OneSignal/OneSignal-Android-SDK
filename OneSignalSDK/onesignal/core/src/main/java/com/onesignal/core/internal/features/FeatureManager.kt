@@ -10,7 +10,16 @@ import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.debug.internal.logging.Logging
 import kotlinx.serialization.json.JsonObject
 
+/**
+ * Resolves backend-driven [FeatureFlag] state for the current device run and exposes the
+ * enabled set to the rest of the SDK. State is derived from cached/remote config and
+ * [FeatureActivationMode] latching rules.
+ */
 interface IFeatureManager {
+    /**
+     * Whether [feature] is enabled for the current run, after applying remote config and
+     * [FeatureActivationMode] latching rules.
+     */
     fun isEnabled(feature: FeatureFlag): Boolean
 
     /**
