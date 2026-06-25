@@ -522,11 +522,13 @@ internal class OneSignalImp(
         replaceWith = ReplaceWith("loginSuspend(externalId)"),
     )
     override fun login(externalId: String) {
-        Logging.warn(
-            "login(externalId) is deprecated and should no longer be used. " +
-                "Use the suspend function loginSuspend(externalId) instead.",
+        loginInternal(
+            externalId = externalId,
+            jwtBearerToken = null,
+            deprecationMessage =
+                "login(externalId) is deprecated and should no longer be used. " +
+                    "Use the suspend function loginSuspend(externalId) instead.",
         )
-        loginInternal(externalId, null)
     }
 
     @Deprecated(
@@ -539,22 +541,27 @@ internal class OneSignalImp(
         externalId: String,
         jwtBearerToken: String?,
     ) {
-        Logging.warn(
-            "login(externalId, jwtBearerToken) is deprecated and should no longer be used. " +
-                "Use the suspend function loginSuspend(externalId, jwtBearerToken) instead.",
+        loginInternal(
+            externalId = externalId,
+            jwtBearerToken = jwtBearerToken,
+            deprecationMessage =
+                "login(externalId, jwtBearerToken) is deprecated and should no longer be used. " +
+                    "Use the suspend function loginSuspend(externalId, jwtBearerToken) instead.",
         )
-        loginInternal(externalId, jwtBearerToken)
     }
 
     private fun loginInternal(
         externalId: String,
         jwtBearerToken: String?,
+        deprecationMessage: String,
     ) {
         if (isBackgroundThreadingEnabled) {
             waitForInit(operationName = "login")
         } else {
             requireInitForOperation("login")
         }
+
+        Logging.warn(deprecationMessage)
 
         val context = loginHelper.switchUser(externalId, jwtBearerToken) ?: return
 
@@ -576,16 +583,16 @@ internal class OneSignalImp(
         replaceWith = ReplaceWith("logoutSuspend()"),
     )
     override fun logout() {
-        Logging.warn(
-            "logout() is deprecated and should no longer be used. " +
-                "Use the suspend function logoutSuspend() instead.",
-        )
-
         if (isBackgroundThreadingEnabled) {
             waitForInit(operationName = "logout")
         } else {
             requireInitForOperation("logout")
         }
+
+        Logging.warn(
+            "logout() is deprecated and should no longer be used. " +
+                "Use the suspend function logoutSuspend() instead.",
+        )
 
         val context = logoutHelper.switchUser() ?: return
 
@@ -610,11 +617,6 @@ internal class OneSignalImp(
         externalId: String,
         token: String,
     ) {
-        Logging.warn(
-            "updateUserJwt(externalId, token) is deprecated and should no longer be used. " +
-                "Use the suspend function updateUserJwtSuspend(externalId, token) instead.",
-        )
-
         if (isBackgroundThreadingEnabled) {
             waitForInit(operationName = "updateUserJwt")
         } else {
@@ -622,6 +624,11 @@ internal class OneSignalImp(
                 throw IllegalStateException("Must call 'initWithContext' before 'updateUserJwt'")
             }
         }
+
+        Logging.warn(
+            "updateUserJwt(externalId, token) is deprecated and should no longer be used. " +
+                "Use the suspend function updateUserJwtSuspend(externalId, token) instead.",
+        )
 
         jwtTokenStore.putJwt(externalId, token)
         // Wake the queue so any deferred ops can dispatch with the fresh token.
