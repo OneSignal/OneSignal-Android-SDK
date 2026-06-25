@@ -526,8 +526,8 @@ internal class OneSignalImp(
             externalId = externalId,
             jwtBearerToken = null,
             deprecationMessage =
-                "login(externalId) is deprecated and should no longer be used. " +
-                    "Use the suspend function loginSuspend(externalId) instead.",
+            "login(externalId) is deprecated and should no longer be used. " +
+                "Use the suspend function loginSuspend(externalId) instead.",
         )
     }
 
@@ -545,8 +545,8 @@ internal class OneSignalImp(
             externalId = externalId,
             jwtBearerToken = jwtBearerToken,
             deprecationMessage =
-                "login(externalId, jwtBearerToken) is deprecated and should no longer be used. " +
-                    "Use the suspend function loginSuspend(externalId, jwtBearerToken) instead.",
+            "login(externalId, jwtBearerToken) is deprecated and should no longer be used. " +
+                "Use the suspend function loginSuspend(externalId, jwtBearerToken) instead.",
         )
     }
 
