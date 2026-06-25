@@ -5,6 +5,8 @@ import com.onesignal.common.PIIHasher
 import com.onesignal.common.modeling.ModelChangeTags
 import com.onesignal.common.modeling.ModelChangedArgs
 import com.onesignal.core.internal.application.IApplicationService
+import com.onesignal.debug.LogLevel
+import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.session.internal.session.ISessionService
 import com.onesignal.user.internal.Subscription
 import com.onesignal.user.internal.subscriptions.impl.SubscriptionManager
@@ -23,6 +25,10 @@ import io.mockk.spyk
 import io.mockk.verify
 
 class SubscriptionManagerTests : FunSpec({
+
+    beforeAny {
+        Logging.logLevel = LogLevel.NONE
+    }
 
     test("initializes subscriptions from model store") {
         // Given
@@ -182,12 +188,13 @@ class SubscriptionManagerTests : FunSpec({
 
         val subscriptionManager = SubscriptionManager(mockApplicationService, mockSessionService, mockSubscriptionModelStore)
 
-        // When
-        subscriptionManager.addOrUpdatePushSubscriptionToken("pushToken2", SubscriptionStatus.FIREBASE_FCM_ERROR_IOEXCEPTION_OTHER)
+        // When a new token arrives (a successful registration always reports SUBSCRIBED with a
+        // token; an error always reports a null token, never a token paired with an error status)
+        subscriptionManager.addOrUpdatePushSubscriptionToken("pushToken2", SubscriptionStatus.SUBSCRIBED)
 
         // Then
         pushSubscription.address shouldBe "pushToken2"
-        pushSubscription.status shouldBe SubscriptionStatus.FIREBASE_FCM_ERROR_IOEXCEPTION_OTHER
+        pushSubscription.status shouldBe SubscriptionStatus.SUBSCRIBED
     }
 
     test("remove email subscription removes from model store") {
@@ -616,5 +623,173 @@ class SubscriptionManagerTests : FunSpec({
         // Then
         result shouldNotBe null
         result!!.id shouldBe "subscription1"
+    }
+
+    // A transient, tokenless FCM/HMS token-fetch failure (e.g. -9 SERVICE_NOT_AVAILABLE) must not
+    // downgrade a push subscription that is already SUBSCRIBED with a valid cached token. A failed
+    // registration reports a null token alongside the error status, so the cached address is left
+    // intact and persisting the error would spuriously unsubscribe the device on the backend.
+    test("transient tokenless token-fetch error does not downgrade a healthy SUBSCRIBED push subscription") {
+        val retryableErrors =
+            listOf(
+                SubscriptionStatus.FIREBASE_FCM_INIT_ERROR,
+                SubscriptionStatus.FIREBASE_FCM_ERROR_IOEXCEPTION_SERVICE_NOT_AVAILABLE,
+                SubscriptionStatus.FIREBASE_FCM_ERROR_IOEXCEPTION_OTHER,
+                SubscriptionStatus.FIREBASE_FCM_ERROR_MISC_EXCEPTION,
+                SubscriptionStatus.HMS_TOKEN_TIMEOUT,
+                SubscriptionStatus.HMS_API_EXCEPTION_OTHER,
+                SubscriptionStatus.FIREBASE_FCM_ERROR_IOEXCEPTION_AUTHENTICATION_FAILED,
+            )
+
+        for (status in retryableErrors) {
+            // Given a healthy push subscription
+            val pushSubscription = SubscriptionModel()
+            pushSubscription.id = "subscription1"
+            pushSubscription.type = SubscriptionType.PUSH
+            pushSubscription.status = SubscriptionStatus.SUBSCRIBED
+            pushSubscription.optedIn = true
+            pushSubscription.address = "validToken"
+
+            val mockSubscriptionModelStore = mockk<SubscriptionModelStore>()
+            val mockApplicationService = mockk<IApplicationService>()
+            val mockSessionService = mockk<ISessionService>(relaxed = true)
+            every { mockSubscriptionModelStore.subscribe(any()) } just runs
+            every { mockSubscriptionModelStore.list() } returns listOf(pushSubscription)
+
+            val subscriptionManager =
+                SubscriptionManager(mockApplicationService, mockSessionService, mockSubscriptionModelStore)
+
+            // When a failed registration reports a null token alongside the transient error
+            subscriptionManager.addOrUpdatePushSubscriptionToken(null, status)
+
+            // Then the healthy SUBSCRIBED state and cached token are preserved
+            pushSubscription.status shouldBe SubscriptionStatus.SUBSCRIBED
+            pushSubscription.address shouldBe "validToken"
+        }
+    }
+
+    // The guard must be narrow: real opt-outs / permission changes are also tokenless, but they are
+    // not retryable token errors and must continue to downgrade the subscription as before.
+    test("non-retryable tokenless statuses still downgrade a SUBSCRIBED push subscription") {
+        val nonRetryableStatuses =
+            listOf(
+                SubscriptionStatus.NO_PERMISSION,
+                SubscriptionStatus.UNSUBSCRIBE,
+                SubscriptionStatus.DISABLED_FROM_REST_API_DEFAULT_REASON,
+            )
+
+        for (status in nonRetryableStatuses) {
+            // Given a healthy push subscription
+            val pushSubscription = SubscriptionModel()
+            pushSubscription.id = "subscription1"
+            pushSubscription.type = SubscriptionType.PUSH
+            pushSubscription.status = SubscriptionStatus.SUBSCRIBED
+            pushSubscription.optedIn = true
+            pushSubscription.address = "validToken"
+
+            val mockSubscriptionModelStore = mockk<SubscriptionModelStore>()
+            val mockApplicationService = mockk<IApplicationService>()
+            val mockSessionService = mockk<ISessionService>(relaxed = true)
+            every { mockSubscriptionModelStore.subscribe(any()) } just runs
+            every { mockSubscriptionModelStore.list() } returns listOf(pushSubscription)
+
+            val subscriptionManager =
+                SubscriptionManager(mockApplicationService, mockSessionService, mockSubscriptionModelStore)
+
+            // When
+            subscriptionManager.addOrUpdatePushSubscriptionToken(null, status)
+
+            // Then the downgrade is applied
+            pushSubscription.status shouldBe status
+        }
+    }
+
+    test("transient tokenless token-fetch error is persisted when there is no cached token to protect") {
+        // Given a SUBSCRIBED push subscription with no cached token (nothing to protect)
+        val pushSubscription = SubscriptionModel()
+        pushSubscription.id = "subscription1"
+        pushSubscription.type = SubscriptionType.PUSH
+        pushSubscription.status = SubscriptionStatus.SUBSCRIBED
+        pushSubscription.optedIn = true
+        pushSubscription.address = ""
+
+        val mockSubscriptionModelStore = mockk<SubscriptionModelStore>()
+        val mockApplicationService = mockk<IApplicationService>()
+        val mockSessionService = mockk<ISessionService>(relaxed = true)
+        every { mockSubscriptionModelStore.subscribe(any()) } just runs
+        every { mockSubscriptionModelStore.list() } returns listOf(pushSubscription)
+
+        val subscriptionManager =
+            SubscriptionManager(mockApplicationService, mockSessionService, mockSubscriptionModelStore)
+
+        // When
+        subscriptionManager.addOrUpdatePushSubscriptionToken(
+            null,
+            SubscriptionStatus.FIREBASE_FCM_ERROR_IOEXCEPTION_SERVICE_NOT_AVAILABLE,
+        )
+
+        // Then the error is persisted (the guard only protects an already-healthy, tokened subscription)
+        pushSubscription.status shouldBe SubscriptionStatus.FIREBASE_FCM_ERROR_IOEXCEPTION_SERVICE_NOT_AVAILABLE
+    }
+
+    test("transient tokenless token-fetch error is persisted when the subscription is not already SUBSCRIBED") {
+        // Given a push subscription that is already in a non-subscribed state
+        val pushSubscription = SubscriptionModel()
+        pushSubscription.id = "subscription1"
+        pushSubscription.type = SubscriptionType.PUSH
+        pushSubscription.status = SubscriptionStatus.NO_PERMISSION
+        pushSubscription.optedIn = true
+        pushSubscription.address = "validToken"
+
+        val mockSubscriptionModelStore = mockk<SubscriptionModelStore>()
+        val mockApplicationService = mockk<IApplicationService>()
+        val mockSessionService = mockk<ISessionService>(relaxed = true)
+        every { mockSubscriptionModelStore.subscribe(any()) } just runs
+        every { mockSubscriptionModelStore.list() } returns listOf(pushSubscription)
+
+        val subscriptionManager =
+            SubscriptionManager(mockApplicationService, mockSessionService, mockSubscriptionModelStore)
+
+        // When
+        subscriptionManager.addOrUpdatePushSubscriptionToken(
+            null,
+            SubscriptionStatus.FIREBASE_FCM_ERROR_IOEXCEPTION_SERVICE_NOT_AVAILABLE,
+        )
+
+        // Then the status is updated (there is no healthy SUBSCRIBED state to protect)
+        pushSubscription.status shouldBe SubscriptionStatus.FIREBASE_FCM_ERROR_IOEXCEPTION_SERVICE_NOT_AVAILABLE
+    }
+
+    test("SubscriptionStatus.isRetryableTokenError flags exactly the transient token-fetch errors") {
+        // Given the full enum
+        // When filtering by the new flag
+        val retryable = SubscriptionStatus.values().filter { it.isRetryableTokenError }.toSet()
+
+        // Then it is exactly the transient FCM/HMS token-fetch errors and nothing else
+        retryable shouldBe
+            setOf(
+                SubscriptionStatus.FIREBASE_FCM_INIT_ERROR,
+                SubscriptionStatus.FIREBASE_FCM_ERROR_IOEXCEPTION_SERVICE_NOT_AVAILABLE,
+                SubscriptionStatus.FIREBASE_FCM_ERROR_IOEXCEPTION_OTHER,
+                SubscriptionStatus.FIREBASE_FCM_ERROR_MISC_EXCEPTION,
+                SubscriptionStatus.HMS_TOKEN_TIMEOUT,
+                SubscriptionStatus.HMS_API_EXCEPTION_OTHER,
+                SubscriptionStatus.FIREBASE_FCM_ERROR_IOEXCEPTION_AUTHENTICATION_FAILED,
+            )
+    }
+
+    test("SubscriptionStatus.isRetryableTokenError is false for healthy and user-driven statuses") {
+        // SUBSCRIBED, permission/opt-out, and permanent configuration errors must never be treated
+        // as transient, otherwise the guard would mask real subscription state changes.
+        listOf(
+            SubscriptionStatus.SUBSCRIBED,
+            SubscriptionStatus.NO_PERMISSION,
+            SubscriptionStatus.UNSUBSCRIBE,
+            SubscriptionStatus.INVALID_FCM_SENDER_ID,
+            SubscriptionStatus.OUTDATED_GOOGLE_PLAY_SERVICES_APP,
+            SubscriptionStatus.HMS_ARGUMENTS_INVALID,
+            SubscriptionStatus.DISABLED_FROM_REST_API_DEFAULT_REASON,
+            SubscriptionStatus.ERROR,
+        ).forEach { it.isRetryableTokenError shouldBe false }
     }
 })
