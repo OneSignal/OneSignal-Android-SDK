@@ -64,7 +64,7 @@ enum class SubscriptionStatus(val value: Int) {
     /** The subscription is not enabled due to a missing HMS library */
     MISSING_HMS_PUSHKIT_LIBRARY(-28),
 
-    /** The subscription is not enabled due to an FCM authentication failed IOException */
+    /** The subscription is not enabled due to an FCM authentication failed IOException, this can be retried */
     FIREBASE_FCM_ERROR_IOEXCEPTION_AUTHENTICATION_FAILED(-29),
 
     /** The subscription is not enabled because the app has disabled the subscription via API */

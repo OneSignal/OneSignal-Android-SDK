@@ -2,6 +2,7 @@ package com.onesignal.user.internal.subscriptions
 
 import com.onesignal.common.IDManager.LOCAL_PREFIX
 import com.onesignal.common.PIIHasher
+import com.onesignal.common.modeling.IModelChangedHandler
 import com.onesignal.common.modeling.ModelChangeTags
 import com.onesignal.common.modeling.ModelChangedArgs
 import com.onesignal.core.internal.application.IApplicationService
@@ -659,12 +660,17 @@ class SubscriptionManagerTests : FunSpec({
             val subscriptionManager =
                 SubscriptionManager(mockApplicationService, mockSessionService, mockSubscriptionModelStore)
 
+            val changeHandler = mockk<IModelChangedHandler>(relaxed = true)
+            pushSubscription.subscribe(changeHandler)
+
             // When a failed registration reports a null token alongside the transient error
             subscriptionManager.addOrUpdatePushSubscriptionToken(null, status)
 
             // Then the healthy SUBSCRIBED state and cached token are preserved
             pushSubscription.status shouldBe SubscriptionStatus.SUBSCRIBED
             pushSubscription.address shouldBe "validToken"
+            // And no model change is emitted, so no backend subscription-update operation is generated
+            verify(exactly = 0) { changeHandler.onChanged(any(), any()) }
         }
     }
 
@@ -696,11 +702,16 @@ class SubscriptionManagerTests : FunSpec({
             val subscriptionManager =
                 SubscriptionManager(mockApplicationService, mockSessionService, mockSubscriptionModelStore)
 
+            val changeHandler = mockk<IModelChangedHandler>(relaxed = true)
+            pushSubscription.subscribe(changeHandler)
+
             // When
             subscriptionManager.addOrUpdatePushSubscriptionToken(null, status)
 
             // Then the downgrade is applied
             pushSubscription.status shouldBe status
+            // And the change is emitted so the backend subscription is updated
+            verify(exactly = 1) { changeHandler.onChanged(any(), any()) }
         }
     }
 
