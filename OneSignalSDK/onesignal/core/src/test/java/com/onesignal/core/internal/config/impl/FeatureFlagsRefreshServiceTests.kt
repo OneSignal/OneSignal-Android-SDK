@@ -21,6 +21,7 @@ import io.mockk.just
 import io.mockk.mockk
 import io.mockk.mockkStatic
 import io.mockk.slot
+import io.mockk.unmockkObject
 import io.mockk.unmockkStatic
 import io.mockk.verify
 
@@ -209,27 +210,37 @@ class FeatureFlagsRefreshServiceTests : FunSpec({
         // side effects.
         unmockkStatic("com.onesignal.common.threading.ThreadUtilsKt")
         mockkStatic("com.onesignal.common.threading.ThreadUtilsKt")
-        every { runOnSerialIO(any<() -> Unit>()) } answers {
-            firstArg<() -> Unit>().invoke()
+        try {
+            every { runOnSerialIO(any<() -> Unit>()) } answers {
+                firstArg<() -> Unit>().invoke()
+            }
+            every { OneSignalDispatchers.launchOnIO(any<suspend () -> Unit>()) } returns mockk(relaxed = true)
+
+            val model = ConfigModel().apply { appId = "appId-1" }
+            val store = mockConfigStore(model)
+            val (backend, _) = mockBackend()
+            // start: [true, false] (loop iter1=true, iter2=false break) + onFocus restart loop: [true, false].
+            val app = foregroundedAppService(true, false, true, false)
+
+            val service = FeatureFlagsRefreshService(app, store, backend).apply { refreshIntervalMs = 0L }
+            service.start()
+            awaitIO()
+
+            // start() fires onFocus(true) via the addApplicationLifecycleHandler mock, so we
+            // already have 1 invocation from initial focus. Direct onFocus / onUnfocused calls
+            // bump the counter to 3 total.
+            service.onFocus(firedOnSubscribe = false)
+            service.onUnfocused()
+
+            verify(exactly = 3) { runOnSerialIO(any<() -> Unit>()) }
+        } finally {
+            // This test re-mocks ThreadUtilsKt and stubs OneSignalDispatchers.launchOnIO to a
+            // no-op Job. Without restoring them, that no-op stub leaks past this spec (it is the
+            // last test here) and breaks later specs that exercise the *real* dispatcher —
+            // notably HttpClientTests, whose `launchOnIO {…}.join()` then `retVal!!` NPEs when the
+            // block never runs. Tear the threading mocks down here so the next spec starts clean.
+            unmockkObject(OneSignalDispatchers)
+            unmockkStatic("com.onesignal.common.threading.ThreadUtilsKt")
         }
-        every { OneSignalDispatchers.launchOnIO(any<suspend () -> Unit>()) } returns mockk(relaxed = true)
-
-        val model = ConfigModel().apply { appId = "appId-1" }
-        val store = mockConfigStore(model)
-        val (backend, _) = mockBackend()
-        // start: [true, false] (loop iter1=true, iter2=false break) + onFocus restart loop: [true, false].
-        val app = foregroundedAppService(true, false, true, false)
-
-        val service = FeatureFlagsRefreshService(app, store, backend).apply { refreshIntervalMs = 0L }
-        service.start()
-        awaitIO()
-
-        // start() fires onFocus(true) via the addApplicationLifecycleHandler mock, so we
-        // already have 1 invocation from initial focus. Direct onFocus / onUnfocused calls
-        // bump the counter to 3 total.
-        service.onFocus(firedOnSubscribe = false)
-        service.onUnfocused()
-
-        verify(exactly = 3) { runOnSerialIO(any<() -> Unit>()) }
     }
 })

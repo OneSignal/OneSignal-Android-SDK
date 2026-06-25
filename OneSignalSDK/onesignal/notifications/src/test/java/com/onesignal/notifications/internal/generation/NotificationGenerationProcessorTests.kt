@@ -1,6 +1,7 @@
 package com.onesignal.notifications.internal.generation
 
 import android.content.Context
+import com.onesignal.common.threading.OneSignalDispatchers
 import com.onesignal.common.threading.suspendifyOnIO
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
@@ -23,7 +24,12 @@ import io.mockk.mockk
 import io.mockk.mockkStatic
 import io.mockk.runs
 import io.mockk.spyk
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
 import org.json.JSONObject
 
@@ -99,8 +105,23 @@ private class Mocks {
 class NotificationGenerationProcessorTests : FunSpec({
     listener(IOMockHelper)
 
+    // processNotificationData bounds the external callbacks with `withTimeout { launchOnIO { … }.join() }`.
+    // IOMockHelper stubs launchOnIO to run inline via runBlocking, which blocks the calling thread inside
+    // waitForWake() and defeats withTimeout (the suite hangs forever on the preventDefault-without-display
+    // cases). Restore the production async semantics for launchOnIO in this spec by dispatching on a large
+    // Dispatchers.IO-backed scope (mirroring the prior GlobalScope.launch(Dispatchers.IO) path) so .join()
+    // suspends and withTimeout can cancel it. The scope is cancelled in afterSpec to drop any callback
+    // coroutine still parked in waitForWake().
+    val callbackScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    afterSpec { callbackScope.cancel() }
+
     beforeAny {
         Logging.logLevel = LogLevel.NONE
+
+        every { OneSignalDispatchers.launchOnIO(any<suspend () -> Unit>()) } answers {
+            val block = firstArg<suspend () -> Unit>()
+            callbackScope.launch { block() }
+        }
 
         mockkStatic(android.text.TextUtils::class)
         every { android.text.TextUtils.isEmpty(any()) } answers { firstArg<CharSequence?>()?.isEmpty() ?: true }
@@ -282,10 +303,10 @@ class NotificationGenerationProcessorTests : FunSpec({
     test("processNotificationData allows the will display callback to prevent default behavior twice") {
         // Given
         val mocks = Mocks()
-        // Bump the callback timeout from the suite default (10ms). Top-level launchOnIO falls
-        // through to GlobalScope.launch(Dispatchers.IO) (it's not stubbed by IOMockHelper),
-        // and on slow CI runners the IO scheduler can take longer than 10ms to dispatch the
-        // callback, causing withTimeout to cancel before discard is ever set.
+        // Bump the callback timeout from the suite default (10ms). launchOnIO is dispatched on a
+        // real Dispatchers.IO-backed scope in this spec (see the beforeAny override), and on slow
+        // CI runners the IO scheduler can take longer than 10ms to dispatch the callback, causing
+        // withTimeout to cancel before discard is ever set.
         every { mocks.notificationGenerationProcessor getProperty "EXTERNAL_CALLBACKS_TIMEOUT" } answers { 1_000L }
         coEvery { mocks.notificationDisplayer.displayNotification(any()) } returns true
         coEvery { mocks.notificationLifecycleService.externalRemoteNotificationReceived(any()) } just runs

@@ -2,6 +2,7 @@ package com.onesignal.session.internal.session
 
 import com.onesignal.common.threading.OneSignalDispatchers
 import com.onesignal.common.threading.runOnSerialIO
+import com.onesignal.mocks.IOMockHelper
 import com.onesignal.mocks.MockHelper
 import com.onesignal.session.internal.session.impl.SessionService
 import io.kotest.core.spec.style.FunSpec
@@ -37,6 +38,13 @@ private class Mocks {
 }
 
 class SessionServiceTests : FunSpec({
+    // SessionService.onFocus/onUnfocused dispatch their state mutation through the now-always-async
+    // runOnSerialIO. IOMockHelper.beforeSpec stubs runOnSerialIO to run inline so the tests below
+    // can assert session state synchronously after the call. The SDK-4508 tests further down
+    // re-mock/unmock runOnSerialIO themselves to assert the dispatch contract; they run last, so
+    // their finally-unmock does not affect the earlier inline-dispatch tests.
+    listener(IOMockHelper)
+
     test("session created on focus when current session invalid") {
         // Given
         val mocks = Mocks()

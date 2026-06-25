@@ -73,6 +73,9 @@ class SDKInitTests : FunSpec({
                     error.set(t)
                 }
             }
+        // Daemon so a stuck waitForInit() (e.g. if a dispatch is rejected under pool pressure)
+        // can never keep the test JVM alive and trip the 6h CI timeout (SDK-4213).
+        thread.isDaemon = true
         thread.start()
         thread.join(2_000)
 
@@ -240,6 +243,8 @@ class SDKInitTests : FunSpec({
                 os.user // This should block until either trigger is released or timed out
             }
 
+        // Daemon so a stuck waitForInit() can never keep the test JVM alive (SDK-4213 CI hang).
+        accessorThread.isDaemon = true
         accessorThread.start()
         accessorThread.join(500)
 
@@ -292,6 +297,8 @@ class SDKInitTests : FunSpec({
                 }
             }
 
+        // Daemon so a stuck waitForInit() can never keep the test JVM alive (SDK-4213 CI hang).
+        accessorThread.isDaemon = true
         accessorThread.start()
         accessorThread.join(500)
 
