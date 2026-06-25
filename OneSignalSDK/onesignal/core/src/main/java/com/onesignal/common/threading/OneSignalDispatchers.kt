@@ -206,10 +206,9 @@ object OneSignalDispatchers {
      * is meaningful lead time (e.g. a `goAsync()` handoff or `initWithContext` work) before the
      * first `suspendify*` / `launchOn*` dispatch.
      *
-     * [suspendifyOnIO], [suspendifyOnDefault], [launchOnIO], and [launchOnDefault] route through
-     * [IO] / [Default] only when [ThreadingMode.useBackgroundThreading] is true. With that mode
-     * off, they use `Dispatchers.IO` / `Dispatchers.Default`, so [prewarm] mainly benefits future
-     * calls after the mode flips; [suspendifyOnSerialIO] always routes through [SerialIO].
+     * [suspendifyOnIO], [suspendifyOnDefault], [launchOnIO], [launchOnDefault], and
+     * [suspendifyOnSerialIO] always route through [IO] / [Default] / [SerialIO], so [prewarm]
+     * benefits the very first real dispatch from any of them.
      *
      * The known main-thread cold-start entry points:
      * | Entry point | Class |
