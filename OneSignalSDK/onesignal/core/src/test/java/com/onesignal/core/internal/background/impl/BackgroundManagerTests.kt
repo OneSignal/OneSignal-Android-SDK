@@ -14,10 +14,9 @@ import io.mockk.verifyOrder
 import kotlinx.coroutines.Job
 
 /**
- * Regression coverage for SDK-4505. Asserts that BackgroundManager.onFocus / onUnfocused
- * route through OneSignalDispatchers.launchOnSerialIO so the JobScheduler Binder call doesn't
- * run inline on the main thread (the ANR fix), and rapid bursts stay in submission order
- * (the serial-dispatcher refinement).
+ * Asserts that BackgroundManager.onFocus / onUnfocused route through
+ * OneSignalDispatchers.launchOnSerialIO so the JobScheduler Binder call doesn't run inline on the
+ * main thread (avoiding an ANR), and that rapid bursts stay in submission order.
  */
 class BackgroundManagerTests : FunSpec({
 
@@ -72,9 +71,9 @@ class BackgroundManagerTests : FunSpec({
                 emptyList(),
             )
 
-        // Simulate the user backgrounding then immediately foregrounding the app on the
-        // main thread (the SDK-4505 reproducer). Both calls must route through the same
-        // serial dispatcher so the IO worker observes them in this submission order.
+        // Simulate the user backgrounding then immediately foregrounding the app on the main
+        // thread. Both calls must route through the same serial dispatcher so the IO worker
+        // observes them in this submission order.
         backgroundManager.onUnfocused()
         backgroundManager.onFocus(firedOnSubscribe = false)
 

@@ -330,12 +330,12 @@ class NotificationPermissionControllerTests : FunSpec({
         }
     }
 
-    test("onFocus dispatches polling-interval update + waker through runOnSerialIO (SDK-4507)") {
-        // SDK-4507: the lifecycle-registered onFocus handler reads ConfigModel and calls
-        // Waiter.wake(), the latter of which dispatches a coroutine resume into the IO pool.
-        // On cold start this is the SDK's first OneSignalDispatchers consumer in the process,
-        // and the executor + dispatcher + scope lazy chain pinned the main thread for many
-        // seconds. The fix routes through runOnSerialIO; verify that contract here.
+    test("onFocus dispatches polling-interval update + waker through runOnSerialIO") {
+        // The lifecycle-registered onFocus handler reads ConfigModel and calls Waiter.wake(),
+        // the latter of which dispatches a coroutine resume into the IO pool. On cold start this
+        // is the SDK's first OneSignalDispatchers consumer in the process, and the executor +
+        // dispatcher + scope lazy chain pinned the main thread for many seconds. The fix routes
+        // through runOnSerialIO; verify that contract here.
         //
         // We stub the helper so the wrapped block does not run (we don't want a real
         // pollingWaiter.wake() to spawn a real coroutine from this test). The helper itself
@@ -378,7 +378,7 @@ class NotificationPermissionControllerTests : FunSpec({
         }
     }
 
-    test("onUnfocused dispatches polling-interval reset through runOnSerialIO (SDK-4507)") {
+    test("onUnfocused dispatches polling-interval reset through runOnSerialIO") {
         val threadUtilsPath = "com.onesignal.common.threading.ThreadUtilsKt"
         mockkStatic(threadUtilsPath)
         mockkObject(OneSignalDispatchers)

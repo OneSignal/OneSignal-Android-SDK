@@ -119,23 +119,23 @@ internal class OneSignalImp : IOneSignal,
 
     override val session: ISessionManager
         get() =
-            getServiceWithFeatureGate { services.getService() }
+            waitAndReturn { services.getService() }
 
     override val notifications: INotificationsManager
         get() =
-            getServiceWithFeatureGate { services.getService() }
+            waitAndReturn { services.getService() }
 
     override val location: ILocationManager
         get() =
-            getServiceWithFeatureGate { services.getService() }
+            waitAndReturn { services.getService() }
 
     override val inAppMessages: IInAppMessagesManager
         get() =
-            getServiceWithFeatureGate { services.getService() }
+            waitAndReturn { services.getService() }
 
     override val user: IUserManager
         get() =
-            getServiceWithFeatureGate { services.getService() }
+            waitAndReturn { services.getService() }
 
     // Services required by this class
     // WARNING: OperationRepo depends on OperationModelStore which in-turn depends
@@ -174,15 +174,14 @@ internal class OneSignalImp : IOneSignal,
                 }
             }.build()
 
-    // Background-threaded init is the default. Off-main work routes through OneSignal's
-    // centralized dispatcher pool rather than ad-hoc threads / Dispatchers.IO.
+    // Off-main work routes through OneSignal's centralized dispatcher pool rather than ad-hoc
+    // threads / Dispatchers.IO.
     //
-    // Resolved per-access (get()) rather than captured once: an eager `val` would force the
-    // lazy `pools.IO` executor/dispatcher to construct during OneSignalImp construction (on the
-    // main thread, before initWithContext's prewarm() runs), partially defeating SDK-4507/4794,
-    // and would also pin this instance to a single pool generation -- so after resetForTest()
-    // swaps `pools` and shutdownNow()'s the old executor, a reused instance would dispatch onto
-    // a dead pool. The getter always reads the current generation's (already-warm) dispatcher.
+    // Resolved per-access (get()) rather than captured once: an eager `val` would construct the
+    // lazy `pools.IO` dispatcher during OneSignalImp construction on the main thread (before
+    // prewarm() runs), and would pin this instance to one pool generation -- so after
+    // resetForTest() swaps `pools` and shutdownNow()'s the old executor, a reused instance would
+    // dispatch onto a dead pool. The getter always reads the current generation's warm dispatcher.
     private val ioDispatcher: CoroutineDispatcher get() = OneSignalDispatchers.IO
 
     // get the current config model, if there is one
@@ -311,10 +310,8 @@ internal class OneSignalImp : IOneSignal,
 
         // Warm OneSignalDispatchers on a dedicated daemon thread so the first production caller
         // of suspendifyOnIO / launchOnSerialIO doesn't pay the ThreadPoolExecutor + dispatcher +
-        // scope construction cost on the main thread. See SDK-4507; OTel showed that cost as
-        // 5–20s main-thread blocks at first foreground/background lifecycle event. Calling
-        // prewarm() is idempotent, fire-and-forget, and safe even if a prior initWithContext
-        // attempt already started the prewarm.
+        // scope construction cost on the main thread (observed as 5-20s main-thread blocks at the
+        // first foreground/background lifecycle event). prewarm() is idempotent and fire-and-forget.
         OneSignalDispatchers.prewarm()
 
         synchronized(initLock) {
@@ -580,12 +577,10 @@ internal class OneSignalImp : IOneSignal,
 
         // Wait indefinitely until init actually completes - ensures consistent state
         // Function only returns when initState is SUCCESS or FAILED
-        // NOTE: This is a suspend function, so it's non-blocking when called from coroutines.
-        // However, if waitForInit() (which uses runBlocking) is called from the main thread,
-        // it will block the main thread indefinitely until init completes, which can cause ANRs.
-        // This is intentional per PR #2412: "ANR is the lesser of two evils and the app can recover,
-        // where an uncaught throw it can not." To avoid ANRs, call SDK methods from background threads
-        // or use the suspend API from coroutines.
+        // Non-blocking when called from coroutines. But if waitForInit() (which uses runBlocking)
+        // is called from the main thread, it blocks the main thread until init completes, which can
+        // ANR. This is intentional: an ANR is recoverable, an uncaught throw is not. To avoid it,
+        // call SDK methods from background threads or use the suspend API.
         completionToAwait.await()
 
         // Log how long initialization took
@@ -610,15 +605,11 @@ internal class OneSignalImp : IOneSignal,
         return getter()
     }
 
+    // Blocks until init completes; [waitForInit] throws on NOT_STARTED / FAILED and
+    // returns once initState == SUCCESS.
     private fun <T> waitAndReturn(getter: () -> T): T {
         waitForInit()
         return getter()
-    }
-
-    private fun <T> getServiceWithFeatureGate(getter: () -> T): T {
-        // Blocks until init completes; [waitForInit] throws on NOT_STARTED / FAILED and
-        // returns once initState == SUCCESS.
-        return waitAndReturn(getter)
     }
 
     private fun <T> blockingGet(getter: () -> T): T {
@@ -713,9 +704,9 @@ internal class OneSignalImp : IOneSignal,
     ): Boolean {
         Logging.log(LogLevel.DEBUG, "initWithContext(context: $context, appId: $appId)")
 
-        // Same SDK-4507 warm-up as the synchronous variant. Reaching this entry point on the
-        // main thread (e.g. SyncJobService.onStartJob -> suspendifyOnIO -> initWithContext(context))
-        // pays the cold-init cost on the dispatcher used to enter [withContext] below, so warm
+        // Same warm-up as the synchronous variant. Reaching this entry point on the main thread
+        // (e.g. SyncJobService.onStartJob -> suspendifyOnIO -> initWithContext(context)) pays the
+        // cold-init cost on the dispatcher used to enter [withContext] below, so warm
         // OneSignalDispatchers on a background thread before we touch [ioDispatcher].
         OneSignalDispatchers.prewarm()
 
