@@ -176,7 +176,14 @@ internal class OneSignalImp : IOneSignal,
 
     // Background-threaded init is the default. Off-main work routes through OneSignal's
     // centralized dispatcher pool rather than ad-hoc threads / Dispatchers.IO.
-    private val ioDispatcher: CoroutineDispatcher = OneSignalDispatchers.IO
+    //
+    // Resolved per-access (get()) rather than captured once: an eager `val` would force the
+    // lazy `pools.IO` executor/dispatcher to construct during OneSignalImp construction (on the
+    // main thread, before initWithContext's prewarm() runs), partially defeating SDK-4507/4794,
+    // and would also pin this instance to a single pool generation -- so after resetForTest()
+    // swaps `pools` and shutdownNow()'s the old executor, a reused instance would dispatch onto
+    // a dead pool. The getter always reads the current generation's (already-warm) dispatcher.
+    private val ioDispatcher: CoroutineDispatcher get() = OneSignalDispatchers.IO
 
     // get the current config model, if there is one
     private val configModel: ConfigModel by lazy { services.getService<ConfigModelStore>().model }
@@ -285,6 +292,16 @@ internal class OneSignalImp : IOneSignal,
         return startupService
     }
 
+    /**
+     * Fire-and-forget init. The actual work runs asynchronously on the IO pool, so this method
+     * cannot know the real outcome before it returns.
+     *
+     * Return value: always `true` once init has been kicked off (or is already in progress/done).
+     * It does NOT reflect init success — a failure surfaces later, either via a subsequent
+     * accessor throwing or by querying [isInitialized]. Callers (including wrapper SDKs) must not
+     * branch on this boolean to detect init failure; use the suspending [initWithContextSuspend],
+     * which returns an accurate result, when the outcome matters.
+     */
     @Suppress("ReturnCount", "TooGenericExceptionCaught")
     override fun initWithContext(
         context: Context,
@@ -401,10 +418,9 @@ internal class OneSignalImp : IOneSignal,
             // `await()`. Reach a terminal state via [completeInit] (atomic state+completion) and
             // return `false`. The throw is captured on `initFailureException.addSuppressed(...)`
             // so a subsequent accessor surfaces it to the caller. We deliberately don't rethrow
-            // here: the FF-on `suspendifyOnIO { ... }` arm would swallow it anyway, the FF-off
-            // `runBlocking { ... }` arm would propagate it, and the [initWithContextSuspend]
-            // path would propagate it — three different observable behaviors for the same kind
-            // of failure. `return false` gives one consistent shape; callers can query
+            // here: the synchronous [initWithContext] dispatches this via `suspendifyOnIO { ... }`
+            // (which has no caller to rethrow to), so returning `false` on every path — including
+            // [initWithContextSuspend] — gives one consistent shape. Callers can query
             // `initFailureException` (or just the returned `Boolean`) to react.
             Logging.error("OneSignal: internalInit threw unexpectedly; marking init FAILED", e)
             initFailureException?.addSuppressed(e)

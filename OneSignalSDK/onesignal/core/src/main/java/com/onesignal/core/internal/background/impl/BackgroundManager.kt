@@ -73,7 +73,7 @@ internal class BackgroundManager(
 
     // JobScheduler.cancel/schedule are synchronous Binder calls; on some devices they block the
     // main thread for seconds (SDK-4505). Offload to SerialIO so a rapid unfocus -> focus burst
-    // still runs cancel-then-schedule in submission order. FF gates the rollout.
+    // still runs cancel-then-schedule in submission order.
     override fun onFocus(firedOnSubscribe: Boolean) {
         runOnSerialIO { cancelSyncTask() }
     }
