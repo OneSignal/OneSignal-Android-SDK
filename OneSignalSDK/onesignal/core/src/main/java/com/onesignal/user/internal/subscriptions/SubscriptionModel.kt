@@ -64,7 +64,7 @@ enum class SubscriptionStatus(val value: Int) {
     /** The subscription is not enabled due to a missing HMS library */
     MISSING_HMS_PUSHKIT_LIBRARY(-28),
 
-    /** The subscription is not enabled due to an FCM authentication failed IOException */
+    /** The subscription is not enabled due to an FCM authentication failed IOException, this can be retried */
     FIREBASE_FCM_ERROR_IOEXCEPTION_AUTHENTICATION_FAILED(-29),
 
     /** The subscription is not enabled because the app has disabled the subscription via API */
@@ -74,7 +74,33 @@ enum class SubscriptionStatus(val value: Int) {
     ERROR(9999),
     ;
 
+    /**
+     * `true` when this status represents a *transient, retryable* failure to fetch a push token
+     * from FCM/HMS (e.g. a temporary IOException, service-unavailable, or init error)
+     *
+     * A retryable token error means "we momentarily couldn't reach FCM/HMS", not "this device can
+     * no longer receive push". It must therefore never downgrade a subscription that is already
+     * [SUBSCRIBED] with a valid token — the next successful registration recovers the token.
+     */
+    val isRetryableTokenError: Boolean
+        get() = this in RETRYABLE_TOKEN_ERRORS
+
     companion object {
+        /**
+         * Transient, retryable token-fetch failures. These are the statuses that should not
+         * overwrite a healthy push subscription.
+         */
+        private val RETRYABLE_TOKEN_ERRORS =
+            setOf(
+                FIREBASE_FCM_INIT_ERROR, // -8
+                FIREBASE_FCM_ERROR_IOEXCEPTION_SERVICE_NOT_AVAILABLE, // -9
+                FIREBASE_FCM_ERROR_IOEXCEPTION_OTHER, // -11
+                FIREBASE_FCM_ERROR_MISC_EXCEPTION, // -12
+                HMS_TOKEN_TIMEOUT, // -25
+                HMS_API_EXCEPTION_OTHER, // -27
+                FIREBASE_FCM_ERROR_IOEXCEPTION_AUTHENTICATION_FAILED, // -29
+            )
+
         fun fromInt(value: Int): SubscriptionStatus? {
             return SubscriptionStatus.values().firstOrNull { it.value == value }
         }

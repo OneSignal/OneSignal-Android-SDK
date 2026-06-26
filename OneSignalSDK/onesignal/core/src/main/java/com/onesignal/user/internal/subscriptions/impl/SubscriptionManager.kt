@@ -89,6 +89,19 @@ internal class SubscriptionManager(
                 pushSubModel.address = pushToken
             }
 
+            // A temporary token-fetch failure (no token) shouldn't unsubscribe a device that is
+            // already subscribed with a valid token. Keep the current status.
+            val isTransientTokenlessError = pushToken == null && pushTokenStatus.isRetryableTokenError
+            val isAlreadyHealthy =
+                pushSubModel.status == SubscriptionStatus.SUBSCRIBED && pushSubModel.address.isNotEmpty()
+            if (isTransientTokenlessError && isAlreadyHealthy) {
+                Logging.warn(
+                    "SubscriptionManager: ignoring transient push token status $pushTokenStatus " +
+                        "(${pushTokenStatus.value}).",
+                )
+                return
+            }
+
             pushSubModel.status = pushTokenStatus
         }
     }
