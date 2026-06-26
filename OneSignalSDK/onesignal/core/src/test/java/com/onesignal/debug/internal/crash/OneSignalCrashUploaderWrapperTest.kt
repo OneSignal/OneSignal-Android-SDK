@@ -7,7 +7,6 @@ import androidx.test.core.app.ApplicationProvider
 import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.config.ConfigModel
-import com.onesignal.core.internal.features.FeatureFlag
 import com.onesignal.core.internal.features.IFeatureManager
 import com.onesignal.core.internal.preferences.PreferenceOneSignalKeys
 import com.onesignal.core.internal.preferences.PreferenceStores
@@ -39,11 +38,9 @@ class OneSignalCrashUploaderWrapperTest : FunSpec({
         sharedPreferences.edit().clear().commit()
     }
 
-    fun mockFeatureManager(backgroundThreadingEnabled: Boolean = true): IFeatureManager {
+    fun mockFeatureManager(): IFeatureManager {
         val featureManager = mockk<IFeatureManager>()
-        every { featureManager.isEnabled(FeatureFlag.SDK_BACKGROUND_THREADING) } returns backgroundThreadingEnabled
-        every { featureManager.enabledFeatureKeys() } returns
-            if (backgroundThreadingEnabled) listOf(FeatureFlag.SDK_BACKGROUND_THREADING.key) else emptyList()
+        every { featureManager.enabledFeatureKeys() } returns emptyList()
         every { featureManager.remoteFeatureFlagMetadata() } returns null
         return featureManager
     }
@@ -95,7 +92,7 @@ class OneSignalCrashUploaderWrapperTest : FunSpec({
         val mockApplicationService = mockk<IApplicationService>(relaxed = true)
         every { mockApplicationService.appContext } returns appContext
 
-        val wrapper = OneSignalCrashUploaderWrapper(mockApplicationService, mockFeatureManager(backgroundThreadingEnabled = false))
+        val wrapper = OneSignalCrashUploaderWrapper(mockApplicationService, mockFeatureManager())
 
         // Multiple calls should not throw
         runBlocking {

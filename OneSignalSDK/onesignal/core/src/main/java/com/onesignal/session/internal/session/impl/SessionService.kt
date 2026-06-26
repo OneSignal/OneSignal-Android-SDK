@@ -1,7 +1,7 @@
 package com.onesignal.session.internal.session.impl
 
 import com.onesignal.common.events.EventProducer
-import com.onesignal.common.threading.runOnSerialIOIfBackgroundThreading
+import com.onesignal.common.threading.runOnSerialIO
 import com.onesignal.core.internal.application.IApplicationLifecycleHandler
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.background.IBackgroundService
@@ -45,7 +45,7 @@ internal class SessionService(
      * Run in the background when the session would time out, only if a session is currently active.
      *
      * Returns null if [bootstrap] has not yet run -- callers that invoke us before bootstrap
-     * (possible under SDK_BACKGROUND_THREADING when init is still in flight) should treat this
+     * (possible when init is still in flight) should treat this
      * as "no schedule needed" rather than crashing on a null-deref.
      */
     override val scheduleBackgroundRunIn: Long?
@@ -82,7 +82,7 @@ internal class SessionService(
 
     private fun endSession() {
         // Defensive: if bootstrap() has not run yet, there is no session state to end.
-        // This can happen under SDK_BACKGROUND_THREADING when SyncJobService races with
+        // This can happen when SyncJobService races with
         // an in-flight initWithContext that has not yet reached bootstrapServices().
         val session = this.session ?: return
         if (!session.isValid) return
@@ -107,7 +107,7 @@ internal class SessionService(
         // Capture focus time on the caller's thread so session timestamps reflect lifecycle
         // arrival, not dispatcher latency (SDK-4506).
         val focusTimeMs = _time.currentTimeMillis
-        runOnSerialIOIfBackgroundThreading {
+        runOnSerialIO {
             handleOnFocus(firedOnSubscribe, focusTimeMs)
         }
     }
@@ -150,7 +150,7 @@ internal class SessionService(
     override fun onUnfocused() {
         // Capture on the caller's thread so activeDuration is unaffected by dispatcher latency.
         val unfocusTimeMs = _time.currentTimeMillis
-        runOnSerialIOIfBackgroundThreading {
+        runOnSerialIO {
             handleOnUnfocused(unfocusTimeMs)
         }
     }
