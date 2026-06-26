@@ -7,6 +7,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.util.concurrent.ExecutorService
@@ -62,114 +63,152 @@ object OneSignalDispatchers {
         }
     }
 
-    private val ioExecutor: ThreadPoolExecutor by lazy {
-        try {
-            ThreadPoolExecutor(
-                IO_CORE_POOL_SIZE,
-                IO_MAX_POOL_SIZE,
-                KEEP_ALIVE_TIME_SECONDS,
-                TimeUnit.SECONDS,
-                LinkedBlockingQueue(QUEUE_CAPACITY),
-                OptimizedThreadFactory(
-                    namePrefix = IO_THREAD_NAME_PREFIX,
-                    priority = Thread.NORM_PRIORITY - 1,
-                    // Slightly lower priority for I/O tasks
-                ),
-            ).apply {
-                allowCoreThreadTimeOut(false) // Keep core threads alive
+    /**
+     * Holds one generation of executors, dispatchers, and scopes. Everything stays lazily
+     * initialized (so production cold-start only pays for what the first caller actually uses),
+     * but bundling them lets the test-only [resetForTest] hook atomically swap in a clean
+     * generation and tear down the old one — including [shutdownNow] to interrupt worker threads
+     * that are parked in non-cancellable JVM waits (e.g. `CountDownLatch.await()` from a prior
+     * spec), which a plain coroutine cancellation cannot free.
+     */
+    private class Pools {
+        val ioExecutorLazy =
+            lazy {
+                try {
+                    ThreadPoolExecutor(
+                        IO_CORE_POOL_SIZE,
+                        IO_MAX_POOL_SIZE,
+                        KEEP_ALIVE_TIME_SECONDS,
+                        TimeUnit.SECONDS,
+                        LinkedBlockingQueue(QUEUE_CAPACITY),
+                        OptimizedThreadFactory(
+                            namePrefix = IO_THREAD_NAME_PREFIX,
+                            priority = Thread.NORM_PRIORITY - 1,
+                            // Slightly lower priority for I/O tasks
+                        ),
+                    ).apply {
+                        allowCoreThreadTimeOut(false) // Keep core threads alive
+                    }
+                } catch (e: Exception) {
+                    Logging.error("OneSignalDispatchers: Failed to create IO executor: ${e.message}")
+                    throw e // Let the dispatcher fallback handle this
+                }
             }
-        } catch (e: Exception) {
-            Logging.error("OneSignalDispatchers: Failed to create IO executor: ${e.message}")
-            throw e // Let the dispatcher fallback handle this
-        }
-    }
+        val ioExecutor: ThreadPoolExecutor get() = ioExecutorLazy.value
 
-    /** Single-thread executor for order-sensitive lifecycle work (focus / unfocus handlers). */
-    private val serialIOExecutor: ExecutorService by lazy {
-        try {
-            Executors.newSingleThreadExecutor(
-                OptimizedThreadFactory(
-                    namePrefix = SERIAL_IO_THREAD_NAME,
-                    priority = Thread.NORM_PRIORITY - 1,
-                ),
-            )
-        } catch (e: Exception) {
-            Logging.error("OneSignalDispatchers: Failed to create SerialIO executor: ${e.message}")
-            throw e
-        }
-    }
-
-    private val defaultExecutor: ThreadPoolExecutor by lazy {
-        try {
-            ThreadPoolExecutor(
-                DEFAULT_CORE_POOL_SIZE,
-                DEFAULT_MAX_POOL_SIZE,
-                KEEP_ALIVE_TIME_SECONDS,
-                TimeUnit.SECONDS,
-                LinkedBlockingQueue(QUEUE_CAPACITY),
-                OptimizedThreadFactory(DEFAULT_THREAD_NAME_PREFIX),
-            ).apply {
-                allowCoreThreadTimeOut(false) // Keep core threads alive
+        /** Single-thread executor for order-sensitive lifecycle work (focus / unfocus handlers). */
+        val serialIOExecutorLazy =
+            lazy {
+                try {
+                    Executors.newSingleThreadExecutor(
+                        OptimizedThreadFactory(
+                            namePrefix = SERIAL_IO_THREAD_NAME,
+                            priority = Thread.NORM_PRIORITY - 1,
+                        ),
+                    )
+                } catch (e: Exception) {
+                    Logging.error("OneSignalDispatchers: Failed to create SerialIO executor: ${e.message}")
+                    throw e
+                }
             }
-        } catch (e: Exception) {
-            Logging.error("OneSignalDispatchers: Failed to create Default executor: ${e.message}")
-            throw e // Let the dispatcher fallback handle this
+        val serialIOExecutor: ExecutorService get() = serialIOExecutorLazy.value
+
+        val defaultExecutorLazy =
+            lazy {
+                try {
+                    ThreadPoolExecutor(
+                        DEFAULT_CORE_POOL_SIZE,
+                        DEFAULT_MAX_POOL_SIZE,
+                        KEEP_ALIVE_TIME_SECONDS,
+                        TimeUnit.SECONDS,
+                        LinkedBlockingQueue(QUEUE_CAPACITY),
+                        OptimizedThreadFactory(DEFAULT_THREAD_NAME_PREFIX),
+                    ).apply {
+                        allowCoreThreadTimeOut(false) // Keep core threads alive
+                    }
+                } catch (e: Exception) {
+                    Logging.error("OneSignalDispatchers: Failed to create Default executor: ${e.message}")
+                    throw e // Let the dispatcher fallback handle this
+                }
+            }
+        val defaultExecutor: ThreadPoolExecutor get() = defaultExecutorLazy.value
+
+        // Dispatchers - also lazy initialized
+        val IO: CoroutineDispatcher by lazy {
+            try {
+                ioExecutor.asCoroutineDispatcher()
+            } catch (e: Exception) {
+                Logging.error("OneSignalDispatchers: Using fallback Dispatchers.IO dispatcher: ${e.message}")
+                Dispatchers.IO
+            }
+        }
+
+        val Default: CoroutineDispatcher by lazy {
+            try {
+                defaultExecutor.asCoroutineDispatcher()
+            } catch (e: Exception) {
+                Logging.error("OneSignalDispatchers: Using fallback Dispatchers.Default dispatcher: ${e.message}")
+                Dispatchers.Default
+            }
+        }
+
+        val SerialIO: CoroutineDispatcher by lazy {
+            try {
+                serialIOExecutor.asCoroutineDispatcher()
+            } catch (e: Exception) {
+                // Fall back to a limitedParallelism(1) view of Dispatchers.IO so submissions stay serialized.
+                Logging.error("OneSignalDispatchers: Using fallback serialized Dispatchers.IO: ${e.message}")
+                @Suppress("OPT_IN_USAGE")
+                Dispatchers.IO.limitedParallelism(1)
+            }
+        }
+
+        val ioScopeLazy = lazy { CoroutineScope(SupervisorJob() + IO) }
+        val IOScope: CoroutineScope get() = ioScopeLazy.value
+
+        val defaultScopeLazy = lazy { CoroutineScope(SupervisorJob() + Default) }
+        val DefaultScope: CoroutineScope get() = defaultScopeLazy.value
+
+        val serialIOScopeLazy = lazy { CoroutineScope(SupervisorJob() + SerialIO) }
+        val SerialIOScope: CoroutineScope get() = serialIOScopeLazy.value
+
+        /**
+         * Cancel scopes and forcibly stop executors for this generation. Only touches what was
+         * actually initialized so we never spin up a pool just to tear it down. [shutdownNow]
+         * interrupts parked worker threads so they can't outlive the spec that created them.
+         */
+        @Suppress("TooGenericExceptionCaught")
+        fun shutdown() {
+            if (ioScopeLazy.isInitialized()) runCatching { ioScopeLazy.value.cancel() }
+            if (defaultScopeLazy.isInitialized()) runCatching { defaultScopeLazy.value.cancel() }
+            if (serialIOScopeLazy.isInitialized()) runCatching { serialIOScopeLazy.value.cancel() }
+            if (ioExecutorLazy.isInitialized()) runCatching { ioExecutorLazy.value.shutdownNow() }
+            if (defaultExecutorLazy.isInitialized()) runCatching { defaultExecutorLazy.value.shutdownNow() }
+            if (serialIOExecutorLazy.isInitialized()) runCatching { serialIOExecutorLazy.value.shutdownNow() }
         }
     }
 
-    // Dispatchers and scopes - also lazy initialized
-    val IO: CoroutineDispatcher by lazy {
-        try {
-            ioExecutor.asCoroutineDispatcher()
-        } catch (e: Exception) {
-            Logging.error("OneSignalDispatchers: Using fallback Dispatchers.IO dispatcher: ${e.message}")
-            Dispatchers.IO
-        }
-    }
+    @Volatile
+    private var pools = Pools()
 
-    val Default: CoroutineDispatcher by lazy {
-        try {
-            defaultExecutor.asCoroutineDispatcher()
-        } catch (e: Exception) {
-            Logging.error("OneSignalDispatchers: Using fallback Dispatchers.Default dispatcher: ${e.message}")
-            Dispatchers.Default
-        }
-    }
+    // Dispatchers and scopes delegate to the current generation so [resetForTest] can swap them.
+    val IO: CoroutineDispatcher get() = pools.IO
 
-    val SerialIO: CoroutineDispatcher by lazy {
-        try {
-            serialIOExecutor.asCoroutineDispatcher()
-        } catch (e: Exception) {
-            // Fall back to a limitedParallelism(1) view of Dispatchers.IO so submissions stay serialized.
-            Logging.error("OneSignalDispatchers: Using fallback serialized Dispatchers.IO: ${e.message}")
-            @Suppress("OPT_IN_USAGE")
-            Dispatchers.IO.limitedParallelism(1)
-        }
-    }
+    val Default: CoroutineDispatcher get() = pools.Default
 
-    private val IOScope: CoroutineScope by lazy {
-        CoroutineScope(SupervisorJob() + IO)
-    }
-
-    private val DefaultScope: CoroutineScope by lazy {
-        CoroutineScope(SupervisorJob() + Default)
-    }
-
-    private val SerialIOScope: CoroutineScope by lazy {
-        CoroutineScope(SupervisorJob() + SerialIO)
-    }
+    val SerialIO: CoroutineDispatcher get() = pools.SerialIO
 
     fun launchOnIO(block: suspend () -> Unit): Job {
-        return IOScope.launch { block() }
+        return pools.IOScope.launch { block() }
     }
 
     fun launchOnDefault(block: suspend () -> Unit): Job {
-        return DefaultScope.launch { block() }
+        return pools.DefaultScope.launch { block() }
     }
 
     /** Launches [block] on the single-thread serial IO dispatcher (FIFO across all callers). */
     fun launchOnSerialIO(block: suspend () -> Unit): Job {
-        return SerialIOScope.launch { block() }
+        return pools.SerialIOScope.launch { block() }
     }
 
     @Volatile
@@ -206,10 +245,9 @@ object OneSignalDispatchers {
      * is meaningful lead time (e.g. a `goAsync()` handoff or `initWithContext` work) before the
      * first `suspendify*` / `launchOn*` dispatch.
      *
-     * [suspendifyOnIO], [suspendifyOnDefault], [launchOnIO], and [launchOnDefault] route through
-     * [IO] / [Default] only when [ThreadingMode.useBackgroundThreading] is true. With that mode
-     * off, they use `Dispatchers.IO` / `Dispatchers.Default`, so [prewarm] mainly benefits future
-     * calls after the mode flips; [suspendifyOnSerialIO] always routes through [SerialIO].
+     * [suspendifyOnIO], [suspendifyOnDefault], [launchOnIO], [launchOnDefault], and
+     * [suspendifyOnSerialIO] always route through [IO] / [Default] / [SerialIO], so [prewarm]
+     * benefits the very first real dispatch from any of them.
      *
      * The known main-thread cold-start entry points:
      * | Entry point | Class |
@@ -273,21 +311,54 @@ object OneSignalDispatchers {
             prewarmStarted = false
         }
     }
+
+    /**
+     * Test-only hook to clear all in-flight and queued work between specs.
+     *
+     * Every `suspendify*` / `launchOn*` now routes unconditionally through this single
+     * process-wide object (bounded pools: IO core=2/max=3, Default core=2/max=3, queue cap 200).
+     * In the full unit-test suite, background work launched by one spec can outlive it and
+     * accumulate, saturating the pools and `LinkedBlockingQueue`. Worse, a spec can leave a worker
+     * thread parked in a non-cancellable JVM wait (e.g. a `CountDownLatch.await()` that never gets
+     * released because the test asserted/failed first); a plain coroutine cancellation cannot free
+     * such a thread, so it permanently starves the small pool. Later specs that use the real pool
+     * (e.g. HttpClientTests' `launchOnIO {…}.join()`, OperationRepo, OtelIdResolver) then see
+     * `launchOnIO` rejected/cancelled and observe null results.
+     *
+     * This atomically swaps in a fresh [Pools] generation and tears the old one down —
+     * cancelling its scopes and calling `shutdownNow()` to interrupt parked workers. Safe to call
+     * even when this object is `mockkObject`-mocked: the affected helpers stub only
+     * `prewarm`/`launchOn*`/`suspendify*`, so this real method still runs. Not part of any public
+     * contract.
+     */
+    @Suppress("TooGenericExceptionCaught")
+    internal fun resetForTest() {
+        val old = pools
+        pools = Pools()
+        try {
+            old.shutdown()
+        } catch (e: Exception) {
+            Logging.error("OneSignalDispatchers.resetForTest failed: ${e.message}", e)
+        }
+        resetPrewarmForTest()
+    }
+
     internal fun getPerformanceMetrics(): String {
         return try {
+            val current = pools
             val serialQueueSize =
-                (serialIOExecutor as? ThreadPoolExecutor)?.queue?.size?.toString() ?: "n/a"
+                (current.serialIOExecutor as? ThreadPoolExecutor)?.queue?.size?.toString() ?: "n/a"
             val serialCompleted =
-                (serialIOExecutor as? ThreadPoolExecutor)?.completedTaskCount ?: 0L
+                (current.serialIOExecutor as? ThreadPoolExecutor)?.completedTaskCount ?: 0L
             """
             OneSignalDispatchers Performance Metrics:
-            - IO Pool: ${ioExecutor.activeCount}/${ioExecutor.corePoolSize} active/core threads
-            - IO Queue: ${ioExecutor.queue.size} pending tasks
-            - Default Pool: ${defaultExecutor.activeCount}/${defaultExecutor.corePoolSize} active/core threads
-            - Default Queue: ${defaultExecutor.queue.size} pending tasks
+            - IO Pool: ${current.ioExecutor.activeCount}/${current.ioExecutor.corePoolSize} active/core threads
+            - IO Queue: ${current.ioExecutor.queue.size} pending tasks
+            - Default Pool: ${current.defaultExecutor.activeCount}/${current.defaultExecutor.corePoolSize} active/core threads
+            - Default Queue: ${current.defaultExecutor.queue.size} pending tasks
             - SerialIO Queue: $serialQueueSize pending tasks
-            - Total completed tasks: ${ioExecutor.completedTaskCount + defaultExecutor.completedTaskCount + serialCompleted}
-            - Memory usage: ~${(ioExecutor.activeCount + defaultExecutor.activeCount + 1) * 1024}KB (thread stacks, ~1MB each)
+            - Total completed tasks: ${current.ioExecutor.completedTaskCount + current.defaultExecutor.completedTaskCount + serialCompleted}
+            - Memory usage: ~${(current.ioExecutor.activeCount + current.defaultExecutor.activeCount + 1) * 1024}KB (thread stacks, ~1MB each)
             """.trimIndent()
         } catch (e: Exception) {
             "OneSignalDispatchers not initialized or using fallback dispatchers ${e.message}"
@@ -295,14 +366,15 @@ object OneSignalDispatchers {
     }
 
     internal fun getStatus(): String {
+        val current = pools
         return """
             OneSignalDispatchers Status:
-            - IO Executor: ${executorStatus("ioExecutor") { ioExecutor.isShutdown }}
-            - Default Executor: ${executorStatus("defaultExecutor") { defaultExecutor.isShutdown }}
-            - SerialIO Executor: ${executorStatus("serialIOExecutor") { serialIOExecutor.isShutdown }}
-            - IO Scope: ${scopeStatus("IOScope") { IOScope.isActive }}
-            - Default Scope: ${scopeStatus("DefaultScope") { DefaultScope.isActive }}
-            - SerialIO Scope: ${scopeStatus("SerialIOScope") { SerialIOScope.isActive }}
+            - IO Executor: ${executorStatus("ioExecutor") { current.ioExecutor.isShutdown }}
+            - Default Executor: ${executorStatus("defaultExecutor") { current.defaultExecutor.isShutdown }}
+            - SerialIO Executor: ${executorStatus("serialIOExecutor") { current.serialIOExecutor.isShutdown }}
+            - IO Scope: ${scopeStatus("IOScope") { current.IOScope.isActive }}
+            - Default Scope: ${scopeStatus("DefaultScope") { current.DefaultScope.isActive }}
+            - SerialIO Scope: ${scopeStatus("SerialIOScope") { current.SerialIOScope.isActive }}
         """.trimIndent()
     }
 
