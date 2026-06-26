@@ -42,6 +42,13 @@ object OneSignal {
      * called.
      */
     @JvmStatic
+    @Deprecated(
+        message =
+        "Accessing this property may block the calling thread until the SDK is initialized and " +
+            "cause ANRs when called on the main thread. Use the suspend function getUserSuspend() instead.",
+        replaceWith = ReplaceWith("getUserSuspend()"),
+    )
+    @Suppress("DEPRECATION")
     val User: IUserManager
         get() = oneSignal.user
 
@@ -50,6 +57,13 @@ object OneSignal {
      * has been called.
      */
     @JvmStatic
+    @Deprecated(
+        message =
+        "Accessing this property may block the calling thread until the SDK is initialized and " +
+            "cause ANRs when called on the main thread. Use the suspend function getSessionSuspend() instead.",
+        replaceWith = ReplaceWith("getSessionSuspend()"),
+    )
+    @Suppress("DEPRECATION")
     val Session: ISessionManager
         get() = oneSignal.session
 
@@ -58,6 +72,13 @@ object OneSignal {
      * only after [initWithContext] has been called.
      */
     @JvmStatic
+    @Deprecated(
+        message =
+        "Accessing this property may block the calling thread until the SDK is initialized and " +
+            "cause ANRs when called on the main thread. Use the suspend function getNotificationsSuspend() instead.",
+        replaceWith = ReplaceWith("getNotificationsSuspend()"),
+    )
+    @Suppress("DEPRECATION")
     val Notifications: INotificationsManager
         get() = oneSignal.notifications
 
@@ -66,6 +87,13 @@ object OneSignal {
      * only after [initWithContext] has been called.
      */
     @JvmStatic
+    @Deprecated(
+        message =
+        "Accessing this property may block the calling thread until the SDK is initialized and " +
+            "cause ANRs when called on the main thread. Use the suspend function getLocationSuspend() instead.",
+        replaceWith = ReplaceWith("getLocationSuspend()"),
+    )
+    @Suppress("DEPRECATION")
     val Location: ILocationManager
         get() = oneSignal.location
 
@@ -74,6 +102,13 @@ object OneSignal {
      * only after [initWithContext] has been called.
      */
     @JvmStatic
+    @Deprecated(
+        message =
+        "Accessing this property may block the calling thread until the SDK is initialized and " +
+            "cause ANRs when called on the main thread. Use the suspend function getInAppMessagesSuspend() instead.",
+        replaceWith = ReplaceWith("getInAppMessagesSuspend()"),
+    )
+    @Suppress("DEPRECATION")
     val InAppMessages: IInAppMessagesManager
         get() = oneSignal.inAppMessages
 
@@ -94,6 +129,17 @@ object OneSignal {
      * [initWithContext] to ensure compliance.
      */
     @JvmStatic
+    @get:Deprecated(
+        message =
+        "Reading this property may block the calling thread until the SDK is initialized and " +
+            "cause ANRs when called on the main thread. Use the suspend function getConsentRequiredSuspend() instead.",
+        replaceWith = ReplaceWith("getConsentRequiredSuspend()"),
+    )
+    @set:Deprecated(
+        message = "Use the suspend function setConsentRequiredSuspend(value) instead.",
+        replaceWith = ReplaceWith("setConsentRequiredSuspend(value)"),
+    )
+    @Suppress("DEPRECATION")
     var consentRequired: Boolean
         get() = oneSignal.consentRequired
         set(value) {
@@ -105,6 +151,17 @@ object OneSignal {
      * the application has opted into data privacy protections. See [requiresPrivacyConsent].
      */
     @JvmStatic
+    @get:Deprecated(
+        message =
+        "Reading this property may block the calling thread until the SDK is initialized and " +
+            "cause ANRs when called on the main thread. Use the suspend function getConsentGivenSuspend() instead.",
+        replaceWith = ReplaceWith("getConsentGivenSuspend()"),
+    )
+    @set:Deprecated(
+        message = "Use the suspend function setConsentGivenSuspend(value) instead.",
+        replaceWith = ReplaceWith("setConsentGivenSuspend(value)"),
+    )
+    @Suppress("DEPRECATION")
     var consentGiven: Boolean
         get() = oneSignal.consentGiven
         set(value) {
@@ -115,6 +172,17 @@ object OneSignal {
      * Whether to disable the "GMS is missing" prompt to the user.
      */
     @JvmStatic
+    @get:Deprecated(
+        message =
+        "Reading this property may block the calling thread until the SDK is initialized and " +
+            "cause ANRs when called on the main thread. Use the suspend function getDisableGMSMissingPromptSuspend() instead.",
+        replaceWith = ReplaceWith("getDisableGMSMissingPromptSuspend()"),
+    )
+    @set:Deprecated(
+        message = "Use the suspend function setDisableGMSMissingPromptSuspend(value) instead.",
+        replaceWith = ReplaceWith("setDisableGMSMissingPromptSuspend(value)"),
+    )
+    @Suppress("DEPRECATION")
     var disableGMSMissingPrompt: Boolean
         get() = oneSignal.disableGMSMissingPrompt
         set(value) {
@@ -128,6 +196,13 @@ object OneSignal {
      * @param appId The application ID the OneSignal SDK is bound to.
      */
     @JvmStatic
+    @Deprecated(
+        message =
+        "This blocking method may block the calling thread and cause ANRs when called on the " +
+            "main thread. Use the suspend function initWithContextSuspend(context, appId) instead.",
+        replaceWith = ReplaceWith("initWithContextSuspend(context, appId)"),
+    )
+    @Suppress("DEPRECATION")
     fun initWithContext(
         context: Context,
         appId: String,
@@ -305,6 +380,13 @@ object OneSignal {
      * @param externalId The external ID of the user that is to be logged in.
      */
     @JvmStatic
+    @Deprecated(
+        message =
+        "This blocking method may block the calling thread and cause ANRs when called on the " +
+            "main thread. Use the suspend function loginSuspend(externalId) instead.",
+        replaceWith = ReplaceWith("loginSuspend(externalId)"),
+    )
+    @Suppress("DEPRECATION")
     fun login(externalId: String) = oneSignal.login(externalId)
 
     /**
@@ -329,6 +411,13 @@ object OneSignal {
      * [Identity Verification | OneSignal](https://documentation.onesignal.com/docs/identity-verification)
      */
     @JvmStatic
+    @Deprecated(
+        message =
+        "This blocking method may block the calling thread and cause ANRs when called on the " +
+            "main thread. Use the suspend function loginSuspend(externalId, jwtBearerToken) instead.",
+        replaceWith = ReplaceWith("loginSuspend(externalId, jwtBearerToken)"),
+    )
+    @Suppress("DEPRECATION")
     fun login(
         externalId: String,
         jwtBearerToken: String? = null,
@@ -341,6 +430,13 @@ object OneSignal {
      * data is not cleared.
      */
     @JvmStatic
+    @Deprecated(
+        message =
+        "This blocking method may block the calling thread and cause ANRs when called on the " +
+            "main thread. Use the suspend function logoutSuspend() instead.",
+        replaceWith = ReplaceWith("logoutSuspend()"),
+    )
+    @Suppress("DEPRECATION")
     fun logout() = oneSignal.logout()
 
     /**
@@ -353,6 +449,13 @@ object OneSignal {
      * @param token The new JWT bearer token issued by your backend.
      */
     @JvmStatic
+    @Deprecated(
+        message =
+        "This blocking method may block the calling thread and cause ANRs when called on the " +
+            "main thread. Use the suspend function updateUserJwtSuspend(externalId, token) instead.",
+        replaceWith = ReplaceWith("updateUserJwtSuspend(externalId, token)"),
+    )
+    @Suppress("DEPRECATION")
     fun updateUserJwt(
         externalId: String,
         token: String,

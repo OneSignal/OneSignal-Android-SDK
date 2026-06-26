@@ -23,29 +23,59 @@ interface IOneSignal {
      * The user manager for accessing user-scoped
      * management.
      */
+    @Deprecated(
+        message =
+        "Accessing this property may block the calling thread until the SDK is initialized and " +
+            "cause ANRs when called on the main thread. Use the suspend function getUser() instead.",
+        replaceWith = ReplaceWith("getUser()"),
+    )
     val user: IUserManager
 
     /**
      * The session manager for accessing session-scoped management.
      */
+    @Deprecated(
+        message =
+        "Accessing this property may block the calling thread until the SDK is initialized and " +
+            "cause ANRs when called on the main thread. Use the suspend function getSession() instead.",
+        replaceWith = ReplaceWith("getSession()"),
+    )
     val session: ISessionManager
 
     /**
      * The notification manager for accessing device-scoped
      * notification management.
      */
+    @Deprecated(
+        message =
+        "Accessing this property may block the calling thread until the SDK is initialized and " +
+            "cause ANRs when called on the main thread. Use the suspend function getNotifications() instead.",
+        replaceWith = ReplaceWith("getNotifications()"),
+    )
     val notifications: INotificationsManager
 
     /**
      * The location manager for accessing device-scoped
      * location management.
      */
+    @Deprecated(
+        message =
+        "Accessing this property may block the calling thread until the SDK is initialized and " +
+            "cause ANRs when called on the main thread. Use the suspend function getLocation() instead.",
+        replaceWith = ReplaceWith("getLocation()"),
+    )
     val location: ILocationManager
 
     /**
      * The In App Messaging manager for accessing device-scoped
      * IAP management.
      */
+    @Deprecated(
+        message =
+        "Accessing this property may block the calling thread until the SDK is initialized and " +
+            "cause ANRs when called on the main thread. Use the suspend function getInAppMessages() instead.",
+        replaceWith = ReplaceWith("getInAppMessages()"),
+    )
     val inAppMessages: IInAppMessagesManager
 
     /**
@@ -62,17 +92,47 @@ interface IOneSignal {
      * should be set to `true` prior to the invocation of
      * [initWithContext] to ensure compliance.
      */
+    @get:Deprecated(
+        message =
+        "Reading this property may block the calling thread until the SDK is initialized and " +
+            "cause ANRs when called on the main thread. Use the suspend function getConsentRequired() instead.",
+        replaceWith = ReplaceWith("getConsentRequired()"),
+    )
+    @set:Deprecated(
+        message = "Use the suspend function setConsentRequired(value) instead.",
+        replaceWith = ReplaceWith("setConsentRequired(value)"),
+    )
     var consentRequired: Boolean
 
     /**
      * Indicates whether privacy consent has been granted. This field is only relevant when
      * the application has opted into data privacy protections. See [consentRequired].
      */
+    @get:Deprecated(
+        message =
+        "Reading this property may block the calling thread until the SDK is initialized and " +
+            "cause ANRs when called on the main thread. Use the suspend function getConsentGiven() instead.",
+        replaceWith = ReplaceWith("getConsentGiven()"),
+    )
+    @set:Deprecated(
+        message = "Use the suspend function setConsentGiven(value) instead.",
+        replaceWith = ReplaceWith("setConsentGiven(value)"),
+    )
     var consentGiven: Boolean
 
     /**
      * Whether to disable the "GMS is missing" prompt to the user.
      */
+    @get:Deprecated(
+        message =
+        "Reading this property may block the calling thread until the SDK is initialized and " +
+            "cause ANRs when called on the main thread. Use the suspend function getDisableGMSMissingPrompt() instead.",
+        replaceWith = ReplaceWith("getDisableGMSMissingPrompt()"),
+    )
+    @set:Deprecated(
+        message = "Use the suspend function setDisableGMSMissingPrompt(value) instead.",
+        replaceWith = ReplaceWith("setDisableGMSMissingPrompt(value)"),
+    )
     var disableGMSMissingPrompt: Boolean
 
     /**
@@ -83,6 +143,12 @@ interface IOneSignal {
      *
      * @return true if the SDK could be successfully initialized, false otherwise.
      */
+    @Deprecated(
+        message =
+        "This blocking method may block the calling thread and cause ANRs when called on the " +
+            "main thread. Use the suspend function initWithContextSuspend(context, appId) instead.",
+        replaceWith = ReplaceWith("initWithContextSuspend(context, appId)"),
+    )
     fun initWithContext(
         context: Context,
         appId: String,
@@ -116,11 +182,30 @@ interface IOneSignal {
      * trust for the login operation.  Required when identity verification has been enabled. See
      * [Identity Verification | OneSignal](https://documentation.onesignal.com/docs/identity-verification)
      */
+    @Deprecated(
+        message =
+        "This blocking method may block the calling thread and cause ANRs when called on the " +
+            "main thread. Use the suspend function loginSuspend(externalId, jwtBearerToken) instead.",
+        replaceWith = ReplaceWith("loginSuspend(externalId, jwtBearerToken)"),
+    )
     fun login(
         externalId: String,
         jwtBearerToken: String? = null,
     )
 
+    /**
+     * Login to OneSignal under the user identified by the [externalId] provided, without a JWT
+     * bearer token. Convenience overload of [login] equivalent to calling it with a `null` token.
+     *
+     * @param externalId The external ID of the user that is to be logged in.
+     */
+    @Deprecated(
+        message =
+        "This blocking method may block the calling thread and cause ANRs when called on the " +
+            "main thread. Use the suspend function loginSuspend(externalId) instead.",
+        replaceWith = ReplaceWith("loginSuspend(externalId)"),
+    )
+    @Suppress("DEPRECATION")
     fun login(externalId: String) = login(externalId, null)
 
     /**
@@ -129,6 +214,12 @@ interface IOneSignal {
      * be retrieved, except through this device as long as the app remains installed and the app
      * data is not cleared.
      */
+    @Deprecated(
+        message =
+        "This blocking method may block the calling thread and cause ANRs when called on the " +
+            "main thread. Use the suspend function logoutSuspend() instead.",
+        replaceWith = ReplaceWith("logoutSuspend()"),
+    )
     fun logout()
 
     /**
@@ -140,6 +231,12 @@ interface IOneSignal {
      * @param externalId The external ID the JWT belongs to.
      * @param token The new JWT bearer token issued by your backend.
      */
+    @Deprecated(
+        message =
+        "This blocking method may block the calling thread and cause ANRs when called on the " +
+            "main thread. Use the suspend function updateUserJwtSuspend(externalId, token) instead.",
+        replaceWith = ReplaceWith("updateUserJwtSuspend(externalId, token)"),
+    )
     fun updateUserJwt(
         externalId: String,
         token: String,
