@@ -85,6 +85,20 @@ class OtelAnrDetectorTest : FunSpec({
         detector shouldNotBe null
     }
 
+    test("createAnrDetector should accept custom background threshold") {
+        // When
+        val detector = createAnrDetector(
+            mockPlatformProvider,
+            mockLogger,
+            anrThresholdMs = 5_000L,
+            checkIntervalMs = 2_000L,
+            backgroundThresholdMs = 20_000L
+        )
+
+        // Then
+        detector shouldNotBe null
+    }
+
     // ===== Start/Stop Tests =====
 
     test("start should log info messages") {
@@ -217,5 +231,69 @@ class OtelAnrDetectorTest : FunSpec({
         // Then
         AnrConstants.DEFAULT_ANR_THRESHOLD_MS shouldBe 5_000L
         AnrConstants.DEFAULT_CHECK_INTERVAL_MS shouldBe 2_000L
+        AnrConstants.DEFAULT_BACKGROUND_BLOCK_THRESHOLD_MS shouldBe 10_000L
+        // The background threshold must stay above the foreground ANR threshold so backgrounded
+        // blocks need to last longer before they are even recorded as a warning.
+        (AnrConstants.DEFAULT_BACKGROUND_BLOCK_THRESHOLD_MS > AnrConstants.DEFAULT_ANR_THRESHOLD_MS) shouldBe true
+    }
+
+    // ===== classifyBlock Tests =====
+
+    // Defaults mirror AnrConstants: 5s ANR, 2s check interval, 2s frozen slack, 10s background.
+    fun classify(
+        timeSinceLastResponseMs: Long,
+        inForeground: Boolean,
+        actualSleepMs: Long = 2_000L,
+    ): BlockClassification = classifyBlock(
+        timeSinceLastResponseMs = timeSinceLastResponseMs,
+        actualSleepMs = actualSleepMs,
+        checkIntervalMs = 2_000L,
+        frozenSlackMs = 2_000L,
+        anrThresholdMs = 5_000L,
+        backgroundThresholdMs = 10_000L,
+        inForeground = inForeground,
+    )
+
+    test("foreground block past the ANR threshold is a foreground ANR") {
+        classify(timeSinceLastResponseMs = 6_000L, inForeground = true) shouldBe BlockClassification.FOREGROUND_ANR
+    }
+
+    test("foreground block within the ANR threshold is responsive") {
+        classify(timeSinceLastResponseMs = 4_000L, inForeground = true) shouldBe BlockClassification.RESPONSIVE
+    }
+
+    test("background block past the foreground threshold but below the background threshold is responsive") {
+        // 7s would be a foreground ANR, but in the background it is below the 10s warning threshold.
+        classify(timeSinceLastResponseMs = 7_000L, inForeground = false) shouldBe BlockClassification.RESPONSIVE
+    }
+
+    test("background block past the background threshold is a background warning, not an ANR") {
+        classify(timeSinceLastResponseMs = 11_000L, inForeground = false) shouldBe BlockClassification.BACKGROUND_WARNING
+    }
+
+    test("watchdog oversleeping beyond the frozen slack is treated as a frozen process") {
+        // Even a huge measured block is suppressed when our own sleep overran (Doze / freeze).
+        classify(
+            timeSinceLastResponseMs = 60_000L,
+            inForeground = true,
+            actualSleepMs = 30_000L,
+        ) shouldBe BlockClassification.FROZEN_PROCESS
+    }
+
+    test("frozen-process detection wins over a foreground ANR") {
+        classify(
+            timeSinceLastResponseMs = 60_000L,
+            inForeground = false,
+            actualSleepMs = 30_000L,
+        ) shouldBe BlockClassification.FROZEN_PROCESS
+    }
+
+    test("sleep overrun within the slack is not treated as frozen") {
+        // 2s interval + 1.5s overrun = within the 2s slack, so a real foreground ANR still reports.
+        classify(
+            timeSinceLastResponseMs = 6_000L,
+            inForeground = true,
+            actualSleepMs = 3_500L,
+        ) shouldBe BlockClassification.FOREGROUND_ANR
     }
 })
