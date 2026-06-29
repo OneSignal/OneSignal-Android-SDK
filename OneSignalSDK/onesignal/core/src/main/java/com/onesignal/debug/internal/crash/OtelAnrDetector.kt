@@ -39,17 +39,19 @@ internal class OtelAnrDetector(
     private val checkIntervalMs: Long = AnrConstants.DEFAULT_CHECK_INTERVAL_MS,
     private val backgroundThresholdMs: Long = AnrConstants.DEFAULT_BACKGROUND_BLOCK_THRESHOLD_MS,
     private val isAppInForeground: () -> Boolean = { true },
+    // Monotonic clock source, injectable so the heartbeat/check path is deterministically testable.
+    private val now: () -> Long = { SystemClock.uptimeMillis() },
 ) : IOtelAnrDetector {
     private val crashReporter: IOtelCrashReporter = OtelFactory.createCrashReporter(openTelemetryCrash, logger)
     private val mainHandler = Handler(Looper.getMainLooper())
     private val isMonitoring = AtomicBoolean(false)
 
-    // All durations here use the monotonic SystemClock.uptimeMillis() rather than wall-clock time:
-    // it can't be skewed by clock adjustments (NTP, manual time change, DST), it matches the clock
-    // the main Looper schedules with, and it pauses during deep sleep so a dozing device doesn't
-    // accumulate phantom "block" time.
-    private val lastResponseTime = AtomicLong(SystemClock.uptimeMillis())
-    private val lastAnrReportTime = AtomicLong(0L)
+    // All durations here use the monotonic clock (default SystemClock.uptimeMillis) rather than
+    // wall-clock time: it can't be skewed by clock adjustments (NTP, manual time change, DST), it
+    // matches the clock the main Looper schedules with, and it pauses during deep sleep so a dozing
+    // device doesn't accumulate phantom "block" time.
+    private val lastResponseTime = AtomicLong(now())
+    private val lastAnrReportTime = AtomicLong(NEVER_REPORTED)
     private var watchdogThread: Thread? = null
     private var watchdogRunnable: Runnable? = null
     private var mainThreadRunnable: Runnable? = null
@@ -64,6 +66,9 @@ internal class OtelAnrDetector(
         // process itself was frozen/descheduled rather than the main thread being blocked, so the
         // measurement is meaningless. Generous enough to tolerate GC pauses and CPU contention.
         private const val FROZEN_PROCESS_SLACK_MS = 2_000L
+
+        // Sentinel for lastAnrReportTime meaning "no block reported yet / main thread is healthy".
+        private const val NEVER_REPORTED = 0L
     }
 
     override fun start() {
@@ -75,7 +80,7 @@ internal class OtelAnrDetector(
         logger.info("$TAG: Starting ANR detection (threshold: ${anrThresholdMs}ms, check interval: ${checkIntervalMs}ms)")
 
         // Reset the baseline so a gap between construction and start() can't be read as a block.
-        lastResponseTime.set(SystemClock.uptimeMillis())
+        lastResponseTime.set(now())
         setupRunnables()
         startWatchdogThread()
 
@@ -86,7 +91,7 @@ internal class OtelAnrDetector(
     private fun setupRunnables() {
         // Runnable that runs on the main thread to indicate it's responsive
         mainThreadRunnable = Runnable {
-            lastResponseTime.set(SystemClock.uptimeMillis())
+            recordHeartbeat()
         }
 
         // Runnable that runs on the watchdog thread to check for ANRs
@@ -110,12 +115,24 @@ internal class OtelAnrDetector(
         mainHandler.post(runnable)
 
         // Time the sleep itself: if our own thread oversleeps, the process was frozen, not blocked.
-        val sleepStart = SystemClock.uptimeMillis()
+        val sleepStart = now()
         Thread.sleep(checkIntervalMs)
-        val actualSleepMs = SystemClock.uptimeMillis() - sleepStart
+        evaluateCheck(actualSleepMs = now() - sleepStart)
+    }
 
+    /** Records that the main thread ran our heartbeat runnable. */
+    internal fun recordHeartbeat() {
+        lastResponseTime.set(now())
+    }
+
+    /**
+     * Evaluates one watchdog iteration given how long the watchdog's own sleep actually took.
+     * Split from [checkForAnr] (which owns the thread + real sleep) so the heartbeat/classify/report
+     * wiring can be exercised deterministically with an injected clock.
+     */
+    internal fun evaluateCheck(actualSleepMs: Long) {
         val inForeground = resolveForeground()
-        val timeSinceLastResponse = SystemClock.uptimeMillis() - lastResponseTime.get()
+        val timeSinceLastResponse = now() - lastResponseTime.get()
 
         when (
             classifyBlock(
@@ -135,7 +152,7 @@ internal class OtelAnrDetector(
                 logger.debug(
                     "$TAG: Skipping check — watchdog overslept ${actualSleepMs}ms (expected ${checkIntervalMs}ms); process was frozen, not blocked",
                 )
-                lastResponseTime.set(SystemClock.uptimeMillis())
+                lastResponseTime.set(now())
             }
             BlockClassification.RESPONSIVE -> handleMainThreadResponsive()
             BlockClassification.FOREGROUND_ANR -> reportBlockOnce(timeSinceLastResponse, inForeground = true)
@@ -154,15 +171,17 @@ internal class OtelAnrDetector(
         }
 
     private fun reportBlockOnce(timeSinceLastResponse: Long, inForeground: Boolean) {
-        val now = SystemClock.uptimeMillis()
-        val timeSinceLastReport = now - lastAnrReportTime.get()
+        val nowMs = now()
+        val lastReport = lastAnrReportTime.get()
 
-        // Only report if enough time has passed since the last report (avoid duplicates).
-        if (timeSinceLastReport <= MIN_TIME_BETWEEN_ANR_REPORTS_MS) {
-            logger.debug("$TAG: Block still ongoing (${timeSinceLastResponse}ms), already reported recently (${timeSinceLastReport}ms ago)")
+        // Skip only if we actually reported recently. lastReport == NEVER_REPORTED means we have not
+        // reported yet (or the main thread recovered), so we must not dedup — important shortly after
+        // boot when the monotonic clock is still small and `now - 0` would look "recent".
+        if (lastReport != NEVER_REPORTED && nowMs - lastReport <= MIN_TIME_BETWEEN_ANR_REPORTS_MS) {
+            logger.debug("$TAG: Block still ongoing (${timeSinceLastResponse}ms), already reported recently (${nowMs - lastReport}ms ago)")
             return
         }
-        lastAnrReportTime.set(now)
+        lastAnrReportTime.set(nowMs)
 
         if (inForeground) {
             logger.info("$TAG: ⚠️ ANR detected! Main thread unresponsive for ${timeSinceLastResponse}ms (foreground)")
@@ -174,9 +193,9 @@ internal class OtelAnrDetector(
     }
 
     private fun handleMainThreadResponsive() {
-        // Main thread is responsive - reset ANR report time so we can detect new ANRs
-        if (lastAnrReportTime.get() > 0) {
-            lastAnrReportTime.set(0L)
+        // Main thread is responsive - reset report time so we can detect new blocks
+        if (lastAnrReportTime.get() != NEVER_REPORTED) {
+            lastAnrReportTime.set(NEVER_REPORTED)
             logger.debug("$TAG: Main thread recovered, ready to detect new ANRs")
         }
     }

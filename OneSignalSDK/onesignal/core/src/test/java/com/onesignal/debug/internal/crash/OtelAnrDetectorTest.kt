@@ -296,4 +296,126 @@ class OtelAnrDetectorTest : FunSpec({
             actualSleepMs = 3_500L,
         ) shouldBe BlockClassification.FOREGROUND_ANR
     }
+
+    // ===== Heartbeat / evaluateCheck integration (deterministic via injected clock) =====
+    //
+    // These drive the real recordHeartbeat -> clock -> evaluateCheck -> report wiring with a fake
+    // monotonic clock and a fresh logger per test, so there is no background thread, no real sleep,
+    // and no cross-test verify() pollution.
+
+    class FakeClock(var nowMs: Long = 1_000L) {
+        fun advance(ms: Long) { nowMs += ms }
+    }
+
+    fun buildDetector(
+        clock: FakeClock,
+        logger: IOtelLogger,
+        inForeground: () -> Boolean,
+    ): OtelAnrDetector = OtelAnrDetector(
+        mockCrashTelemetry,
+        logger,
+        anrThresholdMs = 5_000L,
+        checkIntervalMs = 2_000L,
+        backgroundThresholdMs = 10_000L,
+        isAppInForeground = inForeground,
+        now = { clock.nowMs },
+    )
+
+    test("a fresh heartbeat keeps a foreground check responsive (no ANR)") {
+        val clock = FakeClock(nowMs = 5_000L)
+        val logger = mockk<IOtelLogger>(relaxed = true)
+        val detector = buildDetector(clock, logger) { true }
+
+        detector.recordHeartbeat() // main thread responded at t=5000
+        clock.advance(4_000L) // below the 5s threshold
+        detector.evaluateCheck(actualSleepMs = 2_000L)
+
+        verify(exactly = 0) { logger.info(match { it.contains("Main thread unresponsive") }) }
+    }
+
+    test("a stale heartbeat past the threshold reports a foreground ANR") {
+        val clock = FakeClock(nowMs = 1_000L)
+        val logger = mockk<IOtelLogger>(relaxed = true)
+        val detector = buildDetector(clock, logger) { true }
+
+        detector.recordHeartbeat() // main thread last responded at t=1000
+        clock.advance(6_000L) // 6s with no heartbeat, past the 5s threshold
+        detector.evaluateCheck(actualSleepMs = 2_000L)
+
+        verify(exactly = 1) { logger.info(match { it.contains("Main thread unresponsive") && it.contains("foreground") }) }
+    }
+
+    test("recovering with a heartbeat returns the detector to responsive") {
+        val clock = FakeClock(nowMs = 1_000L)
+        val logger = mockk<IOtelLogger>(relaxed = true)
+        val detector = buildDetector(clock, logger) { true }
+
+        detector.recordHeartbeat()
+        clock.advance(6_000L)
+        detector.evaluateCheck(actualSleepMs = 2_000L) // fires once
+
+        detector.recordHeartbeat() // main thread recovers at t=7000
+        detector.evaluateCheck(actualSleepMs = 2_000L) // now responsive again
+
+        // Still only the single ANR from before recovery.
+        verify(exactly = 1) { logger.info(match { it.contains("Main thread unresponsive") }) }
+    }
+
+    test("background block past the background threshold logs a warning, not an ANR") {
+        val clock = FakeClock(nowMs = 1_000L)
+        val logger = mockk<IOtelLogger>(relaxed = true)
+        val detector = buildDetector(clock, logger) { false }
+
+        detector.recordHeartbeat()
+        clock.advance(11_000L) // past the 10s background threshold
+        detector.evaluateCheck(actualSleepMs = 2_000L)
+
+        verify(exactly = 1) { logger.info(match { it.contains("backgrounded") && it.contains("warning") }) }
+        verify(exactly = 0) { logger.info(match { it.contains("Main thread unresponsive") }) }
+    }
+
+    test("background block below the background threshold stays responsive") {
+        val clock = FakeClock(nowMs = 1_000L)
+        val logger = mockk<IOtelLogger>(relaxed = true)
+        val detector = buildDetector(clock, logger) { false }
+
+        detector.recordHeartbeat()
+        clock.advance(7_000L) // would be a foreground ANR, but below the 10s background threshold
+        detector.evaluateCheck(actualSleepMs = 2_000L)
+
+        verify(exactly = 0) { logger.info(match { it.contains("Main thread unresponsive") }) }
+        verify(exactly = 0) { logger.info(match { it.contains("backgrounded") }) }
+    }
+
+    test("a watchdog oversleep is reported as a frozen process and resets the baseline") {
+        val clock = FakeClock(nowMs = 1_000L)
+        val logger = mockk<IOtelLogger>(relaxed = true)
+        val detector = buildDetector(clock, logger) { true }
+
+        detector.recordHeartbeat()
+        clock.advance(60_000L) // huge apparent block...
+        detector.evaluateCheck(actualSleepMs = 30_000L) // ...but our own sleep overran => frozen
+
+        verify(exactly = 1) { logger.debug(match { it.contains("frozen") }) }
+        verify(exactly = 0) { logger.info(match { it.contains("Main thread unresponsive") }) }
+
+        // Baseline was reset to now, so the very next on-time check is responsive (no ANR).
+        detector.evaluateCheck(actualSleepMs = 2_000L)
+        verify(exactly = 0) { logger.info(match { it.contains("Main thread unresponsive") }) }
+    }
+
+    test("an ongoing block is reported only once within the dedup window") {
+        val clock = FakeClock(nowMs = 1_000L)
+        val logger = mockk<IOtelLogger>(relaxed = true)
+        val detector = buildDetector(clock, logger) { true }
+
+        detector.recordHeartbeat()
+        clock.advance(6_000L)
+        detector.evaluateCheck(actualSleepMs = 2_000L) // first report
+
+        clock.advance(2_000L) // still blocked, 2s later — within the 30s dedup window
+        detector.evaluateCheck(actualSleepMs = 2_000L) // should be deduped
+
+        verify(exactly = 1) { logger.info(match { it.contains("Main thread unresponsive") }) }
+    }
 })
