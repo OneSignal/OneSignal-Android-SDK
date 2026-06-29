@@ -2,7 +2,7 @@ package com.onesignal.notifications.internal
 
 import androidx.test.core.app.ApplicationProvider
 import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
-import com.onesignal.common.threading.runOnSerialIOIfBackgroundThreading
+import com.onesignal.common.threading.runOnSerialIO
 import com.onesignal.common.threading.suspendifyOnIO
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.debug.LogLevel
@@ -37,12 +37,10 @@ import org.robolectric.annotation.Config
  * SQLite store on first call) inline, and the SQLite write stalled the main thread on
  * devices with slow / contended storage.
  *
- * The fix routes through `runOnSerialIOIfBackgroundThreading` — gated on the
- * `SDK_BACKGROUND_THREADING` remote feature flag so we can A/B compare the offloaded
- * behavior (FF on → serial IO dispatch) against the previous inline behavior (FF off →
- * main thread) in production. These tests assert the dispatch contract on `onFocus`; the
- * helper's two branches are tested in `:core` against `ThreadUtilsTests`, which has direct
- * access to the internal `ThreadingMode` flag.
+ * The fix routes through `runOnSerialIO`, which offloads the work to the serial IO
+ * dispatcher instead of running it inline on the main thread. These tests assert the
+ * dispatch contract on `onFocus`; the helper itself is tested in `:core` against
+ * `ThreadUtilsDispatchTests`.
  *
  * `suspendifyOnIO` is also stubbed because `NotificationsManager`'s init block fires it for
  * `deleteExpiredNotifications`; without the stub a real coroutine would leak past test
@@ -62,7 +60,7 @@ class NotificationsManagerTests : FunSpec({
         Logging.logLevel = LogLevel.NONE
         ShadowRoboNotificationManager.reset()
         mockkStatic(threadUtilsPath)
-        every { runOnSerialIOIfBackgroundThreading(any<() -> Unit>()) } just runs
+        every { runOnSerialIO(any<() -> Unit>()) } just runs
         every { suspendifyOnIO(any<suspend () -> Unit>()) } just runs
     }
 
@@ -95,29 +93,29 @@ class NotificationsManagerTests : FunSpec({
         )
     }
 
-    test("onFocus dispatches refreshNotificationState through runOnSerialIOIfBackgroundThreading") {
+    test("onFocus dispatches refreshNotificationState through runOnSerialIO") {
         val manager = newManager()
 
         manager.onFocus(firedOnSubscribe = false)
 
-        verify(exactly = 1) { runOnSerialIOIfBackgroundThreading(any<() -> Unit>()) }
+        verify(exactly = 1) { runOnSerialIO(any<() -> Unit>()) }
     }
 
-    test("rapid onFocus burst dispatches each event through the gated helper in submission order") {
+    test("rapid onFocus burst dispatches each event through the serial IO helper in submission order") {
         val manager = newManager()
 
         // Two focus events in quick succession on the main thread (e.g. activity restart
-        // bouncing between activities). Both must route through the same gated helper in
+        // bouncing between activities). Both must route through the same serial IO helper in
         // submission order — same defense the BackgroundManager burst test enforces for
         // its `schedule`/`cancel` pair, ensuring future per-event work added here observes
-        // events in main-thread arrival order under the FF-on branch.
+        // events in main-thread arrival order.
         manager.onFocus(firedOnSubscribe = false)
         manager.onFocus(firedOnSubscribe = false)
 
-        verify(exactly = 2) { runOnSerialIOIfBackgroundThreading(any<() -> Unit>()) }
+        verify(exactly = 2) { runOnSerialIO(any<() -> Unit>()) }
         verifyOrder {
-            runOnSerialIOIfBackgroundThreading(any<() -> Unit>())
-            runOnSerialIOIfBackgroundThreading(any<() -> Unit>())
+            runOnSerialIO(any<() -> Unit>())
+            runOnSerialIO(any<() -> Unit>())
         }
     }
 })

@@ -6,26 +6,14 @@ import io.kotest.assertions.throwables.shouldThrowUnit
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.CoroutineDispatcher
 import java.lang.reflect.InvocationTargetException
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
-import kotlin.coroutines.CoroutineContext
 
 class OneSignalImpTests : FunSpec({
     beforeAny {
         Logging.logLevel = LogLevel.NONE
     }
-
-    val throwingDispatcher =
-        object : CoroutineDispatcher() {
-            override fun dispatch(
-                context: CoroutineContext,
-                block: Runnable,
-            ) {
-                error("SUCCESS fast-path should not dispatch")
-            }
-        }
 
     fun markInitialized(os: OneSignalImp) {
         val initStateField = OneSignalImp::class.java.getDeclaredField("initState")
@@ -72,7 +60,7 @@ class OneSignalImpTests : FunSpec({
     }
 
     test("waitForInit returns synchronously without dispatching when initState is SUCCESS") {
-        val os = OneSignalImp(ioDispatcher = throwingDispatcher)
+        val os = OneSignalImp()
         markInitialized(os)
 
         val waitForInit = OneSignalImp::class.java.getDeclaredMethod("waitForInit", String::class.java)
@@ -83,7 +71,7 @@ class OneSignalImpTests : FunSpec({
     }
 
     test("blockingGet returns synchronously without dispatching when initState is SUCCESS") {
-        val os = OneSignalImp(ioDispatcher = throwingDispatcher)
+        val os = OneSignalImp()
         markInitialized(os)
 
         val blockingGet = OneSignalImp::class.java.getDeclaredMethod("blockingGet", Function0::class.java)
@@ -93,12 +81,11 @@ class OneSignalImpTests : FunSpec({
         blockingGet.invoke(os, getter) shouldBe "value"
     }
 
-    test("waitForInit at IN_PROGRESS awaits the completion signal without dispatching to the IO dispatcher") {
-        // Under FF-off, runtimeIoDispatcher == ioDispatcher (the throwing dispatcher). Pre-fix the
-        // IN_PROGRESS wait ran runBlocking(runtimeIoDispatcher) { ... }, coupling it to a dispatcher
-        // that can never run the body (models a saturated IO pool). Post-fix the wait runs on the
-        // caller's own event loop and resumes off the completion signal alone (#1163).
-        val os = OneSignalImp(ioDispatcher = throwingDispatcher)
+    test("waitForInit at IN_PROGRESS awaits the completion signal on the caller's event loop") {
+        // The IN_PROGRESS wait uses a dispatcher-less runBlocking so it resumes on the caller's
+        // own event loop off the completion signal alone, rather than depending on a free worker
+        // in a (possibly saturated) IO pool (#1163).
+        val os = OneSignalImp()
         setPrivateField(os, "initState", InitState.IN_PROGRESS)
         val deferred = CompletableDeferred<Unit>()
         setPrivateField(os, "suspendCompletion", deferred)

@@ -1,15 +1,9 @@
-@file:Suppress("GlobalCoroutineUsage")
-
 package com.onesignal.common.threading
 
 import com.onesignal.debug.internal.logging.Logging
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
-import kotlin.concurrent.thread
 
 /**
  * Modernized ThreadUtils that leverages OneSignalDispatchers for better thread management.
@@ -30,26 +24,11 @@ import kotlin.concurrent.thread
  *
  */
 fun suspendifyOnMain(block: suspend () -> Unit) {
-    if (ThreadingMode.useBackgroundThreading) {
-        OneSignalDispatchers.launchOnIO {
-            try {
-                withContext(Dispatchers.Main) { block() }
-            } catch (e: Exception) {
-                Logging.error("Exception in suspendifyOnMain", e)
-            }
-        }
-        return
-    }
-
-    thread {
+    OneSignalDispatchers.launchOnIO {
         try {
-            runBlocking {
-                withContext(Dispatchers.Main) {
-                    block()
-                }
-            }
+            withContext(Dispatchers.Main) { block() }
         } catch (e: Exception) {
-            Logging.error("Exception on thread with switch to main", e)
+            Logging.error("Exception in suspendifyOnMain", e)
         }
     }
 }
@@ -101,7 +80,7 @@ fun suspendifyOnDefault(block: suspend () -> Unit) {
 /**
  * Runs [block] on the single-thread serial IO dispatcher. Tasks from any thread execute
  * one-at-a-time in submission order — the entry point for lifecycle handlers that need to
- * preserve event ordering. Always routes off-main regardless of [ThreadingMode.useBackgroundThreading].
+ * preserve event ordering.
  *
  * Capture time-sensitive state (timestamps, "current" snapshots) on the caller's thread
  * before invoking — the block itself may run later under load.
@@ -117,17 +96,12 @@ fun suspendifyOnSerialIO(block: suspend () -> Unit) {
 }
 
 /**
- * FF-gated rollout helper for lifecycle offload work. When [ThreadingMode.useBackgroundThreading]
- * is on, dispatches [block] to the serial IO thread; when off, runs it inline so the control
- * cohort retains the original behavior. The block is non-suspending so the FF-off branch doesn't
- * need a [kotlinx.coroutines.runBlocking].
+ * Dispatches lifecycle offload work to the serial IO thread. The block is non-suspending so
+ * callers can hand off plain (non-coroutine) work to the single serial IO worker, preserving
+ * submission order across lifecycle events.
  */
-fun runOnSerialIOIfBackgroundThreading(block: () -> Unit) {
-    if (ThreadingMode.useBackgroundThreading) {
-        suspendifyOnSerialIO { block() }
-    } else {
-        block()
-    }
+fun runOnSerialIO(block: () -> Unit) {
+    suspendifyOnSerialIO { block() }
 }
 
 /**
@@ -143,30 +117,9 @@ fun suspendifyWithCompletion(
     block: suspend () -> Unit,
     onComplete: (() -> Unit)? = null,
 ) {
-    if (ThreadingMode.useBackgroundThreading) {
-        if (useIO) {
-            OneSignalDispatchers.launchOnIO {
-                try {
-                    block()
-                    onComplete?.invoke()
-                } catch (e: Exception) {
-                    Logging.error("Exception in suspendifyWithCompletion", e)
-                }
-            }
-        } else {
-            OneSignalDispatchers.launchOnDefault {
-                try {
-                    block()
-                    onComplete?.invoke()
-                } catch (e: Exception) {
-                    Logging.error("Exception in suspendifyWithCompletion", e)
-                }
-            }
-        }
-        return
-    }
-
-    GlobalScope.launch(if (useIO) Dispatchers.IO else Dispatchers.Default) {
+    val launch: (suspend () -> Unit) -> Job =
+        if (useIO) OneSignalDispatchers::launchOnIO else OneSignalDispatchers::launchOnDefault
+    launch {
         try {
             block()
             onComplete?.invoke()
@@ -191,32 +144,9 @@ fun suspendifyWithErrorHandling(
     onError: ((Exception) -> Unit)? = null,
     onComplete: (() -> Unit)? = null,
 ) {
-    if (ThreadingMode.useBackgroundThreading) {
-        if (useIO) {
-            OneSignalDispatchers.launchOnIO {
-                try {
-                    block()
-                    onComplete?.invoke()
-                } catch (e: Exception) {
-                    Logging.error("Exception in suspendifyWithErrorHandling", e)
-                    onError?.invoke(e)
-                }
-            }
-        } else {
-            OneSignalDispatchers.launchOnDefault {
-                try {
-                    block()
-                    onComplete?.invoke()
-                } catch (e: Exception) {
-                    Logging.error("Exception in suspendifyWithErrorHandling", e)
-                    onError?.invoke(e)
-                }
-            }
-        }
-        return
-    }
-
-    GlobalScope.launch(if (useIO) Dispatchers.IO else Dispatchers.Default) {
+    val launch: (suspend () -> Unit) -> Job =
+        if (useIO) OneSignalDispatchers::launchOnIO else OneSignalDispatchers::launchOnDefault
+    launch {
         try {
             block()
             onComplete?.invoke()
@@ -235,21 +165,11 @@ fun suspendifyWithErrorHandling(
  * @return Job that can be used to wait for completion with .join()
  */
 fun launchOnIO(block: suspend () -> Unit): Job {
-    return if (ThreadingMode.useBackgroundThreading) {
-        OneSignalDispatchers.launchOnIO {
-            try {
-                block()
-            } catch (e: Exception) {
-                Logging.error("Exception in launchOnIO", e)
-            }
-        }
-    } else {
-        GlobalScope.launch(Dispatchers.IO) {
-            try {
-                block()
-            } catch (e: Exception) {
-                Logging.error("Exception in launchOnIO", e)
-            }
+    return OneSignalDispatchers.launchOnIO {
+        try {
+            block()
+        } catch (e: Exception) {
+            Logging.error("Exception in launchOnIO", e)
         }
     }
 }
@@ -261,22 +181,12 @@ fun launchOnIO(block: suspend () -> Unit): Job {
  * @param block The suspending code to execute
  * @return Job that can be used to wait for completion with .join()
  */
-fun launchOnDefault(block: suspend () -> Unit): kotlinx.coroutines.Job {
-    return if (ThreadingMode.useBackgroundThreading) {
-        OneSignalDispatchers.launchOnDefault {
-            try {
-                block()
-            } catch (e: Exception) {
-                Logging.error("Exception in launchOnDefault", e)
-            }
-        }
-    } else {
-        GlobalScope.launch(Dispatchers.Default) {
-            try {
-                block()
-            } catch (e: Exception) {
-                Logging.error("Exception in launchOnDefault", e)
-            }
+fun launchOnDefault(block: suspend () -> Unit): Job {
+    return OneSignalDispatchers.launchOnDefault {
+        try {
+            block()
+        } catch (e: Exception) {
+            Logging.error("Exception in launchOnDefault", e)
         }
     }
 }

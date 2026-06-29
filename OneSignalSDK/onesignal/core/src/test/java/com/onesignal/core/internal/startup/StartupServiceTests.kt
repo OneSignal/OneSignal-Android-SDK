@@ -2,8 +2,6 @@ package com.onesignal.core.internal.startup
 
 import com.onesignal.common.services.ServiceBuilder
 import com.onesignal.common.services.ServiceProvider
-import com.onesignal.core.internal.features.FeatureFlag
-import com.onesignal.core.internal.features.IFeatureManager
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.mocks.IOMockHelper
@@ -16,21 +14,13 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.spyk
 import io.mockk.verify
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.TimeUnit
 
 class StartupServiceTests : FunSpec({
     fun setupServiceProvider(
         bootstrapServices: List<IBootstrapService>,
         startableServices: List<IStartableService>,
-        backgroundThreadingEnabled: Boolean = true,
     ): ServiceProvider {
-        val featureManager = mockk<IFeatureManager>()
-        every { featureManager.isEnabled(FeatureFlag.SDK_BACKGROUND_THREADING) } returns backgroundThreadingEnabled
-        every { featureManager.remoteFeatureFlagMetadata() } returns null
-
         val serviceBuilder = ServiceBuilder()
-        serviceBuilder.register(featureManager).provides<IFeatureManager>()
         for (reg in bootstrapServices)
             serviceBuilder.register(reg).provides<IBootstrapService>()
         for (reg in startableServices)
@@ -103,32 +93,6 @@ class StartupServiceTests : FunSpec({
 
         // Then - wait deterministically for both services to start using IOMockHelper
         awaitIO()
-        verify(exactly = 1) { mockStartupService1.start() }
-        verify(exactly = 1) { mockStartupService2.start() }
-    }
-
-    test("startup will call all IStartableService dependencies when BACKGROUND_THREADING is off") {
-        // Given
-        val latch = CountDownLatch(2)
-        val mockStartupService1 = mockk<IStartableService>(relaxed = true)
-        val mockStartupService2 = mockk<IStartableService>(relaxed = true)
-        every { mockStartupService1.start() } answers { latch.countDown() }
-        every { mockStartupService2.start() } answers { latch.countDown() }
-
-        val startupService =
-            StartupService(
-                setupServiceProvider(
-                    listOf(),
-                    listOf(mockStartupService1, mockStartupService2),
-                    backgroundThreadingEnabled = false
-                )
-            )
-
-        // When
-        startupService.scheduleStart()
-
-        // Then
-        latch.await(1, TimeUnit.SECONDS) shouldBe true
         verify(exactly = 1) { mockStartupService1.start() }
         verify(exactly = 1) { mockStartupService2.start() }
     }

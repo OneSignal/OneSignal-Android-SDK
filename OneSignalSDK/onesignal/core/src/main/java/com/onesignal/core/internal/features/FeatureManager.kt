@@ -3,7 +3,6 @@ package com.onesignal.core.internal.features
 import com.onesignal.common.modeling.ISingletonModelStoreChangeHandler
 import com.onesignal.common.modeling.ModelChangeTags
 import com.onesignal.common.modeling.ModelChangedArgs
-import com.onesignal.common.threading.ThreadingMode
 import com.onesignal.core.internal.backend.impl.FeatureFlagsJsonParser
 import com.onesignal.core.internal.config.ConfigModel
 import com.onesignal.core.internal.config.ConfigModelStore
@@ -162,17 +161,12 @@ internal class FeatureManager(
             }
         }
 
+    @Suppress("UNUSED_PARAMETER")
     private fun applySideEffects(
         feature: FeatureFlag,
         enabled: Boolean,
     ) {
         when (feature) {
-            FeatureFlag.SDK_BACKGROUND_THREADING ->
-                ThreadingMode.updateUseBackgroundThreading(
-                    enabled = enabled,
-                    source = "FeatureManager:${feature.activationMode}"
-                )
-
             // SDK_IDENTITY_VERIFICATION has no side effect: IdentityVerificationService
             // reads featureStates directly via isEnabled() at gate-check time.
             FeatureFlag.SDK_IDENTITY_VERIFICATION -> {}
@@ -183,10 +177,10 @@ internal class FeatureManager(
         /**
          * Local-only test hook for forcing features ON without backend config.
          * Add feature keys here while testing locally, e.g.:
-         * setOf(FeatureFlag.SDK_BACKGROUND_THREADING.key)
+         * setOf(FeatureFlag.SDK_IDENTITY_VERIFICATION.key)
          */
         private val localFeatureOverrides: Set<String> = emptySet()
 //        private val localFeatureOverrides: Set<String> =
-//            setOf(FeatureFlag.SDK_BACKGROUND_THREADING.key)
+//            setOf(FeatureFlag.SDK_IDENTITY_VERIFICATION.key)
     }
 }
