@@ -2,6 +2,7 @@ package com.onesignal.debug.internal.crash
 
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import com.onesignal.otel.IOtelCrashReporter
 import com.onesignal.otel.IOtelLogger
 import com.onesignal.otel.IOtelOpenTelemetryCrash
@@ -42,7 +43,12 @@ internal class OtelAnrDetector(
     private val crashReporter: IOtelCrashReporter = OtelFactory.createCrashReporter(openTelemetryCrash, logger)
     private val mainHandler = Handler(Looper.getMainLooper())
     private val isMonitoring = AtomicBoolean(false)
-    private val lastResponseTime = AtomicLong(System.currentTimeMillis())
+
+    // All durations here use the monotonic SystemClock.uptimeMillis() rather than wall-clock time:
+    // it can't be skewed by clock adjustments (NTP, manual time change, DST), it matches the clock
+    // the main Looper schedules with, and it pauses during deep sleep so a dozing device doesn't
+    // accumulate phantom "block" time.
+    private val lastResponseTime = AtomicLong(SystemClock.uptimeMillis())
     private val lastAnrReportTime = AtomicLong(0L)
     private var watchdogThread: Thread? = null
     private var watchdogRunnable: Runnable? = null
@@ -68,6 +74,8 @@ internal class OtelAnrDetector(
 
         logger.info("$TAG: Starting ANR detection (threshold: ${anrThresholdMs}ms, check interval: ${checkIntervalMs}ms)")
 
+        // Reset the baseline so a gap between construction and start() can't be read as a block.
+        lastResponseTime.set(SystemClock.uptimeMillis())
         setupRunnables()
         startWatchdogThread()
 
@@ -78,7 +86,7 @@ internal class OtelAnrDetector(
     private fun setupRunnables() {
         // Runnable that runs on the main thread to indicate it's responsive
         mainThreadRunnable = Runnable {
-            lastResponseTime.set(System.currentTimeMillis())
+            lastResponseTime.set(SystemClock.uptimeMillis())
         }
 
         // Runnable that runs on the watchdog thread to check for ANRs
@@ -102,12 +110,12 @@ internal class OtelAnrDetector(
         mainHandler.post(runnable)
 
         // Time the sleep itself: if our own thread oversleeps, the process was frozen, not blocked.
-        val sleepStart = System.currentTimeMillis()
+        val sleepStart = SystemClock.uptimeMillis()
         Thread.sleep(checkIntervalMs)
-        val actualSleepMs = System.currentTimeMillis() - sleepStart
+        val actualSleepMs = SystemClock.uptimeMillis() - sleepStart
 
         val inForeground = resolveForeground()
-        val timeSinceLastResponse = System.currentTimeMillis() - lastResponseTime.get()
+        val timeSinceLastResponse = SystemClock.uptimeMillis() - lastResponseTime.get()
 
         when (
             classifyBlock(
@@ -127,7 +135,7 @@ internal class OtelAnrDetector(
                 logger.debug(
                     "$TAG: Skipping check — watchdog overslept ${actualSleepMs}ms (expected ${checkIntervalMs}ms); process was frozen, not blocked",
                 )
-                lastResponseTime.set(System.currentTimeMillis())
+                lastResponseTime.set(SystemClock.uptimeMillis())
             }
             BlockClassification.RESPONSIVE -> handleMainThreadResponsive()
             BlockClassification.FOREGROUND_ANR -> reportBlockOnce(timeSinceLastResponse, inForeground = true)
@@ -146,7 +154,7 @@ internal class OtelAnrDetector(
         }
 
     private fun reportBlockOnce(timeSinceLastResponse: Long, inForeground: Boolean) {
-        val now = System.currentTimeMillis()
+        val now = SystemClock.uptimeMillis()
         val timeSinceLastReport = now - lastAnrReportTime.get()
 
         // Only report if enough time has passed since the last report (avoid duplicates).
