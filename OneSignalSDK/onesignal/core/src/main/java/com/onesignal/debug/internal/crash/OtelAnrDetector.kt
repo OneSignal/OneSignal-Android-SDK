@@ -8,9 +8,9 @@ import com.onesignal.otel.IOtelLogger
 import com.onesignal.otel.IOtelOpenTelemetryCrash
 import com.onesignal.otel.OtelFactory
 import com.onesignal.otel.crash.IOtelAnrDetector
+import com.onesignal.otel.crash.isOneSignalAtFault
 import kotlinx.coroutines.runBlocking
 import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.atomic.AtomicLong
 
 /**
  * Android-specific implementation of ANR detection.
@@ -24,34 +24,39 @@ import java.util.concurrent.atomic.AtomicLong
  * the foreground as in the background:
  * - Foreground block > [anrThresholdMs]: a real, user-visible ANR — reported as a crash-class ANR.
  * - Background block > [backgroundThresholdMs]: not an ANR (Android raises no ANR for a
- *   backgrounded app) — recorded as a lower-severity warning so it stays out of the ANR metric.
+ *   backgrounded app) — recorded under a distinct exception type so it stays out of the ANR metric
+ *   while remaining retained and queryable for real background regressions.
  * - If the watchdog thread's own sleep overran far beyond [checkIntervalMs], the whole process was
  *   descheduled (Doze / cached-process freeze) rather than the main thread being stuck, so the
  *   measured "block" is a freeze artifact and is suppressed.
  *
- * This is a standalone component that can be initialized independently of the crash handler.
- * It creates its own crash reporter to save ANR reports.
+ * Every timing/classification/dedup decision is delegated to [AnrCheckEvaluator] (pure, JVM-tested),
+ * and all Android touch points go through the injectable [AnrWatchdogPlatform] seam so the watchdog's
+ * behavior can be exercised deterministically off-device.
  */
 internal class OtelAnrDetector(
     openTelemetryCrash: IOtelOpenTelemetryCrash,
     private val logger: IOtelLogger,
     private val anrThresholdMs: Long = AnrConstants.DEFAULT_ANR_THRESHOLD_MS,
     private val checkIntervalMs: Long = AnrConstants.DEFAULT_CHECK_INTERVAL_MS,
-    private val backgroundThresholdMs: Long = AnrConstants.DEFAULT_BACKGROUND_BLOCK_THRESHOLD_MS,
+    backgroundThresholdMs: Long = AnrConstants.DEFAULT_BACKGROUND_BLOCK_THRESHOLD_MS,
     private val isAppInForeground: () -> Boolean = { true },
-    // Monotonic clock source, injectable so the heartbeat/check path is deterministically testable.
-    private val now: () -> Long = { SystemClock.uptimeMillis() },
+    // Android touch points (main-thread Handler, stack capture) plus the monotonic clock, injectable
+    // so the whole watchdog runs deterministically off-device.
+    private val platform: AnrWatchdogPlatform = AndroidAnrWatchdogPlatform(),
 ) : IOtelAnrDetector {
     private val crashReporter: IOtelCrashReporter = OtelFactory.createCrashReporter(openTelemetryCrash, logger)
-    private val mainHandler = Handler(Looper.getMainLooper())
     private val isMonitoring = AtomicBoolean(false)
 
-    // All durations here use the monotonic clock (default SystemClock.uptimeMillis) rather than
-    // wall-clock time: it can't be skewed by clock adjustments (NTP, manual time change, DST), it
-    // matches the clock the main Looper schedules with, and it pauses during deep sleep so a dozing
-    // device doesn't accumulate phantom "block" time.
-    private val lastResponseTime = AtomicLong(now())
-    private val lastAnrReportTime = AtomicLong(NEVER_REPORTED)
+    private val evaluator = AnrCheckEvaluator(
+        anrThresholdMs = anrThresholdMs,
+        checkIntervalMs = checkIntervalMs,
+        backgroundThresholdMs = backgroundThresholdMs,
+        frozenSlackMs = FROZEN_PROCESS_SLACK_MS,
+        dedupWindowMs = MIN_TIME_BETWEEN_ANR_REPORTS_MS,
+        now = { platform.now() },
+    )
+
     private var watchdogThread: Thread? = null
     private var watchdogRunnable: Runnable? = null
     private var mainThreadRunnable: Runnable? = null
@@ -66,9 +71,6 @@ internal class OtelAnrDetector(
         // process itself was frozen/descheduled rather than the main thread being blocked, so the
         // measurement is meaningless. Generous enough to tolerate GC pauses and CPU contention.
         private const val FROZEN_PROCESS_SLACK_MS = 2_000L
-
-        // Sentinel for lastAnrReportTime meaning "no block reported yet / main thread is healthy".
-        private const val NEVER_REPORTED = 0L
     }
 
     override fun start() {
@@ -80,7 +82,7 @@ internal class OtelAnrDetector(
         logger.info("$TAG: Starting ANR detection (threshold: ${anrThresholdMs}ms, check interval: ${checkIntervalMs}ms)")
 
         // Reset the baseline so a gap between construction and start() can't be read as a block.
-        lastResponseTime.set(now())
+        evaluator.resetBaseline()
         setupRunnables()
         startWatchdogThread()
 
@@ -110,53 +112,47 @@ internal class OtelAnrDetector(
         }
     }
 
-    private fun checkForAnr() {
+    internal fun checkForAnr() {
         val runnable = mainThreadRunnable ?: return
-        mainHandler.post(runnable)
+        platform.postToMainThread(runnable)
 
         // Time the sleep itself: if our own thread oversleeps, the process was frozen, not blocked.
-        val sleepStart = now()
+        val sleepStart = platform.now()
         Thread.sleep(checkIntervalMs)
-        evaluateCheck(actualSleepMs = now() - sleepStart)
+        evaluateCheck(actualSleepMs = platform.now() - sleepStart)
     }
 
     /** Records that the main thread ran our heartbeat runnable. */
     internal fun recordHeartbeat() {
-        lastResponseTime.set(now())
+        evaluator.recordHeartbeat()
     }
 
     /**
-     * Evaluates one watchdog iteration given how long the watchdog's own sleep actually took.
-     * Split from [checkForAnr] (which owns the thread + real sleep) so the heartbeat/classify/report
-     * wiring can be exercised deterministically with an injected clock.
+     * Runs one watchdog iteration's decision (via [AnrCheckEvaluator]) and performs the side effect.
+     * Split from [checkForAnr] (which owns the real sleep) so the wiring can be exercised
+     * deterministically with an injected clock and platform.
      */
     internal fun evaluateCheck(actualSleepMs: Long) {
         val inForeground = resolveForeground()
-        val timeSinceLastResponse = now() - lastResponseTime.get()
-
-        when (
-            classifyBlock(
-                timeSinceLastResponseMs = timeSinceLastResponse,
-                actualSleepMs = actualSleepMs,
-                checkIntervalMs = checkIntervalMs,
-                frozenSlackMs = FROZEN_PROCESS_SLACK_MS,
-                anrThresholdMs = anrThresholdMs,
-                backgroundThresholdMs = backgroundThresholdMs,
-                inForeground = inForeground,
-            )
-        ) {
-            BlockClassification.FROZEN_PROCESS -> {
-                // The watchdog thread itself was descheduled (Doze / cached-process freeze). Anything
-                // we measured for the main thread is a freeze artifact, so skip it and treat the main
-                // thread as responsive to avoid firing on the next iteration.
+        when (val result = evaluator.evaluate(actualSleepMs = actualSleepMs, inForeground = inForeground)) {
+            is AnrCheckResult.Responsive -> Unit
+            is AnrCheckResult.FrozenProcess ->
                 logger.debug(
-                    "$TAG: Skipping check — watchdog overslept ${actualSleepMs}ms (expected ${checkIntervalMs}ms); process was frozen, not blocked",
+                    "$TAG: Skipping check — watchdog overslept ${result.actualSleepMs}ms " +
+                        "(expected ${result.expectedSleepMs}ms); process was frozen, not blocked",
                 )
-                lastResponseTime.set(now())
+            is AnrCheckResult.Deduped ->
+                logger.debug(
+                    "$TAG: Block still ongoing (${result.durationMs}ms), already reported recently (${result.sinceLastReportMs}ms ago)",
+                )
+            is AnrCheckResult.ForegroundAnr -> {
+                logger.info("$TAG: ⚠️ ANR detected! Main thread unresponsive for ${result.durationMs}ms (foreground)")
+                reportAnr(result.durationMs)
             }
-            BlockClassification.RESPONSIVE -> handleMainThreadResponsive()
-            BlockClassification.FOREGROUND_ANR -> reportBlockOnce(timeSinceLastResponse, inForeground = true)
-            BlockClassification.BACKGROUND_WARNING -> reportBlockOnce(timeSinceLastResponse, inForeground = false)
+            is AnrCheckResult.BackgroundWarning -> {
+                logger.info("$TAG: Main thread blocked for ${result.durationMs}ms while backgrounded — recording warning, not ANR")
+                reportBackgroundBlock(result.durationMs)
+            }
         }
     }
 
@@ -169,36 +165,6 @@ internal class OtelAnrDetector(
             logger.debug("$TAG: Could not resolve app state (${t.message}), assuming foreground")
             true
         }
-
-    private fun reportBlockOnce(timeSinceLastResponse: Long, inForeground: Boolean) {
-        val nowMs = now()
-        val lastReport = lastAnrReportTime.get()
-
-        // Skip only if we actually reported recently. lastReport == NEVER_REPORTED means we have not
-        // reported yet (or the main thread recovered), so we must not dedup — important shortly after
-        // boot when the monotonic clock is still small and `now - 0` would look "recent".
-        if (lastReport != NEVER_REPORTED && nowMs - lastReport <= MIN_TIME_BETWEEN_ANR_REPORTS_MS) {
-            logger.debug("$TAG: Block still ongoing (${timeSinceLastResponse}ms), already reported recently (${nowMs - lastReport}ms ago)")
-            return
-        }
-        lastAnrReportTime.set(nowMs)
-
-        if (inForeground) {
-            logger.info("$TAG: ⚠️ ANR detected! Main thread unresponsive for ${timeSinceLastResponse}ms (foreground)")
-            reportAnr(timeSinceLastResponse)
-        } else {
-            logger.info("$TAG: Main thread blocked for ${timeSinceLastResponse}ms while backgrounded — recording warning, not ANR")
-            reportBackgroundBlock(timeSinceLastResponse)
-        }
-    }
-
-    private fun handleMainThreadResponsive() {
-        // Main thread is responsive - reset report time so we can detect new blocks
-        if (lastAnrReportTime.get() != NEVER_REPORTED) {
-            lastAnrReportTime.set(NEVER_REPORTED)
-            logger.debug("$TAG: Main thread recovered, ready to detect new ANRs")
-        }
-    }
 
     private fun startWatchdogThread() {
         // Start the watchdog thread
@@ -220,7 +186,7 @@ internal class OtelAnrDetector(
         watchdogThread = null
         watchdogRunnable = null
         // Remove pending callbacks before nulling to prevent execution after stop
-        mainThreadRunnable?.let { mainHandler.removeCallbacks(it) }
+        mainThreadRunnable?.let { platform.removeFromMainThread(it) }
         mainThreadRunnable = null
 
         logger.info("$TAG: ✅ ANR detection stopped")
@@ -231,14 +197,11 @@ internal class OtelAnrDetector(
         try {
             logger.info("$TAG: Checking if ANR is OneSignal-related (unresponsive for ${unresponsiveDurationMs}ms)")
 
-            // Get the main thread's stack trace
-            val mainThread = Looper.getMainLooper().thread
-            val stackTrace = mainThread.stackTrace
+            val mainThread = platform.mainThread()
+            val stackTrace = platform.mainThreadStackTrace()
 
             // Only report if OneSignal is at fault (uses centralized utility from otel module)
-            val isOneSignalAtFault = com.onesignal.otel.crash.isOneSignalAtFault(stackTrace)
-
-            if (!isOneSignalAtFault) {
+            if (!isOneSignalAtFault(stackTrace)) {
                 logger.debug("$TAG: ANR is not OneSignal-related, skipping report")
                 return
             }
@@ -248,7 +211,7 @@ internal class OtelAnrDetector(
             // Create an ANR exception with the stack trace
             val anrException = ApplicationNotRespondingException(
                 "Application Not Responding: Main thread blocked for ${unresponsiveDurationMs}ms",
-                stackTrace
+                stackTrace,
             )
 
             // Report it as a crash (but mark it as ANR)
@@ -263,28 +226,37 @@ internal class OtelAnrDetector(
     }
 
     /**
-     * Records a backgrounded main-thread block as a warning rather than an ANR.
+     * Records a backgrounded main-thread block as a retained warning rather than an ANR.
      *
-     * Android raises no ANR for a backgrounded app, so this is not a user-visible crash. We keep the
-     * captured stack trace for diagnostics but route it through the warning log stream so it stays
-     * out of the ANR/crash metric. Like [reportAnr], only OneSignal-induced blocks are recorded.
+     * Android raises no ANR for a backgrounded app, so this is not a user-visible crash. We route it
+     * through the same retained, disk-buffered crash telemetry as [reportAnr] (so it survives
+     * regardless of the remote log level and stays queryable), but tag it with a distinct exception
+     * type — [BackgroundMainThreadBlockException] — so the backend segments it into its own stream and
+     * keeps it out of the ANR/crash metric, exactly how ANRs are already segmented from crashes by
+     * type. The exception message carries a compact stack fingerprint (top frame + first OneSignal
+     * frame) for triage. Like [reportAnr], only OneSignal-induced blocks are recorded.
      */
     @Suppress("TooGenericExceptionCaught")
     private fun reportBackgroundBlock(unresponsiveDurationMs: Long) {
         try {
-            val mainThread = Looper.getMainLooper().thread
-            val stackTrace = mainThread.stackTrace
+            val mainThread = platform.mainThread()
+            val stackTrace = platform.mainThreadStackTrace()
 
-            if (!com.onesignal.otel.crash.isOneSignalAtFault(stackTrace)) {
+            if (!isOneSignalAtFault(stackTrace)) {
                 logger.debug("$TAG: Background block is not OneSignal-related, skipping")
                 return
             }
 
-            val frames = stackTrace.joinToString("\n") { "    at $it" }
-            logger.warn(
-                "$TAG: OneSignal-related main-thread block for ${unresponsiveDurationMs}ms while " +
-                    "backgrounded (not a user-visible ANR)\n$frames",
+            val blockException = BackgroundMainThreadBlockException(
+                "Background main-thread block for ${unresponsiveDurationMs}ms | ${buildBlockFingerprint(stackTrace)}",
+                stackTrace,
             )
+
+            runBlocking {
+                crashReporter.saveCrash(mainThread, blockException)
+            }
+
+            logger.info("$TAG: ✅ Background block warning recorded")
         } catch (t: Throwable) {
             logger.error("$TAG: Failed to record background block: ${t.message} - ${t.javaClass.simpleName}")
         }
@@ -296,7 +268,20 @@ internal class OtelAnrDetector(
      */
     private class ApplicationNotRespondingException(
         message: String,
-        stackTrace: Array<StackTraceElement>
+        stackTrace: Array<StackTraceElement>,
+    ) : RuntimeException(message) {
+        init {
+            this.stackTrace = stackTrace
+        }
+    }
+
+    /**
+     * Custom exception type for backgrounded main-thread blocks. A distinct type keeps these out of
+     * the ANR/crash buckets on the backend while remaining queryable as their own stream.
+     */
+    private class BackgroundMainThreadBlockException(
+        message: String,
+        stackTrace: Array<StackTraceElement>,
     ) : RuntimeException(message) {
         init {
             this.stackTrace = stackTrace
@@ -304,59 +289,51 @@ internal class OtelAnrDetector(
     }
 }
 
-// Use the centralized isOneSignalAtFault from otel module
-
 /**
- * How a watchdog check is interpreted. Kept separate from side effects so the decision is a pure,
- * deterministically testable function of the measured timings and app state.
+ * The platform touch points the watchdog needs: posting to the main thread, capturing its stack, and
+ * a monotonic clock. Injecting this keeps [OtelAnrDetector] free of hard Android references at test
+ * time so the watchdog logic can be driven on a plain JVM.
  */
-internal enum class BlockClassification {
-    /** Main thread responded within the applicable threshold. */
-    RESPONSIVE,
+internal interface AnrWatchdogPlatform {
+    fun postToMainThread(runnable: Runnable)
 
-    /** The watchdog thread's own sleep overran — the process was frozen, not the main thread. */
-    FROZEN_PROCESS,
+    fun removeFromMainThread(runnable: Runnable)
 
-    /** Foreground block beyond the ANR threshold: a real, user-visible ANR. */
-    FOREGROUND_ANR,
+    fun mainThread(): Thread
 
-    /** Background block beyond the background threshold: not an ANR, recorded as a warning. */
-    BACKGROUND_WARNING,
+    fun mainThreadStackTrace(): Array<StackTraceElement>
+
+    /**
+     * Monotonic time in ms. Backed by SystemClock.uptimeMillis in production: it can't be skewed by
+     * clock adjustments (NTP, manual time change, DST), it matches the clock the main Looper schedules
+     * with, and it pauses during deep sleep so a dozing device doesn't accumulate phantom block time.
+     */
+    fun now(): Long
 }
 
-/**
- * Pure decision for a single watchdog check.
- *
- * Frozen-process detection wins first: if the watchdog's own sleep overran [checkIntervalMs] by more
- * than [frozenSlackMs], the whole process was descheduled and any measured block is an artifact.
- * Otherwise the applicable threshold depends on app state — [anrThresholdMs] in the foreground (where
- * Android raises real ANRs) and the higher [backgroundThresholdMs] in the background.
- */
-@Suppress("LongParameterList")
-internal fun classifyBlock(
-    timeSinceLastResponseMs: Long,
-    actualSleepMs: Long,
-    checkIntervalMs: Long,
-    frozenSlackMs: Long,
-    anrThresholdMs: Long,
-    backgroundThresholdMs: Long,
-    inForeground: Boolean,
-): BlockClassification {
-    if (actualSleepMs - checkIntervalMs > frozenSlackMs) {
-        return BlockClassification.FROZEN_PROCESS
+/** Production [AnrWatchdogPlatform] backed by the app's main [Looper] and [SystemClock]. */
+private class AndroidAnrWatchdogPlatform : AnrWatchdogPlatform {
+    private val mainHandler = Handler(Looper.getMainLooper())
+
+    override fun postToMainThread(runnable: Runnable) {
+        mainHandler.post(runnable)
     }
-    val threshold = if (inForeground) anrThresholdMs else backgroundThresholdMs
-    if (timeSinceLastResponseMs <= threshold) {
-        return BlockClassification.RESPONSIVE
+
+    override fun removeFromMainThread(runnable: Runnable) {
+        mainHandler.removeCallbacks(runnable)
     }
-    return if (inForeground) BlockClassification.FOREGROUND_ANR else BlockClassification.BACKGROUND_WARNING
+
+    override fun mainThread(): Thread = Looper.getMainLooper().thread
+
+    override fun mainThreadStackTrace(): Array<StackTraceElement> = Looper.getMainLooper().thread.stackTrace
+
+    override fun now(): Long = SystemClock.uptimeMillis()
 }
 
 /**
  * Factory function to create an ANR detector for Android.
  * This is in the core module since it needs to access Android-specific classes.
  */
-
 internal fun createAnrDetector(
     platformProvider: com.onesignal.otel.IOtelPlatformProvider,
     logger: IOtelLogger,

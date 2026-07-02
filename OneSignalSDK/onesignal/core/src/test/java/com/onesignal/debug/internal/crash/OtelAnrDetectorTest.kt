@@ -1,383 +1,150 @@
 package com.onesignal.debug.internal.crash
 
-import android.os.Build
-import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
 import com.onesignal.otel.IOtelLogger
 import com.onesignal.otel.IOtelOpenTelemetryCrash
-import com.onesignal.otel.IOtelPlatformProvider
 import com.onesignal.otel.crash.IOtelAnrDetector
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
-import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.types.shouldBeInstanceOf
-import io.mockk.coEvery
-import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
-import org.robolectric.annotation.Config
 
-@RobolectricTest
-@Config(sdk = [Build.VERSION_CODES.O])
+/**
+ * Pure-JVM tests for the Android ANR watchdog shell. The Android touch points (main-thread Handler,
+ * main-thread stack capture) are injected via [AnrWatchdogPlatform], and the monotonic clock via a
+ * fake, so the whole watchdog runs off-device without Robolectric — which also means JaCoCo actually
+ * measures this code. Pure decision logic is covered separately in [AnrCheckEvaluatorTest].
+ */
 class OtelAnrDetectorTest : FunSpec({
 
-    val mockPlatformProvider = mockk<IOtelPlatformProvider>(relaxed = true)
-    val mockLogger = mockk<IOtelLogger>(relaxed = true)
-    val mockCrashTelemetry = mockk<IOtelOpenTelemetryCrash>(relaxed = true)
-
-    fun setupDefaultMocks() {
-        every { mockPlatformProvider.sdkBase } returns "android"
-        every { mockPlatformProvider.sdkBaseVersion } returns "1.0.0"
-        every { mockPlatformProvider.appPackageId } returns "com.test.app"
-        every { mockPlatformProvider.appVersion } returns "1.0"
-        every { mockPlatformProvider.deviceManufacturer } returns "Test"
-        every { mockPlatformProvider.deviceModel } returns "TestDevice"
-        every { mockPlatformProvider.osName } returns "Android"
-        every { mockPlatformProvider.osVersion } returns "10"
-        every { mockPlatformProvider.osBuildId } returns "TEST123"
-        every { mockPlatformProvider.sdkWrapper } returns null
-        every { mockPlatformProvider.sdkWrapperVersion } returns null
-        every { mockPlatformProvider.appId } returns "test-app-id"
-        every { mockPlatformProvider.onesignalId } returns null
-        every { mockPlatformProvider.pushSubscriptionId } returns null
-        every { mockPlatformProvider.appState } returns "foreground"
-        every { mockPlatformProvider.processUptime } returns 100L
-        every { mockPlatformProvider.currentThreadName } returns "main"
-        every { mockPlatformProvider.crashStoragePath } returns "/test/path"
-        every { mockPlatformProvider.minFileAgeForReadMillis } returns 5000L
-        every { mockPlatformProvider.remoteLogLevel } returns "ERROR"
-        every { mockPlatformProvider.appIdForHeaders } returns "test-app-id"
-        every { mockPlatformProvider.apiBaseUrl } returns "https://api.onesignal.com"
-        coEvery { mockPlatformProvider.getInstallId() } returns "test-install-id"
-    }
-
-    beforeEach {
-        setupDefaultMocks()
-    }
-
-    // ===== Factory Function Tests =====
-
-    test("createAnrDetector should return IOtelAnrDetector") {
-        // When
-        val detector = createAnrDetector(mockPlatformProvider, mockLogger)
-
-        // Then
-        detector.shouldBeInstanceOf<IOtelAnrDetector>()
-    }
-
-    test("createAnrDetector should create detector with default thresholds") {
-        // When
-        val detector = createAnrDetector(mockPlatformProvider, mockLogger)
-
-        // Then
-        detector shouldNotBe null
-    }
-
-    test("createAnrDetector should accept custom thresholds") {
-        // When
-        val detector = createAnrDetector(
-            mockPlatformProvider,
-            mockLogger,
-            anrThresholdMs = 10_000L,
-            checkIntervalMs = 2_000L
-        )
-
-        // Then
-        detector shouldNotBe null
-    }
-
-    test("createAnrDetector should accept custom background threshold") {
-        // When
-        val detector = createAnrDetector(
-            mockPlatformProvider,
-            mockLogger,
-            anrThresholdMs = 5_000L,
-            checkIntervalMs = 2_000L,
-            backgroundThresholdMs = 20_000L
-        )
-
-        // Then
-        detector shouldNotBe null
-    }
-
-    // ===== Start/Stop Tests =====
-
-    test("start should log info messages") {
-        // Given
-        val detector = createAnrDetector(mockPlatformProvider, mockLogger)
-
-        // When
-        detector.start()
-
-        // Then
-        verify { mockLogger.info(match { it.contains("Starting ANR detection") }) }
-
-        // Cleanup
-        detector.stop()
-    }
-
-    test("stop should log info messages") {
-        // Given
-        val detector = createAnrDetector(mockPlatformProvider, mockLogger)
-        detector.start()
-
-        // When
-        detector.stop()
-
-        // Then
-        verify { mockLogger.info(match { it.contains("Stopping ANR detection") }) }
-    }
-
-    test("start should warn when already monitoring") {
-        // Given
-        val detector = createAnrDetector(mockPlatformProvider, mockLogger)
-        detector.start()
-
-        // When - start again
-        detector.start()
-
-        // Then
-        verify { mockLogger.warn(match { it.contains("Already monitoring") }) }
-
-        // Cleanup
-        detector.stop()
-    }
-
-    test("stop should warn when not monitoring") {
-        // Given
-        val detector = createAnrDetector(mockPlatformProvider, mockLogger)
-
-        // When - stop without starting
-        detector.stop()
-
-        // Then
-        verify { mockLogger.warn(match { it.contains("Not monitoring") }) }
-    }
-
-    test("start and stop can be called multiple times safely") {
-        // Given
-        val detector = createAnrDetector(mockPlatformProvider, mockLogger)
-
-        // When
-        detector.start()
-        detector.stop()
-        detector.start()
-        detector.stop()
-
-        // Then - no exceptions thrown
-    }
-
-    // ===== OtelAnrDetector Internal Tests =====
-
-    test("OtelAnrDetector should implement IOtelAnrDetector") {
-        // Given
-        val detector = OtelAnrDetector(mockCrashTelemetry, mockLogger)
-
-        // Then
-        detector.shouldBeInstanceOf<IOtelAnrDetector>()
-    }
-
-    test("OtelAnrDetector should accept custom thresholds") {
-        // When
-        val detector = OtelAnrDetector(
-            mockCrashTelemetry,
-            mockLogger,
-            anrThresholdMs = 15_000L,
-            checkIntervalMs = 3_000L
-        )
-
-        // Then
-        detector shouldNotBe null
-    }
-
-    test("OtelAnrDetector start should initialize watchdog thread") {
-        // Given
-        val detector = OtelAnrDetector(
-            mockCrashTelemetry,
-            mockLogger,
-            anrThresholdMs = 100_000L, // Very long threshold to prevent actual ANR detection
-            checkIntervalMs = 100_000L // Very long interval
-        )
-
-        // When
-        detector.start()
-
-        // Then
-        verify { mockLogger.info(match { it.contains("ANR detection started successfully") }) }
-
-        // Cleanup
-        detector.stop()
-    }
-
-    test("OtelAnrDetector stop should stop watchdog thread") {
-        // Given
-        val detector = OtelAnrDetector(
-            mockCrashTelemetry,
-            mockLogger,
-            anrThresholdMs = 100_000L,
-            checkIntervalMs = 100_000L
-        )
-        detector.start()
-
-        // When
-        detector.stop()
-
-        // Then
-        verify { mockLogger.info(match { it.contains("ANR detection stopped") }) }
-    }
-
-    // ===== AnrConstants Tests =====
-
-    test("AnrConstants should have reasonable defaults") {
-        // Then
-        AnrConstants.DEFAULT_ANR_THRESHOLD_MS shouldBe 5_000L
-        AnrConstants.DEFAULT_CHECK_INTERVAL_MS shouldBe 2_000L
-        AnrConstants.DEFAULT_BACKGROUND_BLOCK_THRESHOLD_MS shouldBe 10_000L
-        // The background threshold must stay above the foreground ANR threshold so backgrounded
-        // blocks need to last longer before they are even recorded as a warning.
-        (AnrConstants.DEFAULT_BACKGROUND_BLOCK_THRESHOLD_MS > AnrConstants.DEFAULT_ANR_THRESHOLD_MS) shouldBe true
-    }
-
-    // ===== classifyBlock Tests =====
-
-    // Defaults mirror AnrConstants: 5s ANR, 2s check interval, 2s frozen slack, 10s background.
-    fun classify(
-        timeSinceLastResponseMs: Long,
-        inForeground: Boolean,
-        actualSleepMs: Long = 2_000L,
-    ): BlockClassification = classifyBlock(
-        timeSinceLastResponseMs = timeSinceLastResponseMs,
-        actualSleepMs = actualSleepMs,
-        checkIntervalMs = 2_000L,
-        frozenSlackMs = 2_000L,
-        anrThresholdMs = 5_000L,
-        backgroundThresholdMs = 10_000L,
-        inForeground = inForeground,
+    val oneSignalStack = arrayOf(
+        StackTraceElement("android.os.MessageQueue", "nativePollOnce", "MessageQueue.java", 1),
+        StackTraceElement("com.onesignal.core.Foo", "bar", "Foo.kt", 42),
     )
-
-    test("foreground block past the ANR threshold is a foreground ANR") {
-        classify(timeSinceLastResponseMs = 6_000L, inForeground = true) shouldBe BlockClassification.FOREGROUND_ANR
-    }
-
-    test("foreground block within the ANR threshold is responsive") {
-        classify(timeSinceLastResponseMs = 4_000L, inForeground = true) shouldBe BlockClassification.RESPONSIVE
-    }
-
-    test("background block past the foreground threshold but below the background threshold is responsive") {
-        // 7s would be a foreground ANR, but in the background it is below the 10s warning threshold.
-        classify(timeSinceLastResponseMs = 7_000L, inForeground = false) shouldBe BlockClassification.RESPONSIVE
-    }
-
-    test("background block past the background threshold is a background warning, not an ANR") {
-        classify(timeSinceLastResponseMs = 11_000L, inForeground = false) shouldBe BlockClassification.BACKGROUND_WARNING
-    }
-
-    test("watchdog oversleeping beyond the frozen slack is treated as a frozen process") {
-        // Even a huge measured block is suppressed when our own sleep overran (Doze / freeze).
-        classify(
-            timeSinceLastResponseMs = 60_000L,
-            inForeground = true,
-            actualSleepMs = 30_000L,
-        ) shouldBe BlockClassification.FROZEN_PROCESS
-    }
-
-    test("frozen-process detection wins over a foreground ANR") {
-        classify(
-            timeSinceLastResponseMs = 60_000L,
-            inForeground = false,
-            actualSleepMs = 30_000L,
-        ) shouldBe BlockClassification.FROZEN_PROCESS
-    }
-
-    test("sleep overrun within the slack is not treated as frozen") {
-        // 2s interval + 1.5s overrun = within the 2s slack, so a real foreground ANR still reports.
-        classify(
-            timeSinceLastResponseMs = 6_000L,
-            inForeground = true,
-            actualSleepMs = 3_500L,
-        ) shouldBe BlockClassification.FOREGROUND_ANR
-    }
-
-    // ===== Heartbeat / evaluateCheck integration (deterministic via injected clock) =====
-    //
-    // These drive the real recordHeartbeat -> clock -> evaluateCheck -> report wiring with a fake
-    // monotonic clock and a fresh logger per test, so there is no background thread, no real sleep,
-    // and no cross-test verify() pollution.
+    val nonOneSignalStack = arrayOf(
+        StackTraceElement("android.os.MessageQueue", "nativePollOnce", "MessageQueue.java", 1),
+        StackTraceElement("com.example.App", "onCreate", "App.kt", 7),
+    )
 
     class FakeClock(var nowMs: Long = 1_000L) {
         fun advance(ms: Long) { nowMs += ms }
     }
 
+    class FakePlatform(
+        var stack: Array<StackTraceElement>,
+        private val clock: FakeClock,
+        private val runPostsSynchronously: Boolean = true,
+    ) : AnrWatchdogPlatform {
+        override fun postToMainThread(runnable: Runnable) {
+            // Simulate a responsive main thread that immediately runs the heartbeat.
+            if (runPostsSynchronously) runnable.run()
+        }
+
+        override fun removeFromMainThread(runnable: Runnable) = Unit
+
+        override fun mainThread(): Thread = Thread.currentThread()
+
+        override fun mainThreadStackTrace(): Array<StackTraceElement> = stack
+
+        override fun now(): Long = clock.nowMs
+    }
+
     fun buildDetector(
         clock: FakeClock,
         logger: IOtelLogger,
-        inForeground: () -> Boolean,
+        platform: FakePlatform,
+        inForeground: () -> Boolean = { true },
+        checkIntervalMs: Long = 2_000L,
     ): OtelAnrDetector = OtelAnrDetector(
-        mockCrashTelemetry,
+        mockk<IOtelOpenTelemetryCrash>(relaxed = true),
         logger,
         anrThresholdMs = 5_000L,
-        checkIntervalMs = 2_000L,
+        checkIntervalMs = checkIntervalMs,
         backgroundThresholdMs = 10_000L,
         isAppInForeground = inForeground,
-        now = { clock.nowMs },
+        platform = platform,
     )
 
-    test("a fresh heartbeat keeps a foreground check responsive (no ANR)") {
-        val clock = FakeClock(nowMs = 5_000L)
-        val logger = mockk<IOtelLogger>(relaxed = true)
-        val detector = buildDetector(clock, logger) { true }
+    test("OtelAnrDetector implements IOtelAnrDetector") {
+        val clock = FakeClock()
+        val detector = buildDetector(clock, mockk(relaxed = true), FakePlatform(oneSignalStack, clock))
+        detector.shouldBeInstanceOf<IOtelAnrDetector>()
+    }
 
-        detector.recordHeartbeat() // main thread responded at t=5000
-        clock.advance(4_000L) // below the 5s threshold
+    // ===== evaluateCheck: decision -> side effect wiring =====
+
+    test("a fresh heartbeat keeps a foreground check responsive (no ANR)") {
+        val clock = FakeClock(5_000L)
+        val logger = mockk<IOtelLogger>(relaxed = true)
+        val detector = buildDetector(clock, logger, FakePlatform(oneSignalStack, clock))
+
+        detector.recordHeartbeat()
+        clock.advance(4_000L)
         detector.evaluateCheck(actualSleepMs = 2_000L)
 
         verify(exactly = 0) { logger.info(match { it.contains("Main thread unresponsive") }) }
     }
 
-    test("a stale heartbeat past the threshold reports a foreground ANR") {
-        val clock = FakeClock(nowMs = 1_000L)
+    test("a stale heartbeat past the threshold reports and saves a foreground ANR") {
+        val clock = FakeClock(1_000L)
         val logger = mockk<IOtelLogger>(relaxed = true)
-        val detector = buildDetector(clock, logger) { true }
+        val detector = buildDetector(clock, logger, FakePlatform(oneSignalStack, clock))
 
-        detector.recordHeartbeat() // main thread last responded at t=1000
-        clock.advance(6_000L) // 6s with no heartbeat, past the 5s threshold
+        detector.recordHeartbeat()
+        clock.advance(6_000L)
         detector.evaluateCheck(actualSleepMs = 2_000L)
 
         verify(exactly = 1) { logger.info(match { it.contains("Main thread unresponsive") && it.contains("foreground") }) }
+        verify { logger.info(match { it.contains("ANR report saved successfully") }) }
+    }
+
+    test("a foreground ANR whose stack is not OneSignal-related is not reported") {
+        val clock = FakeClock(1_000L)
+        val logger = mockk<IOtelLogger>(relaxed = true)
+        val detector = buildDetector(clock, logger, FakePlatform(nonOneSignalStack, clock))
+
+        detector.recordHeartbeat()
+        clock.advance(6_000L)
+        detector.evaluateCheck(actualSleepMs = 2_000L)
+
+        verify { logger.debug(match { it.contains("not OneSignal-related") }) }
+        verify(exactly = 0) { logger.info(match { it.contains("ANR report saved successfully") }) }
     }
 
     test("recovering with a heartbeat returns the detector to responsive") {
-        val clock = FakeClock(nowMs = 1_000L)
+        val clock = FakeClock(1_000L)
         val logger = mockk<IOtelLogger>(relaxed = true)
-        val detector = buildDetector(clock, logger) { true }
+        val detector = buildDetector(clock, logger, FakePlatform(oneSignalStack, clock))
 
         detector.recordHeartbeat()
         clock.advance(6_000L)
         detector.evaluateCheck(actualSleepMs = 2_000L) // fires once
 
-        detector.recordHeartbeat() // main thread recovers at t=7000
-        detector.evaluateCheck(actualSleepMs = 2_000L) // now responsive again
+        clock.advance(1_000L)
+        detector.recordHeartbeat() // main thread recovers
+        detector.evaluateCheck(actualSleepMs = 2_000L) // responsive again
 
-        // Still only the single ANR from before recovery.
         verify(exactly = 1) { logger.info(match { it.contains("Main thread unresponsive") }) }
     }
 
-    test("background block past the background threshold logs a warning, not an ANR") {
-        val clock = FakeClock(nowMs = 1_000L)
+    test("a background block past the background threshold records a warning, not an ANR") {
+        val clock = FakeClock(1_000L)
         val logger = mockk<IOtelLogger>(relaxed = true)
-        val detector = buildDetector(clock, logger) { false }
+        val detector = buildDetector(clock, logger, FakePlatform(oneSignalStack, clock), inForeground = { false })
 
         detector.recordHeartbeat()
-        clock.advance(11_000L) // past the 10s background threshold
+        clock.advance(11_000L)
         detector.evaluateCheck(actualSleepMs = 2_000L)
 
         verify(exactly = 1) { logger.info(match { it.contains("backgrounded") && it.contains("warning") }) }
+        verify { logger.info(match { it.contains("Background block warning recorded") }) }
         verify(exactly = 0) { logger.info(match { it.contains("Main thread unresponsive") }) }
     }
 
-    test("background block below the background threshold stays responsive") {
-        val clock = FakeClock(nowMs = 1_000L)
+    test("a background block below the background threshold stays responsive") {
+        val clock = FakeClock(1_000L)
         val logger = mockk<IOtelLogger>(relaxed = true)
-        val detector = buildDetector(clock, logger) { false }
+        val detector = buildDetector(clock, logger, FakePlatform(oneSignalStack, clock), inForeground = { false })
 
         detector.recordHeartbeat()
         clock.advance(7_000L) // would be a foreground ANR, but below the 10s background threshold
@@ -387,10 +154,23 @@ class OtelAnrDetectorTest : FunSpec({
         verify(exactly = 0) { logger.info(match { it.contains("backgrounded") }) }
     }
 
-    test("a watchdog oversleep is reported as a frozen process and resets the baseline") {
-        val clock = FakeClock(nowMs = 1_000L)
+    test("a background block whose stack is not OneSignal-related is skipped") {
+        val clock = FakeClock(1_000L)
         val logger = mockk<IOtelLogger>(relaxed = true)
-        val detector = buildDetector(clock, logger) { true }
+        val detector = buildDetector(clock, logger, FakePlatform(nonOneSignalStack, clock), inForeground = { false })
+
+        detector.recordHeartbeat()
+        clock.advance(11_000L)
+        detector.evaluateCheck(actualSleepMs = 2_000L)
+
+        verify { logger.debug(match { it.contains("Background block is not OneSignal-related") }) }
+        verify(exactly = 0) { logger.info(match { it.contains("Background block warning recorded") }) }
+    }
+
+    test("a watchdog oversleep is reported as a frozen process and resets the baseline") {
+        val clock = FakeClock(1_000L)
+        val logger = mockk<IOtelLogger>(relaxed = true)
+        val detector = buildDetector(clock, logger, FakePlatform(oneSignalStack, clock))
 
         detector.recordHeartbeat()
         clock.advance(60_000L) // huge apparent block...
@@ -399,23 +179,84 @@ class OtelAnrDetectorTest : FunSpec({
         verify(exactly = 1) { logger.debug(match { it.contains("frozen") }) }
         verify(exactly = 0) { logger.info(match { it.contains("Main thread unresponsive") }) }
 
-        // Baseline was reset to now, so the very next on-time check is responsive (no ANR).
         detector.evaluateCheck(actualSleepMs = 2_000L)
         verify(exactly = 0) { logger.info(match { it.contains("Main thread unresponsive") }) }
     }
 
     test("an ongoing block is reported only once within the dedup window") {
-        val clock = FakeClock(nowMs = 1_000L)
+        val clock = FakeClock(1_000L)
         val logger = mockk<IOtelLogger>(relaxed = true)
-        val detector = buildDetector(clock, logger) { true }
+        val detector = buildDetector(clock, logger, FakePlatform(oneSignalStack, clock))
 
         detector.recordHeartbeat()
         clock.advance(6_000L)
         detector.evaluateCheck(actualSleepMs = 2_000L) // first report
 
-        clock.advance(2_000L) // still blocked, 2s later — within the 30s dedup window
-        detector.evaluateCheck(actualSleepMs = 2_000L) // should be deduped
+        clock.advance(2_000L) // still blocked, within the 30s dedup window
+        detector.evaluateCheck(actualSleepMs = 2_000L) // deduped
 
         verify(exactly = 1) { logger.info(match { it.contains("Main thread unresponsive") }) }
+        verify { logger.debug(match { it.contains("already reported recently") }) }
+    }
+
+    test("an unknown app state is treated as foreground so a real ANR is never dropped") {
+        val clock = FakeClock(1_000L)
+        val logger = mockk<IOtelLogger>(relaxed = true)
+        val detector = buildDetector(clock, logger, FakePlatform(oneSignalStack, clock), inForeground = { error("no state") })
+
+        detector.recordHeartbeat()
+        clock.advance(6_000L)
+        detector.evaluateCheck(actualSleepMs = 2_000L)
+
+        verify { logger.debug(match { it.contains("Could not resolve app state") }) }
+        verify(exactly = 1) { logger.info(match { it.contains("Main thread unresponsive") && it.contains("foreground") }) }
+    }
+
+    // ===== start / stop lifecycle (real watchdog thread, fake platform + clock) =====
+
+    test("start then stop drives the watchdog loop and logs lifecycle") {
+        val clock = FakeClock(1_000L)
+        val logger = mockk<IOtelLogger>(relaxed = true)
+        // Small interval so the real watchdog thread iterates a few times before we stop it.
+        val detector = buildDetector(clock, logger, FakePlatform(oneSignalStack, clock), checkIntervalMs = 20L)
+
+        detector.start()
+        Thread.sleep(120L) // let the watchdog run a handful of responsive checks
+        detector.stop()
+
+        verify { logger.info(match { it.contains("ANR detection started successfully") }) }
+        verify { logger.info(match { it.contains("ANR detection stopped") }) }
+    }
+
+    test("start twice warns about already monitoring") {
+        val clock = FakeClock()
+        val logger = mockk<IOtelLogger>(relaxed = true)
+        val detector = buildDetector(clock, logger, FakePlatform(oneSignalStack, clock), checkIntervalMs = 100_000L)
+
+        detector.start()
+        detector.start()
+        verify { logger.warn(match { it.contains("Already monitoring") }) }
+
+        detector.stop()
+    }
+
+    test("stop without start warns about not monitoring") {
+        val clock = FakeClock()
+        val logger = mockk<IOtelLogger>(relaxed = true)
+        val detector = buildDetector(clock, logger, FakePlatform(oneSignalStack, clock))
+
+        detector.stop()
+        verify { logger.warn(match { it.contains("Not monitoring") }) }
+    }
+
+    // ===== AnrConstants =====
+
+    test("AnrConstants should have reasonable defaults") {
+        AnrConstants.DEFAULT_ANR_THRESHOLD_MS shouldBe 5_000L
+        AnrConstants.DEFAULT_CHECK_INTERVAL_MS shouldBe 2_000L
+        AnrConstants.DEFAULT_BACKGROUND_BLOCK_THRESHOLD_MS shouldBe 10_000L
+        // The background threshold must stay above the foreground ANR threshold so backgrounded
+        // blocks need to last longer before they are even recorded as a warning.
+        (AnrConstants.DEFAULT_BACKGROUND_BLOCK_THRESHOLD_MS > AnrConstants.DEFAULT_ANR_THRESHOLD_MS) shouldBe true
     }
 })
