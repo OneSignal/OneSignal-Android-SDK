@@ -80,20 +80,24 @@ class NotificationOpenedActivityHMS :
         // warm dispatchers before the first suspendifyOnDefault dispatch.
         OneSignalDispatchers.prewarm()
         suspendifyOnDefault {
-            if (!OneSignal.initWithContext(applicationContext)) {
-                return@suspendifyOnDefault
-            }
+            try {
+                if (!OneSignal.initWithContext(applicationContext)) {
+                    return@suspendifyOnDefault
+                }
 
-            val notificationPayloadProcessorHMS = OneSignal.getService<INotificationOpenedProcessorHMS>()
-            notificationPayloadProcessorHMS.handleHMSNotificationOpenIntent(this, intent)
-
-            // Finish only after the open is fully processed, on the main thread. Finishing
-            // synchronously (before this background work) lets the trampoline's onStop reach
-            // ApplicationService while entryState is still APP_CLOSE, so the stale-entry reset is
-            // skipped and the NOTIFICATION_CLICK set here lingers — mis-attributing the next organic
-            // launch as a direct notification session.
-            runOnUiThread {
-                AndroidUtils.finishSafely(this)
+                val notificationPayloadProcessorHMS = OneSignal.getService<INotificationOpenedProcessorHMS>()
+                notificationPayloadProcessorHMS.handleHMSNotificationOpenIntent(this, intent)
+            } finally {
+                // Finish only after the open is fully processed (or an early return / failure),
+                // on the main thread. Finishing synchronously (before this background work) lets the
+                // trampoline's onStop reach ApplicationService while entryState is still APP_CLOSE, so
+                // the stale-entry reset is skipped and the NOTIFICATION_CLICK set here lingers —
+                // mis-attributing the next organic launch as a direct notification session. Running in
+                // finally guarantees the trampoline is always dismissed even when init fails or
+                // processing throws (suspendifyWithCompletion catches and logs exceptions).
+                runOnUiThread {
+                    AndroidUtils.finishSafely(this)
+                }
             }
         }
     }
