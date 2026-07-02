@@ -12,8 +12,14 @@
     <init>(...);
 }
 
+# Optional push providers are compileOnly in the SDK and referenced directly by the
+# provider-specific registrators. A consuming app only bundles the provider(s) it targets, so the
+# others are absent at R8 time: Huawei-only apps exclude com.google.firebase:firebase-messaging
+# (removing com.google.firebase.**, referenced from PushRegistratorFCM), just as GMS apps omit HMS
+# (com.huawei.**) and ADM (com.amazon.**). Suppress the missing-class errors for all three.
 -dontwarn com.huawei.**
 -dontwarn com.amazon.**
+-dontwarn com.google.firebase.**
 
 # ADM handlers are instantiated by name from the app manifest AND their on* lifecycle callbacks
 # (onMessage/onRegistered/onRegistrationError/onUnregistered) are invoked by the ADM framework, not
