@@ -4,8 +4,14 @@ import com.onesignal.common.threading.OneSignalDispatchers
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.features.IFeatureManager
 import com.onesignal.core.internal.startup.IStartableService
+import com.onesignal.debug.internal.logging.logger.LoggerModuleSwitch
+import com.onesignal.debug.internal.logging.logger.android.AndroidLogger
+import com.onesignal.debug.internal.logging.logger.android.FileLogStore
+import com.onesignal.debug.internal.logging.logger.android.OneSignalLogHttpSender
+import com.onesignal.debug.internal.logging.logger.android.createAndroidLoggerPlatformProvider
 import com.onesignal.debug.internal.logging.otel.android.AndroidOtelLogger
 import com.onesignal.debug.internal.logging.otel.android.createAndroidOtelPlatformProvider
+import com.onesignal.logger.LoggerFactory
 import com.onesignal.otel.OtelFactory
 import com.onesignal.otel.crash.OtelCrashUploader
 
@@ -34,7 +40,7 @@ internal class OneSignalCrashUploaderWrapper(
     private val applicationService: IApplicationService,
     private val featureManager: IFeatureManager,
 ) : IStartableService {
-    private val uploader: OtelCrashUploader by lazy {
+    private val otelUploader: OtelCrashUploader by lazy {
         // Create Android-specific platform provider (injects Android values + a FeatureManager
         // supplier that resolves to the constructor-injected manager on each access).
         val platformProvider = createAndroidOtelPlatformProvider(
@@ -46,12 +52,23 @@ internal class OneSignalCrashUploaderWrapper(
         OtelFactory.createCrashUploader(platformProvider, logger)
     }
 
+    private val loggerUploader by lazy {
+        val platformProvider = createAndroidLoggerPlatformProvider(applicationService.appContext) { featureManager }
+        val remote = LoggerFactory.createRemoteTelemetry(platformProvider, OneSignalLogHttpSender())
+        val fileStore = FileLogStore(platformProvider.crashStoragePath)
+        LoggerFactory.createCrashUploader(platformProvider, remote, fileStore, AndroidLogger())
+    }
+
     @Suppress("TooGenericExceptionCaught")
     override fun start() {
         if (!OtelSdkSupport.isSupported) return
         OneSignalDispatchers.launchOnIO {
             try {
-                uploader.start()
+                if (LoggerModuleSwitch.USE_LOGGER_MODULE) {
+                    loggerUploader.start()
+                } else {
+                    otelUploader.start()
+                }
             } catch (t: Throwable) {
                 com.onesignal.debug.internal.logging.Logging.warn(
                     "OneSignal: Crash uploader failed to start: ${t.message}",

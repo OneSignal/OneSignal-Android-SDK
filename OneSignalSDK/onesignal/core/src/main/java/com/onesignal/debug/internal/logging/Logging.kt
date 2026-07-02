@@ -6,6 +6,8 @@ import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.debug.ILogListener
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.OneSignalLogEvent
+import com.onesignal.logger.ILogTelemetryRemote
+import com.onesignal.logger.LogLoggingHelper
 import com.onesignal.otel.IOtelOpenTelemetryRemote
 import com.onesignal.otel.OtelLoggingHelper
 import kotlinx.coroutines.CoroutineScope
@@ -50,6 +52,29 @@ object Logging {
     ) {
         otelRemoteTelemetry = telemetry
         shouldSendLogLevel = shouldSend
+    }
+
+    /**
+     * Optional `logger` module remote telemetry. This is the OpenTelemetry-free
+     * replacement for [otelRemoteTelemetry]; only one of the two is wired at a time
+     * (see LoggerModuleSwitch). Set this when remote logging is enabled via the
+     * logger module.
+     */
+    @Volatile
+    private var loggerRemoteTelemetry: ILogTelemetryRemote? = null
+
+    @Volatile
+    private var shouldSendLoggerLogLevel: (LogLevel) -> Boolean = { false }
+
+    /**
+     * Sets the `logger` module remote telemetry instance and log level check function.
+     */
+    fun setLoggerTelemetry(
+        telemetry: ILogTelemetryRemote?,
+        shouldSend: (LogLevel) -> Boolean = { false },
+    ) {
+        loggerRemoteTelemetry = telemetry
+        shouldSendLoggerLogLevel = shouldSend
     }
 
     // Coroutine scope for async Otel logging (non-blocking)
@@ -132,6 +157,7 @@ object Logging {
         showVisualLogging(level, fullMessage, throwable)
         callLogListeners(level, fullMessage, throwable)
         logToOtel(level, fullMessage, throwable)
+        logToLogger(level, fullMessage, throwable)
     }
 
     private fun logToLogcat(
@@ -231,6 +257,37 @@ object Logging {
             } catch (t: Throwable) {
                 // Don't log Otel errors to Otel (would cause infinite loop)
                 android.util.Log.e(TAG, "Failed to log to Otel: ${t.message}", t)
+            }
+        }
+    }
+
+    /**
+     * Logs to the `logger` module remote telemetry if enabled. Non-blocking, mirrors
+     * [logToOtel]. Only one of the otel/logger sinks is active at a time.
+     */
+    @Suppress("TooGenericExceptionCaught", "ReturnCount")
+    private fun logToLogger(
+        level: LogLevel,
+        message: String,
+        throwable: Throwable?,
+    ) {
+        val telemetry = loggerRemoteTelemetry ?: return
+
+        if (level == LogLevel.NONE) return
+        if (!shouldSendLoggerLogLevel(level)) return
+
+        otelLoggingScope.launch {
+            try {
+                LogLoggingHelper.log(
+                    telemetry = telemetry,
+                    level = level.name,
+                    message = message,
+                    exceptionType = throwable?.javaClass?.name,
+                    exceptionMessage = throwable?.message,
+                    exceptionStacktrace = throwable?.stackTraceToString(),
+                )
+            } catch (t: Throwable) {
+                android.util.Log.e(TAG, "Failed to log to logger module: ${t.message}", t)
             }
         }
     }

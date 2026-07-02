@@ -1,0 +1,90 @@
+plugins {
+    id 'org.jetbrains.kotlin.multiplatform'
+    id 'com.android.library'
+    id 'org.jetbrains.kotlin.plugin.serialization'
+    id 'com.diffplug.spotless'
+}
+
+// Kotlin Multiplatform "logger" module.
+//
+// This is the platform-agnostic, OpenTelemetry-free replacement for the `otel`
+// module. ALL logic lives in `commonMain` (pure Kotlin, no Android or JVM-only
+// OpenTelemetry types) so the exact same pipeline can be shared with the iOS SDK.
+//
+// The module deliberately follows the same decoupled shape as `otel`:
+//   - platform values are injected via ILoggerPlatformProvider
+//   - logging is injected via ILogger
+//   - HTTP and file IO are injected via ILogHttpSender / ILogFileStore
+//   - everything is composed through LoggerFactory
+// This keeps the module honest about its dependencies (i.e. "not so easy to use")
+// while making the eventual core swap from `otel` -> `logger` near-mechanical.
+
+kotlin {
+    androidTarget {
+        compilations.all {
+            kotlinOptions {
+                jvmTarget = '1.8'
+            }
+        }
+    }
+
+    // iOS targets — these make the module genuinely multiplatform. They are not
+    // compiled by the Android build (Android tasks only touch the android target),
+    // so they don't block the Android swap-and-test goal.
+    iosX64()
+    iosArm64()
+    iosSimulatorArm64()
+
+    sourceSets {
+        commonMain {
+            dependencies {
+                implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutinesVersion"
+                implementation "org.jetbrains.kotlinx:kotlinx-serialization-json:$kotlinxSerializationJsonVersion"
+            }
+        }
+        commonTest {
+            dependencies {
+                implementation kotlin('test')
+                implementation "org.jetbrains.kotlinx:kotlinx-coroutines-test:$coroutinesVersion"
+                implementation "org.jetbrains.kotlinx:kotlinx-serialization-json:$kotlinxSerializationJsonVersion"
+            }
+        }
+    }
+}
+
+android {
+    namespace 'com.onesignal.logger'
+    compileSdkVersion rootProject.buildVersions.compileSdkVersion
+
+    defaultConfig {
+        // Matches the `otel` module. Runtime callers gate usage on SDK level the
+        // same way `otel` does, so consuming modules (min 21) override the merge.
+        minSdkVersion 26
+    }
+
+    // Must mirror the build types declared by consuming modules (e.g. :core) so
+    // Gradle variant matching can resolve this module for every variant.
+    buildTypes {
+        original {
+            minifyEnabled false
+        }
+        release {
+            minifyEnabled false
+        }
+        unity {
+            minifyEnabled false
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+}
+
+ext {
+    projectName = "OneSignal SDK Logger"
+    projectDescription = "OneSignal SDK - Multiplatform logging/telemetry module"
+}
+
+apply from: '../spotless.gradle'

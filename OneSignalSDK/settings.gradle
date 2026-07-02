@@ -16,6 +16,7 @@ gradle.rootProject {
                 substitute(module('com.onesignal:location')).using(project(':OneSignal:location'))
                 substitute(module('com.onesignal:in-app-messages')).using(project(':OneSignal:in-app-messages'))
                 substitute(module('com.onesignal:otel')).using(project(':OneSignal:otel'))
+                substitute(module('com.onesignal:logger')).using(project(':OneSignal:logger'))
             }
         }
     }
@@ -32,3 +33,4 @@ include ':OneSignal:location'
 include ':OneSignal:notifications'
 include ':OneSignal:testhelpers'
 include ':OneSignal:otel'
+include ':OneSignal:logger'
