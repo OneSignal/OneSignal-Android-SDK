@@ -15,10 +15,11 @@
 -dontwarn com.huawei.**
 -dontwarn com.amazon.**
 
-# ADM entry points are referenced by name from the app manifest and reflectively resolved; keep their
-# constructors so ADM can instantiate them.
--keep public class com.onesignal.notifications.services.ADMMessageHandler { <init>(...); }
--keep public class com.onesignal.notifications.services.ADMMessageHandlerJob { <init>(...); }
+# ADM handlers are instantiated by name from the app manifest AND their on* lifecycle callbacks
+# (onMessage/onRegistered/onRegistrationError/onUnregistered) are invoked by the ADM framework, not
+# the SDK, so keep both constructors and those methods. (Amazon-device-only path, untestable in CI.)
+-keep public class com.onesignal.notifications.services.ADMMessageHandler { <init>(...); void on*(...); }
+-keep public class com.onesignal.notifications.services.ADMMessageHandlerJob { <init>(...); void on*(...); }
 
 # Legacy v4 job shim is referenced by name (older scheduled jobs); keep its constructors.
 -keep class com.onesignal.JobIntentService$* { <init>(...); }

@@ -16,6 +16,15 @@
     *** is*();
 }
 
+# Enum constants are looked up by name via valueOf/enumValueOf against server-supplied strings
+# (e.g. Model.getOptEnumProperty -> ConfigModel.logLevel from remote-params JSON). Their names must
+# survive obfuscation, so keep enum fields and the synthetic values()/valueOf(String) methods.
+-keepclassmembers enum com.onesignal.** {
+    <fields>;
+    public static **[] values();
+    public static ** valueOf(java.lang.String);
+}
+
 # Optional feature modules are loaded by fully-qualified name (OneSignalImp loads them via
 # Class.forName(...).newInstance()), so the name must be preserved and a no-arg constructor kept.
 -keep class ** implements com.onesignal.common.modules.IModule {
