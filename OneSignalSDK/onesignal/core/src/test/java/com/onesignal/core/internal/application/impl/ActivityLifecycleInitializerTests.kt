@@ -17,10 +17,10 @@ import io.mockk.verifyOrder
  *
  * Intentionally self-contained (does NOT use IOMockHelper). It only needs prewarm() stubbed to a
  * no-op so the real prewarm daemon isn't spawned. It must NOT install IOMockHelper's global
- * launchOn*/suspendify* stubs: this spec sorts lexicographically before sibling specs such as
- * BackgroundManagerTests, and those stubs would leak into the shared OneSignalDispatchers object
- * mock and run dispatched blocks inline in the next spec. Stubbing only prewarm() keeps the leak
- * surface empty.
+ * launchOnSerialIO and suspendify stubs: this spec sorts lexicographically before sibling specs
+ * such as BackgroundManagerTests, and those stubs would leak into the shared OneSignalDispatchers
+ * object mock and run dispatched blocks inline in the next spec. Stubbing only prewarm() keeps the
+ * leak surface empty.
  */
 class ActivityLifecycleInitializerTests : FunSpec({
     beforeTest {
