@@ -230,11 +230,12 @@ internal class OtelAnrDetector(
      *
      * Android raises no ANR for a backgrounded app, so this is not a user-visible crash. We route it
      * through the same retained, disk-buffered crash telemetry as [reportAnr] (so it survives
-     * regardless of the remote log level and stays queryable), but tag it with a distinct exception
-     * type — [BackgroundMainThreadBlockException] — so the backend segments it into its own stream and
-     * keeps it out of the ANR/crash metric, exactly how ANRs are already segmented from crashes by
-     * type. The exception message carries a compact stack fingerprint (top frame + first OneSignal
-     * frame) for triage. Like [reportAnr], only OneSignal-induced blocks are recorded.
+     * regardless of the remote log level and stays queryable), but via [IOtelCrashReporter.saveNonFatal]
+     * so it is emitted at a non-fatal severity and tagged non-fatal — keeping it out of any
+     * severity-based crash/ANR metric rather than relying on the exception type alone. It is also
+     * given a distinct exception type — [BackgroundMainThreadBlockException] — so it can be segmented
+     * into its own stream, and the exception message carries a compact stack fingerprint (top frame +
+     * first OneSignal frame) for triage. Like [reportAnr], only OneSignal-induced blocks are recorded.
      */
     @Suppress("TooGenericExceptionCaught")
     private fun reportBackgroundBlock(unresponsiveDurationMs: Long) {
@@ -253,7 +254,7 @@ internal class OtelAnrDetector(
             )
 
             runBlocking {
-                crashReporter.saveCrash(mainThread, blockException)
+                crashReporter.saveNonFatal(mainThread, blockException)
             }
 
             logger.info("$TAG: ✅ Background block warning recorded")
