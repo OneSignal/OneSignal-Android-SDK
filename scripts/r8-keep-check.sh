@@ -56,18 +56,26 @@ THIRD_PARTY_PREFIXES="$(
 )"
 
 # Normalize the raw seeds into the stable, high-signal set we diff:
-#  - member-level seeds only (lines with ": ") -- these are the constructors / getters / enum
-#    constants / methods that keep rules protect; a dropped keep shows up as a missing member here.
+#  - METHOD seeds only. A seed line is "owner: member"; a method member has a return type before
+#    its name (so it contains a space) and an argument list (so it contains "("). This deliberately
+#    excludes constructors ("Owner(...)": name only, no return type) and fields/enum-constants
+#    ("Type NAME": no "("). Those categories are subject to host-dependent R8 behavior -- Kotlin
+#    default-arg / DefaultConstructorMarker constructor synthesis and enum unboxing differ between
+#    build hosts -- and were the sole cause of macOS-vs-Linux baseline drift. Name-matched method
+#    seeds are deterministic and are what the reflective keeps we care about actually protect
+#    (GoogleApiClient.connect/disconnect/blockingConnect, Model getters, the NSE callback).
 #  - owned by com.onesignal.* (the SDK) or one of the reflectively-kept third-party classes.
 #  - excluding com.onesignal.example.* (the demo app's own code, not the SDK under test).
-#  - excluding anonymous/lambda owners (a '$' followed by a digit) whose R8 numbering churns on
-#    unrelated code changes and would make the baseline noisy.
+#  - excluding anonymous/lambda owners (a '$' followed by a digit) whose R8 numbering churns.
 normalize() {
   awk -v tp="$THIRD_PARTY_PREFIXES" '
     BEGIN { n = split(tp, arr, "\n") }
     index($0, ": ") == 0 { next }
     {
       owner = $0; sub(/: .*/, "", owner)
+      member = $0; sub(/^[^:]*: /, "", member)
+      if (index(member, "(") == 0) next
+      if (index(member, " ") == 0) next
       if (owner ~ /^com\.onesignal\.example/) next
       if (owner ~ /\$[0-9]/) next
       keep = 0
