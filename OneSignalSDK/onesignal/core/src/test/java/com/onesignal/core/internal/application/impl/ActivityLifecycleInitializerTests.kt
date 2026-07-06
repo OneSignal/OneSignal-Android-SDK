@@ -3,22 +3,34 @@ package com.onesignal.core.internal.application.impl
 import android.app.Application
 import android.content.Context
 import com.onesignal.common.threading.OneSignalDispatchers
-import com.onesignal.mocks.IOMockHelper
 import io.kotest.core.spec.style.FunSpec
-import io.mockk.clearMocks
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.mockkObject
+import io.mockk.unmockkObject
 import io.mockk.verify
 import io.mockk.verifyOrder
 
+/**
+ * Verifies ActivityLifecycleInitializer.create() prewarms OneSignalDispatchers at process start,
+ * before it registers activity lifecycle callbacks.
+ *
+ * Intentionally self-contained (does NOT use IOMockHelper). It only needs prewarm() stubbed to a
+ * no-op so the real prewarm daemon isn't spawned. It must NOT install IOMockHelper's global
+ * launchOn*/suspendify* stubs: this spec sorts lexicographically before sibling specs such as
+ * BackgroundManagerTests, and those stubs would leak into the shared OneSignalDispatchers object
+ * mock and run dispatched blocks inline in the next spec. Stubbing only prewarm() keeps the leak
+ * surface empty.
+ */
 class ActivityLifecycleInitializerTests : FunSpec({
-    listener(IOMockHelper)
+    beforeTest {
+        mockkObject(OneSignalDispatchers)
+        every { OneSignalDispatchers.prewarm() } returns Unit
+        resetSharedApplicationService()
+    }
 
-    beforeAny {
-        // IOMockHelper owns the OneSignalDispatchers object mock and stubs prewarm() to a no-op.
-        // Clear only recorded calls so this spec verifies initializer ordering without spawning the
-        // real OneSignal-prewarm daemon thread.
-        clearMocks(OneSignalDispatchers, answers = false)
+    afterTest {
+        unmockkObject(OneSignalDispatchers)
         resetSharedApplicationService()
     }
 
