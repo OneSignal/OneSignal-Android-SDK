@@ -90,10 +90,8 @@ class NotificationOpenedActivityTest : FunSpec({
         activity.wasProcessIntentCalled shouldBe true
     }
 
-    // Ordering guard (not the SDK-4845 regression itself): the trampoline must not be finished by
-    // the synchronous part of processIntent, and on the success path finish() must run only after
-    // processFromContext (preserving the Xiaomi startActivity()-before-finish() ordering).
-    // suspendifyOnDefault is stubbed to capture (not run) its block so we control when it executes.
+    // Ordering guard: finish() must run only after processFromContext, never from the synchronous
+    // part of processIntent. suspendifyOnDefault is captured (not run) so we control when it executes.
     test("finishes the base trampoline only after open processing completes") {
         val serviceProvider = mockk<IServiceProvider>(relaxed = true)
         val processor = mockk<INotificationOpenedProcessor>(relaxed = true)
@@ -122,7 +120,7 @@ class NotificationOpenedActivityTest : FunSpec({
         }
     }
 
-    // Core SDK-4845 regression: the init-failure early-return path must still dismiss the trampoline.
+    // The init-failure early return must still dismiss the trampoline.
     test("always finishes the base trampoline even when initialization fails") {
         val serviceProvider = mockk<IServiceProvider>(relaxed = true)
         val processor = mockk<INotificationOpenedProcessor>(relaxed = true)
@@ -148,9 +146,8 @@ class NotificationOpenedActivityTest : FunSpec({
         }
     }
 
-    // Core SDK-4845 regression: when open processing throws, the trampoline must still be dismissed.
-    // The exception propagates (suspendifyWithCompletion catches/logs it in production), but the
-    // finally block must have finished the activity before it unwinds.
+    // When processing throws, the exception still propagates (production logs it via
+    // suspendifyWithCompletion), but the trampoline must be finished before it unwinds.
     test("always finishes the base trampoline even when open processing throws") {
         val serviceProvider = mockk<IServiceProvider>(relaxed = true)
         val processor = mockk<INotificationOpenedProcessor>(relaxed = true)

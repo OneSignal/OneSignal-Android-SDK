@@ -70,9 +70,8 @@ abstract class NotificationOpenedActivityBase :
                 // startActivity() must be called BEFORE finish(), otherwise
                 // the app is never foregrounded.
             } finally {
-                // Finish in finally, on the main thread, so the trampoline is always dismissed —
-                // including when init fails, we early-return, or processing throws. Running after
-                // processing (not before) preserves the Xiaomi startActivity()-before-finish() ordering.
+                // Always dismiss the trampoline, even if init fails or processing throws.
+                // Finishing after processing (not before) keeps the app foregrounding correctly on Xiaomi.
                 runOnUiThread {
                     AndroidUtils.finishSafely(this)
                 }
