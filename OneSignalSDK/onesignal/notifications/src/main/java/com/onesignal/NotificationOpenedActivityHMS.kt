@@ -30,6 +30,7 @@ package com.onesignal
 import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
+import com.onesignal.common.AndroidUtils
 import com.onesignal.common.threading.OneSignalDispatchers
 import com.onesignal.common.threading.suspendifyOnDefault
 import com.onesignal.core.internal.application.OneSignalInternalActivity
@@ -75,22 +76,29 @@ class NotificationOpenedActivityHMS :
     }
 
     private fun processIntent() {
-        processOpen(intent)
-        finish()
-    }
-
-    private fun processOpen(intent: Intent?) {
         // HMS notification-open trampoline runs on the main thread and can cold-start the process;
         // warm dispatchers before the first suspendifyOnDefault dispatch.
         OneSignalDispatchers.prewarm()
         suspendifyOnDefault {
-            if (!OneSignal.initWithContext(applicationContext)) {
-                return@suspendifyOnDefault
-            }
+            try {
+                if (!OneSignal.initWithContext(applicationContext)) {
+                    return@suspendifyOnDefault
+                }
 
-            val notificationPayloadProcessorHMS = OneSignal.getService<INotificationOpenedProcessorHMS>()
-            val self = this
-            notificationPayloadProcessorHMS.handleHMSNotificationOpenIntent(self, intent)
+                val notificationPayloadProcessorHMS = OneSignal.getService<INotificationOpenedProcessorHMS>()
+                notificationPayloadProcessorHMS.handleHMSNotificationOpenIntent(this, intent)
+            } finally {
+                // Finish only after the open is fully processed (or an early return / failure),
+                // on the main thread. Finishing synchronously (before this background work) lets the
+                // trampoline's onStop reach ApplicationService while entryState is still APP_CLOSE, so
+                // the stale-entry reset is skipped and the NOTIFICATION_CLICK set here lingers —
+                // mis-attributing the next organic launch as a direct notification session. Running in
+                // finally guarantees the trampoline is always dismissed even when init fails or
+                // processing throws (suspendifyWithCompletion catches and logs exceptions).
+                runOnUiThread {
+                    AndroidUtils.finishSafely(this)
+                }
+            }
         }
     }
 }
