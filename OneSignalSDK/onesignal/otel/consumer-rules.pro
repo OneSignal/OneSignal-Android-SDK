@@ -10,7 +10,8 @@
 # transitive opentelemetry-bom, removed internal classes (e.g. io.opentelemetry.api.internal.ApiUsageLogger)
 # leave dangling references from the unused opentelemetry-api-incubator alpha (ExtendedDefaultTracer).
 # R8 suppresses a "Missing class" diagnostic when the MISSING class matches -dontwarn, so match the
-# internal packages directly (referrer-independent). Keep the incubator rule too so warnings for
-# OneSignal's actively-used OTel classes (api.logs, sdk, exporter) still surface.
+# io.opentelemetry.api.internal package directly (referrer-independent). Scoped to api.internal (not a
+# broad **.internal.** wildcard) so genuine missing-class errors in the sdk/exporter internals that
+# OneSignal actively uses still surface. The incubator rule covers the unused ExtendedDefaultTracer path.
 -dontwarn io.opentelemetry.api.incubator.**
--dontwarn io.opentelemetry.**.internal.**
+-dontwarn io.opentelemetry.api.internal.**
