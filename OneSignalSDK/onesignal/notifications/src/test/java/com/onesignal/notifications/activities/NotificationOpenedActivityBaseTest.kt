@@ -1,18 +1,29 @@
 package com.onesignal.notifications.activities
 
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
+import com.onesignal.OneSignal
+import com.onesignal.common.services.IServiceProvider
 import com.onesignal.common.threading.OneSignalDispatchers
 import com.onesignal.common.threading.suspendifyOnDefault
 import com.onesignal.mocks.IOMockHelper
+import com.onesignal.notifications.internal.open.INotificationOpenedProcessor
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.mockk.clearMocks
+import io.mockk.coEvery
+import io.mockk.coVerify
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.mockkObject
+import io.mockk.unmockkObject
 import io.mockk.verify
 import io.mockk.verifyOrder
+import kotlinx.coroutines.runBlocking
 import org.robolectric.Robolectric
 import org.robolectric.shadows.ShadowLooper
 
@@ -77,5 +88,59 @@ class NotificationOpenedActivityTest : FunSpec({
         val activity = controller.setup().get()
 
         activity.wasProcessIntentCalled shouldBe true
+    }
+
+    // Regression for SDK-4845: the base/GMS trampoline must always be finished after processing,
+    // and must not be finished before processing runs. suspendifyOnDefault is stubbed to capture
+    // (not run) its block so we can control exactly when the coroutine body executes.
+    test("does not finish the base trampoline until after open processing runs") {
+        val serviceProvider = mockk<IServiceProvider>(relaxed = true)
+        val processor = mockk<INotificationOpenedProcessor>(relaxed = true)
+        every { serviceProvider.getService(INotificationOpenedProcessor::class.java) } returns processor
+        mockkObject(OneSignal)
+        try {
+            every { OneSignal.services } returns serviceProvider
+            coEvery { OneSignal.initWithContext(any<Context>()) } returns true
+
+            var capturedBlock: (suspend () -> Unit)? = null
+            every { suspendifyOnDefault(any()) } answers { capturedBlock = firstArg() }
+
+            val activity = Robolectric.buildActivity(TestNotificationOpenedActivity::class.java).setup().get()
+
+            // The synchronous part of processIntent must NOT finish the activity or run processing yet.
+            activity.isFinishing shouldBe false
+            coVerify(exactly = 0) { processor.processFromContext(any(), any()) }
+
+            runBlocking { capturedBlock!!.invoke() }
+
+            coVerify(exactly = 1) { processor.processFromContext(activity, any()) }
+            activity.isFinishing shouldBe true
+        } finally {
+            unmockkObject(OneSignal)
+        }
+    }
+
+    test("always finishes the base trampoline even when initialization fails") {
+        val serviceProvider = mockk<IServiceProvider>(relaxed = true)
+        val processor = mockk<INotificationOpenedProcessor>(relaxed = true)
+        every { serviceProvider.getService(INotificationOpenedProcessor::class.java) } returns processor
+        mockkObject(OneSignal)
+        try {
+            every { OneSignal.services } returns serviceProvider
+            coEvery { OneSignal.initWithContext(any<Context>()) } returns false
+
+            var capturedBlock: (suspend () -> Unit)? = null
+            every { suspendifyOnDefault(any()) } answers { capturedBlock = firstArg() }
+
+            val activity = Robolectric.buildActivity(TestNotificationOpenedActivity::class.java).setup().get()
+
+            runBlocking { capturedBlock!!.invoke() }
+
+            // Early return on init failure must still dismiss the trampoline via the finally block.
+            coVerify(exactly = 0) { processor.processFromContext(any(), any()) }
+            activity.isFinishing shouldBe true
+        } finally {
+            unmockkObject(OneSignal)
+        }
     }
 })

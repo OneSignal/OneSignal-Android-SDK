@@ -58,21 +58,24 @@ abstract class NotificationOpenedActivityBase :
         // warm dispatchers before the first suspendifyOnDefault dispatch.
         OneSignalDispatchers.prewarm()
         suspendifyOnDefault {
-            if (!OneSignal.initWithContext(applicationContext)) {
-                return@suspendifyOnDefault
-            }
+            try {
+                if (!OneSignal.initWithContext(applicationContext)) {
+                    return@suspendifyOnDefault
+                }
 
-            val openedProcessor = OneSignal.getService<INotificationOpenedProcessor>()
-            openedProcessor.processFromContext(this, intent)
-            // KEEP: Xiaomi Compatibility:
-            // Must keep this Activity alive while trampolining, that is
-            // startActivity() must be called BEFORE finish(), otherwise
-            // the app is never foregrounded.
-
-            // Safely finish the activity on the main thread after processing is complete.
-            // This gives the system enough time to complete rendering before closing the Trampoline activity.
-            runOnUiThread {
-                AndroidUtils.finishSafely(this)
+                val openedProcessor = OneSignal.getService<INotificationOpenedProcessor>()
+                openedProcessor.processFromContext(this, intent)
+                // KEEP: Xiaomi Compatibility:
+                // Must keep this Activity alive while trampolining, that is
+                // startActivity() must be called BEFORE finish(), otherwise
+                // the app is never foregrounded.
+            } finally {
+                // Finish in finally, on the main thread, so the trampoline is always dismissed —
+                // including when init fails, we early-return, or processing throws. Running after
+                // processing (not before) preserves the Xiaomi startActivity()-before-finish() ordering.
+                runOnUiThread {
+                    AndroidUtils.finishSafely(this)
+                }
             }
         }
     }
