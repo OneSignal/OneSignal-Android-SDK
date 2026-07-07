@@ -1005,6 +1005,112 @@ class InAppMessagesManagerTests : FunSpec({
     }
 
     context("Message Queue and Display") {
+        // Backs the InAppStateService mock with real state so the paused setter and the
+        // display flow (which reads/writes paused and inAppMessageIdShowing) behave like production.
+        fun statefulInAppState(initiallyPaused: Boolean) {
+            var pausedState = initiallyPaused
+            var showingId: String? = null
+            every { mocks.inAppStateService.paused } answers { pausedState }
+            every { mocks.inAppStateService.paused = any() } answers { pausedState = firstArg() }
+            every { mocks.inAppStateService.inAppMessageIdShowing } answers { showingId }
+            every { mocks.inAppStateService.inAppMessageIdShowing = any() } answers { showingId = firstArg() }
+        }
+
+        test("message queued while paused displays on unpause when triggers still evaluate true") {
+            // Given
+            val message = mocks.createInAppMessage()
+            statefulInAppState(initiallyPaused = true)
+            every { mocks.userManager.onesignalId } returns "onesignal-id"
+            every { mocks.applicationService.isInForeground } returns true
+            every { mocks.pushSubscription.id } returns "subscription-id"
+            every { mocks.triggerController.evaluateMessageTriggers(message) } returns true
+            every { mocks.triggerController.isTriggerOnMessage(any(), any()) } returns false
+            every { mocks.triggerController.messageHasOnlyDynamicTriggers(any()) } returns false
+            coEvery { mocks.applicationService.waitUntilSystemConditionsAvailable() } returns true
+            coEvery { mocks.backend.listInAppMessages(any(), any(), any(), any()) } returns listOf(message)
+            coEvery { mocks.inAppDisplayer.displayMessage(any()) } returns true
+
+            // Fetch while paused - message qualifies and is queued but blocked from display
+            mocks.inAppMessagesManager.onSessionStarted()
+            awaitIO()
+            coVerify(exactly = 0) { mocks.inAppDisplayer.displayMessage(any()) }
+
+            // When
+            mocks.inAppMessagesManager.paused = false
+            awaitIO()
+
+            // Then
+            coVerify(exactly = 1) { mocks.inAppDisplayer.displayMessage(message) }
+        }
+
+        test("message queued while paused does not display on unpause when triggers no longer evaluate true") {
+            // Given
+            val message = mocks.createInAppMessage()
+            statefulInAppState(initiallyPaused = true)
+            every { mocks.userManager.onesignalId } returns "onesignal-id"
+            every { mocks.applicationService.isInForeground } returns true
+            every { mocks.pushSubscription.id } returns "subscription-id"
+            every { mocks.triggerController.evaluateMessageTriggers(message) } returns true
+            every { mocks.triggerController.isTriggerOnMessage(any(), any()) } returns false
+            every { mocks.triggerController.messageHasOnlyDynamicTriggers(any()) } returns false
+            coEvery { mocks.applicationService.waitUntilSystemConditionsAvailable() } returns true
+            coEvery { mocks.backend.listInAppMessages(any(), any(), any(), any()) } returns listOf(message)
+            coEvery { mocks.inAppDisplayer.displayMessage(any()) } returns true
+
+            // Fetch while paused - message qualifies and is queued but blocked from display
+            mocks.inAppMessagesManager.onSessionStarted()
+            awaitIO()
+
+            // Trigger conditions change while still paused so the queued message no longer qualifies
+            every { mocks.triggerController.evaluateMessageTriggers(message) } returns false
+
+            // When
+            mocks.inAppMessagesManager.paused = false
+            awaitIO()
+
+            // Then - stale queued message is pruned, not displayed
+            coVerify(exactly = 0) { mocks.inAppDisplayer.displayMessage(any()) }
+
+            // And the message is not lost: it displays once its triggers evaluate true again
+            every { mocks.triggerController.evaluateMessageTriggers(message) } returns true
+            mocks.inAppMessagesManager.onTriggerChanged("some-trigger")
+            awaitIO()
+            coVerify(exactly = 1) { mocks.inAppDisplayer.displayMessage(message) }
+        }
+
+        test("message displays mid-session when trigger is satisfied after unpausing") {
+            // Reproduces the reported scenario: Paused = false is set first, then the
+            // qualifying trigger is added - the message must display without a new session.
+            // Given
+            val message = mocks.createInAppMessage()
+            statefulInAppState(initiallyPaused = true)
+            every { mocks.userManager.onesignalId } returns "onesignal-id"
+            every { mocks.applicationService.isInForeground } returns true
+            every { mocks.pushSubscription.id } returns "subscription-id"
+            every { mocks.triggerController.evaluateMessageTriggers(message) } returns false
+            every { mocks.triggerController.isTriggerOnMessage(any(), any()) } returns false
+            every { mocks.triggerController.messageHasOnlyDynamicTriggers(any()) } returns false
+            coEvery { mocks.applicationService.waitUntilSystemConditionsAvailable() } returns true
+            coEvery { mocks.backend.listInAppMessages(any(), any(), any(), any()) } returns listOf(message)
+            coEvery { mocks.inAppDisplayer.displayMessage(any()) } returns true
+
+            // Fetch while paused - message does not qualify yet
+            mocks.inAppMessagesManager.onSessionStarted()
+            awaitIO()
+
+            // When - unpause first (nothing qualifies yet), then the trigger becomes satisfied
+            mocks.inAppMessagesManager.paused = false
+            awaitIO()
+            coVerify(exactly = 0) { mocks.inAppDisplayer.displayMessage(any()) }
+
+            every { mocks.triggerController.evaluateMessageTriggers(message) } returns true
+            mocks.inAppMessagesManager.onTriggerChanged("view")
+            awaitIO()
+
+            // Then
+            coVerify(exactly = 1) { mocks.inAppDisplayer.displayMessage(message) }
+        }
+
         test("messages are not queued when paused") {
             // Given
             val message = mocks.createInAppMessage()

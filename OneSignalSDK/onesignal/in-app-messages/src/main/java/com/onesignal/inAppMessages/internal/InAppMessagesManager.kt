@@ -189,7 +189,14 @@ internal class InAppMessagesManager(
 
             if (!value) {
                 suspendifyOnDefault {
+                    // Messages queued while paused are parked in the display queue. Unpausing
+                    // should only resume delivery for messages whose triggers currently evaluate
+                    // true, so drop stale entries before re-evaluating and draining the queue.
+                    messageDisplayQueueMutex.withLock {
+                        messageDisplayQueue.removeAll { !_triggerController.evaluateMessageTriggers(it) }
+                    }
                     evaluateInAppMessages()
+                    attemptToShowInAppMessage()
                 }
             }
         }
