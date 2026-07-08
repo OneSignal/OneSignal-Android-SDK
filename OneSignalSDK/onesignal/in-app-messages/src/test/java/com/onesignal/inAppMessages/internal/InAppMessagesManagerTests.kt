@@ -129,13 +129,17 @@ private class Mocks {
     // Helper function to create InAppMessage with custom triggers (factory-style, returns new message each call)
     fun createInAppMessage(
         id: String = "test-message-${System.nanoTime()}", // Unique ID by default
-        triggers: List<Triple<String, String, String>> = emptyList() // List of (property, operator, value)
+        triggers: List<Triple<String, String, String>> = emptyList(), // List of (property, operator, value)
+        endTime: String? = null // ISO8601, e.g. "2000-01-01T00:00:00.000Z"
     ): InAppMessage {
         val json = JSONObject().apply {
             put("id", id)
             put("variants", JSONObject().apply {
                 put("all", JSONObject().apply { put("en", "variant-id-123") })
             })
+            if (endTime != null) {
+                put("end_time", endTime)
+            }
 
             if (triggers.isEmpty()) {
                 put("triggers", JSONArray())
@@ -173,6 +177,15 @@ private class Mocks {
             .first { it.name == "hasCompletedFirstFetch" }
         property.isAccessible = true
         return property.get(manager) as Boolean
+    }
+
+    // Helper function to access private messageDisplayQueue field for testing using Kotlin reflection
+    fun getMessageDisplayQueue(manager: InAppMessagesManager): MutableList<InAppMessage> {
+        val property = InAppMessagesManager::class.memberProperties
+            .first { it.name == "messageDisplayQueue" }
+        property.isAccessible = true
+        @Suppress("UNCHECKED_CAST")
+        return property.get(manager) as MutableList<InAppMessage>
     }
 
     // Helper function to create InAppMessagesManager with all dependencies
@@ -1076,6 +1089,31 @@ class InAppMessagesManagerTests : FunSpec({
             mocks.inAppMessagesManager.onTriggerChanged("some-trigger")
             awaitIO()
             coVerify(exactly = 1) { mocks.inAppDisplayer.displayMessage(message) }
+        }
+
+        test("message queued while paused does not display on unpause when its end time has passed") {
+            // Given
+            val expiredMessage = mocks.createInAppMessage(endTime = "2000-01-01T00:00:00.000Z")
+            val validMessage = mocks.createInAppMessage()
+            statefulInAppState(initiallyPaused = true)
+            every { mocks.triggerController.evaluateMessageTriggers(any()) } returns true
+            every { mocks.triggerController.isTriggerOnMessage(any(), any()) } returns false
+            every { mocks.triggerController.messageHasOnlyDynamicTriggers(any()) } returns false
+            coEvery { mocks.applicationService.waitUntilSystemConditionsAvailable() } returns true
+            coEvery { mocks.inAppDisplayer.displayMessage(any()) } returns true
+
+            // Both messages were queued before the end time passed. Evaluation never queues an
+            // already-expired message, so seed the queue directly to simulate expiry-while-paused.
+            mocks.getMessageDisplayQueue(mocks.inAppMessagesManager).add(expiredMessage)
+            mocks.getMessageDisplayQueue(mocks.inAppMessagesManager).add(validMessage)
+
+            // When
+            mocks.inAppMessagesManager.paused = false
+            awaitIO()
+
+            // Then - the expired message is pruned while the still-valid one displays
+            coVerify(exactly = 0) { mocks.inAppDisplayer.displayMessage(expiredMessage) }
+            coVerify(exactly = 1) { mocks.inAppDisplayer.displayMessage(validMessage) }
         }
 
         test("message displays mid-session when trigger is satisfied after unpausing") {
