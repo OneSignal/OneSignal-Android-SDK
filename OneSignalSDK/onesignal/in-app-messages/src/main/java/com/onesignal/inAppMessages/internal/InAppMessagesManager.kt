@@ -178,6 +178,7 @@ internal class InAppMessagesManager(
         get() = _state.paused
         set(value) {
             Logging.debug("InAppMessagesManager.setPaused(value: $value)")
+            val wasPaused = _state.paused
             _state.paused = value
 
             // If paused is true and an In-App Message is showing, dismiss it
@@ -187,7 +188,9 @@ internal class InAppMessagesManager(
                 }
             }
 
-            if (!value) {
+            // Only run the prune/evaluate/drain path on an actual paused -> unpaused
+            // transition; a redundant `paused = false` should not mutate the queue.
+            if (wasPaused && !value) {
                 suspendifyOnDefault {
                     // Messages queued while paused are parked in the display queue. Unpausing
                     // should only resume delivery for messages that are still eligible, so drop

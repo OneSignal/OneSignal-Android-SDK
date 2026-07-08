@@ -188,6 +188,15 @@ private class Mocks {
         return property.get(manager) as MutableList<InAppMessage>
     }
 
+    // Helper function to access private dismissedMessages field for testing using Kotlin reflection
+    fun getDismissedMessages(manager: InAppMessagesManager): MutableSet<String> {
+        val property = InAppMessagesManager::class.memberProperties
+            .first { it.name == "dismissedMessages" }
+        property.isAccessible = true
+        @Suppress("UNCHECKED_CAST")
+        return property.get(manager) as MutableSet<String>
+    }
+
     // Helper function to create InAppMessagesManager with all dependencies
     val inAppMessagesManager = InAppMessagesManager(
         applicationService,
@@ -1114,6 +1123,50 @@ class InAppMessagesManagerTests : FunSpec({
             // Then - the expired message is pruned while the still-valid one displays
             coVerify(exactly = 0) { mocks.inAppDisplayer.displayMessage(expiredMessage) }
             coVerify(exactly = 1) { mocks.inAppDisplayer.displayMessage(validMessage) }
+        }
+
+        test("message queued while paused does not display on unpause when it was dismissed") {
+            // Given
+            val dismissedMessage = mocks.createInAppMessage()
+            val validMessage = mocks.createInAppMessage()
+            statefulInAppState(initiallyPaused = true)
+            every { mocks.triggerController.evaluateMessageTriggers(any()) } returns true
+            every { mocks.triggerController.isTriggerOnMessage(any(), any()) } returns false
+            every { mocks.triggerController.messageHasOnlyDynamicTriggers(any()) } returns false
+            coEvery { mocks.applicationService.waitUntilSystemConditionsAvailable() } returns true
+            coEvery { mocks.inAppDisplayer.displayMessage(any()) } returns true
+
+            // Seed the queue directly to simulate a message that was queued while paused
+            // and then dismissed (e.g. via a preview or another surface) before unpausing.
+            mocks.getMessageDisplayQueue(mocks.inAppMessagesManager).add(dismissedMessage)
+            mocks.getMessageDisplayQueue(mocks.inAppMessagesManager).add(validMessage)
+            mocks.getDismissedMessages(mocks.inAppMessagesManager).add(dismissedMessage.messageId)
+
+            // When
+            mocks.inAppMessagesManager.paused = false
+            awaitIO()
+
+            // Then - the dismissed message is pruned while the still-valid one displays
+            coVerify(exactly = 0) { mocks.inAppDisplayer.displayMessage(dismissedMessage) }
+            coVerify(exactly = 1) { mocks.inAppDisplayer.displayMessage(validMessage) }
+        }
+
+        test("redundant paused = false assignment does not prune or drain the queue") {
+            // Given - already unpaused, with a queued message whose triggers no longer hold
+            val message = mocks.createInAppMessage()
+            statefulInAppState(initiallyPaused = false)
+            every { mocks.triggerController.evaluateMessageTriggers(message) } returns false
+            coEvery { mocks.applicationService.waitUntilSystemConditionsAvailable() } returns true
+            coEvery { mocks.inAppDisplayer.displayMessage(any()) } returns true
+            mocks.getMessageDisplayQueue(mocks.inAppMessagesManager).add(message)
+
+            // When - setting paused = false without a paused -> unpaused transition
+            mocks.inAppMessagesManager.paused = false
+            awaitIO()
+
+            // Then - the queue is untouched and nothing is displayed
+            mocks.getMessageDisplayQueue(mocks.inAppMessagesManager) shouldBe listOf(message)
+            coVerify(exactly = 0) { mocks.inAppDisplayer.displayMessage(any()) }
         }
 
         test("message displays mid-session when trigger is satisfied after unpausing") {
