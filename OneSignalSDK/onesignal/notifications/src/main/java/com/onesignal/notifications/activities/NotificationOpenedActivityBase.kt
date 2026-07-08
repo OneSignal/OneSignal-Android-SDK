@@ -58,21 +58,23 @@ abstract class NotificationOpenedActivityBase :
         // warm dispatchers before the first suspendifyOnDefault dispatch.
         OneSignalDispatchers.prewarm()
         suspendifyOnDefault {
-            if (!OneSignal.initWithContext(applicationContext)) {
-                return@suspendifyOnDefault
-            }
+            try {
+                if (!OneSignal.initWithContext(applicationContext)) {
+                    return@suspendifyOnDefault
+                }
 
-            val openedProcessor = OneSignal.getService<INotificationOpenedProcessor>()
-            openedProcessor.processFromContext(this, intent)
-            // KEEP: Xiaomi Compatibility:
-            // Must keep this Activity alive while trampolining, that is
-            // startActivity() must be called BEFORE finish(), otherwise
-            // the app is never foregrounded.
-
-            // Safely finish the activity on the main thread after processing is complete.
-            // This gives the system enough time to complete rendering before closing the Trampoline activity.
-            runOnUiThread {
-                AndroidUtils.finishSafely(this)
+                val openedProcessor = OneSignal.getService<INotificationOpenedProcessor>()
+                openedProcessor.processFromContext(this, intent)
+                // KEEP: Xiaomi Compatibility:
+                // Must keep this Activity alive while trampolining, that is
+                // startActivity() must be called BEFORE finish(), otherwise
+                // the app is never foregrounded.
+            } finally {
+                // Always dismiss the trampoline, even if init fails or processing throws.
+                // Finishing after processing (not before) keeps the app foregrounding correctly on Xiaomi.
+                runOnUiThread {
+                    AndroidUtils.finishSafely(this)
+                }
             }
         }
     }
