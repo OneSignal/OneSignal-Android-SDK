@@ -1,6 +1,10 @@
 # Amazon ADM is a compileOnly dependency; suppress missing-class warnings when the app omits it.
 -dontwarn com.amazon.**
 
+# ServiceRegistrationReflection.resolve matches constructors via genericParameterTypes
+# (e.g. List<IBackgroundService>). Keep Signature so R8 cannot strip that metadata.
+-keepattributes Signature
+
 # Service implementations are instantiated by reflectively selecting a constructor
 # (ServiceRegistrationReflection.resolve -> constructor.newInstance). The classes are retained via
 # ::class.java literals in the modules, so only their constructors need protecting here.
@@ -9,8 +13,8 @@
 }
 
 # Models are populated from JSON by matching getter method *names* via reflection
-# (Model.initializeFromJson looks up "get<Property>"/"is<Property>"). Getters must survive and keep
-# their names, so this must run without allowobfuscation.
+# (Model.initializeFromJson looks up "get<Property>"). Kotlin boolean properties also expose
+# is*() getters that must keep their names. No allowobfuscation.
 -keepclassmembers class * extends com.onesignal.common.modeling.Model {
     *** get*();
     *** is*();

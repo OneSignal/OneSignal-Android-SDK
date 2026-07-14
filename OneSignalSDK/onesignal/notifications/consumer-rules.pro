@@ -12,23 +12,24 @@
     <init>(...);
 }
 
-# Optional push providers are compileOnly in the SDK and referenced directly by the
-# provider-specific registrators. A consuming app only bundles the provider(s) it targets, so the
-# others are absent at R8 time: Huawei-only apps exclude com.google.firebase:firebase-messaging
-# (removing com.google.firebase.**, referenced from PushRegistratorFCM), just as GMS apps omit HMS
-# (com.huawei.**) and ADM (com.amazon.**). Suppress the missing-class errors for all three.
+# Optional / excludable push providers are referenced directly by the provider-specific
+# registrators. firebase-messaging is api (pulled in by default) but Huawei apps routinely
+# exclude it; play-services-base, HMS, and ADM are compileOnly. When a consuming app omits a
+# provider, those classes are absent at R8 time: Huawei-only apps drop firebase-messaging (and
+# typically have no Play services), so PushRegistratorFCM's com.google.firebase.** /
+# com.google.android.gms.tasks.** and GooglePlayServicesUpgradePrompt's
+# com.google.android.gms.common.** are missing; GMS apps omit HMS (com.huawei.**) and ADM
+# (com.amazon.**). Suppress the missing-class errors for all of them.
 -dontwarn com.huawei.**
 -dontwarn com.amazon.**
 -dontwarn com.google.firebase.**
+-dontwarn com.google.android.gms.**
 
 # ADM handlers are instantiated by name from the app manifest AND their on* lifecycle callbacks
 # (onMessage/onRegistered/onRegistrationError/onUnregistered) are invoked by the ADM framework, not
 # the SDK, so keep both constructors and those methods. (Amazon-device-only path, untestable in CI.)
 -keep public class com.onesignal.notifications.services.ADMMessageHandler { <init>(...); void on*(...); }
 -keep public class com.onesignal.notifications.services.ADMMessageHandlerJob { <init>(...); void on*(...); }
-
-# Legacy v4 job shim is referenced by name (older scheduled jobs); keep its constructors.
--keep class com.onesignal.JobIntentService$* { <init>(...); }
 
 # Notification service implementations are instantiated via reflective constructor selection
 # (ServiceRegistrationReflection). Keep only their constructors.

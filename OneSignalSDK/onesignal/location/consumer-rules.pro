@@ -4,6 +4,12 @@
     <init>(...);
 }
 
+# GMS and HMS location libraries are compileOnly; LocationModule references both
+# GmsLocationController and HmsLocationController directly, so an app that ships only one
+# provider will see the other's classes as missing at R8 time.
+-dontwarn com.google.android.gms.**
+-dontwarn com.huawei.**
+
 # GoogleApiClientCompatProxy invokes these GMS methods reflectively by string name (for
 # compatibility across Google Play services versions), so their names must be preserved.
 -keepclassmembers class com.google.android.gms.common.api.GoogleApiClient {

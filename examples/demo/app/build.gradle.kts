@@ -99,9 +99,6 @@ android {
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
-                // Emits R8 seeds/config so CI can diff kept consumer members against a baseline
-                // and catch a reflectively-referenced keep being silently dropped.
-                "proguard-r8-report.pro"
             )
         }
         debug {
