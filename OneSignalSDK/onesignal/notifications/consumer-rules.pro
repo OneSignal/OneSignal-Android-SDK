@@ -49,3 +49,9 @@
 -keep class * extends androidx.work.InputMerger {
     public <init>();
 }
+
+# Room resolves WorkManager's generated database implementation by name and invokes its no-arg
+# constructor reflectively. R8 full mode can remove that constructor when using WorkManager 2.8.x.
+-keep class androidx.work.impl.WorkDatabase_Impl {
+    <init>();
+}
