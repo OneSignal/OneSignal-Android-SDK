@@ -9,6 +9,20 @@ If your proposed contribution is a small bug fix, please feel free to create you
 
 If your contribution would _break_ or _change_ the functionality of the SDK, please reach out to us on (contact) before you put in a lot of effort into a change we may not be able to use. We try our best to make sure that the SDK remains stable so that developers do not have to continually change their code, however some breaking changes _are_ desirable, so please get in touch to discuss your idea before you put in a lot of effort.
 
+### Building the SDK from source
+
+The shared Kotlin Multiplatform `:logger` module lives in the standalone [OneSignal-KMP-SDK](https://github.com/OneSignal/OneSignal-KMP-SDK) repository and is consumed here as a git submodule pinned to a specific commit. Its sources are checked out under `OneSignal-KMP-SDK/`, so you must initialize the submodule before building or the Gradle build will fail (the remapped `:OneSignal:logger` project directory won't exist).
+
+```bash
+# Fresh clone (recommended)
+git clone --recurse-submodules git@github.com:OneSignal/OneSignal-Android-SDK.git
+
+# If you already cloned without --recurse-submodules
+git submodule update --init --recursive
+```
+
+Whenever you pull changes that move the submodule pointer, re-run `git submodule update --init --recursive` to sync your local checkout to the pinned commit.
+
 #### Before Submitting A Bug Report
 Before creating bug reports, please check this list of steps to follow.
 

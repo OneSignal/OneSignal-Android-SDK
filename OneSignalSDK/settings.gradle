@@ -33,4 +33,10 @@ include ':OneSignal:location'
 include ':OneSignal:notifications'
 include ':OneSignal:testhelpers'
 include ':OneSignal:otel'
+
+// The :logger module is a Kotlin Multiplatform module maintained in the standalone
+// OneSignal-KMP-SDK repo and consumed here as a git submodule (pinned commit). Its
+// sources live outside this Gradle tree, so we remap the project directory. Run
+// `git submodule update --init --recursive` after cloning, or the path won't exist.
 include ':OneSignal:logger'
+project(':OneSignal:logger').projectDir = new File(settingsDir, '../OneSignal-KMP-SDK/logger')
