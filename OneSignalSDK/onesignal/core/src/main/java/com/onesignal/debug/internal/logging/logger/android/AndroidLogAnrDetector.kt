@@ -7,7 +7,6 @@ import com.onesignal.logger.CrashData
 import com.onesignal.logger.ILogAnrDetector
 import com.onesignal.logger.ILogCrashReporter
 import com.onesignal.logger.ILogger
-import kotlinx.coroutines.runBlocking
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
 
@@ -113,7 +112,7 @@ internal class AndroidLogAnrDetector(
                     exceptionMessage = "Application Not Responding: Main thread blocked for ${unresponsiveDurationMs}ms",
                     stacktrace = stackTrace.joinToString("\n") { it.toString() },
                 )
-            runBlocking { crashReporter.saveCrash(crash) }
+            crashReporter.saveCrash(crash)
             logger.info("$TAG: ANR report saved")
         } catch (t: Throwable) {
             logger.error("$TAG: failed to report ANR: ${t.message}")

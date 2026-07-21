@@ -26,8 +26,8 @@ internal class FileLogStore(
     }
 
     @Suppress("TooGenericExceptionCaught", "SwallowedException")
-    override fun save(bytes: ByteArray) {
-        try {
+    override fun save(bytes: ByteArray): Boolean {
+        return try {
             val dir = rootDir
             if (!dir.exists()) dir.mkdirs()
             // Write to a temp file then rename so a half-written file is never readable.
@@ -39,8 +39,10 @@ internal class FileLogStore(
                 target.writeBytes(bytes)
                 temp.delete()
             }
+            true
         } catch (t: Throwable) {
-            // Crash-path safety: never throw from persistence.
+            // Crash-path safety: never throw from persistence; signal failure to caller.
+            false
         }
     }
 

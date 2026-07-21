@@ -4,7 +4,6 @@ import com.onesignal.logger.CrashData
 import com.onesignal.logger.ILogCrashHandler
 import com.onesignal.logger.ILogCrashReporter
 import com.onesignal.logger.ILogger
-import kotlinx.coroutines.runBlocking
 
 /**
  * Android [ILogCrashHandler] — installs a [Thread.UncaughtExceptionHandler] that
@@ -68,7 +67,7 @@ internal class AndroidLogCrashHandler(
 
         logger.info("AndroidLogCrashHandler: OneSignal-related crash detected, saving report")
         try {
-            runBlocking { crashReporter.saveCrash(throwable.toCrashData(thread)) }
+            crashReporter.saveCrash(throwable.toCrashData(thread))
         } catch (t: Throwable) {
             logger.error("AndroidLogCrashHandler: failed to save crash report: ${t.message}")
         }
