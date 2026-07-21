@@ -1,0 +1,106 @@
+name: Bump KMP Submodule
+
+# Reusable workflow: re-points the OneSignal-KMP-SDK git submodule to a released tag
+# and opens a PR. Called by the KMP repo's Release workflow (the fan-out pattern used
+# by OneSignal/sdk-shared), or run manually via workflow_dispatch.
+#
+# Cross-repo callers authenticate by passing the shared org push token as
+# GH_PUSH_TOKEN: a workflow triggered from the KMP repo runs with the KMP repo's
+# GITHUB_TOKEN, which cannot write here, so GH_PUSH_TOKEN (used across the OneSignal
+# SDK repos) is required for the checkout/push/PR to target this repo.
+
+on:
+  workflow_call:
+    inputs:
+      kmp_version:
+        description: "OneSignal-KMP-SDK tag to pin the submodule to (e.g. v0.2.0)"
+        required: true
+        type: string
+      kmp_sha:
+        description: "Commit SHA the tag points at (the gitlink target)"
+        required: true
+        type: string
+    secrets:
+      GH_PUSH_TOKEN:
+        required: false
+        description: Cross-repo push token (contents + pull-requests write)
+  workflow_dispatch:
+    inputs:
+      kmp_version:
+        description: "OneSignal-KMP-SDK tag to pin the submodule to (e.g. v0.2.0)"
+        required: true
+        type: string
+      kmp_sha:
+        description: "Commit SHA the tag points at (the gitlink target)"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    env:
+      SUBMODULE_PATH: OneSignal-KMP-SDK
+      VERSION: ${{ inputs.kmp_version }}
+      NEW_SHA: ${{ inputs.kmp_sha }}
+    steps:
+      - name: "[Checkout] Android SDK"
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GH_PUSH_TOKEN || github.token }}
+          # Only the mode-160000 gitlink SHA is rewritten, so the submodule contents
+          # are not needed (no recursive checkout).
+
+      - name: "[Setup] Git user"
+        uses: OneSignal/sdk-shared/.github/actions/setup-git-user@main
+
+      - name: "[Bump] Re-point submodule gitlink"
+        id: bump
+        run: |
+          set -euo pipefail
+          branch="chore/bump-kmp-${VERSION}"
+          echo "branch=$branch" >> "$GITHUB_OUTPUT"
+
+          git checkout -b "$branch"
+          # Update the mode-160000 gitlink entry to the commit the tag points at.
+          git update-index --add --cacheinfo "160000,${NEW_SHA},${SUBMODULE_PATH}"
+
+          # No-op guard: if the pointer already matches (e.g. the very first release,
+          # where main already points at the tagged commit), skip the commit/PR
+          # instead of failing on an empty commit.
+          if git diff --cached --quiet; then
+            echo "Submodule already at ${NEW_SHA}; nothing to bump."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+          git commit -m "chore(logger): bump ${SUBMODULE_PATH} submodule to ${VERSION}"
+          git push origin "$branch" --force-with-lease
+
+      - name: "[PR] Open bump PR"
+        if: ${{ steps.bump.outputs.changed == 'true' }}
+        env:
+          GH_TOKEN: ${{ secrets.GH_PUSH_TOKEN || github.token }}
+        run: |
+          set -euo pipefail
+          branch="${{ steps.bump.outputs.branch }}"
+          body="$(printf '%s\n\n%s\n\n%s' \
+            "Automated bump of the \`${SUBMODULE_PATH}\` submodule to **${VERSION}** (\`${NEW_SHA}\`)." \
+            "Release notes: https://github.com/OneSignal/OneSignal-KMP-SDK/releases/tag/${VERSION}" \
+            "After merge, run \`git submodule update --init --recursive\` locally to sync.")"
+
+          # Reuse the PR if one is already open for this branch.
+          if gh pr view "$branch" >/dev/null 2>&1; then
+            echo "PR already exists for $branch; branch updated in place."
+          else
+            gh pr create \
+              --base main \
+              --head "$branch" \
+              --title "chore(logger): bump shared KMP logger to ${VERSION}" \
+              --body "$body"
+          fi
