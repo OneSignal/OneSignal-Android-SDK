@@ -14,5 +14,5 @@ package com.onesignal.debug.internal.logging.logger
  * switch) can be removed along with the `:otel` module.
  */
 internal object LoggerModuleSwitch {
-    const val USE_LOGGER_MODULE = false
+    const val USE_LOGGER_MODULE = true
 }

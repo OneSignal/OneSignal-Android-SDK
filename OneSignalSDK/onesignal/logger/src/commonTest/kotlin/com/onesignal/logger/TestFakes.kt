@@ -72,12 +72,12 @@ internal class FakeFileStore : ILogFileStore {
         entries.add(Entry(id, bytes, ageMillis))
     }
 
-    override fun listReadable(minAgeMillis: Long): List<StoredLogFile> =
+    override suspend fun listReadable(minAgeMillis: Long): List<StoredLogFile> =
         entries
             .filter { it.ageMillis >= minAgeMillis && it.id !in deletedIds }
             .map { StoredLogFile(it.id, it.bytes) }
 
-    override fun delete(id: String) {
+    override suspend fun delete(id: String) {
         deletedIds.add(id)
         entries.removeAll { it.id == id }
     }

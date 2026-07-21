@@ -18,7 +18,7 @@ import com.onesignal.logger.internal.LogTelemetryRemoteImpl
 object LoggerFactory {
     /**
      * Creates a remote telemetry instance for shipping SDK log events over the
-     * network (batched, OTLP/JSON).
+     * network (batched, OTLP/protobuf).
      */
     fun createRemoteTelemetry(
         platformProvider: ILoggerPlatformProvider,

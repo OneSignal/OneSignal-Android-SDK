@@ -24,7 +24,7 @@ class LogTelemetryTest {
     )
 
     @Test
-    fun emitThenForceFlushPostsOtlpJsonToCorrectEndpoint() = runTest {
+    fun emitThenForceFlushPostsOtlpProtobufToCorrectEndpoint() = runTest {
         val provider = FakePlatformProvider()
         val http = FakeHttpSender()
         val telemetry = remote(backgroundScope, provider, http)
@@ -35,14 +35,15 @@ class LogTelemetryTest {
         assertEquals(1, http.sentRequests.size)
         val req = http.sentRequests[0]
         assertEquals("https://api.onesignal.com/sdk/log?app_id=app-123", req.url)
-        assertEquals("application/json", req.contentType)
+        assertEquals("application/x-protobuf", req.contentType)
         assertEquals("onesignal/android/5.9.5", req.headers["SDK-Version"])
 
-        val body = http.lastBodyAsString()
-        assertTrue(body.contains("hello"))
-        assertTrue(body.contains("custom"))
-        // resource attribute attached
-        assertTrue(body.contains("ossdk.install_id"))
+        // Decode the OTLP/protobuf body and assert the record + resource attribute.
+        val record = parseProto(req.body).message(1).message(2).message(2)
+        assertEquals("hello", record.message(5).string(1))
+        assertTrue(record.all(6).any { parseProto(it.bytes()).string(1) == "custom" })
+        val resourceAttrKeys = parseProto(req.body).message(1).message(1).all(1).map { parseProto(it.bytes()).string(1) }
+        assertTrue(resourceAttrKeys.contains("ossdk.install_id"))
     }
 
     @Test
@@ -76,9 +77,12 @@ class LogTelemetryTest {
         telemetry.emit(LogRecord(LogSeverity.FATAL, "crash!", mapOf("exception.type" to "X")))
 
         assertEquals(1, store.entries.size)
-        val json = store.entries[0].bytes.decodeToString()
-        assertTrue(json.contains("crash!"))
-        assertTrue(json.contains("exception.type"))
-        assertTrue(json.contains("ossdk.install_id"))
+        // Stored crash record is OTLP/protobuf; decode and assert its contents.
+        val record = parseProto(store.entries[0].bytes).message(1).message(2).message(2)
+        assertEquals("crash!", record.message(5).string(1))
+        assertTrue(record.all(6).any { parseProto(it.bytes()).string(1) == "exception.type" })
+        val resourceAttrKeys =
+            parseProto(store.entries[0].bytes).message(1).message(1).all(1).map { parseProto(it.bytes()).string(1) }
+        assertTrue(resourceAttrKeys.contains("ossdk.install_id"))
     }
 }

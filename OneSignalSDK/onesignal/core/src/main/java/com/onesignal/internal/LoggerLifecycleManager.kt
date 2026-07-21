@@ -43,7 +43,7 @@ internal class LoggerLifecycleManager(
     }
 
     private val logger = AndroidLogger()
-    private val httpSender = OneSignalLogHttpSender()
+    private val httpSender = OneSignalLogHttpSender(logger) { platformProvider.isExporterLoggingEnabled }
 
     private val fileStore: FileLogStore by lazy { FileLogStore(platformProvider.crashStoragePath) }
 

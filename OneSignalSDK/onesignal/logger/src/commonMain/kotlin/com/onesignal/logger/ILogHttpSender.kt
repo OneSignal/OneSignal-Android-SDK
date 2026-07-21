@@ -1,8 +1,8 @@
 package com.onesignal.logger
 
 /**
- * Outbound HTTP request for log export. Body is already-encoded bytes (e.g. OTLP
- * JSON) with the matching [contentType].
+ * Outbound HTTP request for log export. Body is already-encoded bytes (OTLP
+ * protobuf) with the matching [contentType].
  */
 data class LogHttpRequest(
     val url: String,

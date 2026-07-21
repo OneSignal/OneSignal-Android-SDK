@@ -9,7 +9,7 @@ import com.onesignal.logger.otlp.EncodableRecord
 import com.onesignal.logger.otlp.OtlpLogEncoder
 
 /**
- * Crash telemetry sink: encodes each record to OTLP/JSON and writes it to the
+ * Crash telemetry sink: encodes each record to OTLP/protobuf and writes it to the
  * injected [ILogFileStore] immediately. This is what makes crash reports survive a
  * process death — they are durably persisted before the process exits and shipped on
  * the next launch by the crash uploader.

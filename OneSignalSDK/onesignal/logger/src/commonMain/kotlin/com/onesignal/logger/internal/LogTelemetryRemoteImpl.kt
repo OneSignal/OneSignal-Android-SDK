@@ -17,7 +17,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
 /**
- * Remote telemetry sink: batches records and ships them as OTLP/JSON over the
+ * Remote telemetry sink: batches records and ships them as OTLP/protobuf over the
  * injected [ILogHttpSender]. Resource (top-level) attributes are computed once and
  * cached, mirroring the old SDK's resource caching.
  */

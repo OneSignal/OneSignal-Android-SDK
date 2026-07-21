@@ -2,6 +2,8 @@ package com.onesignal.debug.internal.logging.logger.android
 
 import com.onesignal.logger.ILogFileStore
 import com.onesignal.logger.StoredLogFile
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.util.UUID
 
@@ -43,30 +45,33 @@ internal class FileLogStore(
     }
 
     @Suppress("TooGenericExceptionCaught", "SwallowedException")
-    override fun listReadable(minAgeMillis: Long): List<StoredLogFile> {
-        return try {
-            val now = System.currentTimeMillis()
-            rootDir.listFiles { file -> file.isFile && file.name.endsWith(FILE_SUFFIX) }
-                ?.filter { now - it.lastModified() >= minAgeMillis }
-                ?.mapNotNull { file ->
-                    try {
-                        StoredLogFile(id = file.name, bytes = file.readBytes())
-                    } catch (t: Throwable) {
-                        null
+    override suspend fun listReadable(minAgeMillis: Long): List<StoredLogFile> =
+        withContext(Dispatchers.IO) {
+            try {
+                val now = System.currentTimeMillis()
+                rootDir.listFiles { file -> file.isFile && file.name.endsWith(FILE_SUFFIX) }
+                    ?.filter { now - it.lastModified() >= minAgeMillis }
+                    ?.mapNotNull { file ->
+                        try {
+                            StoredLogFile(id = file.name, bytes = file.readBytes())
+                        } catch (t: Throwable) {
+                            null
+                        }
                     }
-                }
-                ?: emptyList()
-        } catch (t: Throwable) {
-            emptyList()
+                    ?: emptyList()
+            } catch (t: Throwable) {
+                emptyList()
+            }
         }
-    }
 
     @Suppress("TooGenericExceptionCaught", "SwallowedException")
-    override fun delete(id: String) {
-        try {
-            File(rootDir, id).delete()
-        } catch (t: Throwable) {
-            // best-effort
+    override suspend fun delete(id: String) {
+        withContext(Dispatchers.IO) {
+            try {
+                File(rootDir, id).delete()
+            } catch (t: Throwable) {
+                // best-effort
+            }
         }
     }
 }

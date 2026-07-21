@@ -54,9 +54,11 @@ internal class OneSignalCrashUploaderWrapper(
 
     private val loggerUploader by lazy {
         val platformProvider = createAndroidLoggerPlatformProvider(applicationService.appContext) { featureManager }
-        val remote = LoggerFactory.createRemoteTelemetry(platformProvider, OneSignalLogHttpSender())
+        val logger = AndroidLogger()
+        val httpSender = OneSignalLogHttpSender(logger) { platformProvider.isExporterLoggingEnabled }
+        val remote = LoggerFactory.createRemoteTelemetry(platformProvider, httpSender)
         val fileStore = FileLogStore(platformProvider.crashStoragePath)
-        LoggerFactory.createCrashUploader(platformProvider, remote, fileStore, AndroidLogger())
+        LoggerFactory.createCrashUploader(platformProvider, remote, fileStore, logger)
     }
 
     @Suppress("TooGenericExceptionCaught")
