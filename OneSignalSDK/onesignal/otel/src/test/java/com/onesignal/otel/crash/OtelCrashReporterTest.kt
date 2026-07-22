@@ -5,13 +5,17 @@ import com.onesignal.otel.IOtelLogger
 import com.onesignal.otel.IOtelOpenTelemetryCrash
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.FunSpec
+import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.mockk.clearMocks
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.slot
 import io.mockk.verify
+import io.opentelemetry.api.common.AttributeKey
+import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.api.logs.LogRecordBuilder
 import io.opentelemetry.api.logs.Severity
 import io.opentelemetry.sdk.common.CompletableResultCode
@@ -54,6 +58,46 @@ class OtelCrashReporterTest : FunSpec({
         coVerify(exactly = 1) { mockOpenTelemetry.getLogger() }
         coVerify(exactly = 1) { mockOpenTelemetry.forceFlush() }
         verify { mockLogRecordBuilder.setSeverity(Severity.FATAL) }
+        verify { mockLogRecordBuilder.emit() }
+    }
+
+    test("saveCrash should emit at FATAL severity and tag the record fatal") {
+        val attrsSlot = slot<Attributes>()
+        every { mockLogRecordBuilder.setAllAttributes(capture(attrsSlot)) } returns mockLogRecordBuilder
+        val crashReporter = OtelCrashReporter(mockOpenTelemetry, mockLogger)
+
+        runBlocking {
+            crashReporter.saveCrash(Thread.currentThread(), RuntimeException("boom"))
+        }
+
+        verify { mockLogRecordBuilder.setSeverity(Severity.FATAL) }
+        attrsSlot.captured.get(AttributeKey.booleanKey("ossdk.crash.fatal")) shouldBe true
+    }
+
+    test("saveNonFatal should emit at WARN severity and tag the record non-fatal") {
+        val attrsSlot = slot<Attributes>()
+        every { mockLogRecordBuilder.setAllAttributes(capture(attrsSlot)) } returns mockLogRecordBuilder
+        val crashReporter = OtelCrashReporter(mockOpenTelemetry, mockLogger)
+
+        runBlocking {
+            crashReporter.saveNonFatal(Thread.currentThread(), RuntimeException("background block"))
+        }
+
+        // A background block must never ride the fatal severity that feeds the crash/ANR metric.
+        verify { mockLogRecordBuilder.setSeverity(Severity.WARN) }
+        verify(exactly = 0) { mockLogRecordBuilder.setSeverity(Severity.FATAL) }
+        attrsSlot.captured.get(AttributeKey.booleanKey("ossdk.crash.fatal")) shouldBe false
+    }
+
+    test("saveNonFatal should still get logger, emit, and flush to the retained crash telemetry") {
+        val crashReporter = OtelCrashReporter(mockOpenTelemetry, mockLogger)
+
+        runBlocking {
+            crashReporter.saveNonFatal(Thread.currentThread(), RuntimeException("background block"))
+        }
+
+        coVerify(exactly = 1) { mockOpenTelemetry.getLogger() }
+        coVerify(exactly = 1) { mockOpenTelemetry.forceFlush() }
         verify { mockLogRecordBuilder.emit() }
     }
 

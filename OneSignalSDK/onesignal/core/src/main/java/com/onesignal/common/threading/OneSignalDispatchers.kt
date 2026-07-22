@@ -252,6 +252,7 @@ object OneSignalDispatchers {
      * The known main-thread cold-start entry points:
      * | Entry point | Class |
      * |---|---|
+     * | process-start activity lifecycle registration | `core.internal.application.impl.ActivityLifecycleInitializer` |
      * | `initWithContext` / `initWithContextSuspend` | `OneSignalImp` |
      * | `onStartJob` | `core.services.SyncJobService` |
      * | `onReceive` | `FCMBroadcastReceiver`, `NotificationDismissReceiver`, `BootUpReceiver`, `UpgradeReceiver` |

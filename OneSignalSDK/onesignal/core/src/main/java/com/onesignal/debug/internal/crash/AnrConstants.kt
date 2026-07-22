@@ -16,4 +16,14 @@ internal object AnrConstants {
      * The ANR detector checks the main thread responsiveness every 2 seconds.
      */
     const val DEFAULT_CHECK_INTERVAL_MS: Long = 2_000L
+
+    /**
+     * Threshold for main-thread blocks while the app is backgrounded.
+     *
+     * Android only raises a real, user-visible ANR while the app is in the foreground, so a
+     * backgrounded block is not an ANR — it is recorded as a lower-severity warning instead.
+     * A higher threshold than the foreground one absorbs the normal scheduling delays a
+     * backgrounded process sees, keeping the warning stream meaningful rather than noisy.
+     */
+    const val DEFAULT_BACKGROUND_BLOCK_THRESHOLD_MS: Long = 10_000L
 }
