@@ -67,6 +67,8 @@ internal class AndroidLogCrashHandler(
 
         logger.info("AndroidLogCrashHandler: OneSignal-related crash detected, saving report")
         try {
+            // Synchronous by contract: the process is about to die, so the crash must reach
+            // disk before we hand off to the existing handler. Mirrors OtelCrashHandler.
             crashReporter.saveCrash(throwable.toCrashData(thread))
         } catch (t: Throwable) {
             logger.error("AndroidLogCrashHandler: failed to save crash report: ${t.message}")

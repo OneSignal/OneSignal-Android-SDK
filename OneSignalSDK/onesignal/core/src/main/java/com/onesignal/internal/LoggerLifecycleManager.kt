@@ -187,6 +187,10 @@ internal class LoggerLifecycleManager(
                 logger,
                 AnrConstants.DEFAULT_ANR_THRESHOLD_MS,
                 AnrConstants.DEFAULT_CHECK_INTERVAL_MS,
+                AnrConstants.DEFAULT_BACKGROUND_BLOCK_THRESHOLD_MS,
+                // Only "background" downgrades a block to a non-fatal warning; "unknown" is
+                // treated as foreground so a genuine ANR is never silently dropped.
+                isAppInForeground = { platformProvider.appState != "background" },
             )
         detector.start()
         anrDetector = detector
