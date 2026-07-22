@@ -12,6 +12,7 @@ import com.onesignal.logger.ILogAnrDetector
 import com.onesignal.logger.ILogCrashReporter
 import com.onesignal.logger.ILogger
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlinx.coroutines.runBlocking
 
 /**
  * Android [ILogAnrDetector] — watchdog that monitors main-thread responsiveness and, if
@@ -171,7 +172,7 @@ internal class AndroidLogAnrDetector(
                     exceptionMessage = "Application Not Responding: Main thread blocked for ${unresponsiveDurationMs}ms",
                     stacktrace = stackTrace.joinToString("\n") { it.toString() },
                 )
-            crashReporter.saveCrash(crash)
+            runBlocking { crashReporter.saveCrash(crash) }
             logger.info("$TAG: ANR report saved")
         } catch (t: Throwable) {
             logger.error("$TAG: failed to report ANR: ${t.message}")
@@ -200,7 +201,7 @@ internal class AndroidLogAnrDetector(
                         "Background main-thread block for ${unresponsiveDurationMs}ms | ${buildBlockFingerprint(stackTrace)}",
                     stacktrace = stackTrace.joinToString("\n") { it.toString() },
                 )
-            crashReporter.saveNonFatal(crash)
+            runBlocking { crashReporter.saveNonFatal(crash) }
             logger.info("$TAG: background block warning recorded")
         } catch (t: Throwable) {
             logger.error("$TAG: failed to record background block: ${t.message}")
