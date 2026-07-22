@@ -82,25 +82,45 @@ jobs:
           git commit -m "chore(logger): bump ${SUBMODULE_PATH} submodule to ${VERSION}"
           git push origin "$branch" --force-with-lease
 
-      - name: "[PR] Open bump PR"
+      - name: "[PR] Open or update bump PR"
         if: ${{ steps.bump.outputs.changed == 'true' }}
         env:
           GH_TOKEN: ${{ secrets.GH_PUSH_TOKEN || github.token }}
         run: |
           set -euo pipefail
           branch="${{ steps.bump.outputs.branch }}"
-          body="$(printf '%s\n\n%s\n\n%s' \
-            "Automated bump of the \`${SUBMODULE_PATH}\` submodule to **${VERSION}** (\`${NEW_SHA}\`)." \
-            "Release notes: https://github.com/OneSignal/OneSignal-KMP-SDK/releases/tag/${VERSION}" \
-            "After merge, run \`git submodule update --init --recursive\` locally to sync.")"
+          notes_url="https://github.com/OneSignal/OneSignal-KMP-SDK/releases/tag/${VERSION}"
 
-          # Reuse the PR if one is already open for this branch.
+          # Best-effort: pull the published release notes for this tag so the reviewer can
+          # read exactly what the new version contains before merging the bump, without
+          # leaving the PR. Reading another repo's release needs cross-repo access, which
+          # GH_PUSH_TOKEN has; on any failure (missing token, release not yet visible) we
+          # fall back to just linking the release page.
+          notes="$(gh release view "$VERSION" --repo OneSignal/OneSignal-KMP-SDK --json body --jq .body 2>/dev/null || true)"
+
+          body_file="$RUNNER_TEMP/bump_pr_body.md"
+          {
+            printf 'Automated bump of the `%s` submodule to **%s** (`%s`).\n\n' "$SUBMODULE_PATH" "$VERSION" "$NEW_SHA"
+            printf '## Release notes — %s\n\n' "$VERSION"
+            if [ -n "$notes" ]; then
+              printf '%s\n\n' "$notes"
+              printf '_Source: [%s](%s)_\n\n' "$VERSION" "$notes_url"
+            else
+              printf 'See [%s](%s).\n\n' "$VERSION" "$notes_url"
+            fi
+            printf 'After merge, run `git submodule update --init --recursive` locally to sync.\n'
+          } > "$body_file"
+
+          # Reuse the PR if one is already open for this branch (re-runs refresh title/body).
           if gh pr view "$branch" >/dev/null 2>&1; then
-            echo "PR already exists for $branch; branch updated in place."
+            echo "PR already exists for $branch; refreshing title and release notes."
+            gh pr edit "$branch" \
+              --title "chore(logger): bump shared KMP logger to ${VERSION}" \
+              --body-file "$body_file"
           else
             gh pr create \
               --base main \
               --head "$branch" \
               --title "chore(logger): bump shared KMP logger to ${VERSION}" \
-              --body "$body"
+              --body-file "$body_file"
           fi
