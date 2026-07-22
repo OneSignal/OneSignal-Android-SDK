@@ -4,7 +4,6 @@ import com.onesignal.logger.CrashData
 import com.onesignal.logger.ILogCrashHandler
 import com.onesignal.logger.ILogCrashReporter
 import com.onesignal.logger.ILogger
-import kotlinx.coroutines.runBlocking
 
 /**
  * Android [ILogCrashHandler] — installs a [Thread.UncaughtExceptionHandler] that
@@ -68,9 +67,8 @@ internal class AndroidLogCrashHandler(
 
         logger.info("AndroidLogCrashHandler: OneSignal-related crash detected, saving report")
         try {
-            // Block until the disk write finishes — the process is about to die.
-            // Durability comes from ILogFileStore.save; runBlocking bridges the suspend API.
-            runBlocking { crashReporter.saveCrash(throwable.toCrashData(thread)) }
+            // Synchronous by contract — process is about to die; write must finish first.
+            crashReporter.saveCrash(throwable.toCrashData(thread))
         } catch (t: Throwable) {
             logger.error("AndroidLogCrashHandler: failed to save crash report: ${t.message}")
         }
