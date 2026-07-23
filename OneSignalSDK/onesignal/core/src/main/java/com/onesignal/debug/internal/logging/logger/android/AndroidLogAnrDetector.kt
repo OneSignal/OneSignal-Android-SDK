@@ -197,7 +197,7 @@ internal class AndroidLogAnrDetector(
                     threadName = mainThread.name,
                     exceptionType = "BackgroundMainThreadBlockException",
                     exceptionMessage =
-                        "Background main-thread block for ${unresponsiveDurationMs}ms | ${buildBlockFingerprint(stackTrace)}",
+                    "Background main-thread block for ${unresponsiveDurationMs}ms | ${buildBlockFingerprint(stackTrace)}",
                     stacktrace = stackTrace.joinToString("\n") { it.toString() },
                 )
             crashReporter.saveNonFatal(crash)
