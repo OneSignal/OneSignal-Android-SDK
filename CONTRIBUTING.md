@@ -11,7 +11,7 @@ If your contribution would _break_ or _change_ the functionality of the SDK, ple
 
 ### Building the SDK from source
 
-The shared Kotlin Multiplatform `:logger` module lives in the standalone [OneSignal-KMP-SDK](https://github.com/OneSignal/OneSignal-KMP-SDK) repository and is consumed here as a git submodule pinned to a specific commit. Its sources are checked out under `OneSignal-KMP-SDK/`, so you must initialize the submodule before building or the Gradle build will fail (the remapped `:OneSignal:logger` project directory won't exist).
+The shared Kotlin Multiplatform `:kmp` module lives in the standalone [OneSignal-KMP-SDK](https://github.com/OneSignal/OneSignal-KMP-SDK) repository and is consumed here as a git submodule pinned to a specific commit. Its sources are checked out under `OneSignal-KMP-SDK/`, so you must initialize the submodule before building or the Gradle build will fail (the remapped `:OneSignal:kmp` project directory won't exist).
 
 ```bash
 # Fresh clone (recommended)
@@ -23,9 +23,9 @@ git submodule update --init --recursive
 
 Whenever you pull changes that move the submodule pointer, re-run `git submodule update --init --recursive` to sync your local checkout to the pinned commit.
 
-### Working on the shared `:logger` module
+### Working on the shared `:kmp` module
 
-The `:logger` sources live in the KMP repo and are checked out here, nested, at `OneSignal-KMP-SDK/`. This means **two gits are in play**:
+The `:kmp` sources live in the KMP repo and are checked out here, nested, at `OneSignal-KMP-SDK/`. This means **two gits are in play**:
 
 - Commands run from the **Android repo root** act on Android and only record the submodule *pointer* (a `160000` gitlink SHA) — not the logger source.
 - Commands run from **inside `OneSignal-KMP-SDK/`** act on the KMP repo — that's where the actual `.kt` changes are committed.
@@ -41,8 +41,8 @@ Ends when your change is on KMP `main`. **No tagging and nothing ships to Androi
 ```mermaid
 flowchart TD
     A["Clone with --recurse-submodules<br/>(or: git submodule update --init --recursive)"] --> B["cd OneSignal-KMP-SDK<br/>git checkout main && git pull<br/>git checkout -b feat/my-logger-change"]
-    B --> C["Edit :logger sources"]
-    C --> D["Build/verify locally (no push)<br/>Android: ./gradlew :OneSignal:core:compileDebugKotlin<br/>KMP tests: ./gradlew :logger:testDebugUnitTest :logger:iosSimulatorArm64Test spotlessCheck"]
+    B --> C["Edit :kmp sources"]
+    C --> D["Build/verify locally (no push)<br/>Android: ./gradlew :OneSignal:core:compileDebugKotlin<br/>KMP tests: ./gradlew :kmp:testDebugUnitTest :kmp:iosSimulatorArm64Test spotlessCheck"]
     D -->|iterate| C
     D --> E["Inside the submodule: commit + push<br/>cd OneSignal-KMP-SDK<br/>git add -A && git commit -m 'feat(logger): ...'<br/>git push -u origin feat/my-logger-change"]
     E --> F["Open KMP PR — CI runs (Spotless + unit tests)"]

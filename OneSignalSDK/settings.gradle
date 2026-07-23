@@ -16,7 +16,7 @@ gradle.rootProject {
                 substitute(module('com.onesignal:location')).using(project(':OneSignal:location'))
                 substitute(module('com.onesignal:in-app-messages')).using(project(':OneSignal:in-app-messages'))
                 substitute(module('com.onesignal:otel')).using(project(':OneSignal:otel'))
-                substitute(module('com.onesignal:logger')).using(project(':OneSignal:logger'))
+                substitute(module('com.onesignal:kmp')).using(project(':OneSignal:kmp'))
             }
         }
     }
@@ -34,9 +34,9 @@ include ':OneSignal:notifications'
 include ':OneSignal:testhelpers'
 include ':OneSignal:otel'
 
-// The :logger module is a Kotlin Multiplatform module maintained in the standalone
+// The :kmp module is the shared Kotlin Multiplatform module maintained in the standalone
 // OneSignal-KMP-SDK repo and consumed here as a git submodule (pinned commit). Its
 // sources live outside this Gradle tree, so we remap the project directory. Run
 // `git submodule update --init --recursive` after cloning, or the path won't exist.
-include ':OneSignal:logger'
-project(':OneSignal:logger').projectDir = new File(settingsDir, '../OneSignal-KMP-SDK/logger')
+include ':OneSignal:kmp'
+project(':OneSignal:kmp').projectDir = new File(settingsDir, '../OneSignal-KMP-SDK/kmp')
