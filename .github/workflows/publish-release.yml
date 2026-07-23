@@ -43,6 +43,14 @@ jobs:
           ref: ${{ github.event.inputs.ref || github.sha }}
           submodules: recursive
 
+      # actions/checkout does not fetch tag refs into submodules (fetch-depth: 1).
+      # The shared logger stamps LoggerBuildInfo.KMP_VERSION via `git describe --tags`
+      # and refuses to publish without a vX.Y.* provenance — so tags must be present.
+      - name: Fetch OneSignal-KMP-SDK tags (logger provenance)
+        run: |
+          git -C OneSignal-KMP-SDK fetch --tags --force
+          echo "KMP provenance: $(git -C OneSignal-KMP-SDK describe --tags --always --dirty)"
+
       - name: Detect current branch
         id: detect_branch
         run: |
