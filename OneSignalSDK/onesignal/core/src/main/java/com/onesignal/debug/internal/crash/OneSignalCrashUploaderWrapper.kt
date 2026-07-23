@@ -66,7 +66,7 @@ internal class OneSignalCrashUploaderWrapper(
         if (!OtelSdkSupport.isSupported) return
         OneSignalDispatchers.launchOnIO {
             try {
-                if (LoggerModuleSwitch.USE_LOGGER_MODULE) {
+                if (LoggerModuleSwitch.useLoggerModule(applicationService.appContext)) {
                     loggerUploader.start()
                 } else {
                     otelUploader.start()

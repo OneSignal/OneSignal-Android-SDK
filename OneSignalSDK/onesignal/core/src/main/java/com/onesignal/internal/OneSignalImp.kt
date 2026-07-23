@@ -241,7 +241,7 @@ internal class OneSignalImp : IOneSignal,
         // can be deferred until services have bootstrapped.
         val featureManagerProvider = { services.getService<IFeatureManager>() }
         observabilityManager =
-            if (com.onesignal.debug.internal.logging.logger.LoggerModuleSwitch.USE_LOGGER_MODULE) {
+            if (com.onesignal.debug.internal.logging.logger.LoggerModuleSwitch.useLoggerModule(context)) {
                 LoggerLifecycleManager(context = context, featureManagerProvider = featureManagerProvider)
             } else {
                 OtelLifecycleManager(context = context, featureManagerProvider = featureManagerProvider)

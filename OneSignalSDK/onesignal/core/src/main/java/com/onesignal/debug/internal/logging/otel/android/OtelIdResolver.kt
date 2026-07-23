@@ -2,7 +2,9 @@ package com.onesignal.debug.internal.logging.otel.android
 
 import android.content.Context
 import com.onesignal.common.IDManager
+import com.onesignal.common.toList
 import com.onesignal.core.internal.config.ConfigModel
+import com.onesignal.core.internal.features.FeatureFlag
 import com.onesignal.core.internal.preferences.PreferenceOneSignalKeys
 import com.onesignal.core.internal.preferences.PreferenceStores
 import com.onesignal.debug.internal.logging.Logging
@@ -230,6 +232,21 @@ internal class OtelIdResolver(
         com.onesignal.debug.LogLevel.fromString(
             if (remoteLoggingParams.has("logLevel")) remoteLoggingParams.getString("logLevel") else null
         )
+
+    /**
+     * Resolves whether the multiplatform `logger` module should be used instead of `otel`, from
+     * the [FeatureFlag.SDK_CUSTOM_LOGGING] flag in the cached config's remote feature flags.
+     *
+     * Read directly from SharedPreferences (not via ConfigModelStore / FeatureManager) because
+     * this is consulted during early init, before those services are ready. The cached value is
+     * whatever the previous session persisted, so toggling the flag remotely takes effect on the
+     * next app start. Matching is case-insensitive to mirror FeatureManager's canonical keys.
+     */
+    fun resolveCustomLoggingEnabled(): Boolean {
+        val flags = readConfigModel()?.optJSONArray(ConfigModel::sdkRemoteFeatureFlags.name)?.toList() ?: return false
+        val target = FeatureFlag.SDK_CUSTOM_LOGGING.key
+        return flags.any { (it as? String)?.equals(target, ignoreCase = true) == true }
+    }
 
     /**
      * Resolves install ID from SharedPreferences.

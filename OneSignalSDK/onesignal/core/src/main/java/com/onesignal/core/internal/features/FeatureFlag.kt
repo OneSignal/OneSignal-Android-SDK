@@ -29,6 +29,18 @@ enum class FeatureFlag(
         "sdk_identity_verification",
         FeatureActivationMode.IMMEDIATE
     ),
+
+    /**
+     * Routes SDK observability (remote logging, crash capture/upload, ANR detection) through the
+     * multiplatform `logger` module instead of the legacy OpenTelemetry `otel` module.
+     *
+     * APP_STARTUP: the module choice is latched for the whole process and a remote change only
+     * takes effect on the next app start — switching observability pipelines mid-session is unsafe.
+     */
+    SDK_CUSTOM_LOGGING(
+        "sdk_custom_logging",
+        FeatureActivationMode.APP_STARTUP
+    ),
     ;
 
     /**

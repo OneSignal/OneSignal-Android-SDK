@@ -6,6 +6,7 @@ import androidx.test.core.app.ApplicationProvider
 import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
 import com.onesignal.common.IDManager.LOCAL_PREFIX
 import com.onesignal.core.internal.config.ConfigModel
+import com.onesignal.core.internal.features.FeatureFlag
 import com.onesignal.core.internal.preferences.PreferenceOneSignalKeys
 import com.onesignal.core.internal.preferences.PreferenceStores
 import com.onesignal.debug.LogLevel
@@ -1047,5 +1048,69 @@ class OtelIdResolverTest : FunSpec({
         pushId1 shouldBe "test-push-id"
         appId2 shouldBe "test-app-id"
         pushId2 shouldBe "test-push-id"
+    }
+
+    // ===== resolveCustomLoggingEnabled Tests =====
+    // Reads the SDK_CUSTOM_LOGGING flag from the cached config's sdkRemoteFeatureFlags array.
+    // Drives the otel-vs-logger observability module choice (via LoggerModuleSwitch) on next launch.
+
+    fun writeConfigWithFeatureFlags(vararg flags: String) {
+        val configModel = JSONObject().apply {
+            put(ConfigModel::sdkRemoteFeatureFlags.name, JSONArray().apply { flags.forEach { put(it) } })
+        }
+        writeAndVerifyConfigData(JSONArray().apply { put(configModel) })
+    }
+
+    test("resolveCustomLoggingEnabled returns true when sdk_custom_logging flag is present") {
+        writeConfigWithFeatureFlags(FeatureFlag.SDK_CUSTOM_LOGGING.key)
+
+        OtelIdResolver(appContext!!).resolveCustomLoggingEnabled() shouldBe true
+    }
+
+    test("resolveCustomLoggingEnabled matches the flag case-insensitively") {
+        writeConfigWithFeatureFlags("SDK_Custom_Logging")
+
+        OtelIdResolver(appContext!!).resolveCustomLoggingEnabled() shouldBe true
+    }
+
+    test("resolveCustomLoggingEnabled returns true when flag is present among other flags") {
+        writeConfigWithFeatureFlags("sdk_identity_verification", "sdk_custom_logging", "some_other_flag")
+
+        OtelIdResolver(appContext!!).resolveCustomLoggingEnabled() shouldBe true
+    }
+
+    test("resolveCustomLoggingEnabled returns false when flag is absent but others present") {
+        writeConfigWithFeatureFlags("sdk_identity_verification")
+
+        OtelIdResolver(appContext!!).resolveCustomLoggingEnabled() shouldBe false
+    }
+
+    test("resolveCustomLoggingEnabled returns false when the feature flags array is empty") {
+        writeConfigWithFeatureFlags()
+
+        OtelIdResolver(appContext!!).resolveCustomLoggingEnabled() shouldBe false
+    }
+
+    test("resolveCustomLoggingEnabled returns false when sdkRemoteFeatureFlags field is missing") {
+        val configModel = JSONObject().apply { put(ConfigModel::appId.name, "test-app-id") }
+        writeAndVerifyConfigData(JSONArray().apply { put(configModel) })
+
+        OtelIdResolver(appContext!!).resolveCustomLoggingEnabled() shouldBe false
+    }
+
+    test("resolveCustomLoggingEnabled returns false when no config exists") {
+        OtelIdResolver(appContext!!).resolveCustomLoggingEnabled() shouldBe false
+    }
+
+    test("resolveCustomLoggingEnabled returns false when context is null") {
+        OtelIdResolver(null).resolveCustomLoggingEnabled() shouldBe false
+    }
+
+    test("resolveCustomLoggingEnabled handles invalid JSON gracefully") {
+        sharedPreferences!!.edit()
+            .putString(PreferenceOneSignalKeys.MODEL_STORE_PREFIX + configNameSpace, "invalid-json")
+            .commit()
+
+        OtelIdResolver(appContext!!).resolveCustomLoggingEnabled() shouldBe false
     }
 })

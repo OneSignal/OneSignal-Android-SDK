@@ -170,6 +170,10 @@ internal class FeatureManager(
             // SDK_IDENTITY_VERIFICATION has no side effect: IdentityVerificationService
             // reads featureStates directly via isEnabled() at gate-check time.
             FeatureFlag.SDK_IDENTITY_VERIFICATION -> {}
+            // SDK_CUSTOM_LOGGING has no side effect here: the observability module choice is
+            // made during early init (before this manager exists) by reading the cached flag
+            // straight from prefs via LoggerModuleSwitch/OtelIdResolver.
+            FeatureFlag.SDK_CUSTOM_LOGGING -> {}
         }
     }
 
