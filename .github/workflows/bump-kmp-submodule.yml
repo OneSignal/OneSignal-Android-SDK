@@ -50,6 +50,11 @@ jobs:
       - name: "[Checkout] Android SDK"
         uses: actions/checkout@v4
         with:
+          # Reusable workflows keep the caller's github context, so the default
+          # checkout target is the caller (OneSignal-KMP-SDK), not this repo.
+          # Always pin the Android SDK when called via workflow_call.
+          repository: OneSignal/OneSignal-Android-SDK
+          ref: main
           fetch-depth: 0
           token: ${{ secrets.GH_PUSH_TOKEN || github.token }}
           # Only the mode-160000 gitlink SHA is rewritten, so the submodule contents
