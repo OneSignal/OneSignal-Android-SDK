@@ -28,8 +28,9 @@ import com.onesignal.logger.LoggerFactory
  * multiplatform, OpenTelemetry-free observability pipeline and reacts to remote config
  * changes the same way (using the shared [OtelConfig]/[OtelConfigEvaluator]).
  *
- * Only active when [com.onesignal.debug.internal.logging.logger.LoggerModuleSwitch.USE_LOGGER_MODULE]
- * is true; otherwise [OtelLifecycleManager] is used instead.
+ * Only active when [com.onesignal.debug.internal.logging.logger.LoggerModuleSwitch.useLoggerModule]
+ * resolves true (i.e. the SDK_CUSTOM_LOGGING feature flag is enabled in cached config);
+ * otherwise [OtelLifecycleManager] is used instead.
  */
 @Suppress("TooManyFunctions")
 internal class LoggerLifecycleManager(
