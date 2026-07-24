@@ -38,5 +38,7 @@ For account issues and support please contact OneSignal support from the [OneSig
 #### Demo Project
 To make things easier, we have published demo projects in the `/Examples` folder of this repository.
 
+> **Building from source?** This repository uses a git submodule for the shared Kotlin Multiplatform `:logger` module. Clone with `git clone --recurse-submodules ...`, or run `git submodule update --init --recursive` after cloning, before building. See [CONTRIBUTING.md](CONTRIBUTING.md#building-the-sdk-from-source) for details.
+
 #### Supports:
 * Tested from Android 5.0 (API level 21) to Android 14 (34)

@@ -1,0 +1,3 @@
+[submodule "OneSignal-KMP-SDK"]
+	path = OneSignal-KMP-SDK
+	url = git@github.com:OneSignal/OneSignal-KMP-SDK.git

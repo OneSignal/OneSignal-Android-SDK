@@ -54,7 +54,7 @@ internal class OtelLifecycleManager(
     private val platformProviderFactory: (Context, () -> IFeatureManager) -> OtelPlatformProvider =
         { ctx, fm -> createAndroidOtelPlatformProvider(ctx, fm) },
     private val loggerFactory: () -> IOtelLogger = { AndroidOtelLogger() },
-) : ISingletonModelStoreChangeHandler<ConfigModel> {
+) : ISingletonModelStoreChangeHandler<ConfigModel>, IObservabilityLifecycleManager {
     private val lock = Any()
 
     private val platformProvider: OtelPlatformProvider by lazy {
@@ -74,7 +74,7 @@ internal class OtelLifecycleManager(
      * whichever features are already enabled.
      */
     @Suppress("TooGenericExceptionCaught")
-    fun initializeFromCachedConfig() {
+    override fun initializeFromCachedConfig() {
         if (!OtelSdkSupport.isSupported) {
             Logging.info("OneSignal: Device SDK < ${OtelSdkSupport.MIN_SDK_VERSION}, Otel not supported — skipping all Otel features")
             return
@@ -95,7 +95,7 @@ internal class OtelLifecycleManager(
      * Subscribes this manager to config store change events.
      * Call after the IoC container is bootstrapped (i.e. after [bootstrapServices]).
      */
-    fun subscribeToConfigStore(configModelStore: ConfigModelStore) {
+    override fun subscribeToConfigStore(configModelStore: ConfigModelStore) {
         configModelStore.subscribe(this)
     }
 

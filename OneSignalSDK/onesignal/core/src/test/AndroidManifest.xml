@@ -3,5 +3,5 @@
     xmlns:tools="http://schemas.android.com/tools">
     <uses-sdk
         android:minSdkVersion="26"
-        tools:overrideLibrary="com.onesignal.otel" />
+        tools:overrideLibrary="com.onesignal.otel, com.onesignal.logger" />
 </manifest>

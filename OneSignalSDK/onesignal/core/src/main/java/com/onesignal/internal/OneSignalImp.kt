@@ -61,7 +61,7 @@ internal class OneSignalImp : IOneSignal,
     // Save the exception pointing to the caller that triggered init, not the async worker thread.
     private var initFailureException: Exception? = null
 
-    private var otelManager: OtelLifecycleManager? = null
+    private var observabilityManager: IObservabilityLifecycleManager? = null
 
     override val sdkVersion: String = OneSignalUtils.sdkVersion
 
@@ -239,11 +239,13 @@ internal class OneSignalImp : IOneSignal,
         // anything that happens during the rest of init. FeatureManager is wired in via a
         // lazy supplier — `enabledFeatureFlags` is read per-event, so resolving the manager
         // can be deferred until services have bootstrapped.
-        otelManager =
-            OtelLifecycleManager(
-                context = context,
-                featureManagerProvider = { services.getService<IFeatureManager>() },
-            ).also { it.initializeFromCachedConfig() }
+        val featureManagerProvider = { services.getService<IFeatureManager>() }
+        observabilityManager =
+            if (com.onesignal.debug.internal.logging.logger.LoggerModuleSwitch.USE_LOGGER_MODULE) {
+                LoggerLifecycleManager(context = context, featureManagerProvider = featureManagerProvider)
+            } else {
+                OtelLifecycleManager(context = context, featureManagerProvider = featureManagerProvider)
+            }.also { it.initializeFromCachedConfig() }
 
         PreferenceStoreFix.ensureNoObfuscatedPrefStore(context)
 
@@ -387,7 +389,7 @@ internal class OneSignalImp : IOneSignal,
 
             // Now that the IoC container is ready, subscribe the Otel lifecycle
             // manager to config store events so it reacts to fresh remote config.
-            otelManager?.subscribeToConfigStore(services.getService<ConfigModelStore>())
+            observabilityManager?.subscribeToConfigStore(services.getService<ConfigModelStore>())
 
             val result = resolveAppId(appId, configModel, preferencesService)
             if (result.failed) {
