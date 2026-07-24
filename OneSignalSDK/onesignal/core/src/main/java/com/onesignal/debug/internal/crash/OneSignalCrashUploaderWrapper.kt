@@ -4,6 +4,7 @@ import com.onesignal.common.threading.OneSignalDispatchers
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.features.IFeatureManager
 import com.onesignal.core.internal.startup.IStartableService
+import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.debug.internal.logging.logger.LoggerModuleSwitch
 import com.onesignal.debug.internal.logging.logger.android.AndroidLogger
 import com.onesignal.debug.internal.logging.logger.android.FileLogStore
@@ -14,6 +15,7 @@ import com.onesignal.debug.internal.logging.otel.android.createAndroidOtelPlatfo
 import com.onesignal.logger.LoggerFactory
 import com.onesignal.otel.OtelFactory
 import com.onesignal.otel.crash.OtelCrashUploader
+import java.io.File
 
 /**
  * Android-specific wrapper for OtelCrashUploader that implements IStartableService.
@@ -66,17 +68,76 @@ internal class OneSignalCrashUploaderWrapper(
         if (!OtelSdkSupport.isSupported) return
         OneSignalDispatchers.launchOnIO {
             try {
-                if (LoggerModuleSwitch.useLoggerModule(applicationService.appContext)) {
+                val useLogger = LoggerModuleSwitch.useLoggerModule(applicationService.appContext)
+                val module = if (useLogger) "logger" else "otel"
+                Logging.info("OneSignal: Crash uploader selecting module=$module (SDK_CUSTOM_LOGGING=$useLogger)")
+                logCrashDirInventory("before-upload")
+                if (useLogger) {
                     loggerUploader.start()
+                    // Belt-and-suspenders: guarantee leftover legacy otel crash files are
+                    // reclaimed once the logger is active, independent of the uploader's own
+                    // sweep. Owned `*.otlp` records (incl. failed/too-young uploads) are kept.
+                    purgeLegacyCrashFiles()
+                    logCrashDirInventory("after-cleanup")
                 } else {
                     otelUploader.start()
                 }
             } catch (t: Throwable) {
-                com.onesignal.debug.internal.logging.Logging.warn(
+                Logging.warn(
                     "OneSignal: Crash uploader failed to start: ${t.message}",
                     t,
                 )
             }
+        }
+    }
+
+    /** Resolves the shared crash directory both modules write to. */
+    private fun crashStoragePath(): String =
+        createAndroidOtelPlatformProvider(applicationService.appContext) { featureManager }
+            .crashStoragePath
+
+    /**
+     * Deletes any non-`.otlp` entries (legacy otel bare-millis files, stray `.tmp`s)
+     * left in the shared crash directory. Best-effort and idempotent.
+     */
+    @Suppress("TooGenericExceptionCaught")
+    private suspend fun purgeLegacyCrashFiles() {
+        try {
+            val purged = FileLogStore(crashStoragePath()).deleteUnrecognizedEntries()
+            Logging.info("OneSignal: Legacy crash-file purge removed $purged file(s)")
+        } catch (t: Throwable) {
+            Logging.warn("OneSignal: Legacy crash-file purge failed: ${t.message}", t)
+        }
+    }
+
+    /**
+     * Logs a snapshot of the shared crash dir (counts of owned `.otlp` vs foreign/legacy
+     * entries, plus per-file detail) so leftover formats are visible and cleanup is
+     * verifiable from logs alone.
+     */
+    @Suppress("TooGenericExceptionCaught")
+    private fun logCrashDirInventory(label: String) {
+        try {
+            val path = crashStoragePath()
+            val dir = File(path)
+            val files = dir.listFiles()?.filter { it.isFile }.orEmpty()
+            if (files.isEmpty()) {
+                Logging.info("OneSignal: Crash storage inventory [$label] ($path): empty")
+                return
+            }
+            val otlp = files.count { it.name.endsWith(".otlp") }
+            val legacy = files.size - otlp
+            val now = System.currentTimeMillis()
+            val summary =
+                files.joinToString(separator = "; ") { file ->
+                    "name=${file.name} bytes=${file.length()} ageMs=${now - file.lastModified()}"
+                }
+            Logging.info(
+                "OneSignal: Crash storage inventory [$label] ($path): " +
+                    "total=${files.size} otlp=$otlp legacy=$legacy [$summary]",
+            )
+        } catch (t: Throwable) {
+            Logging.warn("OneSignal: Crash storage inventory failed: ${t.message}", t)
         }
     }
 }
