@@ -105,15 +105,14 @@ internal class FileLogStore(
      * `*.otlp` owned records are left untouched so failed / too-young uploads can
      * still retry on the next launch.
      *
-     * This is a host-side, belt-and-suspenders sweep invoked after the logger's
-     * crash-upload pass; it is intentionally not on the [ILogFileStore] contract so
-     * it requires no change to the shared KMP module. Idempotent and safe to call
-     * repeatedly.
+     * Implements the shared [ILogFileStore] contract: the KMP `LogCrashUploader`
+     * invokes this after its owned-record upload pass. The host also calls it as a
+     * belt-and-suspenders sweep. Idempotent and safe to call repeatedly.
      *
      * @return number of unrecognized entries deleted
      */
     @Suppress("TooGenericExceptionCaught", "SwallowedException")
-    suspend fun deleteUnrecognizedEntries(): Int =
+    override suspend fun deleteUnrecognizedEntries(): Int =
         withContext(Dispatchers.IO) {
             try {
                 val foreign =
