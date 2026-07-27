@@ -6,6 +6,7 @@ import com.onesignal.otel.IOtelPlatformProvider
 import com.onesignal.otel.config.OtelConfigCrashFile
 import io.opentelemetry.sdk.logs.data.LogRecordData
 import kotlinx.coroutines.delay
+import java.io.File
 import java.util.concurrent.TimeUnit
 
 /**
@@ -35,6 +36,9 @@ class OtelCrashUploader(
 ) {
     companion object {
         const val SEND_TIMEOUT_SECONDS = 30L
+        private const val MAX_PREVIEW_RECORDS = 3
+        private const val MAX_BODY_PREVIEW_CHARS = 120
+        private const val MAX_PREVIEW_ATTR_KEYS = 8
     }
 
     private fun getReports() =
@@ -56,7 +60,11 @@ class OtelCrashUploader(
             return
         }
 
-        logger.info("OtelCrashUploader: starting")
+        logger.info(
+            "OtelCrashUploader: starting path=${platformProvider.crashStoragePath} " +
+                "minFileAgeMs=${platformProvider.minFileAgeForReadMillis} level=$remoteLogLevel",
+        )
+        logDiskFiles("before-read")
         internalStart()
     }
 
@@ -73,19 +81,47 @@ class OtelCrashUploader(
         sendCrashReports(getReports())
         delay(platformProvider.minFileAgeForReadMillis)
         sendCrashReports(getReports())
+        logDiskFiles("after-upload-passes")
     }
 
-    private fun sendCrashReports(reports: Iterator<Collection<LogRecordData>>) {
+    internal fun sendCrashReports(reports: Iterator<Collection<LogRecordData>>) {
         val networkExporter = openTelemetryRemote.logExporter
         var failed = false
+        var sentBatches = 0
         // NOTE: next() will delete the previous report, so we only want to send
         // another one if there isn't an issue making network calls.
         while (reports.hasNext() && !failed) {
-            val future = networkExporter.export(reports.next())
-            logger.debug("Sending OneSignal crash report")
+            val batch = reports.next()
+            logger.info(
+                "OtelCrashUploader: posting batch records=${batch.size} preview=[${summarizeRecords(batch)}]",
+            )
+            val future = networkExporter.export(batch)
             val result = future.join(SEND_TIMEOUT_SECONDS, TimeUnit.SECONDS)
             failed = !result.isSuccess
-            logger.debug("Done OneSignal crash report, failed: $failed")
+            if (!failed) sentBatches++
+            logger.info("OtelCrashUploader: batch done failed=$failed")
         }
+        logger.info("OtelCrashUploader: pass complete sentBatches=$sentBatches stoppedOnFailure=$failed")
     }
+
+    internal fun logDiskFiles(label: String) {
+        val dir = File(platformProvider.crashStoragePath)
+        val files = dir.listFiles()?.filter { it.isFile }.orEmpty()
+        if (files.isEmpty()) {
+            logger.info("OtelCrashUploader: disk $label — no files in ${dir.path}")
+            return
+        }
+        val summary =
+            files.joinToString(separator = "; ") { file ->
+                "name=${file.name} bytes=${file.length()}"
+            }
+        logger.info("OtelCrashUploader: disk $label count=${files.size} [$summary]")
+    }
+
+    internal fun summarizeRecords(batch: Collection<LogRecordData>): String =
+        batch.take(MAX_PREVIEW_RECORDS).joinToString(separator = " | ") { record ->
+            val body = runCatching { record.body.asString() }.getOrNull()?.take(MAX_BODY_PREVIEW_CHARS)
+            val attrs = record.attributes.asMap().keys.take(MAX_PREVIEW_ATTR_KEYS).joinToString(",")
+            "severity=${record.severityText} body=$body attrs=[$attrs]"
+        }
 }

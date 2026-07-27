@@ -9,6 +9,7 @@ import com.onesignal.core.internal.features.IFeatureManager
 import com.onesignal.core.internal.http.OneSignalService
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.otel.IOtelPlatformProvider
+import java.io.File
 
 // Use this to enable/disable the Otel exporter logging in debug builds.
 internal const val OTEL_EXPORTER_LOGGING_ENABLED = false
@@ -172,14 +173,9 @@ internal fun createAndroidOtelPlatformProvider(
     context: Context,
     featureManagerProvider: () -> IFeatureManager,
 ): OtelPlatformProvider {
-    val crashStoragePath = context.cacheDir.path + java.io.File.separator +
-        "onesignal" + java.io.File.separator +
-        "otel" + java.io.File.separator +
-        "crashes"
-
     return OtelPlatformProvider(
         OtelPlatformProviderConfig(
-            crashStoragePath = crashStoragePath,
+            crashStoragePath = getOtelCrashStoragePath(context),
             appPackageId = context.packageName,
             appVersion = com.onesignal.common.AndroidUtils.getAppVersion(context) ?: "unknown",
             context = context,
@@ -187,3 +183,6 @@ internal fun createAndroidOtelPlatformProvider(
         featureManagerProvider = featureManagerProvider,
     )
 }
+
+internal fun getOtelCrashStoragePath(context: Context): String =
+    File(File(File(context.cacheDir, "onesignal"), "otel"), "crashes").path
