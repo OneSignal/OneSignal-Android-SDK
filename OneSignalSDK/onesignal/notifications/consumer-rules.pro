@@ -25,6 +25,12 @@
 -dontwarn com.google.firebase.**
 -dontwarn com.google.android.gms.**
 
+# Firebase Messaging 25.1 adds register(), which is invoked reflectively to preserve compatibility
+# with earlier Firebase versions.
+-keepclassmembers,allowoptimization class com.google.firebase.messaging.FirebaseMessaging {
+    public com.google.android.gms.tasks.Task register();
+}
+
 # ADM handlers are instantiated by name from the app manifest AND their on* lifecycle callbacks
 # (onMessage/onRegistered/onRegistrationError/onUnregistered) are invoked by the ADM framework, not
 # the SDK, so keep both constructors and those methods. (Amazon-device-only path, untestable in CI.)

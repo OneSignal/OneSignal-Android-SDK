@@ -1,9 +1,11 @@
 package com.onesignal.notifications.internal.registration.impl
 
 import android.util.Base64
+import com.google.android.gms.tasks.Task
 import com.google.android.gms.tasks.Tasks
 import com.google.firebase.FirebaseApp
 import com.google.firebase.FirebaseOptions
+import com.google.firebase.installations.FirebaseInstallations
 import com.google.firebase.messaging.FirebaseMessaging
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.config.ConfigModelStore
@@ -58,13 +60,15 @@ internal class PushRegistratorFCM(
         //   as the latter uses the default Firebase app. We need to use a custom Firebase app as
         //   the senderId is provided at runtime.
         val fcmInstance = firebaseApp!!.get(FirebaseMessaging::class.java)
-        // FirebaseMessaging.getToken API was introduced in firebase-messaging:21.0.0
-        val tokenTask = fcmInstance.token
-        try {
-            return Tasks.await(tokenTask)
-        } catch (e: ExecutionException) {
-            throw tokenTask.exception ?: e
-        }
+        return FirebaseTokenProvider(
+            legacyTokenTask = fcmInstance.token,
+            // Reflection keeps firebase-messaging 23.x and 24.x binary-compatible.
+            registerForFid = {
+                @Suppress("UNCHECKED_CAST")
+                fcmInstance.javaClass.getMethod("register").invoke(fcmInstance) as Task<Void>
+            },
+            installationIdTask = { FirebaseInstallations.getInstance(firebaseApp!!).id },
+        ).getToken()
     }
 
     private fun initFirebaseApp(senderId: String) {
@@ -78,5 +82,36 @@ internal class PushRegistratorFCM(
                 .setProjectId(projectId)
                 .build()
         firebaseApp = FirebaseApp.initializeApp(_applicationService.appContext, firebaseOptions, FCM_APP_NAME)
+    }
+}
+
+internal class FirebaseTokenProvider(
+    private val legacyTokenTask: Task<String>,
+    private val registerForFid: () -> Task<Void>,
+    private val installationIdTask: () -> Task<String>,
+) {
+    fun getToken(): String {
+        try {
+            return await(legacyTokenTask)
+        } catch (e: IllegalStateException) {
+            if (!e.message.orEmpty().startsWith(FID_REGISTRATION_REQUIRED_ERROR)) {
+                throw e
+            }
+        }
+
+        await(registerForFid())
+        return await(installationIdTask())
+    }
+
+    private fun <T> await(task: Task<T>): T {
+        try {
+            return Tasks.await(task)
+        } catch (e: ExecutionException) {
+            throw task.exception ?: e
+        }
+    }
+
+    private companion object {
+        const val FID_REGISTRATION_REQUIRED_ERROR = "API disabled. Please use"
     }
 }

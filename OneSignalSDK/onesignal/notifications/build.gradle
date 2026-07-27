@@ -78,7 +78,7 @@ dependencies {
     //   compileSdkVersion 34 or higher.
     api('com.google.firebase:firebase-messaging') {
         version {
-            require '[23.0.8, 24.0.99]'
+            require '[23.0.8, 25.1.99]'
             prefer '24.0.0'
         }
     }
