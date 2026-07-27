@@ -26,6 +26,10 @@
         android:theme="@style/AppTheme"
         tools:ignore="GoogleAppIndexingWarning">
 
+        <meta-data
+            android:name="firebase_messaging_installation_id_enabled"
+            android:value="true" />
+
         <amazon:enable-feature
             android:name="com.amazon.device.messaging"
             android:required="false"/>

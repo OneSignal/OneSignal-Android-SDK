@@ -42,7 +42,7 @@ android {
     compileSdk = 34
 
     defaultConfig {
-        minSdk = 21
+        minSdk = 23
         targetSdk = 34
         versionCode = 1
         versionName = "1.0"
@@ -133,6 +133,11 @@ android {
 
 dependencies {
     // Kotlin
+    implementation("org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion") {
+        version {
+            strictly(kotlinVersion)
+        }
+    }
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlinVersion")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
 
@@ -166,6 +171,7 @@ dependencies {
 
     // OneSignal - Google Play Builds
     "gmsImplementation"("com.onesignal:OneSignal:$sdkVersion")
+    "gmsImplementation"("com.google.firebase:firebase-messaging:25.1.1")
 
     // OneSignal - Huawei Builds
     "huaweiImplementation"("com.onesignal:OneSignal:$sdkVersion") {
