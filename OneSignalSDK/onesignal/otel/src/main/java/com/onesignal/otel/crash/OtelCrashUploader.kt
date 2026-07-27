@@ -84,7 +84,7 @@ class OtelCrashUploader(
         logDiskFiles("after-upload-passes")
     }
 
-    private fun sendCrashReports(reports: Iterator<Collection<LogRecordData>>) {
+    internal fun sendCrashReports(reports: Iterator<Collection<LogRecordData>>) {
         val networkExporter = openTelemetryRemote.logExporter
         var failed = false
         var sentBatches = 0
@@ -104,7 +104,7 @@ class OtelCrashUploader(
         logger.info("OtelCrashUploader: pass complete sentBatches=$sentBatches stoppedOnFailure=$failed")
     }
 
-    private fun logDiskFiles(label: String) {
+    internal fun logDiskFiles(label: String) {
         val dir = File(platformProvider.crashStoragePath)
         val files = dir.listFiles()?.filter { it.isFile }.orEmpty()
         if (files.isEmpty()) {
@@ -118,7 +118,7 @@ class OtelCrashUploader(
         logger.info("OtelCrashUploader: disk $label count=${files.size} [$summary]")
     }
 
-    private fun summarizeRecords(batch: Collection<LogRecordData>): String =
+    internal fun summarizeRecords(batch: Collection<LogRecordData>): String =
         batch.take(MAX_PREVIEW_RECORDS).joinToString(separator = " | ") { record ->
             val body = runCatching { record.body.asString() }.getOrNull()?.take(MAX_BODY_PREVIEW_CHARS)
             val attrs = record.attributes.asMap().keys.take(MAX_PREVIEW_ATTR_KEYS).joinToString(",")
