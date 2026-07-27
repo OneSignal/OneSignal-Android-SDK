@@ -20,7 +20,7 @@ import kotlin.coroutines.cancellation.CancellationException
  * still have been writing).
  *
  * The logger and the legacy otel module share this one crash directory, so ownership
- * is distinguished purely by the [FILE_SUFFIX]: everything the logger writes ends in
+ * is distinguished purely by [CRASH_OWNED_SUFFIX]: everything the logger writes ends in
  * `.otlp`; anything else (legacy otel bare-millis files, stray `.tmp`s) is foreign and
  * reclaimable via [deleteUnrecognizedEntries] once the logger is the active module.
  */
@@ -30,7 +30,6 @@ internal class FileLogStore(
     private val rootDir: File get() = File(rootPath)
 
     private companion object {
-        const val FILE_SUFFIX = ".otlp"
         const val TAG = "OneSignal"
     }
 
@@ -40,7 +39,7 @@ internal class FileLogStore(
             val dir = rootDir
             if (!dir.exists()) dir.mkdirs()
             // Write to a temp file then rename so a half-written file is never readable.
-            val target = File(dir, "${System.currentTimeMillis()}-${UUID.randomUUID()}$FILE_SUFFIX")
+            val target = File(dir, "${System.currentTimeMillis()}-${UUID.randomUUID()}$CRASH_OWNED_SUFFIX")
             val temp = File(dir, target.name + ".tmp")
             temp.writeBytes(bytes)
             if (!temp.renameTo(target)) {
@@ -65,7 +64,7 @@ internal class FileLogStore(
             try {
                 val now = System.currentTimeMillis()
                 val allFiles = rootDir.listFiles()?.filter { it.isFile }.orEmpty()
-                val suffixMatches = allFiles.filter { it.name.endsWith(FILE_SUFFIX) }
+                val suffixMatches = allFiles.filter { isOwnedCrashFile(it.name) }
                 val readable =
                     suffixMatches
                         .filter { now - it.lastModified() >= minAgeMillis }
@@ -124,24 +123,28 @@ internal class FileLogStore(
         withContext(Dispatchers.IO) {
             try {
                 val now = System.currentTimeMillis()
-                val foreign =
-                    rootDir.listFiles()?.filter { file ->
-                        file.isFile &&
-                            !file.name.endsWith(FILE_SUFFIX) &&
-                            now - file.lastModified() >= minAgeMillis
+                val listed =
+                    rootDir.listFiles()?.filter { it.isFile }?.map { file ->
+                        CrashDirEntry(
+                            name = file.name,
+                            lastModifiedMs = file.lastModified(),
+                            lengthBytes = file.length(),
+                        )
                     }.orEmpty()
+                val foreign = selectUnrecognizedEntries(listed, now, minAgeMillis)
                 if (foreign.isEmpty()) {
                     Logging.debug("FileLogStore: no unrecognized files to purge in ${rootDir.path}")
                     return@withContext 0
                 }
                 var deleted = 0
                 val names = mutableListOf<String>()
-                for (file in foreign) {
+                for (entry in foreign) {
+                    val file = File(rootDir, entry.name)
                     if (file.delete()) {
                         deleted++
-                        names.add(file.name)
+                        names.add(entry.name)
                     } else {
-                        Logging.warn("FileLogStore: failed to purge unrecognized file ${file.name}")
+                        Logging.warn("FileLogStore: failed to purge unrecognized file ${entry.name}")
                     }
                 }
                 Logging.info(

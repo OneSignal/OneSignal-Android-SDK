@@ -7,9 +7,11 @@ import com.onesignal.core.internal.startup.IStartableService
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.debug.internal.logging.logger.LoggerModuleSwitch
 import com.onesignal.debug.internal.logging.logger.android.AndroidLogger
+import com.onesignal.debug.internal.logging.logger.android.CrashDirEntry
 import com.onesignal.debug.internal.logging.logger.android.FileLogStore
 import com.onesignal.debug.internal.logging.logger.android.OneSignalLogHttpSender
 import com.onesignal.debug.internal.logging.logger.android.createAndroidLoggerPlatformProvider
+import com.onesignal.debug.internal.logging.logger.android.formatCrashDirInventory
 import com.onesignal.debug.internal.logging.otel.android.AndroidOtelLogger
 import com.onesignal.debug.internal.logging.otel.android.createAndroidOtelPlatformProvider
 import com.onesignal.logger.LoggerFactory
@@ -74,8 +76,9 @@ internal class OneSignalCrashUploaderWrapper(
                 Logging.info("OneSignal: Crash uploader selecting module=$module (SDK_CUSTOM_LOGGING=$useLogger)")
                 logCrashDirInventory("before-upload")
                 if (useLogger) {
-                    // Shared LogCrashUploader owns the legacy-file purge via
-                    // ILogFileStore.deleteUnrecognizedEntries() (FileLogStore).
+                    // Shared LogCrashUploader.start() is suspend and finishes the owned-record
+                    // upload pass plus the finally-purge before returning, so the after-cleanup
+                    // inventory below is not racing a background purge.
                     loggerUploader.start()
                     logCrashDirInventory("after-cleanup")
                 } else {
@@ -106,29 +109,23 @@ internal class OneSignalCrashUploaderWrapper(
     private fun logCrashDirInventory(label: String) {
         try {
             val path = crashStoragePath()
-            val dir = File(path)
-            val files = dir.listFiles()?.filter { it.isFile }.orEmpty()
-            if (files.isEmpty()) {
-                Logging.info("OneSignal: Crash storage inventory [$label] ($path): empty")
-                return
-            }
-            val otlp = files.count { it.name.endsWith(".otlp") }
-            val legacy = files.size - otlp
             val now = System.currentTimeMillis()
-            val sample = files.take(MAX_INVENTORY_SAMPLE)
-            val summary =
-                sample.joinToString(separator = "; ") { file ->
-                    "name=${file.name} bytes=${file.length()} ageMs=${now - file.lastModified()}"
-                }
-            val truncated =
-                if (files.size > MAX_INVENTORY_SAMPLE) {
-                    " …(+${files.size - MAX_INVENTORY_SAMPLE} more)"
-                } else {
-                    ""
-                }
+            val entries =
+                File(path).listFiles()?.filter { it.isFile }?.map { file ->
+                    CrashDirEntry(
+                        name = file.name,
+                        lastModifiedMs = file.lastModified(),
+                        lengthBytes = file.length(),
+                    )
+                }.orEmpty()
             Logging.info(
-                "OneSignal: Crash storage inventory [$label] ($path): " +
-                    "total=${files.size} otlp=$otlp legacy=$legacy [$summary]$truncated",
+                formatCrashDirInventory(
+                    label = label,
+                    path = path,
+                    entries = entries,
+                    nowMs = now,
+                    maxSample = MAX_INVENTORY_SAMPLE,
+                ),
             )
         } catch (t: Throwable) {
             Logging.warn("OneSignal: Crash storage inventory failed: ${t.message}", t)
