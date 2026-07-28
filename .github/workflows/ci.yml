@@ -156,7 +156,10 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: unit-tests-results
-          path: OneSignalSDK/unittest/build
+          path: |
+            OneSignalSDK/**/build/reports/tests/
+            OneSignalSDK/**/build/test-results/
+          if-no-files-found: error
 
   demo-build:
     runs-on: ubuntu-latest
