@@ -4,16 +4,21 @@ import com.onesignal.common.threading.OneSignalDispatchers
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.features.IFeatureManager
 import com.onesignal.core.internal.startup.IStartableService
+import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.debug.internal.logging.logger.LoggerModuleSwitch
 import com.onesignal.debug.internal.logging.logger.android.AndroidLogger
+import com.onesignal.debug.internal.logging.logger.android.CrashDirEntry
 import com.onesignal.debug.internal.logging.logger.android.FileLogStore
 import com.onesignal.debug.internal.logging.logger.android.OneSignalLogHttpSender
 import com.onesignal.debug.internal.logging.logger.android.createAndroidLoggerPlatformProvider
+import com.onesignal.debug.internal.logging.logger.android.formatCrashDirInventory
 import com.onesignal.debug.internal.logging.otel.android.AndroidOtelLogger
 import com.onesignal.debug.internal.logging.otel.android.createAndroidOtelPlatformProvider
 import com.onesignal.logger.LoggerFactory
 import com.onesignal.otel.OtelFactory
 import com.onesignal.otel.crash.OtelCrashUploader
+import java.io.File
+import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * Android-specific wrapper for OtelCrashUploader that implements IStartableService.
@@ -66,17 +71,68 @@ internal class OneSignalCrashUploaderWrapper(
         if (!OtelSdkSupport.isSupported) return
         OneSignalDispatchers.launchOnIO {
             try {
-                if (LoggerModuleSwitch.useLoggerModule(applicationService.appContext)) {
+                val useLogger = LoggerModuleSwitch.useLoggerModule(applicationService.appContext)
+                val module = if (useLogger) "logger" else "otel"
+                Logging.info("OneSignal: Crash uploader selecting module=$module (SDK_CUSTOM_LOGGING=$useLogger)")
+                logCrashDirInventory("before-upload")
+                if (useLogger) {
+                    // Shared LogCrashUploader.start() is suspend and finishes the owned-record
+                    // upload pass plus the finally-purge before returning, so the after-cleanup
+                    // inventory below is not racing a background purge.
                     loggerUploader.start()
+                    logCrashDirInventory("after-cleanup")
                 } else {
                     otelUploader.start()
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (t: Throwable) {
-                com.onesignal.debug.internal.logging.Logging.warn(
+                Logging.warn(
                     "OneSignal: Crash uploader failed to start: ${t.message}",
                     t,
                 )
             }
         }
+    }
+
+    /** Resolves the shared crash directory both modules write to. */
+    private fun crashStoragePath(): String =
+        createAndroidOtelPlatformProvider(applicationService.appContext) { featureManager }
+            .crashStoragePath
+
+    /**
+     * Logs a snapshot of the shared crash dir (counts of owned `.otlp` vs foreign/legacy
+     * entries, plus a bounded per-file sample) so leftover formats are visible and
+     * cleanup is verifiable from logs alone.
+     */
+    @Suppress("TooGenericExceptionCaught")
+    private fun logCrashDirInventory(label: String) {
+        try {
+            val path = crashStoragePath()
+            val now = System.currentTimeMillis()
+            val entries =
+                File(path).listFiles()?.filter { it.isFile }?.map { file ->
+                    CrashDirEntry(
+                        name = file.name,
+                        lastModifiedMs = file.lastModified(),
+                        lengthBytes = file.length(),
+                    )
+                }.orEmpty()
+            Logging.info(
+                formatCrashDirInventory(
+                    label = label,
+                    path = path,
+                    entries = entries,
+                    nowMs = now,
+                    maxSample = MAX_INVENTORY_SAMPLE,
+                ),
+            )
+        } catch (t: Throwable) {
+            Logging.warn("OneSignal: Crash storage inventory failed: ${t.message}", t)
+        }
+    }
+
+    private companion object {
+        const val MAX_INVENTORY_SAMPLE = 20
     }
 }
