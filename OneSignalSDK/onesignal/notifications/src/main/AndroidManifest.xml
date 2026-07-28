@@ -78,19 +78,18 @@
 
         <receiver
             android:name="com.onesignal.notifications.receivers.NotificationDismissReceiver"
-            android:exported="true"/>
+            android:exported="false"/>
 
         <receiver
             android:name="com.onesignal.notifications.receivers.BootUpReceiver"
-            android:exported="true">
+            android:exported="false">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
-                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
             </intent-filter>
         </receiver>
         <receiver
             android:name="com.onesignal.notifications.receivers.UpgradeReceiver"
-            android:exported="true">
+            android:exported="false">
             <intent-filter>
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
             </intent-filter>
@@ -102,13 +101,13 @@
             android:excludeFromRecents="true"
             android:taskAffinity=""
             android:theme="@android:style/Theme.Translucent.NoTitleBar"
-            android:exported="true" />
+            android:exported="false" />
 
         <activity
             android:name="com.onesignal.notifications.activities.NotificationOpenedActivityAndroid22AndOlder"
             android:noHistory="true"
             android:excludeFromRecents="true"
             android:theme="@android:style/Theme.Translucent.NoTitleBar"
-            android:exported="true" />
+            android:exported="false" />
     </application>
 </manifest>
