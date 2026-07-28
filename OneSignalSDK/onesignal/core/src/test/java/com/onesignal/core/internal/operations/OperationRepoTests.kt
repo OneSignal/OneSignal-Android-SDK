@@ -951,16 +951,22 @@ class OperationRepoTests : FunSpec({
             ExecutionResponse(ExecutionResult.SUCCESS)
         }
 
-        // When
-        mocks.operationRepo.start()
-
-        // Enqueue operations in a way that tests the critical scenario:
-        // 1. Translation source generates mappings
-        // 2. Operations needing translation wait for those mappings
-        // 3. After translation, operations are grouped and executed together
+        // Queue every operation before processing so the translation source cannot
+        // execute before the operation that needs its mapping has been enqueued.
         mocks.operationRepo.enqueue(translationSource)
-        mocks.operationRepo.enqueue(groupableOp1) // This needs translation
-        mocks.operationRepo.enqueueAndWait(groupableOp2) // This doesn't need translation but should be grouped
+        mocks.operationRepo.enqueue(groupableOp1)
+        val groupedExecutionResult = WaiterWithValue<Boolean>()
+        launch(start = CoroutineStart.UNDISPATCHED) {
+            groupedExecutionResult.wake(mocks.operationRepo.enqueueAndWait(groupableOp2))
+        }
+        withTimeout(1_000) {
+            while (synchronized(mocks.operationRepo.queue) { mocks.operationRepo.queue.size } < 3) {
+                delay(1)
+            }
+        }
+
+        mocks.operationRepo.start()
+        withTimeout(1_000) { groupedExecutionResult.waitForWake() } shouldBe true
 
         // Then verify the critical execution order
         executionOrder.size shouldBeGreaterThan 2 // At minimum: Translation source + translation + grouped execution (>= 3)

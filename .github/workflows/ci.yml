@@ -22,11 +22,13 @@ permissions:
   issues: write
 
 jobs:
-  build:
+  code-quality:
     runs-on: ubuntu-latest
     steps:
       - name: "[Checkout] Repo"
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
+        with:
+          submodules: recursive
       - name: "[Setup] Project"
         uses: ./.github/actions/project-setup
       - name: "[Code Formatting] Spotless"
@@ -37,14 +39,25 @@ jobs:
         working-directory: OneSignalSDK
         run: |
           ./gradlew detekt --console=plain
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: "[Checkout] Repo"
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          submodules: recursive
+      - name: "[Setup] Project"
+        uses: ./.github/actions/project-setup
+        with:
+          # Keep untrusted fork PRs read-only; this is the sole cache writer for other runs.
+          cache-read-only: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository }}
       - name: "[Test] SDK Unit Tests"
+        id: unit_tests
         working-directory: OneSignalSDK
         run: |
           ./gradlew testDebugUnitTest --console=plain --continue
-      - name: "[Build] Demo app (minified GMS + Huawei release)"
-        working-directory: OneSignalSDK
-        run: |
-          ./gradlew :app:assembleGmsRelease :app:assembleHuaweiRelease --console=plain
       - name: "[Diff Coverage] Check for bypass"
         id: coverage_bypass
         if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
@@ -100,7 +113,7 @@ jobs:
           fi
       - name: Comment PR with coverage summary
         if: always() && github.event_name == 'pull_request'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const fs = require('fs');
@@ -139,8 +152,47 @@ jobs:
               }
             }
       - name: Unit tests results
-        if: failure()
-        uses: actions/upload-artifact@v4
+        if: failure() && steps.unit_tests.outcome == 'failure'
+        uses: actions/upload-artifact@v7
         with:
           name: unit-tests-results
-          path: OneSignalSDK/unittest/build
+          path: |
+            OneSignalSDK/**/build/reports/tests/
+            OneSignalSDK/**/build/test-results/
+          if-no-files-found: warn
+
+  demo-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: "[Checkout] Repo"
+        uses: actions/checkout@v7
+        with:
+          submodules: recursive
+      - name: "[Setup] Project"
+        uses: ./.github/actions/project-setup
+      - name: "[Build] Demo app (minified GMS + Huawei release)"
+        working-directory: OneSignalSDK
+        run: |
+          ./gradlew :app:assembleGmsRelease :app:assembleHuaweiRelease --console=plain
+
+  # Keep the existing required check stable while the workloads run independently.
+  build:
+    if: always()
+    needs:
+      - code-quality
+      - test
+      - demo-build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify parallel jobs
+        env:
+          CODE_QUALITY_RESULT: ${{ needs.code-quality.result }}
+          TEST_RESULT: ${{ needs.test.result }}
+          DEMO_BUILD_RESULT: ${{ needs.demo-build.result }}
+        run: |
+          if [ "$CODE_QUALITY_RESULT" != "success" ] ||
+             [ "$TEST_RESULT" != "success" ] ||
+             [ "$DEMO_BUILD_RESULT" != "success" ]; then
+            echo "One or more required jobs failed or were cancelled."
+            exit 1
+          fi
