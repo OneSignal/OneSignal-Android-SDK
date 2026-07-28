@@ -22,6 +22,7 @@ internal class PushRegistratorFCM(
     companion object {
         private const val FCM_APP_NAME = "ONESIGNAL_SDK_FCM_APP_NAME"
         private const val FID_REGISTRATION_ENABLED = "firebase_messaging_installation_id_enabled"
+        private const val GMS_PACKAGE_NAME = "com.google.android.gms"
 
         // project_info.project_id
         private const val FCM_DEFAULT_PROJECT_ID = "onesignal-shared-public"
@@ -36,6 +37,7 @@ internal class PushRegistratorFCM(
     private val projectId: String
     private val appId: String
     private val apiKey: String
+    private val hasBackendFcmCredentials: Boolean
 
     private var firebaseApp: FirebaseApp? = null
     override val providerName: String
@@ -48,16 +50,18 @@ internal class PushRegistratorFCM(
         this.appId = fcpParams.appId ?: FCM_DEFAULT_APP_ID
         val defaultApiKey = String(Base64.decode(FCM_DEFAULT_API_KEY_BASE64, Base64.DEFAULT))
         this.apiKey = fcpParams.apiKey ?: defaultApiKey
+        this.hasBackendFcmCredentials =
+            fcpParams.projectId != null && fcpParams.appId != null && fcpParams.apiKey != null
     }
 
     @Throws(ExecutionException::class, InterruptedException::class)
     override suspend fun getToken(senderId: String): String {
         initFirebaseApp(senderId)
-        return getTokenWithClassFirebaseMessaging()
+        return getTokenWithClassFirebaseMessaging(senderId)
     }
 
     @Throws(ExecutionException::class, InterruptedException::class)
-    private fun getTokenWithClassFirebaseMessaging(): String {
+    private fun getTokenWithClassFirebaseMessaging(senderId: String): String {
         // We use firebaseApp.get(FirebaseMessaging.class) instead of FirebaseMessaging.getInstance()
         //   as the latter uses the default Firebase app. We need to use a custom Firebase app as
         //   the senderId is provided at runtime.
@@ -66,8 +70,17 @@ internal class PushRegistratorFCM(
             fcmInstance.javaClass.methods.firstOrNull {
                 it.name == "register" && it.parameterTypes.isEmpty()
             }
+        val fidRegistrationEnabled = registerMethod != null && isFidRegistrationEnabled()
+        if (fidRegistrationEnabled) {
+            // FirebaseMessaging.getToken() is rejected while the manifest flag is set, so there is
+            // no legacy path left to fall back to when FID registration cannot be trusted.
+            fidRegistrationBlocker(senderId, appId, hasBackendFcmCredentials, gmsVersionCode())?.let {
+                throw IllegalStateException("$FID_REGISTRATION_ENABLED is enabled in the manifest, but $it.")
+            }
+        }
+
         return FirebaseTokenProvider(
-            fidRegistrationEnabled = registerMethod != null && isFidRegistrationEnabled(),
+            fidRegistrationEnabled = fidRegistrationEnabled,
             legacyTokenTask = { fcmInstance.token },
             // Reflection keeps firebase-messaging 23.x and 24.x binary-compatible.
             registerForFid = {
@@ -92,6 +105,16 @@ internal class PushRegistratorFCM(
         }
     }
 
+    @Suppress("DEPRECATION")
+    private fun gmsVersionCode(): Int {
+        val context = _applicationService.appContext
+        return try {
+            context.packageManager.getPackageInfo(GMS_PACKAGE_NAME, 0).versionCode
+        } catch (_: PackageManager.NameNotFoundException) {
+            0
+        }
+    }
+
     private fun initFirebaseApp(senderId: String) {
         if (firebaseApp != null) return
         val firebaseOptions =
@@ -104,6 +127,38 @@ internal class PushRegistratorFCM(
                 .build()
         firebaseApp = FirebaseApp.initializeApp(_applicationService.appContext, firebaseOptions, FCM_APP_NAME)
     }
+}
+
+/**
+ * firebase-messaging only performs FID registration on this Play Services build or newer. Below it
+ * `register()` quietly registers a legacy token instead, which no public API exposes.
+ */
+private const val MIN_GMS_VERSION_FOR_FID = 261200000
+
+/**
+ * FID registration mints an installation ID against the Firebase project identified by [gmpAppId]
+ * and then registers it under [senderId], so both must describe the same project. Returns null when
+ * registration can be trusted, otherwise the reason it cannot.
+ */
+internal fun fidRegistrationBlocker(
+    senderId: String,
+    gmpAppId: String,
+    hasBackendFcmCredentials: Boolean,
+    gmsVersionCode: Int,
+): String? {
+    // A v1 app ID is "1:<projectNumber>:android:<hash>", and the project number is the sender ID.
+    if (!hasBackendFcmCredentials || gmpAppId.split(':').getOrNull(1) != senderId) {
+        return "the FCM credentials in use do not belong to the Firebase project for sender ID " +
+            "$senderId. Add your Firebase service account under App Settings > Android on the " +
+            "OneSignal dashboard, or remove the manifest flag"
+    }
+
+    if (gmsVersionCode < MIN_GMS_VERSION_FOR_FID) {
+        return "'Google Play services' $gmsVersionCode predates $MIN_GMS_VERSION_FOR_FID and would " +
+            "register a token this SDK cannot read. Update 'Google Play services', or remove the manifest flag"
+    }
+
+    return null
 }
 
 internal class FirebaseTokenProvider(
