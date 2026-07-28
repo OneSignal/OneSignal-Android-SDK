@@ -74,15 +74,7 @@ class BadgeCountUpdaterTests : FunSpec({
     }
 
     test("updateCount should use ShortcutBadger before Android O") {
-        val mocks = Mocks()
-        val updater =
-            BadgeCountUpdater(
-                mocks.applicationService,
-                mocks.queryHelper,
-                mocks.databaseProvider,
-            )
-
-        updater.updateCount(3)
+        Mocks().badgeCountUpdater(Build.VERSION_CODES.O - 1).updateCount(3)
 
         verify(exactly = 1) { ShortcutBadger.applyCountOrThrow(any(), 3) }
     }
