@@ -40,6 +40,7 @@ private class Mocks {
         every { applicationService.appContext } returns context
         every { context.packageManager } returns packageManager
         every { context.packageName } returns "com.onesignal.example"
+        every { queryHelper.recentUninteractedWithNotificationsWhere() } returns StringBuilder("1=1")
         every {
             packageManager.getApplicationInfo("com.onesignal.example", PackageManager.GET_META_DATA)
         } returns applicationInfo
