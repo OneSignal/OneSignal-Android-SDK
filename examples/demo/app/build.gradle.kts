@@ -25,12 +25,10 @@ fun demoOverride(key: String): String? {
     return demoLocalProperties.getProperty(key)?.trim()?.takeIf { it.isNotEmpty() }
 }
 
-// Apply GMS or Huawei plugin based on build variant
+// Apply the Huawei plugin only for Huawei build variants.
 // Check at configuration time, not when task graph is ready
 val taskRequests = gradle.startParameter.taskRequests.toString().lowercase()
-if (taskRequests.contains("gms")) {
-    apply(plugin = "com.google.gms.google-services")
-} else if (taskRequests.contains("huawei")) {
+if (taskRequests.contains("huawei")) {
     apply(plugin = "com.huawei.agconnect")
 }
 

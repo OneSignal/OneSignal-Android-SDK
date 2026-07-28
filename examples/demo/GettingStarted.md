@@ -161,7 +161,6 @@ When building from `OneSignalSDK/`, the `SDK_VERSION` property is **required** a
 
 | Problem | Fix |
 |---------|-----|
-| `google-services.json` error | Make sure the `gms` variant is selected. The file is already checked in. |
 | Push not received on emulator | Use a device with Google Play Services. Some emulator images lack FCM support. |
 | `SDK_VERSION is not defined` | You're building from `OneSignalSDK/`. Pass `-PSDK_VERSION=X.Y.Z`. |
 | Gradle sync fails on Huawei deps | Switch to `gmsDebug` unless you specifically need HMS testing. |

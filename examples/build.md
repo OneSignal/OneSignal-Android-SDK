@@ -42,10 +42,10 @@ Two flavors are declared on the `default` dimension:
 
 | Flavor | Use case |
 |--------|----------|
-| `gms`  | Google Play Services / FCM — applies the `com.google.gms.google-services` plugin and pulls `play-services-location`. |
+| `gms`  | Google Play Services / FCM — pulls `play-services-location`. OneSignal initializes its own Firebase app, so no Google Services plugin or `google-services.json` is needed. |
 | `huawei` | Huawei HMS — applies `com.huawei.agconnect`, excludes the GMS transitive deps from the OneSignal artifact, and pulls `com.huawei.hms:push` + `com.huawei.hms:location`. |
 
-The plugin (`com.google.gms.google-services` vs `com.huawei.agconnect`) is selected at configuration time by inspecting `gradle.startParameter.taskRequests` so a clean `./gradlew tasks` doesn't require both Google and Huawei configuration files.
+The Huawei plugin is selected at configuration time by inspecting `gradle.startParameter.taskRequests` so a clean `./gradlew tasks` doesn't require Huawei configuration.
 
 ### `build.gradle.kts` essentials
 
@@ -226,12 +226,11 @@ The `vine_boom.wav` file from [`sdk-shared/assets`](https://github.com/OneSignal
 
 ### Service config files
 
-The shared default `applicationId` is `com.onesignal.example`. Both service configs must agree:
+The shared default `applicationId` is `com.onesignal.example`.
 
-- `app/google-services.json` → `package_name = "com.onesignal.example"` for the `gms` flavor.
 - `app/agconnect-services.json` → every `package_name` entry set to `com.onesignal.example` for the `huawei` flavor.
 
-If the package changes you must regenerate these from the Firebase / Huawei AppGallery consoles.
+If the package changes you must regenerate this file from the Huawei AppGallery console.
 
 ### Huawei flavor
 
@@ -257,7 +256,6 @@ examples/
     └── app/
         ├── build.gradle.kts                   # namespace = com.onesignal.example, gms/huawei flavors
         ├── proguard-rules.pro
-        ├── google-services.json               # package_name = com.onesignal.example
         ├── agconnect-services.json            # package_name = com.onesignal.example
         └── src/
             ├── main/
