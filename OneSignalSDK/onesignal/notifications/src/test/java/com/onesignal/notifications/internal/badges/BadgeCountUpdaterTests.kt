@@ -16,7 +16,6 @@ import io.kotest.core.spec.style.FunSpec
 import io.mockk.Runs
 import io.mockk.every
 import io.mockk.just
-import io.mockk.lastArg
 import io.mockk.mockk
 import io.mockk.mockkObject
 import io.mockk.mockkStatic
@@ -52,7 +51,7 @@ private class Mocks {
         every {
             database.query(any(), any(), any(), any(), any(), any(), any(), any(), any())
         } answers {
-            lastArg<(ICursor) -> Unit>().invoke(cursor)
+            arg<(ICursor) -> Unit>(8).invoke(cursor)
         }
     }
 
