@@ -48,7 +48,7 @@ jobs:
       NEW_SHA: ${{ inputs.kmp_sha }}
     steps:
       - name: "[Checkout] Android SDK"
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           # Reusable workflows keep the caller's github context, so the default
           # checkout target is the caller (OneSignal-KMP-SDK), not this repo.
