@@ -72,7 +72,7 @@ internal class BadgeCountUpdater private constructor(
         // ShortcutBadger can cause native SIGSEGV crashes on some OEM devices
         // (e.g. Xiaomi Redmi) where the broadcast receiver has buggy native code.
         if (_sdkInt >= Build.VERSION_CODES.O) return
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+        if (_sdkInt >= Build.VERSION_CODES.M) {
             updateStandard()
         } else {
             updateFallback()
