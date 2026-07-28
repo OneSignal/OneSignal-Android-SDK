@@ -159,7 +159,7 @@ jobs:
           path: |
             OneSignalSDK/**/build/reports/tests/
             OneSignalSDK/**/build/test-results/
-          if-no-files-found: error
+          if-no-files-found: warn
 
   demo-build:
     runs-on: ubuntu-latest
