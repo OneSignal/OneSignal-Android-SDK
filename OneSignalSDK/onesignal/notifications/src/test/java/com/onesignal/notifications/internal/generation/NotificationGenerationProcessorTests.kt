@@ -272,6 +272,10 @@ class NotificationGenerationProcessorTests : FunSpec({
     test("processNotificationData should immediately drop the notification when will display callback indicates to") {
         // Given
         val mocks = Mocks()
+        // Same CI flake as the preventDefault-twice cases below: the suite default timeout (10ms)
+        // can elapse before Dispatchers.IO runs the callback, so discard is never set and display
+        // is attempted against an unstubbed mock.
+        every { mocks.notificationGenerationProcessor getProperty "EXTERNAL_CALLBACKS_TIMEOUT" } answers { 1_000L }
         coEvery { mocks.notificationLifecycleService.externalRemoteNotificationReceived(any()) } just runs
         coEvery { mocks.notificationLifecycleService.externalNotificationWillShowInForeground(any()) } answers {
             val willDisplayEvent = firstArg<INotificationWillDisplayEvent>()
@@ -288,6 +292,7 @@ class NotificationGenerationProcessorTests : FunSpec({
     test("processNotificationData should immediately drop the notification when received event callback indicates to") {
         // Given
         val mocks = Mocks()
+        every { mocks.notificationGenerationProcessor getProperty "EXTERNAL_CALLBACKS_TIMEOUT" } answers { 1_000L }
         coEvery { mocks.notificationLifecycleService.externalRemoteNotificationReceived(any()) } answers {
             val receivedEvent = firstArg<INotificationReceivedEvent>()
             receivedEvent.preventDefault(true)
