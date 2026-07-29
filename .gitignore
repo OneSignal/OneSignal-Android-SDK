@@ -38,3 +38,6 @@ node_modules/
 
 # Coverage report
 coverage/diff_coverage.html
+
+# Firebase config is per-project; supply your own rather than committing it
+google-services.json

@@ -25,15 +25,28 @@ fun demoOverride(key: String): String? {
     return demoLocalProperties.getProperty(key)?.trim()?.takeIf { it.isNotEmpty() }
 }
 
-// Apply the Huawei plugin only for Huawei build variants.
+// Apply GMS or Huawei plugin based on build variant
 // Check at configuration time, not when task graph is ready
 val taskRequests = gradle.startParameter.taskRequests.toString().lowercase()
-if (taskRequests.contains("huawei")) {
+if (taskRequests.contains("gms")) {
+    // google-services.json is per Firebase project so it is not committed. Drop your own in
+    //   app/ to get a default FirebaseApp, which Installation ID registration needs. Without it
+    //   the app still builds and registers through the legacy FCM token API.
+    if (file("google-services.json").exists()) {
+        apply(plugin = "com.google.gms.google-services")
+    }
+} else if (taskRequests.contains("huawei")) {
     apply(plugin = "com.huawei.agconnect")
 }
 
 // OneSignal SDK version - can be overridden via gradle property SDK_VERSION
 val sdkVersion: String = rootProject.findProperty("SDK_VERSION") as? String ?: "5.6.1"
+
+// Firebase Installation ID registration only exists in firebase-messaging 25.1.0 and newer, and
+//   only takes effect when the manifest flag is on. Both are overridable so every combination can
+//   be built: -PfirebaseMessagingVersion=24.0.0 -PfidRegistrationEnabled=false
+val firebaseMessagingVersion: String = demoOverride("firebaseMessagingVersion") ?: "25.1.1"
+val fidRegistrationEnabled: String = demoOverride("fidRegistrationEnabled") ?: "true"
 
 android {
     namespace = "com.onesignal.example"
@@ -78,7 +91,9 @@ android {
     productFlavors {
         create("gms") {
             dimension = "default"
+            minSdk = 23
             applicationId = "com.onesignal.example"
+            manifestPlaceholders["fidRegistrationEnabled"] = fidRegistrationEnabled
         }
         create("huawei") {
             dimension = "default"
@@ -164,6 +179,7 @@ dependencies {
 
     // OneSignal - Google Play Builds
     "gmsImplementation"("com.onesignal:OneSignal:$sdkVersion")
+    "gmsImplementation"("com.google.firebase:firebase-messaging:$firebaseMessagingVersion")
 
     // OneSignal - Huawei Builds
     "huaweiImplementation"("com.onesignal:OneSignal:$sdkVersion") {
