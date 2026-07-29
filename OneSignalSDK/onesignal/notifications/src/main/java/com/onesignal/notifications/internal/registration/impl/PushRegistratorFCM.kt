@@ -10,6 +10,7 @@ import com.google.firebase.messaging.FirebaseMessaging
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.device.IDeviceService
+import java.lang.reflect.InvocationTargetException
 import java.util.concurrent.ExecutionException
 
 internal class PushRegistratorFCM(
@@ -74,18 +75,9 @@ internal class PushRegistratorFCM(
 
         return FCMTokenProvider.InstallationIdRegistration(
             senderId = defaultApp.options.gcmSenderId,
-            register = { register(defaultApp.get(FirebaseMessaging::class.java)) },
+            register = { FCMTokenProvider.invokeRegister(defaultApp.get(FirebaseMessaging::class.java)) },
             installationId = { FirebaseInstallations.getInstance(defaultApp).id },
         )
-    }
-
-    // FirebaseMessaging.register was added in firebase-messaging:25.1.0. This module compiles
-    //   against the preferred 24.0.0, but the non-strict Gradle constraint lets apps select newer
-    //   versions through conflict resolution.
-    private fun register(firebaseMessaging: FirebaseMessaging): Task<*> {
-        return firebaseMessaging.javaClass
-            .getMethod("register")
-            .invoke(firebaseMessaging) as Task<*>
     }
 
     private fun initFirebaseApp(senderId: String) {
@@ -157,6 +149,34 @@ internal object FCMTokenProvider {
 
         await(registration.register())
         return await(registration.installationId())
+    }
+
+    /**
+     * Calls register() reflectively. FirebaseMessaging.register was added in firebase-messaging
+     * 25.1.0. This module compiles against the preferred 24.0.0, but the non-strict Gradle
+     * constraint lets apps select newer versions through conflict resolution.
+     */
+    @Suppress("SwallowedException")
+    fun invokeRegister(target: Any): Task<*> {
+        val register =
+            try {
+                target.javaClass.getMethod("register")
+            } catch (e: NoSuchMethodException) {
+                throw IllegalStateException(
+                    "Firebase Installation ID registration is enabled but " +
+                        "FirebaseMessaging.register() was not found. It requires firebase-messaging " +
+                        "25.1.0 or newer, and has to survive minification, so check that OneSignal's " +
+                        "consumer ProGuard rules are applied.",
+                    e,
+                )
+            }
+
+        // invoke() wraps anything register() throws synchronously, which would hide the cause.
+        return try {
+            register.invoke(target) as Task<*>
+        } catch (e: InvocationTargetException) {
+            throw e.targetException
+        }
     }
 
     private fun isLegacyTokenApiDisabled(exception: IllegalStateException): Boolean {

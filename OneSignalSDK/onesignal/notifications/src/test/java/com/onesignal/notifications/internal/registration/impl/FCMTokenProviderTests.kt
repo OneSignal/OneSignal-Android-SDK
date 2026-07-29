@@ -8,6 +8,7 @@ import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
+import io.kotest.matchers.types.shouldBeInstanceOf
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -23,6 +24,15 @@ private fun registration(
     register: () -> Task<*> = { completedTask() },
     installationId: () -> Task<String> = { Tasks.forResult("installation-id") },
 ) = FCMTokenProvider.InstallationIdRegistration(senderId, register, installationId)
+
+private class Registrar(private val exception: Exception? = null) {
+    fun register(): Task<Void> {
+        exception?.let { throw it }
+        return completedTask()
+    }
+}
+
+private class WithoutRegister
 
 @RobolectricTest
 class FCMTokenProviderTests : FunSpec({
@@ -113,5 +123,24 @@ class FCMTokenProviderTests : FunSpec({
             }
 
         thrown shouldBe registrationFailure
+    }
+
+    test("invokes register reflectively") {
+        FCMTokenProvider.invokeRegister(Registrar()).isSuccessful shouldBe true
+    }
+
+    test("unwraps what register throws instead of surfacing the reflection wrapper") {
+        val cause = IllegalStateException("register blew up")
+
+        val thrown = shouldThrow<IllegalStateException> { FCMTokenProvider.invokeRegister(Registrar(cause)) }
+
+        thrown shouldBe cause
+    }
+
+    test("explains the problem when register is missing") {
+        val thrown = shouldThrow<IllegalStateException> { FCMTokenProvider.invokeRegister(WithoutRegister()) }
+
+        thrown.message!! shouldContain "25.1.0 or newer"
+        thrown.cause.shouldBeInstanceOf<NoSuchMethodException>()
     }
 })
