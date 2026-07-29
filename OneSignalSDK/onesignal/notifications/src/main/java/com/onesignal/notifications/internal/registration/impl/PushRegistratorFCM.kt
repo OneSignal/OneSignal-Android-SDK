@@ -79,8 +79,9 @@ internal class PushRegistratorFCM(
         )
     }
 
-    // FirebaseMessaging.register was added in firebase-messaging:25.1.0, which is newer than the
-    //   version this module compiles against.
+    // FirebaseMessaging.register was added in firebase-messaging:25.1.0. This module compiles
+    //   against the preferred 24.0.0, but the non-strict Gradle constraint lets apps select newer
+    //   versions through conflict resolution.
     private fun register(firebaseMessaging: FirebaseMessaging): Task<*> {
         return firebaseMessaging.javaClass
             .getMethod("register")
