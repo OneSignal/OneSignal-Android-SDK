@@ -7,6 +7,7 @@ import com.google.firebase.FirebaseApp
 import com.google.firebase.FirebaseOptions
 import com.google.firebase.installations.FirebaseInstallations
 import com.google.firebase.messaging.FirebaseMessaging
+import com.onesignal.common.AndroidUtils
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.device.IDeviceService
@@ -21,6 +22,8 @@ internal class PushRegistratorFCM(
 ) : PushRegistratorAbstractGoogle(deviceService, _configModelStore, upgradePrompt) {
     companion object {
         private const val FCM_APP_NAME = "ONESIGNAL_SDK_FCM_APP_NAME"
+
+        private const val INSTALLATION_ID_ENABLED_METADATA = "firebase_messaging_installation_id_enabled"
 
         // project_info.project_id
         private const val FCM_DEFAULT_PROJECT_ID = "onesignal-shared-public"
@@ -61,7 +64,20 @@ internal class PushRegistratorFCM(
         //   as the latter uses the default Firebase app. We need to use a custom Firebase app as
         //   the senderId is provided at runtime.
         val fcmInstance = firebaseApp!!.get(FirebaseMessaging::class.java)
-        return FCMTokenProvider.getToken(senderId, { fcmInstance.token }, ::defaultAppRegistration)
+        return FCMTokenProvider.getToken(
+            senderId,
+            ::installationIdEnabled,
+            { fcmInstance.token },
+            ::defaultAppRegistration,
+        )
+    }
+
+    // Manifest merging means the flag can arrive from a dependency instead of the app's own
+    //   manifest, so report what the app actually resolved to. Read as a raw value because a
+    //   string "true" reads as false when asked for a boolean.
+    private fun installationIdEnabled(): String {
+        val metaData = AndroidUtils.getManifestMetaBundle(_applicationService.appContext)
+        return metaData?.get(INSTALLATION_ID_ENABLED_METADATA)?.toString() ?: "not set"
     }
 
     // Installation ID registration is rejected unless the sender id, app id, and api key all belong
@@ -112,6 +128,7 @@ internal object FCMTokenProvider {
      */
     fun getToken(
         senderId: String,
+        installationIdEnabled: () -> String,
         legacyToken: () -> Task<String>,
         installationIdRegistration: () -> InstallationIdRegistration?,
     ): String {
@@ -120,30 +137,33 @@ internal object FCMTokenProvider {
         } catch (e: IllegalStateException) {
             if (!isLegacyTokenApiDisabled(e)) throw e
 
-            registerInstallationId(senderId, installationIdRegistration())
+            registerInstallationId(senderId, installationIdEnabled(), installationIdRegistration())
         }
     }
 
     private fun registerInstallationId(
         senderId: String,
+        installationIdEnabled: String,
         registration: InstallationIdRegistration?,
     ): String {
+        val optedIn = "firebase_messaging_installation_id_enabled=$installationIdEnabled"
+
         if (registration == null) {
             throw IllegalStateException(
-                "Firebase Installation ID registration is enabled but this app has no default " +
-                    "FirebaseApp to register with. Add your Firebase configuration " +
-                    "(google-services.json), or remove firebase_messaging_installation_id_enabled " +
-                    "from your manifest to keep using the legacy FCM token API.",
+                "Firebase Installation ID registration is enabled ($optedIn) but this app has no " +
+                    "default FirebaseApp to register with. Add your Firebase configuration " +
+                    "(google-services.json), or set firebase_messaging_installation_id_enabled to " +
+                    "false in your manifest to keep using the legacy FCM token API.",
             )
         }
 
         if (registration.senderId != senderId) {
             throw IllegalStateException(
-                "Firebase Installation ID registration is enabled but the default FirebaseApp uses " +
-                    "sender id ${registration.senderId}, while OneSignal is configured with sender " +
-                    "id $senderId. Point both at the same Firebase project, or remove " +
-                    "firebase_messaging_installation_id_enabled from your manifest to keep using " +
-                    "the legacy FCM token API.",
+                "Firebase Installation ID registration is enabled ($optedIn) but the default " +
+                    "FirebaseApp uses sender id ${registration.senderId}, while OneSignal is " +
+                    "configured with sender id $senderId. Point both at the same Firebase project, " +
+                    "or set firebase_messaging_installation_id_enabled to false in your manifest " +
+                    "to keep using the legacy FCM token API.",
             )
         }
 

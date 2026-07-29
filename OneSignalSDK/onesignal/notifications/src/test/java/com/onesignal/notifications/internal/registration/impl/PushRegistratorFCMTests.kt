@@ -1,6 +1,7 @@
 package com.onesignal.notifications.internal.registration.impl
 
 import android.content.Context
+import androidx.test.core.app.ApplicationProvider
 import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
 import com.google.android.gms.tasks.Task
 import com.google.android.gms.tasks.Tasks
@@ -48,7 +49,7 @@ private fun registrator(
     every { FirebaseApp.getApps(any()) } returns installedApps
 
     val applicationService = mockk<IApplicationService>()
-    every { applicationService.appContext } returns mockk<Context>()
+    every { applicationService.appContext } returns ApplicationProvider.getApplicationContext<Context>()
 
     return PushRegistratorFCM(
         MockHelper.configModelStore(),
@@ -81,6 +82,7 @@ class PushRegistratorFCMTests : FunSpec({
             }
 
         thrown.message!! shouldContain "no default FirebaseApp"
+        thrown.message!! shouldContain "firebase_messaging_installation_id_enabled=not set"
     }
 
     test("does not register against a default FirebaseApp with a different sender id") {
