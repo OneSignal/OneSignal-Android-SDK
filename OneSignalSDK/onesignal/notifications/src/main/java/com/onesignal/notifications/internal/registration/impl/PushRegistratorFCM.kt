@@ -156,7 +156,6 @@ internal object FCMTokenProvider {
      * 25.1.0. This module compiles against the preferred 24.0.0, but the non-strict Gradle
      * constraint lets apps select newer versions through conflict resolution.
      */
-    @Suppress("SwallowedException")
     fun invokeRegister(target: Any): Task<*> {
         val register =
             try {
@@ -175,7 +174,7 @@ internal object FCMTokenProvider {
         return try {
             register.invoke(target) as Task<*>
         } catch (e: InvocationTargetException) {
-            throw e.targetException
+            throw e.targetException ?: e
         }
     }
 
