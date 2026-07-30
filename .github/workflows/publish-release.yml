@@ -131,14 +131,15 @@ jobs:
             -Psigning.password="$SDK_SIGNING_PASSWORD" \
             -Psigning.secretKeyRingFile="$GPG_FILE_PATH"
 
-      - name: Get latest merged rel/* PR into main
+      - name: Get merged release PR into current branch
         id: fetch_pr
         run: |
           PR_JSON=$(gh pr list \
             --state merged \
             --base "$CURRENT_BRANCH" \
+            --search "\"Release SDK v$SDK_VERSION\" in:title" \
             --json number,title,body,headRefName,mergedAt \
-            --jq '[.[] | select(.headRefName | startswith("rel/"))] | sort_by(.mergedAt) | last')
+            --jq 'sort_by(.mergedAt) | last')
 
           if [[ -z "$PR_JSON" || "$PR_JSON" == "null" ]]; then
             echo "❌ No merged release PR found for base branch: $CURRENT_BRANCH"
