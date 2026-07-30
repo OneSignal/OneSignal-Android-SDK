@@ -116,6 +116,7 @@ internal class InAppBackendService(
         messageId: String,
         clickId: String?,
         isFirstClick: Boolean,
+        eventId: String,
     ) {
         val json: JSONObject =
             object : JSONObject() {
@@ -125,6 +126,7 @@ internal class InAppBackendService(
                     put("player_id", subscriptionId)
                     put("click_id", clickId)
                     put("variant_id", variantId)
+                    put("event_id", eventId)
                     if (isFirstClick) put("first_click", true)
                 }
             }
@@ -150,6 +152,7 @@ internal class InAppBackendService(
         variantId: String?,
         messageId: String,
         pageId: String?,
+        eventId: String,
     ) {
         val json: JSONObject =
             object : JSONObject() {
@@ -159,6 +162,7 @@ internal class InAppBackendService(
                     put("variant_id", variantId)
                     put("device_type", _deviceService.deviceType.value)
                     put("page_id", pageId)
+                    put("event_id", eventId)
                 }
             }
 
@@ -177,6 +181,7 @@ internal class InAppBackendService(
         subscriptionId: String,
         variantId: String?,
         messageId: String,
+        eventId: String,
     ) {
         val json: JSONObject =
             object : JSONObject() {
@@ -186,6 +191,7 @@ internal class InAppBackendService(
                     put("variant_id", variantId)
                     put("device_type", _deviceService.deviceType.value)
                     put("first_impression", true)
+                    put("event_id", eventId)
                 }
             }
 

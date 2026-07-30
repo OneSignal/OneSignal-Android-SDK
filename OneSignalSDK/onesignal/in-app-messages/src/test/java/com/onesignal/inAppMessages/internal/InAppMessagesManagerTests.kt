@@ -717,14 +717,14 @@ class InAppMessagesManagerTests : FunSpec({
             // Given
 
             every { mocks.pushSubscription.id } returns "subscription-id"
-            coEvery { mocks.backend.sendIAMImpression(any(), any(), any(), any()) } just runs
+            coEvery { mocks.backend.sendIAMImpression(any(), any(), any(), any(), any()) } just runs
 
             // When
             mocks.inAppMessagesManager.onMessageWasDisplayed(mocks.createInAppMessage())
             awaitIO()
 
             // Then
-            coVerify { mocks.backend.sendIAMImpression(any(), any(), any(), any()) }
+            coVerify { mocks.backend.sendIAMImpression(any(), any(), any(), any(), any()) }
         }
 
         test("onMessageWasDisplayed does not send impression for preview message") {
@@ -735,14 +735,14 @@ class InAppMessagesManagerTests : FunSpec({
             awaitIO()
 
             // Then
-            coVerify(exactly = 0) { mocks.backend.sendIAMImpression(any(), any(), any(), any()) }
+            coVerify(exactly = 0) { mocks.backend.sendIAMImpression(any(), any(), any(), any(), any()) }
         }
 
         test("onMessageWasDisplayed does not send duplicate impressions") {
             // Given
             val message = mocks.createInAppMessage()
             every { mocks.pushSubscription.id } returns "subscription-id"
-            coEvery { mocks.backend.sendIAMImpression(any(), any(), any(), any()) } just runs
+            coEvery { mocks.backend.sendIAMImpression(any(), any(), any(), any(), any()) } just runs
 
             // When - send impression twice
             mocks.inAppMessagesManager.onMessageWasDisplayed(message)
@@ -750,7 +750,7 @@ class InAppMessagesManagerTests : FunSpec({
             awaitIO()
 
             // Then - should only send once
-            coVerify(exactly = 1) { mocks.backend.sendIAMImpression(any(), any(), any(), any()) }
+            coVerify(exactly = 1) { mocks.backend.sendIAMImpression(any(), any(), any(), any(), any()) }
         }
 
         test("onMessageWillDismiss fires lifecycle callback when subscribers exist") {
@@ -881,14 +881,14 @@ class InAppMessagesManagerTests : FunSpec({
             val mockPage = mockk<InAppMessagePage>(relaxed = true)
             every { mocks.pushSubscription.id } returns "subscription-id"
             every { mockPage.pageId } returns "page-id"
-            coEvery { mocks.backend.sendIAMPageImpression(any(), any(), any(), any(), any()) } just runs
+            coEvery { mocks.backend.sendIAMPageImpression(any(), any(), any(), any(), any(), any()) } just runs
 
             // When
             mocks.inAppMessagesManager.onMessagePageChanged(mocks.createInAppMessage(), mockPage)
             awaitIO()
 
             // Then
-            coVerify { mocks.backend.sendIAMPageImpression(any(), any(), any(), any(), any()) }
+            coVerify { mocks.backend.sendIAMPageImpression(any(), any(), any(), any(), any(), any()) }
         }
 
         test("onMessagePageChanged does nothing for preview message") {
@@ -900,7 +900,7 @@ class InAppMessagesManagerTests : FunSpec({
             awaitIO()
 
             // Then
-            coVerify(exactly = 0) { mocks.backend.sendIAMPageImpression(any(), any(), any(), any(), any()) }
+            coVerify(exactly = 0) { mocks.backend.sendIAMPageImpression(any(), any(), any(), any(), any(), any()) }
         }
     }
 
@@ -910,7 +910,7 @@ class InAppMessagesManagerTests : FunSpec({
             val message = mocks.createInAppMessage()
             every { mocks.pushSubscription.id } returns "subscription-id"
             coEvery {
-                mocks.backend.sendIAMImpression(any(), any(), any(), any())
+                mocks.backend.sendIAMImpression(any(), any(), any(), any(), any())
             } throws BackendException(500, "Server error")
 
             // When
@@ -922,7 +922,7 @@ class InAppMessagesManagerTests : FunSpec({
             awaitIO()
 
             // Then - should attempt twice since first failed
-            coVerify(exactly = 2) { mocks.backend.sendIAMImpression(any(), any(), any(), any()) }
+            coVerify(exactly = 2) { mocks.backend.sendIAMImpression(any(), any(), any(), any(), any()) }
         }
 
         test("onMessagePageChanged removes page impression on backend failure") {
@@ -932,7 +932,7 @@ class InAppMessagesManagerTests : FunSpec({
             every { mocks.pushSubscription.id } returns "subscription-id"
             every { mockPage.pageId } returns "page-id"
             coEvery {
-                mocks.backend.sendIAMPageImpression(any(), any(), any(), any(), any())
+                mocks.backend.sendIAMPageImpression(any(), any(), any(), any(), any(), any())
             } throws BackendException(500, "Server error")
 
             // When
@@ -944,14 +944,14 @@ class InAppMessagesManagerTests : FunSpec({
             awaitIO()
 
             // Then - should attempt twice since first failed
-            coVerify(exactly = 2) { mocks.backend.sendIAMPageImpression(any(), any(), any(), any(), any()) }
+            coVerify(exactly = 2) { mocks.backend.sendIAMPageImpression(any(), any(), any(), any(), any(), any()) }
         }
 
         test("onMessageActionOccurredOnMessage removes click on backend failure") {
             // Given
             val message = mocks.createInAppMessage()
             coEvery {
-                mocks.backend.sendIAMClick(any(), any(), any(), any(), any(), any())
+                mocks.backend.sendIAMClick(any(), any(), any(), any(), any(), any(), any())
             } throws BackendException(500, "Server error")
 
             // When
@@ -959,7 +959,7 @@ class InAppMessagesManagerTests : FunSpec({
             awaitIO()
 
             // Then
-            coVerify { mocks.backend.sendIAMClick(any(), any(), any(), any(), any(), any()) }
+            coVerify { mocks.backend.sendIAMClick(any(), any(), any(), any(), any(), any(), any()) }
             // Click should be removed from message on failure
             message.isClickAvailable("click-id") shouldBe true
         }

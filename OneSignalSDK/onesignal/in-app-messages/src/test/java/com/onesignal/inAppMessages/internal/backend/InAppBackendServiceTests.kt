@@ -357,7 +357,7 @@ class InAppBackendServiceTests :
             val inAppBackendService = InAppBackendService(mockHttpClient, MockHelper.deviceService(), mockHydrator)
 
             // When
-            inAppBackendService.sendIAMClick("appId", "subscriptionId", "variantId", "messageId", "clickId", isFirstClick = true)
+            inAppBackendService.sendIAMClick("appId", "subscriptionId", "variantId", "messageId", "clickId", isFirstClick = true, eventId = "eventId")
 
             // Then
             coVerify(exactly = 1) {
@@ -369,6 +369,7 @@ class InAppBackendServiceTests :
                         it.safeString("player_id") shouldBe "subscriptionId"
                         it.safeString("click_id") shouldBe "clickId"
                         it.safeString("variant_id") shouldBe "variantId"
+                        it.safeString("event_id") shouldBe "eventId"
                         it.safeBool("first_click") shouldBe true
                     },
                 )
@@ -393,6 +394,7 @@ class InAppBackendServiceTests :
                         "messageId",
                         "clickId",
                         isFirstClick = true,
+                        eventId = "eventId",
                     )
                 }
 
@@ -408,6 +410,7 @@ class InAppBackendServiceTests :
                         it.safeString("player_id") shouldBe "subscriptionId"
                         it.safeString("click_id") shouldBe "clickId"
                         it.safeString("variant_id") shouldBe "variantId"
+                        it.safeString("event_id") shouldBe "eventId"
                         it.safeBool("first_click") shouldBe true
                     },
                 )
@@ -423,7 +426,7 @@ class InAppBackendServiceTests :
             val inAppBackendService = InAppBackendService(mockHttpClient, MockHelper.deviceService(), mockHydrator)
 
             // When
-            inAppBackendService.sendIAMImpression("appId", "subscriptionId", "variantId", "messageId")
+            inAppBackendService.sendIAMImpression("appId", "subscriptionId", "variantId", "messageId", "eventId")
 
             // Then
             coVerify(exactly = 1) {
@@ -434,6 +437,7 @@ class InAppBackendServiceTests :
                         it.safeInt("device_type") shouldBe IDeviceService.DeviceType.Android.value
                         it.safeString("player_id") shouldBe "subscriptionId"
                         it.safeString("variant_id") shouldBe "variantId"
+                        it.safeString("event_id") shouldBe "eventId"
                         it.safeBool("first_impression") shouldBe true
                     },
                 )
@@ -451,7 +455,7 @@ class InAppBackendServiceTests :
             // When
             val exception =
                 shouldThrowUnit<BackendException> {
-                    inAppBackendService.sendIAMImpression("appId", "subscriptionId", "variantId", "messageId")
+                    inAppBackendService.sendIAMImpression("appId", "subscriptionId", "variantId", "messageId", "eventId")
                 }
 
             // Then
@@ -465,6 +469,7 @@ class InAppBackendServiceTests :
                         it.safeInt("device_type") shouldBe IDeviceService.DeviceType.Android.value
                         it.safeString("player_id") shouldBe "subscriptionId"
                         it.safeString("variant_id") shouldBe "variantId"
+                        it.safeString("event_id") shouldBe "eventId"
                         it.safeBool("first_impression") shouldBe true
                     },
                 )
@@ -480,7 +485,7 @@ class InAppBackendServiceTests :
             val inAppBackendService = InAppBackendService(mockHttpClient, MockHelper.deviceService(), mockHydrator)
 
             // When
-            inAppBackendService.sendIAMPageImpression("appId", "subscriptionId", "variantId", "messageId", "pageId")
+            inAppBackendService.sendIAMPageImpression("appId", "subscriptionId", "variantId", "messageId", "pageId", "eventId")
 
             // Then
             coVerify(exactly = 1) {
@@ -492,6 +497,7 @@ class InAppBackendServiceTests :
                         it.safeString("player_id") shouldBe "subscriptionId"
                         it.safeString("variant_id") shouldBe "variantId"
                         it.safeString("page_id") shouldBe "pageId"
+                        it.safeString("event_id") shouldBe "eventId"
                     },
                 )
             }
@@ -508,7 +514,7 @@ class InAppBackendServiceTests :
             // When
             val exception =
                 shouldThrowUnit<BackendException> {
-                    inAppBackendService.sendIAMPageImpression("appId", "subscriptionId", "variantId", "messageId", "pageId")
+                    inAppBackendService.sendIAMPageImpression("appId", "subscriptionId", "variantId", "messageId", "pageId", "eventId")
                 }
 
             // Then
@@ -523,6 +529,7 @@ class InAppBackendServiceTests :
                         it.safeString("player_id") shouldBe "subscriptionId"
                         it.safeString("variant_id") shouldBe "variantId"
                         it.safeString("page_id") shouldBe "pageId"
+                        it.safeString("event_id") shouldBe "eventId"
                     },
                 )
             }

@@ -58,6 +58,7 @@ import com.onesignal.user.subscriptions.IPushSubscription
 import com.onesignal.user.subscriptions.ISubscription
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import java.util.UUID
 
 internal class InAppMessagesManager(
     private val _applicationService: IApplicationService,
@@ -783,6 +784,7 @@ internal class InAppMessagesManager(
                     _subscriptionManager.subscriptions.push.id,
                     variantId,
                     message.messageId,
+                    UUID.randomUUID().toString(),
                 )
 
                 _prefs.impressionesMessagesId = impressionedMessages
@@ -1041,6 +1043,7 @@ internal class InAppMessagesManager(
                 variantId,
                 message.messageId,
                 pageId,
+                UUID.randomUUID().toString(),
             )
 
             _prefs.viewPageImpressionedIds = viewedPageIds
@@ -1079,6 +1082,7 @@ internal class InAppMessagesManager(
                 message.messageId,
                 clickId,
                 action.isFirstClick,
+                UUID.randomUUID().toString(),
             )
 
             // Persist success click to disk. Id already added to set before making the network call

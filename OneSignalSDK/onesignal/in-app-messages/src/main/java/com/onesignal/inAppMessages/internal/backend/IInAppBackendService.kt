@@ -93,6 +93,7 @@ internal interface IInAppBackendService {
         messageId: String,
         clickId: String?,
         isFirstClick: Boolean,
+        eventId: String,
     )
 
     /**
@@ -110,6 +111,7 @@ internal interface IInAppBackendService {
         subscriptionId: String,
         variantId: String?,
         messageId: String,
+        eventId: String,
     )
 
     /**
@@ -129,6 +131,7 @@ internal interface IInAppBackendService {
         variantId: String?,
         messageId: String,
         pageId: String?,
+        eventId: String,
     )
 }
 
