@@ -274,43 +274,47 @@ internal class WebViewManager(
 
         val localWebView = webView
         if (dismissed || localWebView == null) {
+            // Dismissed while waiting for the activity; nothing left to measure/show.
+        } else {
+            // At time point the webView isn't attached to a view
+            // Set the WebView to the max screen size then run JS to evaluate the height.
+            setWebViewToMaxSize(activity, localWebView)
+            if (messageContent.isFullBleed) {
+                updateSafeAreaInsets()
+            }
+
+            localWebView.evaluateJavascript(GET_PAGE_META_DATA_JS_FUNCTION) { value ->
+                evaluatePageMetaDataForHeight(value)
+            }
+        }
+    }
+
+    private fun evaluatePageMetaDataForHeight(value: String?) {
+        // SDK-4494: `evaluateJavascript` returns the JSON-encoded result of the
+        // expression. When the JS function is undefined or returns `undefined`
+        // (e.g. WebView not fully loaded yet) the callback receives the literal
+        // string "null", which `JSONObject(...)` rejects. Bail out early instead
+        // of throwing+catching, and route any remaining surprise through Logging
+        // (was previously `e.printStackTrace()`, which bypassed our log pipeline).
+        if (value.isNullOrBlank() || value == "null") {
+            Logging.warn(
+                "calculateHeightAndShowWebViewAfterNewActivity: empty/null page metadata " +
+                    "from WebView; skipping height update",
+            )
             return
         }
+        try {
+            val pagePxHeight = pageRectToViewHeight(activity, JSONObject(value))
 
-        // At time point the webView isn't attached to a view
-        // Set the WebView to the max screen size then run JS to evaluate the height.
-        setWebViewToMaxSize(activity, localWebView)
-        if (messageContent.isFullBleed) {
-            updateSafeAreaInsets()
-        }
-
-        localWebView.evaluateJavascript(GET_PAGE_META_DATA_JS_FUNCTION) { value ->
-            // SDK-4494: `evaluateJavascript` returns the JSON-encoded result of the
-            // expression. When the JS function is undefined or returns `undefined`
-            // (e.g. WebView not fully loaded yet) the callback receives the literal
-            // string "null", which `JSONObject(...)` rejects. Bail out early instead
-            // of throwing+catching, and route any remaining surprise through Logging
-            // (was previously `e.printStackTrace()`, which bypassed our log pipeline).
-            if (value.isNullOrBlank() || value == "null") {
-                Logging.warn(
-                    "calculateHeightAndShowWebViewAfterNewActivity: empty/null page metadata " +
-                        "from WebView; skipping height update",
-                )
-                return@evaluateJavascript
+            suspendifyOnIO {
+                showMessageView(pagePxHeight)
             }
-            try {
-                val pagePxHeight = pageRectToViewHeight(activity, JSONObject(value))
-
-                suspendifyOnIO {
-                    showMessageView(pagePxHeight)
-                }
-            } catch (e: JSONException) {
-                Logging.warn(
-                    "calculateHeightAndShowWebViewAfterNewActivity: could not parse page metadata; " +
-                        "snippet=${bodySnippet(value)}",
-                    e,
-                )
-            }
+        } catch (e: JSONException) {
+            Logging.warn(
+                "calculateHeightAndShowWebViewAfterNewActivity: could not parse page metadata; " +
+                    "snippet=${bodySnippet(value)}",
+                e,
+            )
         }
     }
 
@@ -385,6 +389,39 @@ internal class WebViewManager(
         }
 
         enableWebViewRemoteDebugging()
+        val localWebView = createConfiguredWebView(currentActivity, isFullScreen)
+
+        val assigned =
+            synchronized(lifecycleLock) {
+                if (dismissed) {
+                    destroyWebViewInstance(localWebView)
+                    false
+                } else {
+                    webView = localWebView
+                    true
+                }
+            }
+        if (!assigned) {
+            return
+        }
+
+        _lifecycle.messageWillDisplay(message)
+        _applicationService.waitUntilActivityReady()
+
+        synchronized(lifecycleLock) {
+            if (dismissed || webView !== localWebView) {
+                destroyWebViewInstance(localWebView)
+            } else {
+                setWebViewToMaxSize(currentActivity, localWebView)
+                localWebView.loadData(base64Message, "text/html; charset=utf-8", "base64")
+            }
+        }
+    }
+
+    private fun createConfiguredWebView(
+        currentActivity: Activity,
+        isFullScreen: Boolean,
+    ): OSWebView {
         val localWebView = OSWebView(currentActivity)
         localWebView.overScrollMode = View.OVER_SCROLL_NEVER
         localWebView.isVerticalScrollBarEnabled = false
@@ -401,26 +438,7 @@ internal class WebViewManager(
                 localWebView.fitsSystemWindows = false
             }
         }
-
-        synchronized(lifecycleLock) {
-            if (dismissed) {
-                destroyWebViewInstance(localWebView)
-                return
-            }
-            webView = localWebView
-        }
-
-        _lifecycle.messageWillDisplay(message)
-        _applicationService.waitUntilActivityReady()
-
-        synchronized(lifecycleLock) {
-            if (dismissed || webView !== localWebView) {
-                destroyWebViewInstance(localWebView)
-                return
-            }
-            setWebViewToMaxSize(currentActivity, localWebView)
-            localWebView.loadData(base64Message, "text/html; charset=utf-8", "base64")
-        }
+        return localWebView
     }
 
     /**
@@ -457,7 +475,7 @@ internal class WebViewManager(
     //  set it's height to match.
     private fun setWebViewToMaxSize(
         activity: Activity,
-        targetWebView: OSWebView = webView!!,
+        targetWebView: OSWebView,
     ) {
         targetWebView.layout(0, 0, getWebViewMaxSizeX(activity), getWebViewMaxSizeY(activity))
     }
@@ -601,8 +619,8 @@ internal class WebViewManager(
                 view.stopLoading()
                 view.removeAllViews()
                 view.destroy()
-            } catch (t: Throwable) {
-                Logging.warn("Error destroying IAM WebView", t)
+            } catch (e: RuntimeException) {
+                Logging.warn("Error destroying IAM WebView", e)
             }
         }
         // WebView.destroy() must run on the main thread
