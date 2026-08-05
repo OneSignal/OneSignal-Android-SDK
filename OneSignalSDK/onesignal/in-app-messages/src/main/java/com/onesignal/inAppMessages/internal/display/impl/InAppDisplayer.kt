@@ -21,6 +21,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import java.io.UnsupportedEncodingException
+import java.util.concurrent.atomic.AtomicReference
 
 // Manages WebView instances by pre-loading them, displaying them, and closing them when dismissed.
 //   Includes a static map for pre-loading, showing, and dismissed so these events can't be duplicated.
@@ -41,7 +42,12 @@ internal class InAppDisplayer(
     private val _languageContext: ILanguageContext,
     private val _time: ITime,
 ) : IInAppDisplayer {
-    private var lastInstance: WebViewManager? = null
+    /**
+     * The currently displaying manager, if any. Atomic because dismissal clears it from a
+     * background thread: readers must claim it with [AtomicReference.getAndSet] rather than
+     * checking for null and dereferencing separately.
+     */
+    private val lastInstance = AtomicReference<WebViewManager?>(null)
 
     override suspend fun displayMessage(message: InAppMessage): Boolean? {
         var response =
@@ -100,14 +106,11 @@ internal class InAppDisplayer(
         if (currentActivity != null) {
             // Only a preview will be dismissed, this prevents normal messages from being
             // removed when a preview is sent into the app
-            if (lastInstance != null && message.isPreview) {
-                // Created a callback for dismissing a message and preparing the next one
-                lastInstance!!.dismissAndAwaitNextMessage()
-                lastInstance = null
-                initInAppMessage(currentActivity, message, content)
-            } else {
-                initInAppMessage(currentActivity, message, content)
+            if (message.isPreview) {
+                // Claim the instance in one step; a concurrent dismiss may have already cleared it.
+                lastInstance.getAndSet(null)?.dismissAndAwaitNextMessage()
             }
+            initInAppMessage(currentActivity, message, content)
             return
         }
 
@@ -116,9 +119,10 @@ internal class InAppDisplayer(
     }
 
     override fun dismissCurrentInAppMessage() {
-        Logging.debug("WebViewManager IAM dismissAndAwaitNextMessage lastInstance: $lastInstance")
+        val instance = lastInstance.get()
+        Logging.debug("WebViewManager IAM dismissAndAwaitNextMessage lastInstance: $instance")
 
-        lastInstance?.backgroundDismissAndAwaitNextMessage()
+        instance?.backgroundDismissAndAwaitNextMessage()
     }
 
     private suspend fun initInAppMessage(
@@ -135,11 +139,9 @@ internal class InAppDisplayer(
             val webViewManager = WebViewManager(message, currentActivity, content, _lifecycle, _applicationService, _promptFactory)
             // Clear lastInstance on every dismiss path so OSWebView cannot retain a destroyed Activity
             webViewManager.onDismissed = {
-                if (lastInstance === webViewManager) {
-                    lastInstance = null
-                }
+                lastInstance.compareAndSet(webViewManager, null)
             }
-            lastInstance = webViewManager
+            lastInstance.set(webViewManager)
 
             if (content.isFullBleed) {
                 webViewManager.setContentSafeAreaInsets(content, currentActivity)

@@ -261,10 +261,12 @@ internal class WebViewManager(
     // Every time an Activity is shown we update the height of the WebView since the available
     //   screen size may have changed. (Expect for Fullscreen)
     private suspend fun calculateHeightAndShowWebViewAfterNewActivity() {
-        if (dismissed || messageView == null || webView == null) return
+        // Snapshot: a concurrent dismiss can clear these at any point.
+        val localMessageView = messageView
+        if (dismissed || localMessageView == null || webView == null) return
 
         // Don't need a CSS / HTML height update for fullscreen unless its fullbleed
-        if (messageView!!.displayPosition == Position.FULL_SCREEN && !messageContent.isFullBleed) {
+        if (localMessageView.displayPosition == Position.FULL_SCREEN && !messageContent.isFullBleed) {
             showMessageView(null)
             return
         }
@@ -330,9 +332,7 @@ internal class WebViewManager(
             } else if (lastActivityName != currentActivityName) {
                 if (!closing) {
                     // Navigate to new activity while displaying current IAM
-                    if (messageView != null) {
-                        messageView!!.removeAllViews()
-                    }
+                    messageView?.removeAllViews()
                     showMessageView(lastPageHeight)
                 }
             } else {
@@ -350,8 +350,8 @@ internal class WebViewManager(
             messageView: $messageView
             """.trimIndent(),
         )
-        if (messageView != null && activity.localClassName == currentActivityName) {
-            messageView!!.removeAllViews()
+        if (activity.localClassName == currentActivityName) {
+            messageView?.removeAllViews()
         }
     }
 
