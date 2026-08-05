@@ -16,10 +16,6 @@ on:
         description: "OneSignal-KMP-SDK tag to pin the submodule to (e.g. v0.2.0)"
         required: true
         type: string
-      kmp_sha:
-        description: "Commit SHA the tag points at (the gitlink target)"
-        required: true
-        type: string
     secrets:
       GH_PUSH_TOKEN:
         required: false
@@ -28,10 +24,6 @@ on:
     inputs:
       kmp_version:
         description: "OneSignal-KMP-SDK tag to pin the submodule to (e.g. v0.2.0)"
-        required: true
-        type: string
-      kmp_sha:
-        description: "Commit SHA the tag points at (the gitlink target)"
         required: true
         type: string
 
@@ -45,7 +37,6 @@ jobs:
     env:
       SUBMODULE_PATH: OneSignal-KMP-SDK
       VERSION: ${{ inputs.kmp_version }}
-      NEW_SHA: ${{ inputs.kmp_sha }}
     steps:
       - name: "[Checkout] Android SDK"
         uses: actions/checkout@v7
@@ -62,6 +53,39 @@ jobs:
 
       - name: "[Setup] Git user"
         uses: OneSignal/sdk-shared/.github/actions/setup-git-user@main
+
+      - name: "[Resolve] KMP release tag"
+        env:
+          KMP_REMOTE: https://github.com/OneSignal/OneSignal-KMP-SDK.git
+        run: |
+          set -euo pipefail
+
+          if [[ ! "$VERSION" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo "::error::Invalid KMP version '$VERSION'. Expected a release tag such as v0.2.0."
+            exit 1
+          fi
+
+          if ! git ls-remote --exit-code --refs "$KMP_REMOTE" "refs/tags/${VERSION}" >/dev/null; then
+            echo "::error::KMP release tag '$VERSION' does not exist or could not be resolved."
+            exit 1
+          fi
+
+          tag_repo="$(mktemp -d)"
+          trap 'rm -rf "$tag_repo"' EXIT
+          git -C "$tag_repo" init --bare --quiet
+          if ! git -C "$tag_repo" fetch --quiet --depth=1 "$KMP_REMOTE" "refs/tags/${VERSION}"; then
+            echo "::error::Failed to fetch KMP release tag '$VERSION'."
+            exit 1
+          fi
+
+          new_sha="$(git -C "$tag_repo" rev-parse 'FETCH_HEAD^{commit}')"
+          if ! git -C "$tag_repo" cat-file -e "${new_sha}^{commit}"; then
+            echo "::error::KMP release tag '$VERSION' does not resolve to a commit."
+            exit 1
+          fi
+
+          echo "Resolved $VERSION to $new_sha."
+          echo "NEW_SHA=$new_sha" >> "$GITHUB_ENV"
 
       - name: "[Bump] Re-point submodule gitlink"
         id: bump
