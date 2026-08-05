@@ -118,9 +118,7 @@ internal class InAppDisplayer(
     override fun dismissCurrentInAppMessage() {
         Logging.debug("WebViewManager IAM dismissAndAwaitNextMessage lastInstance: $lastInstance")
 
-        if (lastInstance != null) {
-            lastInstance!!.backgroundDismissAndAwaitNextMessage()
-        }
+        lastInstance?.backgroundDismissAndAwaitNextMessage()
     }
 
     private suspend fun initInAppMessage(
@@ -135,6 +133,12 @@ internal class InAppDisplayer(
                     Base64.NO_WRAP,
                 )
             val webViewManager = WebViewManager(message, currentActivity, content, _lifecycle, _applicationService, _promptFactory)
+            // Clear lastInstance on every dismiss path so OSWebView cannot retain a destroyed Activity
+            webViewManager.onDismissed = {
+                if (lastInstance === webViewManager) {
+                    lastInstance = null
+                }
+            }
             lastInstance = webViewManager
 
             if (content.isFullBleed) {

@@ -3,7 +3,10 @@ package com.onesignal.inAppMessages.internal.display.impl
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.view.View
+import android.view.ViewGroup
 import android.webkit.JavascriptInterface
 import android.webkit.WebSettings
 import android.webkit.WebView
@@ -78,6 +81,9 @@ internal class WebViewManager(
 
     // closing prevents IAM being redisplayed when the activity changes during an actionHandler
     private var closing = false
+
+    // Invoked once after dismiss cleanup so owners can drop references (e.g. InAppDisplayer.lastInstance)
+    var onDismissed: (() -> Unit)? = null
 
     // Lets JS from the page send JSON payloads to this class
     internal inner class OSJavaScriptInterface {
@@ -431,7 +437,9 @@ internal class WebViewManager(
 
                 override fun onMessageWasDismissed() {
                     _lifecycle.messageWasDismissed(message)
-                    _applicationService.removeActivityLifecycleHandler(self)
+                    // Destroy WebView here so every dismiss path (close button, back, drag,
+                    // timer, and dismissAndAwaitNextMessage) releases the Activity context.
+                    self.cleanupAfterDismiss()
                 }
             },
         )
@@ -463,18 +471,59 @@ internal class WebViewManager(
      * Trigger the [.messageView] dismiss animation flow
      */
     suspend fun dismissAndAwaitNextMessage() {
-        val locMessageView = messageView
-
-        if (locMessageView == null || dismissFired) {
+        if (dismissFired) {
             return
         }
 
         dismissFired = true
-        _lifecycle.messageWillDismiss(message)
-        locMessageView.dismissAndAwaitNextMessage()
-        dismissFired = false
+        try {
+            val locMessageView = messageView
+            if (locMessageView != null) {
+                _lifecycle.messageWillDismiss(message)
+                locMessageView.dismissAndAwaitNextMessage()
+            }
+            // Always run cleanup. Normal UI dismiss already called this from
+            // onMessageWasDismissed; the method is idempotent for that case.
+            // Also covers messageView-null and early view dismiss paths.
+            cleanupAfterDismiss()
+        } finally {
+            dismissFired = false
+        }
+    }
 
+    /**
+     * Drop view hierarchy refs and destroy the WebView so it cannot retain a destroyed Activity.
+     * Safe to call more than once.
+     */
+    private fun cleanupAfterDismiss() {
+        _applicationService.removeActivityLifecycleHandler(this)
         setMessageView(null)
+        destroyWebView()
+
+        val callback = onDismissed
+        onDismissed = null
+        callback?.invoke()
+    }
+
+    private fun destroyWebView() {
+        val view = webView ?: return
+        webView = null
+        val destroy = {
+            try {
+                (view.parent as? ViewGroup)?.removeView(view)
+                view.stopLoading()
+                view.removeAllViews()
+                view.destroy()
+            } catch (t: Throwable) {
+                Logging.warn("Error destroying IAM WebView", t)
+            }
+        }
+        // WebView.destroy() must run on the main thread
+        if (AndroidUtils.isRunningOnMainThread()) {
+            destroy()
+        } else {
+            Handler(Looper.getMainLooper()).post(destroy)
+        }
     }
 
     fun setContentSafeAreaInsets(
