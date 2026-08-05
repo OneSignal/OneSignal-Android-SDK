@@ -414,6 +414,44 @@ class WebViewManagerDismissCleanupTests : FunSpec({
         verify(exactly = 1) { lifecycle.messageWasDismissed(message) }
     }
 
+    test("finishDismiss detaches the message view so a racing show cannot orphan it") {
+        val activity = Robolectric.buildActivity(Activity::class.java).setup().get()
+        val applicationService = mockApplicationService(activity)
+        val message = InAppMessage("test-iam", MockHelper.time(1))
+        val content =
+            InAppMessageContent(
+                JSONObject()
+                    .put("html", "<html></html>")
+                    .put("display_duration", 0),
+            )
+        content.displayLocation = WebViewManager.Position.CENTER_MODAL
+        content.pageHeight = 100
+
+        val manager =
+            WebViewManager(
+                message,
+                activity,
+                content,
+                mockk(relaxed = true),
+                applicationService,
+                mockk(relaxed = true),
+            )
+        setWebViewField(manager, OSWebView(activity))
+        manager.createNewInAppMessageView(false)
+
+        val view = getMessageViewField(manager)
+        view.shouldNotBeNull()
+        setWebViewOnMessageView(view, OSWebView(activity))
+
+        // System dismiss (OSPopupWindow.PopupWindowListener.onDismiss) calls straight into
+        // onMessageWasDismissed without running removeAllViews first, so finishDismiss is the
+        // only thing that can tear the view down before dropping the reference to it.
+        getMessageController(view)!!.onMessageWasDismissed()
+
+        getMessageViewField(manager).shouldBeNull()
+        getWebViewOnMessageView(view).shouldBeNull()
+    }
+
     test("message lifecycle callbacks and finishDismiss are single-flight") {
         val activity = Robolectric.buildActivity(Activity::class.java).setup().get()
         val applicationService = mockApplicationService(activity)
@@ -521,6 +559,21 @@ private fun setDismissedField(
     val field = WebViewManager::class.java.getDeclaredField("dismissed")
     field.isAccessible = true
     field.setBoolean(manager, value)
+}
+
+private fun setWebViewOnMessageView(
+    messageView: InAppMessageView,
+    webView: OSWebView,
+) {
+    val field = InAppMessageView::class.java.getDeclaredField("webView")
+    field.isAccessible = true
+    field.set(messageView, webView)
+}
+
+private fun getWebViewOnMessageView(messageView: InAppMessageView): Any? {
+    val field = InAppMessageView::class.java.getDeclaredField("webView")
+    field.isAccessible = true
+    return field.get(messageView)
 }
 
 private fun evaluatePageMetaData(

@@ -71,9 +71,16 @@ internal class WebViewManager(
             }
     }
 
+    // Written under lifecycleLock but read from the main, IO and JS-bridge threads.
+    @Volatile
     private var webView: OSWebView? = null
+
+    @Volatile
     private var messageView: InAppMessageView? = null
+
     private var currentActivityName: String? = null
+
+    @Volatile
     private var lastPageHeight: Int? = null
 
     // Serializes setup / dismiss so a dismiss during WebView creation cannot leave orphans
@@ -91,6 +98,7 @@ internal class WebViewManager(
     private var lifecycleDismissNotified = false
 
     // closing prevents IAM being redisplayed when the activity changes during an actionHandler
+    @Volatile
     private var closing = false
 
     // Invoked once after dismiss cleanup so owners can drop references (e.g. InAppDisplayer.lastInstance)
@@ -357,21 +365,33 @@ internal class WebViewManager(
 
     private suspend fun showMessageView(newHeight: Int?) {
         messageViewMutex.withLock {
-            if (dismissed) {
-                return
-            }
-            val localMessageView = messageView
-            val localWebView = webView
-            if (localMessageView == null || localWebView == null) {
+            // Claim the views under lifecycleLock, the same lock finishDismiss cleans up
+            // under, so a concurrent dismiss cannot leave a destroyed WebView attached to
+            // a view we are about to show.
+            val localMessageView =
+                synchronized(lifecycleLock) {
+                    val view = messageView
+                    val localWebView = webView
+                    if (dismissed || view == null || localWebView == null) {
+                        null
+                    } else {
+                        view.setWebView(localWebView)
+                        view
+                    }
+                }
+            if (localMessageView == null) {
                 Logging.warn("No messageView found to update a with a new height.")
                 return
             }
             Logging.debug("In app message, showing first one with height: $newHeight")
 
-            localMessageView.setWebView(localWebView)
             if (newHeight != null) {
                 lastPageHeight = newHeight
                 localMessageView.updateHeight(newHeight)
+            }
+            // Dismiss may have completed while the height was being applied.
+            if (dismissed) {
+                return
             }
             // showView does not return until in-app is dismissed
             localMessageView.showView(activity)
@@ -409,11 +429,16 @@ internal class WebViewManager(
         _applicationService.waitUntilActivityReady()
 
         synchronized(lifecycleLock) {
-            if (dismissed || webView !== localWebView) {
-                destroyWebViewInstance(localWebView)
-            } else {
+            val stillOwned = webView === localWebView
+            if (!dismissed && stillOwned) {
                 setWebViewToMaxSize(currentActivity, localWebView)
                 localWebView.loadData(base64Message, "text/html; charset=utf-8", "base64")
+            } else {
+                // Claim it before destroying so finishDismiss cannot destroy it a second time.
+                if (stillOwned) {
+                    webView = null
+                }
+                destroyWebViewInstance(localWebView)
             }
         }
     }
@@ -503,6 +528,12 @@ internal class WebViewManager(
             newView.setMessageController(
                 object : InAppMessageView.InAppMessageViewListener {
                     override fun onMessageWasDisplayed() {
+                        // The show animation can end after a dismiss already completed; reporting
+                        // a display then would fire onDidDisplay after onDidDismiss and record an
+                        // impression for a message the user never saw.
+                        if (self.dismissed) {
+                            return
+                        }
                         _lifecycle.messageWasDisplayed(message)
                     }
 
@@ -581,6 +612,7 @@ internal class WebViewManager(
         val callback: (() -> Unit)?
         val shouldNotifyLifecycle: Boolean
         val viewToDestroy: OSWebView?
+        val viewToDetach: InAppMessageView?
 
         synchronized(lifecycleLock) {
             dismissed = true
@@ -594,12 +626,19 @@ internal class WebViewManager(
             lifecycleDismissNotified = true
 
             _applicationService.removeActivityLifecycleHandler(this)
+            viewToDetach = messageView
             setMessageView(null)
             viewToDestroy = webView
             webView = null
 
             callback = onDismissed
             onDismissed = null
+        }
+
+        // Detach before dropping the reference: a show racing this dismiss would otherwise
+        // leave an orphaned PopupWindow that nothing is left holding to remove.
+        if (viewToDetach != null) {
+            runOnMainThread { viewToDetach.removeAllViews() }
         }
 
         if (viewToDestroy != null) {
@@ -613,7 +652,8 @@ internal class WebViewManager(
     }
 
     private fun destroyWebViewInstance(view: OSWebView) {
-        val destroy = {
+        // WebView.destroy() must run on the main thread
+        runOnMainThread {
             try {
                 (view.parent as? ViewGroup)?.removeView(view)
                 view.stopLoading()
@@ -623,11 +663,13 @@ internal class WebViewManager(
                 Logging.warn("Error destroying IAM WebView", e)
             }
         }
-        // WebView.destroy() must run on the main thread
+    }
+
+    private fun runOnMainThread(block: () -> Unit) {
         if (AndroidUtils.isRunningOnMainThread()) {
-            destroy()
+            block()
         } else {
-            Handler(Looper.getMainLooper()).post(destroy)
+            Handler(Looper.getMainLooper()).post(block)
         }
     }
 
