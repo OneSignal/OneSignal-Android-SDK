@@ -29,6 +29,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -333,6 +334,86 @@ class WebViewManagerDismissCleanupTests : FunSpec({
         getMessageViewField(manager).shouldNotBeNull()
     }
 
+    test("full screen setup applies immersive flags and still cleans up on dismiss") {
+        val activity = Robolectric.buildActivity(Activity::class.java).setup().get()
+        val applicationService = mockApplicationService(activity)
+        val manager =
+            createManager(
+                activity,
+                applicationService,
+                mockk(relaxed = true),
+                InAppMessage("test-iam", MockHelper.time(1)),
+            )
+
+        runBlocking {
+            manager.setupWebView(activity, "", true)
+        }
+
+        getWebViewField(manager).shouldNotBeNull()
+
+        runBlocking { manager.dismissAndAwaitNextMessage() }
+
+        getWebViewField(manager).shouldBeNull()
+    }
+
+    test("page metadata callback ignores empty payloads and bad JSON") {
+        val activity = Robolectric.buildActivity(Activity::class.java).setup().get()
+        val applicationService = mockApplicationService(activity)
+        val manager =
+            createManager(
+                activity,
+                applicationService,
+                mockk(relaxed = true),
+                InAppMessage("test-iam", MockHelper.time(1)),
+            )
+
+        // "null" is what evaluateJavascript reports when the JS function is undefined.
+        evaluatePageMetaData(manager, null)
+        evaluatePageMetaData(manager, "")
+        evaluatePageMetaData(manager, "null")
+        evaluatePageMetaData(manager, "{not-json")
+
+        getMessageViewField(manager).shouldBeNull()
+    }
+
+    test("page metadata callback with a valid height reaches showMessageView") {
+        val activity = Robolectric.buildActivity(Activity::class.java).setup().get()
+        val applicationService = mockApplicationService(activity)
+        val lifecycle = mockk<IInAppLifecycleService>(relaxed = true)
+        val manager =
+            createManager(
+                activity,
+                applicationService,
+                lifecycle,
+                InAppMessage("test-iam", MockHelper.time(1)),
+            )
+
+        setWebViewField(manager, OSWebView(activity))
+        evaluatePageMetaData(manager, """{"rect":{"height":140}}""")
+
+        // showMessageView is dispatched on IO; it must bail out safely with no messageView.
+        runBlocking { withTimeout(2_000) { while (getMessageViewField(manager) != null) delay(10) } }
+
+        getMessageViewField(manager).shouldBeNull()
+    }
+
+    test("dismiss completes even when destroying the WebView throws") {
+        val activity = Robolectric.buildActivity(Activity::class.java).setup().get()
+        val applicationService = mockApplicationService(activity)
+        val lifecycle = mockk<IInAppLifecycleService>(relaxed = true)
+        val message = InAppMessage("test-iam", MockHelper.time(1))
+        val manager = createManager(activity, applicationService, lifecycle, message)
+
+        val failingWebView = mockk<OSWebView>(relaxed = true)
+        every { failingWebView.stopLoading() } throws RuntimeException("WebView already destroyed")
+        setWebViewField(manager, failingWebView)
+
+        runBlocking { manager.dismissAndAwaitNextMessage() }
+
+        getWebViewField(manager).shouldBeNull()
+        verify(exactly = 1) { lifecycle.messageWasDismissed(message) }
+    }
+
     test("message lifecycle callbacks and finishDismiss are single-flight") {
         val activity = Robolectric.buildActivity(Activity::class.java).setup().get()
         val applicationService = mockApplicationService(activity)
@@ -440,6 +521,19 @@ private fun setDismissedField(
     val field = WebViewManager::class.java.getDeclaredField("dismissed")
     field.isAccessible = true
     field.setBoolean(manager, value)
+}
+
+private fun evaluatePageMetaData(
+    manager: WebViewManager,
+    value: String?,
+) {
+    val method =
+        WebViewManager::class.java.getDeclaredMethod(
+            "evaluatePageMetaDataForHeight",
+            String::class.java,
+        )
+    method.isAccessible = true
+    method.invoke(manager, value)
 }
 
 private fun newJsInterface(manager: WebViewManager): Any {
