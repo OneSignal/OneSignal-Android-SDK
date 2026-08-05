@@ -15,8 +15,11 @@ import com.onesignal.mocks.MockHelper
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
+import io.mockk.coEvery
 import io.mockk.mockk
 import io.mockk.verify
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.runBlocking
 import org.json.JSONObject
 import org.robolectric.Robolectric
@@ -32,26 +35,14 @@ class WebViewManagerDismissCleanupTests : FunSpec({
         Logging.logLevel = LogLevel.NONE
     }
 
-    test("dismissAndAwaitNextMessage destroys WebView and invokes onDismissed when messageView is null") {
+    test("early dismiss with null messageView destroys WebView and fires lifecycle dismissed") {
         val activity = Robolectric.buildActivity(Activity::class.java).setup().get()
         val applicationService = mockk<IApplicationService>(relaxed = true)
         val lifecycle = mockk<IInAppLifecycleService>(relaxed = true)
-        val promptFactory = mockk<IInAppMessagePromptFactory>(relaxed = true)
         val message = InAppMessage("test-iam", MockHelper.time(1))
-        val content = InAppMessageContent(JSONObject().put("html", "<html></html>"))
+        val manager = createManager(activity, applicationService, lifecycle, message)
 
-        val manager =
-            WebViewManager(
-                message,
-                activity,
-                content,
-                lifecycle,
-                applicationService,
-                promptFactory,
-            )
-
-        val webView = OSWebView(activity)
-        setWebViewField(manager, webView)
+        setWebViewField(manager, OSWebView(activity))
 
         var dismissed = false
         manager.onDismissed = { dismissed = true }
@@ -62,21 +53,17 @@ class WebViewManagerDismissCleanupTests : FunSpec({
 
         getWebViewField(manager).shouldBeNull()
         dismissed shouldBe true
+        verify(exactly = 1) { lifecycle.messageWillDismiss(message) }
+        verify(exactly = 1) { lifecycle.messageWasDismissed(message) }
         verify(exactly = 1) { applicationService.removeActivityLifecycleHandler(manager) }
     }
 
     test("cleanup is idempotent across repeated dismiss calls") {
         val activity = Robolectric.buildActivity(Activity::class.java).setup().get()
         val applicationService = mockk<IApplicationService>(relaxed = true)
-        val manager =
-            WebViewManager(
-                InAppMessage("test-iam", MockHelper.time(1)),
-                activity,
-                InAppMessageContent(JSONObject().put("html", "<html></html>")),
-                mockk(relaxed = true),
-                applicationService,
-                mockk(relaxed = true),
-            )
+        val lifecycle = mockk<IInAppLifecycleService>(relaxed = true)
+        val message = InAppMessage("test-iam", MockHelper.time(1))
+        val manager = createManager(activity, applicationService, lifecycle, message)
 
         setWebViewField(manager, OSWebView(activity))
 
@@ -90,8 +77,94 @@ class WebViewManagerDismissCleanupTests : FunSpec({
 
         getWebViewField(manager).shouldBeNull()
         dismissCount shouldBe 1
+        verify(exactly = 1) { lifecycle.messageWasDismissed(message) }
+    }
+
+    test("concurrent dismiss only completes cleanup and lifecycle once") {
+        val activity = Robolectric.buildActivity(Activity::class.java).setup().get()
+        val applicationService = mockk<IApplicationService>(relaxed = true)
+        val lifecycle = mockk<IInAppLifecycleService>(relaxed = true)
+        val message = InAppMessage("test-iam", MockHelper.time(1))
+        val manager = createManager(activity, applicationService, lifecycle, message)
+
+        setWebViewField(manager, OSWebView(activity))
+
+        var dismissCount = 0
+        manager.onDismissed = { dismissCount++ }
+
+        runBlocking {
+            (1..8).map {
+                async { manager.dismissAndAwaitNextMessage() }
+            }.awaitAll()
+        }
+
+        getWebViewField(manager).shouldBeNull()
+        dismissCount shouldBe 1
+        verify(exactly = 1) { lifecycle.messageWasDismissed(message) }
+        verify(atMost = 1) { applicationService.removeActivityLifecycleHandler(manager) }
+    }
+
+    test("setupWebView after dismiss does not retain a WebView") {
+        val activity = Robolectric.buildActivity(Activity::class.java).setup().get()
+        val applicationService = mockk<IApplicationService>(relaxed = true)
+        coEvery { applicationService.waitUntilActivityReady() } returns true
+        val lifecycle = mockk<IInAppLifecycleService>(relaxed = true)
+        val manager =
+            createManager(
+                activity,
+                applicationService,
+                lifecycle,
+                InAppMessage("test-iam", MockHelper.time(1)),
+            )
+
+        runBlocking {
+            manager.dismissAndAwaitNextMessage()
+            manager.setupWebView(activity, "", false)
+        }
+
+        getWebViewField(manager).shouldBeNull()
+    }
+
+    test("createNewInAppMessageView after dismiss is a no-op") {
+        val activity = Robolectric.buildActivity(Activity::class.java).setup().get()
+        val applicationService = mockk<IApplicationService>(relaxed = true)
+        val manager =
+            createManager(
+                activity,
+                applicationService,
+                mockk(relaxed = true),
+                InAppMessage("test-iam", MockHelper.time(1)),
+            )
+
+        setWebViewField(manager, OSWebView(activity))
+
+        runBlocking {
+            manager.dismissAndAwaitNextMessage()
+        }
+
+        manager.createNewInAppMessageView(false)
+
+        getMessageViewField(manager).shouldBeNull()
+        verify(exactly = 0) { applicationService.addActivityLifecycleHandler(manager) }
     }
 })
+
+private fun createManager(
+    activity: Activity,
+    applicationService: IApplicationService,
+    lifecycle: IInAppLifecycleService,
+    message: InAppMessage,
+    promptFactory: IInAppMessagePromptFactory = mockk(relaxed = true),
+): WebViewManager {
+    return WebViewManager(
+        message,
+        activity,
+        InAppMessageContent(JSONObject().put("html", "<html></html>")),
+        lifecycle,
+        applicationService,
+        promptFactory,
+    )
+}
 
 private fun setWebViewField(
     manager: WebViewManager,
@@ -104,6 +177,12 @@ private fun setWebViewField(
 
 private fun getWebViewField(manager: WebViewManager): Any? {
     val field = WebViewManager::class.java.getDeclaredField("webView")
+    field.isAccessible = true
+    return field.get(manager)
+}
+
+private fun getMessageViewField(manager: WebViewManager): Any? {
+    val field = WebViewManager::class.java.getDeclaredField("messageView")
     field.isAccessible = true
     return field.get(manager)
 }

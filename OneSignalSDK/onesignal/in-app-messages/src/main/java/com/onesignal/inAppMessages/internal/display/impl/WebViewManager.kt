@@ -76,8 +76,19 @@ internal class WebViewManager(
     private var currentActivityName: String? = null
     private var lastPageHeight: Int? = null
 
-    // dismissFired prevents onDidDismiss from getting called multiple times
-    private var dismissFired = false
+    // Serializes setup / dismiss so a dismiss during WebView creation cannot leave orphans
+    // or race createNewInAppMessageView(webView!!).
+    private val lifecycleLock = Any()
+
+    // Terminal: once true, this WebViewManager never shows content again.
+    @Volatile
+    private var dismissed = false
+
+    // Ensures finishDismiss runs exactly once.
+    private var cleanedUp = false
+
+    // Ensures messageWasDismissed lifecycle is fired exactly once.
+    private var lifecycleDismissNotified = false
 
     // closing prevents IAM being redisplayed when the activity changes during an actionHandler
     private var closing = false
@@ -107,6 +118,9 @@ internal class WebViewManager(
         }
 
         private fun handleRenderComplete(jsonObject: JSONObject) {
+            if (dismissed) {
+                return
+            }
             val displayType = getDisplayLocation(jsonObject)
             val pageHeight =
                 if (displayType == Position.FULL_SCREEN) -1 else getPageHeightData(jsonObject)
@@ -225,6 +239,7 @@ internal class WebViewManager(
 
     private suspend fun updateSafeAreaInsets() {
         withContext(Dispatchers.Main) {
+            val localWebView = webView ?: return@withContext
             val insets = ViewUtils.getCutoutAndStatusBarInsets(activity)
             val safeAreaInsetsObject =
                 String.format(
@@ -239,14 +254,14 @@ internal class WebViewManager(
                     SET_SAFE_AREA_INSETS_JS_FUNCTION,
                     safeAreaInsetsObject,
                 )
-            webView!!.evaluateJavascript(safeAreaInsetsFunction, null)
+            localWebView.evaluateJavascript(safeAreaInsetsFunction, null)
         }
     }
 
     // Every time an Activity is shown we update the height of the WebView since the available
     //   screen size may have changed. (Expect for Fullscreen)
     private suspend fun calculateHeightAndShowWebViewAfterNewActivity() {
-        if (messageView == null) return
+        if (dismissed || messageView == null || webView == null) return
 
         // Don't need a CSS / HTML height update for fullscreen unless its fullbleed
         if (messageView!!.displayPosition == Position.FULL_SCREEN && !messageContent.isFullBleed) {
@@ -257,14 +272,19 @@ internal class WebViewManager(
 
         _applicationService.waitUntilActivityReady()
 
+        val localWebView = webView
+        if (dismissed || localWebView == null) {
+            return
+        }
+
         // At time point the webView isn't attached to a view
         // Set the WebView to the max screen size then run JS to evaluate the height.
-        setWebViewToMaxSize(activity)
+        setWebViewToMaxSize(activity, localWebView)
         if (messageContent.isFullBleed) {
             updateSafeAreaInsets()
         }
 
-        webView!!.evaluateJavascript(GET_PAGE_META_DATA_JS_FUNCTION) { value ->
+        localWebView.evaluateJavascript(GET_PAGE_META_DATA_JS_FUNCTION) { value ->
             // SDK-4494: `evaluateJavascript` returns the JSON-encoded result of the
             // expression. When the JS function is undefined or returns `undefined`
             // (e.g. WebView not fully loaded yet) the callback receives the literal
@@ -333,20 +353,25 @@ internal class WebViewManager(
 
     private suspend fun showMessageView(newHeight: Int?) {
         messageViewMutex.withLock {
-            if (messageView == null) {
+            if (dismissed) {
+                return
+            }
+            val localMessageView = messageView
+            val localWebView = webView
+            if (localMessageView == null || localWebView == null) {
                 Logging.warn("No messageView found to update a with a new height.")
                 return
             }
             Logging.debug("In app message, showing first one with height: $newHeight")
 
-            messageView?.setWebView(webView!!)
+            localMessageView.setWebView(localWebView)
             if (newHeight != null) {
                 lastPageHeight = newHeight
-                messageView?.updateHeight(newHeight)
+                localMessageView.updateHeight(newHeight)
             }
             // showView does not return until in-app is dismissed
-            messageView?.showView(activity)
-            messageView?.checkIfShouldDismiss()
+            localMessageView.showView(activity)
+            localMessageView.checkIfShouldDismiss()
         }
     }
 
@@ -355,28 +380,47 @@ internal class WebViewManager(
         base64Message: String,
         isFullScreen: Boolean,
     ) {
+        if (dismissed) {
+            return
+        }
+
         enableWebViewRemoteDebugging()
-        webView = OSWebView(currentActivity)
-        webView!!.overScrollMode = View.OVER_SCROLL_NEVER
-        webView!!.isVerticalScrollBarEnabled = false
-        webView!!.isHorizontalScrollBarEnabled = false
-        secureSetup(webView!!)
+        val localWebView = OSWebView(currentActivity)
+        localWebView.overScrollMode = View.OVER_SCROLL_NEVER
+        localWebView.isVerticalScrollBarEnabled = false
+        localWebView.isHorizontalScrollBarEnabled = false
+        secureSetup(localWebView)
 
         // Setup receiver for page events / data from JS
-        webView!!.addJavascriptInterface(OSJavaScriptInterface(), JS_OBJ_NAME)
+        localWebView.addJavascriptInterface(OSJavaScriptInterface(), JS_OBJ_NAME)
         if (isFullScreen) {
-            webView!!.systemUiVisibility = View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or
+            localWebView.systemUiVisibility = View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or
                 View.SYSTEM_UI_FLAG_IMMERSIVE or
                 View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                webView!!.fitsSystemWindows = false
+                localWebView.fitsSystemWindows = false
             }
+        }
+
+        synchronized(lifecycleLock) {
+            if (dismissed) {
+                destroyWebViewInstance(localWebView)
+                return
+            }
+            webView = localWebView
         }
 
         _lifecycle.messageWillDisplay(message)
         _applicationService.waitUntilActivityReady()
-        setWebViewToMaxSize(currentActivity)
-        webView!!.loadData(base64Message, "text/html; charset=utf-8", "base64")
+
+        synchronized(lifecycleLock) {
+            if (dismissed || webView !== localWebView) {
+                destroyWebViewInstance(localWebView)
+                return
+            }
+            setWebViewToMaxSize(currentActivity, localWebView)
+            localWebView.loadData(base64Message, "text/html; charset=utf-8", "base64")
+        }
     }
 
     /**
@@ -411,8 +455,11 @@ internal class WebViewManager(
     // A render complete or resize event will fire from JS to tell Java it's height and will then display
     //  it via this SDK's InAppMessageView class. If smaller than the screen it will correctly
     //  set it's height to match.
-    private fun setWebViewToMaxSize(activity: Activity) {
-        webView!!.layout(0, 0, getWebViewMaxSizeX(activity), getWebViewMaxSizeY(activity))
+    private fun setWebViewToMaxSize(
+        activity: Activity,
+        targetWebView: OSWebView = webView!!,
+    ) {
+        targetWebView.layout(0, 0, getWebViewMaxSizeX(activity), getWebViewMaxSizeY(activity))
     }
 
     private fun setMessageView(view: InAppMessageView?) {
@@ -420,32 +467,52 @@ internal class WebViewManager(
     }
 
     fun createNewInAppMessageView(dragToDismissDisabled: Boolean) {
-        lastPageHeight = messageContent.pageHeight
-        val hideGrayOverlay = AndroidUtils.getManifestMetaBoolean(_applicationService.appContext, "com.onesignal.inAppMessageHideGrayOverlay")
-        val newView = InAppMessageView(webView!!, messageContent, dragToDismissDisabled, hideGrayOverlay)
-        setMessageView(newView)
-        val self = this
-        messageView!!.setMessageController(
-            object : InAppMessageView.InAppMessageViewListener {
-                override fun onMessageWasDisplayed() {
-                    _lifecycle.messageWasDisplayed(message)
-                }
+        val currentWebView: OSWebView
+        synchronized(lifecycleLock) {
+            if (dismissed) {
+                return
+            }
+            currentWebView = webView ?: return
+            lastPageHeight = messageContent.pageHeight
+            val hideGrayOverlay =
+                AndroidUtils.getManifestMetaBoolean(
+                    _applicationService.appContext,
+                    "com.onesignal.inAppMessageHideGrayOverlay",
+                )
+            val newView = InAppMessageView(currentWebView, messageContent, dragToDismissDisabled, hideGrayOverlay)
+            setMessageView(newView)
+            val self = this
+            newView.setMessageController(
+                object : InAppMessageView.InAppMessageViewListener {
+                    override fun onMessageWasDisplayed() {
+                        _lifecycle.messageWasDisplayed(message)
+                    }
 
-                override fun onMessageWillDismiss() {
-                    _lifecycle.messageWillDismiss(message)
-                }
+                    override fun onMessageWillDismiss() {
+                        _lifecycle.messageWillDismiss(message)
+                    }
 
-                override fun onMessageWasDismissed() {
-                    _lifecycle.messageWasDismissed(message)
-                    // Destroy WebView here so every dismiss path (close button, back, drag,
-                    // timer, and dismissAndAwaitNextMessage) releases the Activity context.
-                    self.cleanupAfterDismiss()
-                }
-            },
-        )
+                    override fun onMessageWasDismissed() {
+                        // Mark dismissed first so in-flight setup cannot recreate content,
+                        // then finish cleanup + lifecycle notification exactly once.
+                        synchronized(self.lifecycleLock) {
+                            self.dismissed = true
+                            self.closing = true
+                        }
+                        self.finishDismiss()
+                    }
+                },
+            )
+        }
 
         // Fires event if available, which will call messageView.showInAppMessageView() for us.
-        _applicationService.addActivityLifecycleHandler(self)
+        _applicationService.addActivityLifecycleHandler(this)
+        synchronized(lifecycleLock) {
+            // Dismiss may have completed between view creation and registration.
+            if (dismissed) {
+                _applicationService.removeActivityLifecycleHandler(this)
+            }
+        }
     }
 
     private fun getWebViewMaxSizeX(activity: Activity): Int {
@@ -468,46 +535,66 @@ internal class WebViewManager(
     }
 
     /**
-     * Trigger the [.messageView] dismiss animation flow
+     * Trigger the [.messageView] dismiss animation flow when present, then always complete
+     * cleanup. Safe under concurrent callers: [dismissed] is terminal and [finishDismiss]
+     * runs once.
      */
     suspend fun dismissAndAwaitNextMessage() {
-        if (dismissFired) {
-            return
+        val locMessageView: InAppMessageView?
+        synchronized(lifecycleLock) {
+            if (dismissed) {
+                return
+            }
+            dismissed = true
+            closing = true
+            locMessageView = messageView
         }
 
-        dismissFired = true
-        try {
-            val locMessageView = messageView
-            if (locMessageView != null) {
-                _lifecycle.messageWillDismiss(message)
-                locMessageView.dismissAndAwaitNextMessage()
-            }
-            // Always run cleanup. Normal UI dismiss already called this from
-            // onMessageWasDismissed; the method is idempotent for that case.
-            // Also covers messageView-null and early view dismiss paths.
-            cleanupAfterDismiss()
-        } finally {
-            dismissFired = false
-        }
+        _lifecycle.messageWillDismiss(message)
+        locMessageView?.dismissAndAwaitNextMessage()
+        finishDismiss()
     }
 
     /**
-     * Drop view hierarchy refs and destroy the WebView so it cannot retain a destroyed Activity.
-     * Safe to call more than once.
+     * Completes dismiss exactly once: destroys the WebView, clears owner refs, and fires
+     * [IInAppLifecycleService.messageWasDismissed] so IAM queue state cannot get stuck.
      */
-    private fun cleanupAfterDismiss() {
-        _applicationService.removeActivityLifecycleHandler(this)
-        setMessageView(null)
-        destroyWebView()
+    private fun finishDismiss() {
+        val callback: (() -> Unit)?
+        val shouldNotifyLifecycle: Boolean
+        val viewToDestroy: OSWebView?
 
-        val callback = onDismissed
-        onDismissed = null
+        synchronized(lifecycleLock) {
+            dismissed = true
+            closing = true
+            if (cleanedUp) {
+                return
+            }
+            cleanedUp = true
+
+            shouldNotifyLifecycle = !lifecycleDismissNotified
+            lifecycleDismissNotified = true
+
+            _applicationService.removeActivityLifecycleHandler(this)
+            setMessageView(null)
+            viewToDestroy = webView
+            webView = null
+
+            callback = onDismissed
+            onDismissed = null
+        }
+
+        if (viewToDestroy != null) {
+            destroyWebViewInstance(viewToDestroy)
+        }
+
+        if (shouldNotifyLifecycle) {
+            _lifecycle.messageWasDismissed(message)
+        }
         callback?.invoke()
     }
 
-    private fun destroyWebView() {
-        val view = webView ?: return
-        webView = null
+    private fun destroyWebViewInstance(view: OSWebView) {
         val destroy = {
             try {
                 (view.parent as? ViewGroup)?.removeView(view)
