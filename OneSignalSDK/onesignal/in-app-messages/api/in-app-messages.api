@@ -1,0 +1,12 @@
+public final class com/onesignal/inAppMessages/internal/triggers/TriggerModel : com/onesignal/common/modeling/Model {
+	public fun <init> ()V
+	public final fun getKey ()Ljava/lang/String;
+	public final fun getValue ()Ljava/lang/Object;
+	public final fun setKey (Ljava/lang/String;)V
+	public final fun setValue (Ljava/lang/Object;)V
+}
+
+public class com/onesignal/inAppMessages/internal/triggers/TriggerModelStore : com/onesignal/common/modeling/SimpleModelStore {
+	public fun <init> ()V
+}
+

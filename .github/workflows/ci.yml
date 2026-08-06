@@ -39,6 +39,15 @@ jobs:
         working-directory: OneSignalSDK
         run: |
           ./gradlew detekt --console=plain
+      - name: "[Public API] Binary compatibility check"
+        working-directory: OneSignalSDK
+        run: |
+          ./gradlew apiCheck --console=plain
+      - name: "[Public API] Explain a failure"
+        if: failure()
+        run: |
+          echo "If apiCheck failed, the public API changed. Review the diff it printed."
+          echo "If the change is intended, run './gradlew apiDump' in OneSignalSDK and commit the updated api/*.api files."
 
   test:
     runs-on: ubuntu-latest

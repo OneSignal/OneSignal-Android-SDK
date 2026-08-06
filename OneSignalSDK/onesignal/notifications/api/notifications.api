@@ -1,0 +1,383 @@
+public final class com/onesignal/NotificationOpenedActivityHMS : android/app/Activity, com/onesignal/core/internal/application/OneSignalInternalActivity {
+	public fun <init> ()V
+}
+
+public final class com/onesignal/notifications/activities/NotificationOpenedActivity : com/onesignal/notifications/activities/NotificationOpenedActivityBase {
+	public fun <init> ()V
+}
+
+public final class com/onesignal/notifications/activities/NotificationOpenedActivityAndroid22AndOlder : com/onesignal/notifications/activities/NotificationOpenedActivityBase {
+	public fun <init> ()V
+}
+
+public abstract class com/onesignal/notifications/activities/NotificationOpenedActivityBase : android/app/Activity, com/onesignal/core/internal/application/OneSignalInternalActivity {
+	public fun <init> ()V
+	protected fun onCreate (Landroid/os/Bundle;)V
+	protected fun onNewIntent (Landroid/content/Intent;)V
+}
+
+public final class com/onesignal/notifications/bridges/OneSignalHmsEventBridge {
+	public static final field HMS_SENT_TIME_KEY Ljava/lang/String;
+	public static final field HMS_TTL_KEY Ljava/lang/String;
+	public static final field INSTANCE Lcom/onesignal/notifications/bridges/OneSignalHmsEventBridge;
+	public final fun onMessageReceived (Landroid/content/Context;Lcom/huawei/hms/push/RemoteMessage;)V
+	public final fun onNewToken (Landroid/content/Context;Ljava/lang/String;)V
+	public final fun onNewToken (Landroid/content/Context;Ljava/lang/String;Landroid/os/Bundle;)V
+}
+
+public abstract interface class com/onesignal/notifications/internal/INotificationActivityOpener {
+	public abstract fun openDestinationActivity (Landroid/app/Activity;Lorg/json/JSONArray;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+}
+
+public final class com/onesignal/notifications/internal/Notification : com/onesignal/notifications/IDisplayableMutableNotification {
+	public fun <init> (Ljava/util/List;Lorg/json/JSONObject;ILcom/onesignal/core/internal/time/ITime;)V
+	public fun <init> (Lorg/json/JSONObject;Lcom/onesignal/core/internal/time/ITime;)V
+	public fun display ()V
+	public fun getActionButtons ()Ljava/util/List;
+	public fun getAdditionalData ()Lorg/json/JSONObject;
+	public fun getAndroidNotificationId ()I
+	public fun getBackgroundImageLayout ()Lcom/onesignal/notifications/BackgroundImageLayout;
+	public fun getBigPicture ()Ljava/lang/String;
+	public fun getBody ()Ljava/lang/String;
+	public fun getCollapseId ()Ljava/lang/String;
+	public final fun getDisplayWaiter ()Lcom/onesignal/common/threading/WaiterWithValue;
+	public fun getFromProjectNumber ()Ljava/lang/String;
+	public fun getGroupKey ()Ljava/lang/String;
+	public fun getGroupMessage ()Ljava/lang/String;
+	public fun getGroupedNotifications ()Ljava/util/List;
+	public fun getLargeIcon ()Ljava/lang/String;
+	public fun getLaunchURL ()Ljava/lang/String;
+	public fun getLedColor ()Ljava/lang/String;
+	public fun getLockScreenVisibility ()I
+	public final fun getNotificationExtender ()Landroidx/core/app/NotificationCompat$Extender;
+	public fun getNotificationId ()Ljava/lang/String;
+	public fun getPriority ()I
+	public fun getRawPayload ()Ljava/lang/String;
+	public fun getSentTime ()J
+	public fun getSmallIcon ()Ljava/lang/String;
+	public fun getSmallIconAccentColor ()Ljava/lang/String;
+	public fun getSound ()Ljava/lang/String;
+	public fun getTemplateId ()Ljava/lang/String;
+	public fun getTemplateName ()Ljava/lang/String;
+	public fun getTitle ()Ljava/lang/String;
+	public fun getTtl ()I
+	public final fun hasNotificationId ()Z
+	public fun setActionButtons (Ljava/util/List;)V
+	public fun setAdditionalData (Lorg/json/JSONObject;)V
+	public fun setAndroidNotificationId (I)V
+	public fun setBackgroundImageLayout (Lcom/onesignal/notifications/BackgroundImageLayout;)V
+	public fun setBigPicture (Ljava/lang/String;)V
+	public fun setBody (Ljava/lang/String;)V
+	public fun setCollapseId (Ljava/lang/String;)V
+	public fun setExtender (Landroidx/core/app/NotificationCompat$Extender;)V
+	public fun setFromProjectNumber (Ljava/lang/String;)V
+	public fun setGroupKey (Ljava/lang/String;)V
+	public fun setGroupMessage (Ljava/lang/String;)V
+	public fun setGroupedNotifications (Ljava/util/List;)V
+	public fun setLargeIcon (Ljava/lang/String;)V
+	public fun setLaunchURL (Ljava/lang/String;)V
+	public fun setLedColor (Ljava/lang/String;)V
+	public fun setLockScreenVisibility (I)V
+	public final fun setNotificationExtender (Landroidx/core/app/NotificationCompat$Extender;)V
+	public fun setNotificationId (Ljava/lang/String;)V
+	public fun setPriority (I)V
+	public fun setRawPayload (Ljava/lang/String;)V
+	public fun setSentTime (J)V
+	public fun setSmallIcon (Ljava/lang/String;)V
+	public fun setSmallIconAccentColor (Ljava/lang/String;)V
+	public fun setSound (Ljava/lang/String;)V
+	public fun setTemplateId (Ljava/lang/String;)V
+	public fun setTemplateName (Ljava/lang/String;)V
+	public fun setTitle (Ljava/lang/String;)V
+	public fun setTtl (I)V
+	public final fun toJSONObject ()Lorg/json/JSONObject;
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/onesignal/notifications/internal/Notification$ActionButton : com/onesignal/notifications/IActionButton {
+	public fun <init> ()V
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun getIcon ()Ljava/lang/String;
+	public fun getId ()Ljava/lang/String;
+	public fun getText ()Ljava/lang/String;
+	public final fun toJSONObject ()Lorg/json/JSONObject;
+}
+
+public abstract interface class com/onesignal/notifications/internal/badges/impl/shortcutbadger/Badger {
+	public abstract fun executeBadge (Landroid/content/Context;Landroid/content/ComponentName;I)V
+	public abstract fun getSupportLaunchers ()Ljava/util/List;
+}
+
+public class com/onesignal/notifications/internal/badges/impl/shortcutbadger/ShortcutBadgeException : java/lang/Exception {
+	public fun <init> (Ljava/lang/String;)V
+	public fun <init> (Ljava/lang/String;Ljava/lang/Exception;)V
+}
+
+public final class com/onesignal/notifications/internal/badges/impl/shortcutbadger/ShortcutBadger {
+	public static fun applyCount (Landroid/content/Context;I)Z
+	public static fun applyCountOrThrow (Landroid/content/Context;I)V
+	public static fun applyNotification (Landroid/content/Context;Landroid/app/Notification;I)V
+	public static fun isBadgeCounterSupported (Landroid/content/Context;)Z
+	public static fun removeCount (Landroid/content/Context;)Z
+	public static fun removeCountOrThrow (Landroid/content/Context;)V
+}
+
+public class com/onesignal/notifications/internal/badges/impl/shortcutbadger/impl/AdwHomeBadger : com/onesignal/notifications/internal/badges/impl/shortcutbadger/Badger {
+	public static final field CLASSNAME Ljava/lang/String;
+	public static final field COUNT Ljava/lang/String;
+	public static final field INTENT_UPDATE_COUNTER Ljava/lang/String;
+	public static final field PACKAGENAME Ljava/lang/String;
+	public fun <init> ()V
+	public fun executeBadge (Landroid/content/Context;Landroid/content/ComponentName;I)V
+	public fun getSupportLaunchers ()Ljava/util/List;
+}
+
+public class com/onesignal/notifications/internal/badges/impl/shortcutbadger/impl/ApexHomeBadger : com/onesignal/notifications/internal/badges/impl/shortcutbadger/Badger {
+	public fun <init> ()V
+	public fun executeBadge (Landroid/content/Context;Landroid/content/ComponentName;I)V
+	public fun getSupportLaunchers ()Ljava/util/List;
+}
+
+public class com/onesignal/notifications/internal/badges/impl/shortcutbadger/impl/AsusHomeBadger : com/onesignal/notifications/internal/badges/impl/shortcutbadger/Badger {
+	public fun <init> ()V
+	public fun executeBadge (Landroid/content/Context;Landroid/content/ComponentName;I)V
+	public fun getSupportLaunchers ()Ljava/util/List;
+}
+
+public class com/onesignal/notifications/internal/badges/impl/shortcutbadger/impl/DefaultBadger : com/onesignal/notifications/internal/badges/impl/shortcutbadger/Badger {
+	public fun <init> ()V
+	public fun executeBadge (Landroid/content/Context;Landroid/content/ComponentName;I)V
+	public fun getSupportLaunchers ()Ljava/util/List;
+}
+
+public class com/onesignal/notifications/internal/badges/impl/shortcutbadger/impl/EverythingMeHomeBadger : com/onesignal/notifications/internal/badges/impl/shortcutbadger/Badger {
+	public fun <init> ()V
+	public fun executeBadge (Landroid/content/Context;Landroid/content/ComponentName;I)V
+	public fun getSupportLaunchers ()Ljava/util/List;
+}
+
+public class com/onesignal/notifications/internal/badges/impl/shortcutbadger/impl/HuaweiHomeBadger : com/onesignal/notifications/internal/badges/impl/shortcutbadger/Badger {
+	public fun <init> ()V
+	public fun executeBadge (Landroid/content/Context;Landroid/content/ComponentName;I)V
+	public fun getSupportLaunchers ()Ljava/util/List;
+}
+
+public class com/onesignal/notifications/internal/badges/impl/shortcutbadger/impl/LGHomeBadger : com/onesignal/notifications/internal/badges/impl/shortcutbadger/Badger {
+	public fun <init> ()V
+	public fun executeBadge (Landroid/content/Context;Landroid/content/ComponentName;I)V
+	public fun getSupportLaunchers ()Ljava/util/List;
+}
+
+public class com/onesignal/notifications/internal/badges/impl/shortcutbadger/impl/NewHtcHomeBadger : com/onesignal/notifications/internal/badges/impl/shortcutbadger/Badger {
+	public static final field COUNT Ljava/lang/String;
+	public static final field EXTRA_COMPONENT Ljava/lang/String;
+	public static final field EXTRA_COUNT Ljava/lang/String;
+	public static final field INTENT_SET_NOTIFICATION Ljava/lang/String;
+	public static final field INTENT_UPDATE_SHORTCUT Ljava/lang/String;
+	public static final field PACKAGENAME Ljava/lang/String;
+	public fun <init> ()V
+	public fun executeBadge (Landroid/content/Context;Landroid/content/ComponentName;I)V
+	public fun getSupportLaunchers ()Ljava/util/List;
+}
+
+public class com/onesignal/notifications/internal/badges/impl/shortcutbadger/impl/NovaHomeBadger : com/onesignal/notifications/internal/badges/impl/shortcutbadger/Badger {
+	public fun <init> ()V
+	public fun executeBadge (Landroid/content/Context;Landroid/content/ComponentName;I)V
+	public fun getSupportLaunchers ()Ljava/util/List;
+}
+
+public class com/onesignal/notifications/internal/badges/impl/shortcutbadger/impl/OPPOHomeBader : com/onesignal/notifications/internal/badges/impl/shortcutbadger/Badger {
+	public fun <init> ()V
+	public fun executeBadge (Landroid/content/Context;Landroid/content/ComponentName;I)V
+	public fun getSupportLaunchers ()Ljava/util/List;
+}
+
+public class com/onesignal/notifications/internal/badges/impl/shortcutbadger/impl/SamsungHomeBadger : com/onesignal/notifications/internal/badges/impl/shortcutbadger/Badger {
+	public fun <init> ()V
+	public fun executeBadge (Landroid/content/Context;Landroid/content/ComponentName;I)V
+	public fun getSupportLaunchers ()Ljava/util/List;
+}
+
+public class com/onesignal/notifications/internal/badges/impl/shortcutbadger/impl/SonyHomeBadger : com/onesignal/notifications/internal/badges/impl/shortcutbadger/Badger {
+	public fun <init> ()V
+	public fun executeBadge (Landroid/content/Context;Landroid/content/ComponentName;I)V
+	public fun getSupportLaunchers ()Ljava/util/List;
+}
+
+public class com/onesignal/notifications/internal/badges/impl/shortcutbadger/impl/VivoHomeBadger : com/onesignal/notifications/internal/badges/impl/shortcutbadger/Badger {
+	public fun <init> ()V
+	public fun executeBadge (Landroid/content/Context;Landroid/content/ComponentName;I)V
+	public fun getSupportLaunchers ()Ljava/util/List;
+}
+
+public class com/onesignal/notifications/internal/badges/impl/shortcutbadger/impl/XiaomiHomeBadger : com/onesignal/notifications/internal/badges/impl/shortcutbadger/Badger {
+	public static final field EXTRA_UPDATE_APP_COMPONENT_NAME Ljava/lang/String;
+	public static final field EXTRA_UPDATE_APP_MSG_TEXT Ljava/lang/String;
+	public static final field INTENT_ACTION Ljava/lang/String;
+	public fun <init> ()V
+	public fun executeBadge (Landroid/content/Context;Landroid/content/ComponentName;I)V
+	public fun getSupportLaunchers ()Ljava/util/List;
+}
+
+public class com/onesignal/notifications/internal/badges/impl/shortcutbadger/impl/ZukHomeBadger : com/onesignal/notifications/internal/badges/impl/shortcutbadger/Badger {
+	public fun <init> ()V
+	public fun executeBadge (Landroid/content/Context;Landroid/content/ComponentName;I)V
+	public fun getSupportLaunchers ()Ljava/util/List;
+}
+
+public class com/onesignal/notifications/internal/badges/impl/shortcutbadger/util/BroadcastHelper {
+	public fun <init> ()V
+	public static fun canResolveBroadcast (Landroid/content/Context;Landroid/content/Intent;)Z
+	public static fun resolveBroadcast (Landroid/content/Context;Landroid/content/Intent;)Ljava/util/List;
+	public static fun sendIntentExplicitly (Landroid/content/Context;Landroid/content/Intent;)V
+}
+
+public class com/onesignal/notifications/internal/badges/impl/shortcutbadger/util/CloseHelper {
+	public fun <init> ()V
+	public static fun close (Landroid/database/Cursor;)V
+	public static fun closeQuietly (Ljava/io/Closeable;)V
+}
+
+public final class com/onesignal/notifications/internal/common/NotificationConstants {
+	public static final field BUNDLE_KEY_ANDROID_NOTIFICATION_ID Ljava/lang/String;
+	public static final field BUNDLE_KEY_ONESIGNAL_DATA Ljava/lang/String;
+	public static final field DEFAULT_TTL_IF_NOT_IN_PAYLOAD I
+	public static final field EXTENSION_SERVICE_META_DATA_TAG_NAME Ljava/lang/String;
+	public static final field GENERATE_NOTIFICATION_BUNDLE_KEY_ACTION_ID Ljava/lang/String;
+	public static final field GOOGLE_SENT_TIME_KEY Ljava/lang/String;
+	public static final field GOOGLE_TTL_KEY Ljava/lang/String;
+	public static final field HMS_SENT_TIME_KEY Ljava/lang/String;
+	public static final field HMS_TTL_KEY Ljava/lang/String;
+	public static final field IAM_PREVIEW_KEY Ljava/lang/String;
+	public static final field INSTANCE Lcom/onesignal/notifications/internal/common/NotificationConstants;
+	public static final field PUSH_ADDITIONAL_DATA_KEY Ljava/lang/String;
+}
+
+public final class com/onesignal/notifications/internal/common/NotificationGenerationJob {
+	public fun <init> (Lcom/onesignal/notifications/internal/Notification;Lorg/json/JSONObject;)V
+	public fun <init> (Lorg/json/JSONObject;Lcom/onesignal/core/internal/time/ITime;)V
+	public final fun getAdditionalData ()Lorg/json/JSONObject;
+	public final fun getAndroidId ()I
+	public final fun getApiNotificationId ()Ljava/lang/String;
+	public final fun getBody ()Ljava/lang/CharSequence;
+	public final fun getJsonPayload ()Lorg/json/JSONObject;
+	public final fun getNotification ()Lcom/onesignal/notifications/internal/Notification;
+	public final fun getOrgFlags ()Ljava/lang/Integer;
+	public final fun getOrgSound ()Landroid/net/Uri;
+	public final fun getOverriddenBodyFromExtender ()Ljava/lang/CharSequence;
+	public final fun getOverriddenFlags ()Ljava/lang/Integer;
+	public final fun getOverriddenSound ()Landroid/net/Uri;
+	public final fun getOverriddenTitleFromExtender ()Ljava/lang/CharSequence;
+	public final fun getShownTimeStamp ()Ljava/lang/Long;
+	public final fun getTitle ()Ljava/lang/CharSequence;
+	public final fun hasExtender ()Z
+	public final fun isNotificationToDisplay ()Z
+	public final fun isRestoring ()Z
+	public final fun setJsonPayload (Lorg/json/JSONObject;)V
+	public final fun setNotificationToDisplay (Z)V
+	public final fun setOrgFlags (Ljava/lang/Integer;)V
+	public final fun setOrgSound (Landroid/net/Uri;)V
+	public final fun setOverriddenBodyFromExtender (Ljava/lang/CharSequence;)V
+	public final fun setOverriddenFlags (Ljava/lang/Integer;)V
+	public final fun setOverriddenSound (Landroid/net/Uri;)V
+	public final fun setOverriddenTitleFromExtender (Ljava/lang/CharSequence;)V
+	public final fun setRestoring (Z)V
+	public final fun setShownTimeStamp (Ljava/lang/Long;)V
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/onesignal/notifications/internal/common/NotificationHelper {
+	public static final field GROUPLESS_SUMMARY_ID I
+	public static final field GROUPLESS_SUMMARY_KEY Ljava/lang/String;
+	public static final field INSTANCE Lcom/onesignal/notifications/internal/common/NotificationHelper;
+	public final fun areNotificationsEnabled (Landroid/content/Context;Ljava/lang/String;)Z
+	public static synthetic fun areNotificationsEnabled$default (Lcom/onesignal/notifications/internal/common/NotificationHelper;Landroid/content/Context;Ljava/lang/String;ILjava/lang/Object;)Z
+	public final fun assignGrouplessNotifications (Landroid/content/Context;Ljava/util/ArrayList;)V
+	public final fun getActiveGrouplessNotifications (Landroid/content/Context;)Ljava/util/ArrayList;
+	public final fun getActiveNotifications (Landroid/content/Context;)[Landroid/service/notification/StatusBarNotification;
+	public final fun getCampaignNameFromNotification (Lcom/onesignal/notifications/INotification;)Ljava/lang/String;
+	public final fun getCustomJSONObject (Lorg/json/JSONObject;)Lorg/json/JSONObject;
+	public final fun getGrouplessNotifsCount (Landroid/content/Context;)I
+	public final fun getNotificationIdFromFCMJson (Lorg/json/JSONObject;)Ljava/lang/String;
+	public final fun getNotificationManager (Landroid/content/Context;)Landroid/app/NotificationManager;
+	public final fun getSoundUri (Landroid/content/Context;Ljava/lang/String;)Landroid/net/Uri;
+	public final fun isGroupSummary (Landroid/service/notification/StatusBarNotification;)Z
+	public final fun parseVibrationPattern (Lorg/json/JSONObject;)[J
+}
+
+public final class com/onesignal/notifications/internal/common/OSWorkManagerHelper {
+	public static final field INSTANCE Lcom/onesignal/notifications/internal/common/OSWorkManagerHelper;
+	public final fun getInstance (Landroid/content/Context;)Landroidx/work/WorkManager;
+}
+
+public abstract interface class com/onesignal/notifications/internal/display/INotificationDisplayer {
+	public abstract fun displayNotification (Lcom/onesignal/notifications/internal/common/NotificationGenerationJob;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+}
+
+public abstract interface class com/onesignal/notifications/internal/lifecycle/INotificationLifecycleCallback {
+	public abstract fun canOpenNotification (Landroid/app/Activity;Lorg/json/JSONObject;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun canReceiveNotification (Lorg/json/JSONObject;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+}
+
+public abstract interface class com/onesignal/notifications/internal/lifecycle/INotificationLifecycleService {
+	public abstract fun addExternalClickListener (Lcom/onesignal/notifications/INotificationClickListener;)V
+	public abstract fun addExternalForegroundLifecycleListener (Lcom/onesignal/notifications/INotificationLifecycleListener;)V
+	public abstract fun canOpenNotification (Landroid/app/Activity;Lorg/json/JSONObject;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun canReceiveNotification (Lorg/json/JSONObject;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun externalNotificationWillShowInForeground (Lcom/onesignal/notifications/INotificationWillDisplayEvent;)V
+	public abstract fun externalRemoteNotificationReceived (Lcom/onesignal/notifications/INotificationReceivedEvent;)V
+	public abstract fun notificationOpened (Landroid/app/Activity;Lorg/json/JSONArray;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun notificationReceived (Lcom/onesignal/notifications/internal/common/NotificationGenerationJob;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun removeExternalClickListener (Lcom/onesignal/notifications/INotificationClickListener;)V
+	public abstract fun removeExternalForegroundLifecycleListener (Lcom/onesignal/notifications/INotificationLifecycleListener;)V
+	public abstract fun setInternalNotificationLifecycleCallback (Lcom/onesignal/notifications/internal/lifecycle/INotificationLifecycleCallback;)V
+}
+
+public final class com/onesignal/notifications/receivers/ADMMessageReceiver : com/amazon/device/messaging/ADMMessageReceiver {
+	public static final field Companion Lcom/onesignal/notifications/receivers/ADMMessageReceiver$Companion;
+	public fun <init> ()V
+}
+
+public final class com/onesignal/notifications/receivers/ADMMessageReceiver$Companion {
+}
+
+public final class com/onesignal/notifications/receivers/BootUpReceiver : android/content/BroadcastReceiver {
+	public fun <init> ()V
+	public fun onReceive (Landroid/content/Context;Landroid/content/Intent;)V
+}
+
+public final class com/onesignal/notifications/receivers/FCMBroadcastReceiver : android/content/BroadcastReceiver {
+	public static final field Companion Lcom/onesignal/notifications/receivers/FCMBroadcastReceiver$Companion;
+	public fun <init> ()V
+	public fun onReceive (Landroid/content/Context;Landroid/content/Intent;)V
+}
+
+public final class com/onesignal/notifications/receivers/FCMBroadcastReceiver$Companion {
+}
+
+public final class com/onesignal/notifications/receivers/NotificationDismissReceiver : android/content/BroadcastReceiver {
+	public fun <init> ()V
+	public fun onReceive (Landroid/content/Context;Landroid/content/Intent;)V
+}
+
+public final class com/onesignal/notifications/receivers/UpgradeReceiver : android/content/BroadcastReceiver {
+	public fun <init> ()V
+	public fun onReceive (Landroid/content/Context;Landroid/content/Intent;)V
+}
+
+public final class com/onesignal/notifications/services/ADMMessageHandler : com/amazon/device/messaging/ADMMessageHandlerBase {
+	public fun <init> ()V
+}
+
+public final class com/onesignal/notifications/services/ADMMessageHandlerJob : com/amazon/device/messaging/ADMMessageHandlerJobBase {
+	public fun <init> ()V
+}
+
+public final class com/onesignal/notifications/services/HmsMessageServiceOneSignal : com/huawei/hms/push/HmsMessageService {
+	public fun <init> ()V
+	public fun onMessageReceived (Lcom/huawei/hms/push/RemoteMessage;)V
+	public fun onNewToken (Ljava/lang/String;)V
+	public fun onNewToken (Ljava/lang/String;Landroid/os/Bundle;)V
+}
+

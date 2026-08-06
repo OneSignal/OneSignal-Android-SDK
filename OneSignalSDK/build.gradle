@@ -26,6 +26,10 @@ buildscript {
         startupVersion = '1.1.1'
         ktlintVersion = '0.50.0' // Used by Spotless for Kotlin formatting (compatible with Kotlin 1.7.10)
         spotlessVersion = '6.25.0'
+        // Pinned to the last line that supports Kotlin 1.9. Note that BCV hooks into the
+        // 'kotlin-android' plugin, so it stops registering tasks if we ever move to AGP 9's
+        // built-in Kotlin. See https://github.com/Kotlin/binary-compatibility-validator/issues/312
+        binaryCompatibilityValidatorVersion = '0.16.3'
         tdunningJsonForTest = '1.0' // DO NOT upgrade for tests, using an old version so it matches AOSP
         // OpenTelemetry versions
         opentelemetryBomVersion = '1.55.0'
@@ -48,7 +52,8 @@ buildscript {
                 "org.jetbrains.dokka:dokka-gradle-plugin:$dokkaVersion",
                 "io.gitlab.arturbosch.detekt:detekt-gradle-plugin:$detektVersion",
                 "com.diffplug.spotless:spotless-plugin-gradle:$spotlessVersion",
-                "com.vanniktech.maven.publish:com.vanniktech.maven.publish.gradle.plugin:0.32.0"
+                "com.vanniktech.maven.publish:com.vanniktech.maven.publish.gradle.plugin:0.32.0",
+                "org.jetbrains.kotlinx:binary-compatibility-validator:$binaryCompatibilityValidatorVersion"
         ]
     }
 
@@ -56,6 +61,18 @@ buildscript {
     dependencies {
         classpath sharedDeps
     }
+}
+
+apply plugin: 'org.jetbrains.kotlinx.binary-compatibility-validator'
+
+// Tracks the public API of the published modules as committed `api/*.api` dumps, so a breaking
+// change has to show up as a reviewable diff instead of being spotted by eye.
+apiValidation {
+    // Not published, so they have no customer-facing surface to protect.
+    ignoredProjects += ['app', 'testhelpers']
+    // Published, but excluded deliberately: :otel is an implementation detail we still reserve the
+    // right to reshape, and :kmp is a git submodule whose API is owned by the OneSignal-KMP-SDK repo.
+    ignoredProjects += ['otel', 'kmp']
 }
 
 allprojects {
