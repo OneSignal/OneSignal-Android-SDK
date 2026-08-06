@@ -33,33 +33,32 @@ class FCMBroadcastReceiver : BroadcastReceiver() {
 
         val pendingResult: BroadcastReceiver.PendingResult? = goAsync()
         // process in background
-        suspendifyOnIO {
-            if (!OneSignal.initWithContext(context.applicationContext)) {
-                Logging.warn("FCMBroadcastReceiver skipped due to failed OneSignal init")
-                pendingResult?.finish()
-                return@suspendifyOnIO
-            }
+        suspendifyOnIO(
+            block = {
+                if (!OneSignal.initWithContext(context.applicationContext)) {
+                    Logging.warn("FCMBroadcastReceiver skipped due to failed OneSignal init")
+                    return@suspendifyOnIO
+                }
 
-            val bundleProcessor = OneSignal.getService<INotificationBundleProcessor>()
+                val bundleProcessor = OneSignal.getService<INotificationBundleProcessor>()
 
-            if (!isFCMMessage(intent)) {
+                if (!isFCMMessage(intent)) {
+                    setSuccessfulResultCode()
+                    return@suspendifyOnIO
+                }
+
+                val processedResult = bundleProcessor.processBundleFromReceiver(context, bundle)
+
+                // Prevent other FCM receivers from firing if work manager is processing the notification
+                if (processedResult?.isWorkManagerProcessing == true) {
+                    setAbort()
+                    return@suspendifyOnIO
+                }
+
                 setSuccessfulResultCode()
-                pendingResult?.finish()
-                return@suspendifyOnIO
-            }
-
-            val processedResult = bundleProcessor.processBundleFromReceiver(context, bundle)
-
-            // Prevent other FCM receivers from firing if work manager is processing the notification
-            if (processedResult?.isWorkManagerProcessing == true) {
-                setAbort()
-                pendingResult?.finish()
-                return@suspendifyOnIO
-            }
-
-            setSuccessfulResultCode()
-            pendingResult?.finish()
-        }
+            },
+            onComplete = { pendingResult?.finish() },
+        )
     }
 
     private fun setSuccessfulResultCode() {

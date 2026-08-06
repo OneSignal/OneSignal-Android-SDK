@@ -79,6 +79,7 @@ object IOMockHelper : BeforeSpecListener, AfterSpecListener, BeforeTestListener,
         }
     }
 
+    @Suppress("LongMethod")
     override suspend fun beforeSpec(spec: Spec) {
         // ThreadUtilsKt = file that contains suspendifyOnIO
         mockkStatic(THREADUTILS_PATH)
@@ -134,6 +135,18 @@ object IOMockHelper : BeforeSpecListener, AfterSpecListener, BeforeTestListener,
         every { suspendifyOnIO(any<suspend () -> Unit>()) } answers {
             val block = firstArg<suspend () -> Unit>()
             trackAsyncWork(block)
+        }
+
+        every { suspendifyOnIO(any<suspend () -> Unit>(), any<() -> Unit>()) } answers {
+            val block = firstArg<suspend () -> Unit>()
+            val onComplete = secondArg<() -> Unit>()
+            trackAsyncWork {
+                try {
+                    block()
+                } finally {
+                    onComplete()
+                }
+            }
         }
 
         every { suspendifyOnSerialIO(any<suspend () -> Unit>()) } answers {

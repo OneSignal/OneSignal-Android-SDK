@@ -46,20 +46,21 @@ class NotificationDismissReceiver : BroadcastReceiver() {
 
         val pendingResult: BroadcastReceiver.PendingResult? = goAsync()
 
-        suspendifyOnIO {
-            if (!OneSignal.initWithContext(context.applicationContext)) {
-                Logging.warn("NotificationOpenedReceiver skipped due to failed OneSignal init")
-                pendingResult?.finish()
-                return@suspendifyOnIO
-            }
+        suspendifyOnIO(
+            block = {
+                if (!OneSignal.initWithContext(context.applicationContext)) {
+                    Logging.warn("NotificationOpenedReceiver skipped due to failed OneSignal init")
+                    return@suspendifyOnIO
+                }
 
-            val notificationOpenedProcessor = OneSignal.getService<INotificationOpenedProcessor>()
+                val notificationOpenedProcessor = OneSignal.getService<INotificationOpenedProcessor>()
 
-            // init OneSignal in background but process in main
-            withContext(Dispatchers.Main) {
-                notificationOpenedProcessor.processFromContext(context, intent)
-            }
-            pendingResult?.finish()
-        }
+                // init OneSignal in background but process in main
+                withContext(Dispatchers.Main) {
+                    notificationOpenedProcessor.processFromContext(context, intent)
+                }
+            },
+            onComplete = { pendingResult?.finish() },
+        )
     }
 }

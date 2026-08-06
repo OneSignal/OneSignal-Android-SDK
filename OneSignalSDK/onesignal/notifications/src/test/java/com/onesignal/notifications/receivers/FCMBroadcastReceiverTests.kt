@@ -53,7 +53,7 @@ class FCMBroadcastReceiverTests : FunSpec({
         verify(exactly = 1) { OneSignalDispatchers.prewarm() }
         verifyOrder {
             OneSignalDispatchers.prewarm()
-            suspendifyOnIO(any<suspend () -> Unit>())
+            suspendifyOnIO(any<suspend () -> Unit>(), any<() -> Unit>())
         }
     }
 

@@ -110,7 +110,7 @@ fun runOnSerialIO(block: () -> Unit) {
  *
  * @param useIO Whether to use IO scope (true) or Default scope (false)
  * @param block The suspending code to execute
- * @param onComplete Optional callback to execute after completion
+ * @param onComplete Optional callback that always executes after [block], including on failure.
  */
 fun suspendifyWithCompletion(
     useIO: Boolean = true,
@@ -122,9 +122,14 @@ fun suspendifyWithCompletion(
     launch {
         try {
             block()
-            onComplete?.invoke()
         } catch (e: Exception) {
             Logging.error("Exception in suspendifyWithCompletion", e)
+        } finally {
+            try {
+                onComplete?.invoke()
+            } catch (e: Exception) {
+                Logging.error("Exception in suspendifyWithCompletion onComplete", e)
+            }
         }
     }
 }
