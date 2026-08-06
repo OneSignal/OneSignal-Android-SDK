@@ -1,0 +1,2460 @@
+public final class com/onesignal/Continue {
+	public static final field INSTANCE Lcom/onesignal/Continue;
+	public static final fun none ()Lkotlin/coroutines/Continuation;
+	public static final fun with (Ljava/util/function/Consumer;)Lkotlin/coroutines/Continuation;
+	public static final fun with (Ljava/util/function/Consumer;Lkotlin/coroutines/CoroutineContext;)Lkotlin/coroutines/Continuation;
+	public static synthetic fun with$default (Ljava/util/function/Consumer;Lkotlin/coroutines/CoroutineContext;ILjava/lang/Object;)Lkotlin/coroutines/Continuation;
+}
+
+public final class com/onesignal/ContinueResult {
+	public fun <init> (ZLjava/lang/Object;Ljava/lang/Throwable;)V
+	public final fun getData ()Ljava/lang/Object;
+	public final fun getThrowable ()Ljava/lang/Throwable;
+	public final fun isSuccess ()Z
+}
+
+public abstract interface class com/onesignal/IOneSignal {
+	public abstract fun addUserJwtInvalidatedListener (Lcom/onesignal/IUserJwtInvalidatedListener;)V
+	public abstract fun getConsentGiven ()Z
+	public abstract fun getConsentGiven (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun getConsentRequired ()Z
+	public abstract fun getConsentRequired (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun getDebug ()Lcom/onesignal/debug/IDebugManager;
+	public abstract fun getDisableGMSMissingPrompt ()Z
+	public abstract fun getDisableGMSMissingPrompt (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun getInAppMessages ()Lcom/onesignal/inAppMessages/IInAppMessagesManager;
+	public abstract fun getInAppMessages (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun getLocation ()Lcom/onesignal/location/ILocationManager;
+	public abstract fun getLocation (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun getNotifications ()Lcom/onesignal/notifications/INotificationsManager;
+	public abstract fun getNotifications (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun getSdkVersion ()Ljava/lang/String;
+	public abstract fun getSession ()Lcom/onesignal/session/ISessionManager;
+	public abstract fun getSession (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun getUser ()Lcom/onesignal/user/IUserManager;
+	public abstract fun getUser (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun initWithContext (Landroid/content/Context;Ljava/lang/String;)Z
+	public abstract fun initWithContext (Landroid/content/Context;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun initWithContextSuspend (Landroid/content/Context;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun isInitialized ()Z
+	public abstract fun login (Ljava/lang/String;)V
+	public abstract fun login (Ljava/lang/String;Ljava/lang/String;)V
+	public abstract fun loginSuspend (Ljava/lang/String;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun logout ()V
+	public abstract fun logoutSuspend (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun removeUserJwtInvalidatedListener (Lcom/onesignal/IUserJwtInvalidatedListener;)V
+	public abstract fun setConsentGiven (Z)V
+	public abstract fun setConsentGiven (ZLkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun setConsentRequired (Z)V
+	public abstract fun setConsentRequired (ZLkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun setDisableGMSMissingPrompt (Z)V
+	public abstract fun setDisableGMSMissingPrompt (ZLkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun updateUserJwt (Ljava/lang/String;Ljava/lang/String;)V
+	public abstract fun updateUserJwtSuspend (Ljava/lang/String;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+}
+
+public final class com/onesignal/IOneSignal$DefaultImpls {
+	public static synthetic fun initWithContextSuspend$default (Lcom/onesignal/IOneSignal;Landroid/content/Context;Ljava/lang/String;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+	public static fun login (Lcom/onesignal/IOneSignal;Ljava/lang/String;)V
+	public static synthetic fun login$default (Lcom/onesignal/IOneSignal;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)V
+	public static synthetic fun loginSuspend$default (Lcom/onesignal/IOneSignal;Ljava/lang/String;Ljava/lang/String;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+}
+
+public abstract interface class com/onesignal/IUserJwtInvalidatedListener {
+	public abstract fun onUserJwtInvalidated (Lcom/onesignal/UserJwtInvalidatedEvent;)V
+}
+
+public final class com/onesignal/OneSignal {
+	public static final field INSTANCE Lcom/onesignal/OneSignal;
+	public static final fun addUserJwtInvalidatedListener (Lcom/onesignal/IUserJwtInvalidatedListener;)V
+	public static final fun getConsentGiven ()Z
+	public static final fun getConsentGivenSuspend (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static final fun getConsentRequired ()Z
+	public static final fun getConsentRequiredSuspend (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static final fun getDebug ()Lcom/onesignal/debug/IDebugManager;
+	public static final fun getDisableGMSMissingPrompt ()Z
+	public static final fun getDisableGMSMissingPromptSuspend (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static final fun getInAppMessages ()Lcom/onesignal/inAppMessages/IInAppMessagesManager;
+	public static final fun getInAppMessagesSuspend (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static final fun getLocation ()Lcom/onesignal/location/ILocationManager;
+	public static final fun getLocationSuspend (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static final fun getNotifications ()Lcom/onesignal/notifications/INotificationsManager;
+	public static final fun getNotificationsSuspend (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static final fun getSdkVersion ()Ljava/lang/String;
+	public final fun getServices ()Lcom/onesignal/common/services/IServiceProvider;
+	public static final fun getSession ()Lcom/onesignal/session/ISessionManager;
+	public static final fun getSessionSuspend (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static final fun getUser ()Lcom/onesignal/user/IUserManager;
+	public static final fun getUserSuspend (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static final fun initWithContext (Landroid/content/Context;Ljava/lang/String;)V
+	public static final fun initWithContext (Landroid/content/Context;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static final fun initWithContextSuspend (Landroid/content/Context;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static synthetic fun initWithContextSuspend$default (Landroid/content/Context;Ljava/lang/String;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+	public static final fun isInitialized ()Z
+	public static final fun login (Ljava/lang/String;)V
+	public static final fun login (Ljava/lang/String;Ljava/lang/String;)V
+	public static synthetic fun login$default (Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)V
+	public static final fun loginSuspend (Ljava/lang/String;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static synthetic fun loginSuspend$default (Ljava/lang/String;Ljava/lang/String;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+	public static final fun logout ()V
+	public static final fun logoutSuspend (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static final fun removeUserJwtInvalidatedListener (Lcom/onesignal/IUserJwtInvalidatedListener;)V
+	public static final fun setConsentGiven (Z)V
+	public static final fun setConsentGivenSuspend (ZLkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static final fun setConsentRequired (Z)V
+	public static final fun setConsentRequiredSuspend (ZLkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static final fun setDisableGMSMissingPrompt (Z)V
+	public static final fun setDisableGMSMissingPromptSuspend (ZLkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static final fun updateUserJwt (Ljava/lang/String;Ljava/lang/String;)V
+	public static final fun updateUserJwtSuspend (Ljava/lang/String;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+}
+
+public final class com/onesignal/SyncJobService : android/app/job/JobService {
+	public fun <init> ()V
+	public fun onStartJob (Landroid/app/job/JobParameters;)Z
+	public fun onStopJob (Landroid/app/job/JobParameters;)Z
+}
+
+public final class com/onesignal/UserJwtInvalidatedEvent {
+	public fun <init> (Ljava/lang/String;)V
+	public final fun getExternalId ()Ljava/lang/String;
+}
+
+public final class com/onesignal/common/AndroidUtils {
+	public static final field INSTANCE Lcom/onesignal/common/AndroidUtils;
+	public final fun filterManifestPermissions (Ljava/util/List;Lcom/onesignal/core/internal/application/IApplicationService;)Ljava/util/List;
+	public final fun finishSafely (Landroid/app/Activity;)V
+	public final fun getAndroidSDKInt ()I
+	public final fun getAppVersion (Landroid/content/Context;)Ljava/lang/String;
+	public final fun getManifestMeta (Landroid/content/Context;Ljava/lang/String;)Ljava/lang/String;
+	public final fun getManifestMetaBoolean (Landroid/content/Context;Ljava/lang/String;)Z
+	public final fun getManifestMetaBundle (Landroid/content/Context;)Landroid/os/Bundle;
+	public final fun getRandomDelay (II)I
+	public final fun getResourceString (Landroid/content/Context;Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;
+	public final fun getRootCauseMessage (Ljava/lang/Throwable;)Ljava/lang/String;
+	public final fun getRootCauseThrowable (Ljava/lang/Throwable;)Ljava/lang/Throwable;
+	public final fun getTargetSdkVersion (Landroid/content/Context;)I
+	public final fun hasConfigChangeFlag (Landroid/app/Activity;I)Z
+	public final fun hasNotificationManagerCompat ()Z
+	public final fun hasPermission (Ljava/lang/String;ZLcom/onesignal/core/internal/application/IApplicationService;)Z
+	public final fun isActivityFullyReady (Landroid/app/Activity;)Z
+	public final fun isAndroidUserUnlocked (Landroid/content/Context;)Z
+	public final fun isRunningOnMainThread ()Z
+	public final fun isStringNotEmpty (Ljava/lang/String;)Z
+	public final fun isValidResourceName (Ljava/lang/String;)Z
+	public final fun opaqueHasClass (Ljava/lang/Class;)Z
+	public final fun openURLInBrowser (Landroid/content/Context;Landroid/net/Uri;)V
+	public final fun openURLInBrowser (Landroid/content/Context;Ljava/lang/String;)V
+	public final fun openURLInBrowserIntent (Landroid/net/Uri;)Landroid/content/Intent;
+}
+
+public final class com/onesignal/common/AndroidUtils$SchemaType : java/lang/Enum {
+	public static final field Companion Lcom/onesignal/common/AndroidUtils$SchemaType$Companion;
+	public static final field DATA Lcom/onesignal/common/AndroidUtils$SchemaType;
+	public static final field HTTP Lcom/onesignal/common/AndroidUtils$SchemaType;
+	public static final field HTTPS Lcom/onesignal/common/AndroidUtils$SchemaType;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lcom/onesignal/common/AndroidUtils$SchemaType;
+	public static fun values ()[Lcom/onesignal/common/AndroidUtils$SchemaType;
+}
+
+public final class com/onesignal/common/AndroidUtils$SchemaType$Companion {
+	public final fun fromString (Ljava/lang/String;)Lcom/onesignal/common/AndroidUtils$SchemaType;
+}
+
+public final class com/onesignal/common/DateUtils {
+	public static final field INSTANCE Lcom/onesignal/common/DateUtils;
+	public final fun iso8601Format ()Ljava/text/SimpleDateFormat;
+}
+
+public final class com/onesignal/common/DeviceUtils {
+	public static final field INSTANCE Lcom/onesignal/common/DeviceUtils;
+	public final fun getCarrierName (Landroid/content/Context;)Ljava/lang/String;
+	public final fun getNetType (Landroid/content/Context;)Ljava/lang/Integer;
+	public final fun isKeyboardUp (Ljava/lang/ref/WeakReference;)Z
+}
+
+public final class com/onesignal/common/IDManager {
+	public static final field INSTANCE Lcom/onesignal/common/IDManager;
+	public final fun createLocalId ()Ljava/lang/String;
+	public final fun isLocalId (Ljava/lang/String;)Z
+}
+
+public final class com/onesignal/common/JSONObjectExtensionsKt {
+	public static final fun expandJSONArray (Lorg/json/JSONObject;Ljava/lang/String;Lkotlin/jvm/functions/Function1;)Ljava/util/List;
+	public static final fun expandJSONObject (Lorg/json/JSONObject;Ljava/lang/String;Lkotlin/jvm/functions/Function1;)V
+	public static final fun putJSONArray (Lorg/json/JSONObject;Ljava/lang/String;Ljava/util/List;Lkotlin/jvm/functions/Function1;)Lorg/json/JSONObject;
+	public static final fun putJSONObject (Lorg/json/JSONObject;Ljava/lang/String;Lkotlin/jvm/functions/Function1;)Lorg/json/JSONObject;
+	public static final fun putMap (Lorg/json/JSONObject;Ljava/lang/String;Ljava/util/Map;)Lorg/json/JSONObject;
+	public static final fun putMap (Lorg/json/JSONObject;Ljava/util/Map;)Lorg/json/JSONObject;
+	public static final fun putSafe (Lorg/json/JSONObject;Ljava/lang/String;Ljava/lang/Object;)Lorg/json/JSONObject;
+	public static final fun safeBool (Lorg/json/JSONObject;Ljava/lang/String;)Ljava/lang/Boolean;
+	public static final fun safeDouble (Lorg/json/JSONObject;Ljava/lang/String;)Ljava/lang/Double;
+	public static final fun safeInt (Lorg/json/JSONObject;Ljava/lang/String;)Ljava/lang/Integer;
+	public static final fun safeJSONObject (Lorg/json/JSONObject;Ljava/lang/String;)Lorg/json/JSONObject;
+	public static final fun safeLong (Lorg/json/JSONObject;Ljava/lang/String;)Ljava/lang/Long;
+	public static final fun safeString (Lorg/json/JSONObject;Ljava/lang/String;)Ljava/lang/String;
+	public static final fun toList (Lorg/json/JSONArray;)Ljava/util/List;
+	public static final fun toMap (Lorg/json/JSONObject;)Ljava/util/Map;
+}
+
+public final class com/onesignal/common/JSONUtils {
+	public static final field EXTERNAL_USER_ID Ljava/lang/String;
+	public static final field INSTANCE Lcom/onesignal/common/JSONUtils;
+	public final fun bundleAsJSONObject (Landroid/os/Bundle;)Lorg/json/JSONObject;
+	public final fun compareJSONArrays (Lorg/json/JSONArray;Lorg/json/JSONArray;)Z
+	public final fun convertToJson (Ljava/lang/Object;)Ljava/lang/Object;
+	public final fun isValidJsonObject (Ljava/lang/Object;)Z
+	public final fun jsonStringToBundle (Ljava/lang/String;)Landroid/os/Bundle;
+	public final fun mapToJson (Ljava/util/Map;)Lorg/json/JSONObject;
+	public final fun newStringMapFromJSONObject (Lorg/json/JSONObject;)Ljava/util/Map;
+	public final fun newStringSetFromJSONArray (Lorg/json/JSONArray;)Ljava/util/Set;
+	public final fun normalizeType (Ljava/lang/Object;)Ljava/lang/Object;
+	public final fun toUnescapedEUIDString (Lorg/json/JSONObject;)Ljava/lang/String;
+	public final fun wrapInJsonArray (Lorg/json/JSONObject;)Lorg/json/JSONArray;
+}
+
+public final class com/onesignal/common/NetworkUtils {
+	public static final field INSTANCE Lcom/onesignal/common/NetworkUtils;
+	public final fun getMaxNetworkRequestAttemptCount ()I
+	public final fun getResponseStatusType (I)Lcom/onesignal/common/NetworkUtils$ResponseStatusType;
+	public final fun setMaxNetworkRequestAttemptCount (I)V
+}
+
+public final class com/onesignal/common/NetworkUtils$ResponseStatusType : java/lang/Enum {
+	public static final field CONFLICT Lcom/onesignal/common/NetworkUtils$ResponseStatusType;
+	public static final field INVALID Lcom/onesignal/common/NetworkUtils$ResponseStatusType;
+	public static final field MISSING Lcom/onesignal/common/NetworkUtils$ResponseStatusType;
+	public static final field RETRYABLE Lcom/onesignal/common/NetworkUtils$ResponseStatusType;
+	public static final field UNAUTHORIZED Lcom/onesignal/common/NetworkUtils$ResponseStatusType;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lcom/onesignal/common/NetworkUtils$ResponseStatusType;
+	public static fun values ()[Lcom/onesignal/common/NetworkUtils$ResponseStatusType;
+}
+
+public final class com/onesignal/common/OneSignalUtils {
+	public static final field INSTANCE Lcom/onesignal/common/OneSignalUtils;
+	public final fun getSdkVersion ()Ljava/lang/String;
+	public final fun isValidEmail (Ljava/lang/String;)Z
+	public final fun isValidPhoneNumber (Ljava/lang/String;)Z
+}
+
+public final class com/onesignal/common/OneSignalWrapper {
+	public static final field INSTANCE Lcom/onesignal/common/OneSignalWrapper;
+	public static final fun getSdkType ()Ljava/lang/String;
+	public static final fun getSdkVersion ()Ljava/lang/String;
+	public static final fun setSdkType (Ljava/lang/String;)V
+	public static final fun setSdkVersion (Ljava/lang/String;)V
+}
+
+public final class com/onesignal/common/PIIHasher {
+	public static final field INSTANCE Lcom/onesignal/common/PIIHasher;
+	public final fun hash (Ljava/lang/String;)Ljava/lang/String;
+	public final fun isHashed (Ljava/lang/String;)Z
+}
+
+public final class com/onesignal/common/RootToolsInternalMethods {
+	public static final field INSTANCE Lcom/onesignal/common/RootToolsInternalMethods;
+	public final fun isRooted ()Z
+}
+
+public final class com/onesignal/common/TimeUtils {
+	public static final field INSTANCE Lcom/onesignal/common/TimeUtils;
+	public final fun getTimeZoneId ()Ljava/lang/String;
+	public final fun getTimeZoneOffset ()I
+}
+
+public final class com/onesignal/common/ViewUtils {
+	public static final field INSTANCE Lcom/onesignal/common/ViewUtils;
+	public final fun dpToPx (I)I
+	public final fun getCutoutAndStatusBarInsets (Landroid/app/Activity;)[I
+	public final fun getFullbleedWindowWidth (Landroid/app/Activity;)I
+	public final fun getWindowHeight (Landroid/app/Activity;)I
+	public final fun getWindowWidth (Landroid/app/Activity;)I
+}
+
+public final class com/onesignal/common/consistency/IamFetchReadyCondition : com/onesignal/common/consistency/models/ICondition {
+	public static final field Companion Lcom/onesignal/common/consistency/IamFetchReadyCondition$Companion;
+	public static final field ID Ljava/lang/String;
+	public fun <init> (Ljava/lang/String;)V
+	public fun getId ()Ljava/lang/String;
+	public fun getRywData (Ljava/util/Map;)Lcom/onesignal/common/consistency/RywData;
+	public fun isMet (Ljava/util/Map;)Z
+}
+
+public final class com/onesignal/common/consistency/IamFetchReadyCondition$Companion {
+}
+
+public final class com/onesignal/common/consistency/RywData {
+	public fun <init> (Ljava/lang/String;Ljava/lang/Long;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/Long;
+	public final fun copy (Ljava/lang/String;Ljava/lang/Long;)Lcom/onesignal/common/consistency/RywData;
+	public static synthetic fun copy$default (Lcom/onesignal/common/consistency/RywData;Ljava/lang/String;Ljava/lang/Long;ILjava/lang/Object;)Lcom/onesignal/common/consistency/RywData;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getRywDelay ()Ljava/lang/Long;
+	public final fun getRywToken ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/onesignal/common/consistency/enums/IamFetchRywTokenKey : java/lang/Enum, com/onesignal/common/consistency/models/IConsistencyKeyEnum {
+	public static final field SUBSCRIPTION Lcom/onesignal/common/consistency/enums/IamFetchRywTokenKey;
+	public static final field USER Lcom/onesignal/common/consistency/enums/IamFetchRywTokenKey;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lcom/onesignal/common/consistency/enums/IamFetchRywTokenKey;
+	public static fun values ()[Lcom/onesignal/common/consistency/enums/IamFetchRywTokenKey;
+}
+
+public final class com/onesignal/common/consistency/impl/ConsistencyManager : com/onesignal/common/consistency/models/IConsistencyManager {
+	public fun <init> ()V
+	public fun getRywDataFromAwaitableCondition (Lcom/onesignal/common/consistency/models/ICondition;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public fun resolveConditionsWithID (Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public fun setRywData (Ljava/lang/String;Lcom/onesignal/common/consistency/models/IConsistencyKeyEnum;Lcom/onesignal/common/consistency/RywData;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+}
+
+public abstract interface class com/onesignal/common/consistency/models/ICondition {
+	public abstract fun getId ()Ljava/lang/String;
+	public abstract fun getRywData (Ljava/util/Map;)Lcom/onesignal/common/consistency/RywData;
+	public abstract fun isMet (Ljava/util/Map;)Z
+}
+
+public abstract interface class com/onesignal/common/consistency/models/IConsistencyKeyEnum {
+}
+
+public abstract interface class com/onesignal/common/consistency/models/IConsistencyManager {
+	public abstract fun getRywDataFromAwaitableCondition (Lcom/onesignal/common/consistency/models/ICondition;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun resolveConditionsWithID (Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun setRywData (Ljava/lang/String;Lcom/onesignal/common/consistency/models/IConsistencyKeyEnum;Lcom/onesignal/common/consistency/RywData;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+}
+
+public class com/onesignal/common/events/CallbackProducer : com/onesignal/common/events/ICallbackNotifier {
+	public fun <init> ()V
+	public final fun fire (Lkotlin/jvm/functions/Function1;)V
+	public final fun fireOnMain (Lkotlin/jvm/functions/Function1;)V
+	public fun getHasCallback ()Z
+	public fun set (Ljava/lang/Object;)V
+	public final fun suspendingFire (Lkotlin/jvm/functions/Function2;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun suspendingFireOnMain (Lkotlin/jvm/functions/Function2;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+}
+
+public class com/onesignal/common/events/EventProducer : com/onesignal/common/events/IEventNotifier {
+	public fun <init> ()V
+	public final fun fire (Lkotlin/jvm/functions/Function1;)V
+	public final fun fireOnMain (Lkotlin/jvm/functions/Function1;)V
+	public fun getHasSubscribers ()Z
+	public fun subscribe (Ljava/lang/Object;)V
+	public final fun subscribeAll (Lcom/onesignal/common/events/EventProducer;)V
+	public final fun suspendingFire (Lkotlin/jvm/functions/Function2;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun suspendingFireOnMain (Lkotlin/jvm/functions/Function2;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public fun unsubscribe (Ljava/lang/Object;)V
+}
+
+public abstract interface class com/onesignal/common/events/ICallbackNotifier {
+	public abstract fun getHasCallback ()Z
+	public abstract fun set (Ljava/lang/Object;)V
+}
+
+public abstract interface class com/onesignal/common/events/IEventNotifier {
+	public abstract fun getHasSubscribers ()Z
+	public abstract fun subscribe (Ljava/lang/Object;)V
+	public abstract fun unsubscribe (Ljava/lang/Object;)V
+}
+
+public final class com/onesignal/common/exceptions/BackendException : java/lang/Exception {
+	public fun <init> (ILjava/lang/String;Ljava/lang/Integer;)V
+	public synthetic fun <init> (ILjava/lang/String;Ljava/lang/Integer;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun getResponse ()Ljava/lang/String;
+	public final fun getRetryAfterSeconds ()Ljava/lang/Integer;
+	public final fun getStatusCode ()I
+}
+
+public final class com/onesignal/common/exceptions/MainThreadException : java/lang/RuntimeException {
+	public fun <init> (Ljava/lang/String;)V
+}
+
+public abstract interface class com/onesignal/common/modeling/IModelChangedHandler {
+	public abstract fun onChanged (Lcom/onesignal/common/modeling/ModelChangedArgs;Ljava/lang/String;)V
+}
+
+public abstract interface class com/onesignal/common/modeling/IModelStore : com/onesignal/common/events/IEventNotifier {
+	public abstract fun add (ILcom/onesignal/common/modeling/Model;Ljava/lang/String;)V
+	public abstract fun add (Lcom/onesignal/common/modeling/Model;Ljava/lang/String;)V
+	public abstract fun clear (Ljava/lang/String;)V
+	public abstract fun create (Lorg/json/JSONObject;)Lcom/onesignal/common/modeling/Model;
+	public abstract fun get (Ljava/lang/String;)Lcom/onesignal/common/modeling/Model;
+	public abstract fun list ()Ljava/util/Collection;
+	public abstract fun remove (Ljava/lang/String;Ljava/lang/String;)V
+	public abstract fun replaceAll (Ljava/util/List;Ljava/lang/String;)V
+}
+
+public final class com/onesignal/common/modeling/IModelStore$DefaultImpls {
+	public static synthetic fun add$default (Lcom/onesignal/common/modeling/IModelStore;ILcom/onesignal/common/modeling/Model;Ljava/lang/String;ILjava/lang/Object;)V
+	public static synthetic fun add$default (Lcom/onesignal/common/modeling/IModelStore;Lcom/onesignal/common/modeling/Model;Ljava/lang/String;ILjava/lang/Object;)V
+	public static synthetic fun clear$default (Lcom/onesignal/common/modeling/IModelStore;Ljava/lang/String;ILjava/lang/Object;)V
+	public static synthetic fun create$default (Lcom/onesignal/common/modeling/IModelStore;Lorg/json/JSONObject;ILjava/lang/Object;)Lcom/onesignal/common/modeling/Model;
+	public static synthetic fun remove$default (Lcom/onesignal/common/modeling/IModelStore;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)V
+	public static synthetic fun replaceAll$default (Lcom/onesignal/common/modeling/IModelStore;Ljava/util/List;Ljava/lang/String;ILjava/lang/Object;)V
+}
+
+public abstract interface class com/onesignal/common/modeling/IModelStoreChangeHandler {
+	public abstract fun onModelAdded (Lcom/onesignal/common/modeling/Model;Ljava/lang/String;)V
+	public abstract fun onModelRemoved (Lcom/onesignal/common/modeling/Model;Ljava/lang/String;)V
+	public abstract fun onModelUpdated (Lcom/onesignal/common/modeling/ModelChangedArgs;Ljava/lang/String;)V
+}
+
+public abstract interface class com/onesignal/common/modeling/ISingletonModelStore : com/onesignal/common/events/IEventNotifier {
+	public abstract fun getModel ()Lcom/onesignal/common/modeling/Model;
+	public abstract fun replace (Lcom/onesignal/common/modeling/Model;Ljava/lang/String;)V
+}
+
+public final class com/onesignal/common/modeling/ISingletonModelStore$DefaultImpls {
+	public static synthetic fun replace$default (Lcom/onesignal/common/modeling/ISingletonModelStore;Lcom/onesignal/common/modeling/Model;Ljava/lang/String;ILjava/lang/Object;)V
+}
+
+public abstract interface class com/onesignal/common/modeling/ISingletonModelStoreChangeHandler {
+	public abstract fun onModelReplaced (Lcom/onesignal/common/modeling/Model;Ljava/lang/String;)V
+	public abstract fun onModelUpdated (Lcom/onesignal/common/modeling/ModelChangedArgs;Ljava/lang/String;)V
+}
+
+public class com/onesignal/common/modeling/MapModel : com/onesignal/common/modeling/Model, java/util/Map, kotlin/jvm/internal/markers/KMutableMap {
+	public fun <init> ()V
+	public fun <init> (Lcom/onesignal/common/modeling/Model;Ljava/lang/String;)V
+	public synthetic fun <init> (Lcom/onesignal/common/modeling/Model;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun clear ()V
+	public final fun containsKey (Ljava/lang/Object;)Z
+	public fun containsKey (Ljava/lang/String;)Z
+	public fun containsValue (Ljava/lang/Object;)Z
+	public final fun entrySet ()Ljava/util/Set;
+	public final fun get (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun get (Ljava/lang/String;)Ljava/lang/Object;
+	public fun getEntries ()Ljava/util/Set;
+	public fun getKeys ()Ljava/util/Set;
+	public fun getSize ()I
+	public fun getValues ()Ljava/util/Collection;
+	public fun isEmpty ()Z
+	public final fun keySet ()Ljava/util/Set;
+	public synthetic fun put (Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;
+	public fun put (Ljava/lang/String;Ljava/lang/Object;)Ljava/lang/Object;
+	public fun putAll (Ljava/util/Map;)V
+	public final fun remove (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun remove (Ljava/lang/String;)Ljava/lang/Object;
+	public final fun size ()I
+	public final fun values ()Ljava/util/Collection;
+}
+
+public class com/onesignal/common/modeling/Model : com/onesignal/common/events/IEventNotifier {
+	public fun <init> ()V
+	public fun <init> (Lcom/onesignal/common/modeling/Model;Ljava/lang/String;)V
+	public synthetic fun <init> (Lcom/onesignal/common/modeling/Model;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	protected fun createListForProperty (Ljava/lang/String;Lorg/json/JSONArray;)Ljava/util/List;
+	protected fun createModelForProperty (Ljava/lang/String;Lorg/json/JSONObject;)Lcom/onesignal/common/modeling/Model;
+	protected final fun getAnyProperty (Ljava/lang/String;Lkotlin/jvm/functions/Function0;)Ljava/lang/Object;
+	public static synthetic fun getAnyProperty$default (Lcom/onesignal/common/modeling/Model;Ljava/lang/String;Lkotlin/jvm/functions/Function0;ILjava/lang/Object;)Ljava/lang/Object;
+	protected final fun getBigDecimalProperty (Ljava/lang/String;Lkotlin/jvm/functions/Function0;)Ljava/math/BigDecimal;
+	public static synthetic fun getBigDecimalProperty$default (Lcom/onesignal/common/modeling/Model;Ljava/lang/String;Lkotlin/jvm/functions/Function0;ILjava/lang/Object;)Ljava/math/BigDecimal;
+	protected final fun getBooleanProperty (Ljava/lang/String;Lkotlin/jvm/functions/Function0;)Z
+	public static synthetic fun getBooleanProperty$default (Lcom/onesignal/common/modeling/Model;Ljava/lang/String;Lkotlin/jvm/functions/Function0;ILjava/lang/Object;)Z
+	protected final fun getData ()Ljava/util/Map;
+	protected final fun getDoubleProperty (Ljava/lang/String;Lkotlin/jvm/functions/Function0;)D
+	public static synthetic fun getDoubleProperty$default (Lcom/onesignal/common/modeling/Model;Ljava/lang/String;Lkotlin/jvm/functions/Function0;ILjava/lang/Object;)D
+	protected final fun getFloatProperty (Ljava/lang/String;Lkotlin/jvm/functions/Function0;)F
+	public static synthetic fun getFloatProperty$default (Lcom/onesignal/common/modeling/Model;Ljava/lang/String;Lkotlin/jvm/functions/Function0;ILjava/lang/Object;)F
+	public fun getHasSubscribers ()Z
+	public final fun getId ()Ljava/lang/String;
+	protected final fun getIntProperty (Ljava/lang/String;Lkotlin/jvm/functions/Function0;)I
+	public static synthetic fun getIntProperty$default (Lcom/onesignal/common/modeling/Model;Ljava/lang/String;Lkotlin/jvm/functions/Function0;ILjava/lang/Object;)I
+	protected final fun getListProperty (Ljava/lang/String;Lkotlin/jvm/functions/Function0;)Ljava/util/List;
+	public static synthetic fun getListProperty$default (Lcom/onesignal/common/modeling/Model;Ljava/lang/String;Lkotlin/jvm/functions/Function0;ILjava/lang/Object;)Ljava/util/List;
+	protected final fun getLongProperty (Ljava/lang/String;Lkotlin/jvm/functions/Function0;)J
+	public static synthetic fun getLongProperty$default (Lcom/onesignal/common/modeling/Model;Ljava/lang/String;Lkotlin/jvm/functions/Function0;ILjava/lang/Object;)J
+	protected final fun getMapModelProperty (Ljava/lang/String;Lkotlin/jvm/functions/Function0;)Lcom/onesignal/common/modeling/MapModel;
+	public static synthetic fun getMapModelProperty$default (Lcom/onesignal/common/modeling/Model;Ljava/lang/String;Lkotlin/jvm/functions/Function0;ILjava/lang/Object;)Lcom/onesignal/common/modeling/MapModel;
+	protected final fun getOptAnyProperty (Ljava/lang/String;Lkotlin/jvm/functions/Function0;)Ljava/lang/Object;
+	public static synthetic fun getOptAnyProperty$default (Lcom/onesignal/common/modeling/Model;Ljava/lang/String;Lkotlin/jvm/functions/Function0;ILjava/lang/Object;)Ljava/lang/Object;
+	protected final fun getOptBigDecimalProperty (Ljava/lang/String;Lkotlin/jvm/functions/Function0;)Ljava/math/BigDecimal;
+	public static synthetic fun getOptBigDecimalProperty$default (Lcom/onesignal/common/modeling/Model;Ljava/lang/String;Lkotlin/jvm/functions/Function0;ILjava/lang/Object;)Ljava/math/BigDecimal;
+	protected final fun getOptBooleanProperty (Ljava/lang/String;Lkotlin/jvm/functions/Function0;)Ljava/lang/Boolean;
+	public static synthetic fun getOptBooleanProperty$default (Lcom/onesignal/common/modeling/Model;Ljava/lang/String;Lkotlin/jvm/functions/Function0;ILjava/lang/Object;)Ljava/lang/Boolean;
+	protected final fun getOptDoubleProperty (Ljava/lang/String;Lkotlin/jvm/functions/Function0;)Ljava/lang/Double;
+	public static synthetic fun getOptDoubleProperty$default (Lcom/onesignal/common/modeling/Model;Ljava/lang/String;Lkotlin/jvm/functions/Function0;ILjava/lang/Object;)Ljava/lang/Double;
+	protected final fun getOptFloatProperty (Ljava/lang/String;Lkotlin/jvm/functions/Function0;)Ljava/lang/Float;
+	public static synthetic fun getOptFloatProperty$default (Lcom/onesignal/common/modeling/Model;Ljava/lang/String;Lkotlin/jvm/functions/Function0;ILjava/lang/Object;)Ljava/lang/Float;
+	protected final fun getOptIntProperty (Ljava/lang/String;Lkotlin/jvm/functions/Function0;)Ljava/lang/Integer;
+	public static synthetic fun getOptIntProperty$default (Lcom/onesignal/common/modeling/Model;Ljava/lang/String;Lkotlin/jvm/functions/Function0;ILjava/lang/Object;)Ljava/lang/Integer;
+	protected final fun getOptListProperty (Ljava/lang/String;Lkotlin/jvm/functions/Function0;)Ljava/util/List;
+	public static synthetic fun getOptListProperty$default (Lcom/onesignal/common/modeling/Model;Ljava/lang/String;Lkotlin/jvm/functions/Function0;ILjava/lang/Object;)Ljava/util/List;
+	protected final fun getOptLongProperty (Ljava/lang/String;Lkotlin/jvm/functions/Function0;)Ljava/lang/Long;
+	public static synthetic fun getOptLongProperty$default (Lcom/onesignal/common/modeling/Model;Ljava/lang/String;Lkotlin/jvm/functions/Function0;ILjava/lang/Object;)Ljava/lang/Long;
+	protected final fun getOptMapModelProperty (Ljava/lang/String;Lkotlin/jvm/functions/Function0;)Lcom/onesignal/common/modeling/MapModel;
+	public static synthetic fun getOptMapModelProperty$default (Lcom/onesignal/common/modeling/Model;Ljava/lang/String;Lkotlin/jvm/functions/Function0;ILjava/lang/Object;)Lcom/onesignal/common/modeling/MapModel;
+	protected final fun getOptStringProperty (Ljava/lang/String;Lkotlin/jvm/functions/Function0;)Ljava/lang/String;
+	public static synthetic fun getOptStringProperty$default (Lcom/onesignal/common/modeling/Model;Ljava/lang/String;Lkotlin/jvm/functions/Function0;ILjava/lang/Object;)Ljava/lang/String;
+	protected final fun getStringProperty (Ljava/lang/String;Lkotlin/jvm/functions/Function0;)Ljava/lang/String;
+	public static synthetic fun getStringProperty$default (Lcom/onesignal/common/modeling/Model;Ljava/lang/String;Lkotlin/jvm/functions/Function0;ILjava/lang/Object;)Ljava/lang/String;
+	public final fun hasProperty (Ljava/lang/String;)Z
+	public final fun initializeFromJson (Lorg/json/JSONObject;)V
+	public final fun initializeFromModel (Ljava/lang/String;Lcom/onesignal/common/modeling/Model;)V
+	public final fun setAnyProperty (Ljava/lang/String;Ljava/lang/Object;Ljava/lang/String;Z)V
+	public static synthetic fun setAnyProperty$default (Lcom/onesignal/common/modeling/Model;Ljava/lang/String;Ljava/lang/Object;Ljava/lang/String;ZILjava/lang/Object;)V
+	public final fun setBigDecimalProperty (Ljava/lang/String;Ljava/math/BigDecimal;Ljava/lang/String;Z)V
+	public static synthetic fun setBigDecimalProperty$default (Lcom/onesignal/common/modeling/Model;Ljava/lang/String;Ljava/math/BigDecimal;Ljava/lang/String;ZILjava/lang/Object;)V
+	public final fun setBooleanProperty (Ljava/lang/String;ZLjava/lang/String;Z)V
+	public static synthetic fun setBooleanProperty$default (Lcom/onesignal/common/modeling/Model;Ljava/lang/String;ZLjava/lang/String;ZILjava/lang/Object;)V
+	public final fun setDoubleProperty (Ljava/lang/String;DLjava/lang/String;Z)V
+	public static synthetic fun setDoubleProperty$default (Lcom/onesignal/common/modeling/Model;Ljava/lang/String;DLjava/lang/String;ZILjava/lang/Object;)V
+	public final fun setFloatProperty (Ljava/lang/String;FLjava/lang/String;Z)V
+	public static synthetic fun setFloatProperty$default (Lcom/onesignal/common/modeling/Model;Ljava/lang/String;FLjava/lang/String;ZILjava/lang/Object;)V
+	public final fun setId (Ljava/lang/String;)V
+	public final fun setIntProperty (Ljava/lang/String;ILjava/lang/String;Z)V
+	public static synthetic fun setIntProperty$default (Lcom/onesignal/common/modeling/Model;Ljava/lang/String;ILjava/lang/String;ZILjava/lang/Object;)V
+	public final fun setListProperty (Ljava/lang/String;Ljava/util/List;Ljava/lang/String;Z)V
+	public static synthetic fun setListProperty$default (Lcom/onesignal/common/modeling/Model;Ljava/lang/String;Ljava/util/List;Ljava/lang/String;ZILjava/lang/Object;)V
+	public final fun setLongProperty (Ljava/lang/String;JLjava/lang/String;Z)V
+	public static synthetic fun setLongProperty$default (Lcom/onesignal/common/modeling/Model;Ljava/lang/String;JLjava/lang/String;ZILjava/lang/Object;)V
+	public final fun setMapModelProperty (Ljava/lang/String;Lcom/onesignal/common/modeling/MapModel;Ljava/lang/String;Z)V
+	public static synthetic fun setMapModelProperty$default (Lcom/onesignal/common/modeling/Model;Ljava/lang/String;Lcom/onesignal/common/modeling/MapModel;Ljava/lang/String;ZILjava/lang/Object;)V
+	public final fun setOptAnyProperty (Ljava/lang/String;Ljava/lang/Object;Ljava/lang/String;Z)V
+	public static synthetic fun setOptAnyProperty$default (Lcom/onesignal/common/modeling/Model;Ljava/lang/String;Ljava/lang/Object;Ljava/lang/String;ZILjava/lang/Object;)V
+	public final fun setOptBigDecimalProperty (Ljava/lang/String;Ljava/math/BigDecimal;Ljava/lang/String;Z)V
+	public static synthetic fun setOptBigDecimalProperty$default (Lcom/onesignal/common/modeling/Model;Ljava/lang/String;Ljava/math/BigDecimal;Ljava/lang/String;ZILjava/lang/Object;)V
+	public final fun setOptBooleanProperty (Ljava/lang/String;Ljava/lang/Boolean;Ljava/lang/String;Z)V
+	public static synthetic fun setOptBooleanProperty$default (Lcom/onesignal/common/modeling/Model;Ljava/lang/String;Ljava/lang/Boolean;Ljava/lang/String;ZILjava/lang/Object;)V
+	public final fun setOptDoubleProperty (Ljava/lang/String;Ljava/lang/Double;Ljava/lang/String;Z)V
+	public static synthetic fun setOptDoubleProperty$default (Lcom/onesignal/common/modeling/Model;Ljava/lang/String;Ljava/lang/Double;Ljava/lang/String;ZILjava/lang/Object;)V
+	public final fun setOptFloatProperty (Ljava/lang/String;Ljava/lang/Float;Ljava/lang/String;Z)V
+	public static synthetic fun setOptFloatProperty$default (Lcom/onesignal/common/modeling/Model;Ljava/lang/String;Ljava/lang/Float;Ljava/lang/String;ZILjava/lang/Object;)V
+	public final fun setOptIntProperty (Ljava/lang/String;Ljava/lang/Integer;Ljava/lang/String;Z)V
+	public static synthetic fun setOptIntProperty$default (Lcom/onesignal/common/modeling/Model;Ljava/lang/String;Ljava/lang/Integer;Ljava/lang/String;ZILjava/lang/Object;)V
+	public final fun setOptListProperty (Ljava/lang/String;Ljava/util/List;Ljava/lang/String;Z)V
+	public static synthetic fun setOptListProperty$default (Lcom/onesignal/common/modeling/Model;Ljava/lang/String;Ljava/util/List;Ljava/lang/String;ZILjava/lang/Object;)V
+	public final fun setOptLongProperty (Ljava/lang/String;Ljava/lang/Long;Ljava/lang/String;Z)V
+	public static synthetic fun setOptLongProperty$default (Lcom/onesignal/common/modeling/Model;Ljava/lang/String;Ljava/lang/Long;Ljava/lang/String;ZILjava/lang/Object;)V
+	public final fun setOptMapModelProperty (Ljava/lang/String;Lcom/onesignal/common/modeling/MapModel;Ljava/lang/String;Z)V
+	public static synthetic fun setOptMapModelProperty$default (Lcom/onesignal/common/modeling/Model;Ljava/lang/String;Lcom/onesignal/common/modeling/MapModel;Ljava/lang/String;ZILjava/lang/Object;)V
+	public final fun setOptStringProperty (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Z)V
+	public static synthetic fun setOptStringProperty$default (Lcom/onesignal/common/modeling/Model;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ZILjava/lang/Object;)V
+	public final fun setStringProperty (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Z)V
+	public static synthetic fun setStringProperty$default (Lcom/onesignal/common/modeling/Model;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ZILjava/lang/Object;)V
+	public fun subscribe (Lcom/onesignal/common/modeling/IModelChangedHandler;)V
+	public synthetic fun subscribe (Ljava/lang/Object;)V
+	public final fun toJSON ()Lorg/json/JSONObject;
+	public fun unsubscribe (Lcom/onesignal/common/modeling/IModelChangedHandler;)V
+	public synthetic fun unsubscribe (Ljava/lang/Object;)V
+}
+
+public final class com/onesignal/common/modeling/ModelChangeTags {
+	public static final field HYDRATE Ljava/lang/String;
+	public static final field INSTANCE Lcom/onesignal/common/modeling/ModelChangeTags;
+	public static final field NORMAL Ljava/lang/String;
+	public static final field NO_PROPOGATE Ljava/lang/String;
+}
+
+public final class com/onesignal/common/modeling/ModelChangedArgs {
+	public fun <init> (Lcom/onesignal/common/modeling/Model;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;Ljava/lang/Object;)V
+	public final fun getModel ()Lcom/onesignal/common/modeling/Model;
+	public final fun getNewValue ()Ljava/lang/Object;
+	public final fun getOldValue ()Ljava/lang/Object;
+	public final fun getPath ()Ljava/lang/String;
+	public final fun getProperty ()Ljava/lang/String;
+}
+
+public abstract class com/onesignal/common/modeling/ModelStore : com/onesignal/common/events/IEventNotifier, com/onesignal/common/modeling/IModelChangedHandler, com/onesignal/common/modeling/IModelStore {
+	public fun <init> ()V
+	public fun <init> (Ljava/lang/String;Lcom/onesignal/core/internal/preferences/IPreferencesService;)V
+	public synthetic fun <init> (Ljava/lang/String;Lcom/onesignal/core/internal/preferences/IPreferencesService;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun add (ILcom/onesignal/common/modeling/Model;Ljava/lang/String;)V
+	public fun add (Lcom/onesignal/common/modeling/Model;Ljava/lang/String;)V
+	public fun clear (Ljava/lang/String;)V
+	public fun get (Ljava/lang/String;)Lcom/onesignal/common/modeling/Model;
+	public fun getHasSubscribers ()Z
+	public final fun getName ()Ljava/lang/String;
+	public fun list ()Ljava/util/Collection;
+	protected final fun load ()V
+	public fun onChanged (Lcom/onesignal/common/modeling/ModelChangedArgs;Ljava/lang/String;)V
+	public final fun persist ()V
+	public fun remove (Ljava/lang/String;Ljava/lang/String;)V
+	public fun replaceAll (Ljava/util/List;Ljava/lang/String;)V
+	public fun subscribe (Lcom/onesignal/common/modeling/IModelStoreChangeHandler;)V
+	public synthetic fun subscribe (Ljava/lang/Object;)V
+	protected fun transformJsonForPersistence (Lcom/onesignal/common/modeling/Model;Lorg/json/JSONObject;)Lorg/json/JSONObject;
+	public fun unsubscribe (Lcom/onesignal/common/modeling/IModelStoreChangeHandler;)V
+	public synthetic fun unsubscribe (Ljava/lang/Object;)V
+}
+
+public class com/onesignal/common/modeling/SimpleModelStore : com/onesignal/common/modeling/ModelStore {
+	public fun <init> (Lkotlin/jvm/functions/Function0;Ljava/lang/String;Lcom/onesignal/core/internal/preferences/IPreferencesService;)V
+	public synthetic fun <init> (Lkotlin/jvm/functions/Function0;Ljava/lang/String;Lcom/onesignal/core/internal/preferences/IPreferencesService;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun create (Lorg/json/JSONObject;)Lcom/onesignal/common/modeling/Model;
+}
+
+public class com/onesignal/common/modeling/SingletonModelStore : com/onesignal/common/modeling/IModelStoreChangeHandler, com/onesignal/common/modeling/ISingletonModelStore {
+	public fun <init> (Lcom/onesignal/common/modeling/ModelStore;)V
+	public fun getHasSubscribers ()Z
+	public fun getModel ()Lcom/onesignal/common/modeling/Model;
+	public final fun getStore ()Lcom/onesignal/common/modeling/ModelStore;
+	public fun onModelAdded (Lcom/onesignal/common/modeling/Model;Ljava/lang/String;)V
+	public fun onModelRemoved (Lcom/onesignal/common/modeling/Model;Ljava/lang/String;)V
+	public fun onModelUpdated (Lcom/onesignal/common/modeling/ModelChangedArgs;Ljava/lang/String;)V
+	public fun replace (Lcom/onesignal/common/modeling/Model;Ljava/lang/String;)V
+	public fun subscribe (Lcom/onesignal/common/modeling/ISingletonModelStoreChangeHandler;)V
+	public synthetic fun subscribe (Ljava/lang/Object;)V
+	public fun unsubscribe (Lcom/onesignal/common/modeling/ISingletonModelStoreChangeHandler;)V
+	public synthetic fun unsubscribe (Ljava/lang/Object;)V
+}
+
+public abstract interface class com/onesignal/common/modules/IModule {
+	public abstract fun register (Lcom/onesignal/common/services/ServiceBuilder;)V
+}
+
+public abstract interface class com/onesignal/common/services/IServiceProvider {
+	public abstract fun getAllServices (Ljava/lang/Class;)Ljava/util/List;
+	public abstract fun getService (Ljava/lang/Class;)Ljava/lang/Object;
+	public abstract fun getServiceOrNull (Ljava/lang/Class;)Ljava/lang/Object;
+	public abstract fun hasService (Ljava/lang/Class;)Z
+}
+
+public final class com/onesignal/common/services/ServiceBuilder : com/onesignal/common/services/IServiceBuilder {
+	public fun <init> ()V
+	public fun build ()Lcom/onesignal/common/services/ServiceProvider;
+	public fun register (Ljava/lang/Class;)Lcom/onesignal/common/services/ServiceRegistration;
+	public fun register (Ljava/lang/Object;)Lcom/onesignal/common/services/ServiceRegistration;
+	public fun register (Lkotlin/jvm/functions/Function1;)Lcom/onesignal/common/services/ServiceRegistration;
+}
+
+public final class com/onesignal/common/services/ServiceProvider : com/onesignal/common/services/IServiceProvider {
+	public static final field Companion Lcom/onesignal/common/services/ServiceProvider$Companion;
+	public fun <init> (Ljava/util/List;)V
+	public fun getAllServices (Ljava/lang/Class;)Ljava/util/List;
+	public fun getService (Ljava/lang/Class;)Ljava/lang/Object;
+	public fun getServiceOrNull (Ljava/lang/Class;)Ljava/lang/Object;
+	public fun hasService (Ljava/lang/Class;)Z
+}
+
+public final class com/onesignal/common/services/ServiceProvider$Companion {
+	public final fun getIndent ()Ljava/lang/String;
+	public final fun setIndent (Ljava/lang/String;)V
+}
+
+public abstract class com/onesignal/common/services/ServiceRegistration {
+	public fun <init> ()V
+	public final fun getServices ()Ljava/util/Set;
+	public final fun provides (Ljava/lang/Class;)Lcom/onesignal/common/services/ServiceRegistration;
+	public abstract fun resolve (Lcom/onesignal/common/services/IServiceProvider;)Ljava/lang/Object;
+}
+
+public final class com/onesignal/common/services/ServiceRegistrationLambda : com/onesignal/common/services/ServiceRegistration {
+	public fun <init> (Lkotlin/jvm/functions/Function1;)V
+	public fun resolve (Lcom/onesignal/common/services/IServiceProvider;)Ljava/lang/Object;
+}
+
+public final class com/onesignal/common/services/ServiceRegistrationReflection : com/onesignal/common/services/ServiceRegistration {
+	public fun <init> (Ljava/lang/Class;)V
+	public fun resolve (Lcom/onesignal/common/services/IServiceProvider;)Ljava/lang/Object;
+}
+
+public final class com/onesignal/common/services/ServiceRegistrationSingleton : com/onesignal/common/services/ServiceRegistration {
+	public fun <init> (Ljava/lang/Object;)V
+	public fun resolve (Lcom/onesignal/common/services/IServiceProvider;)Ljava/lang/Object;
+}
+
+public final class com/onesignal/common/threading/OneSignalDispatchers {
+	public static final field INSTANCE Lcom/onesignal/common/threading/OneSignalDispatchers;
+	public final fun getDefault ()Lkotlinx/coroutines/CoroutineDispatcher;
+	public final fun getIO ()Lkotlinx/coroutines/CoroutineDispatcher;
+	public final fun getSerialIO ()Lkotlinx/coroutines/CoroutineDispatcher;
+	public final fun launchOnDefault (Lkotlin/jvm/functions/Function1;)Lkotlinx/coroutines/Job;
+	public final fun launchOnIO (Lkotlin/jvm/functions/Function1;)Lkotlinx/coroutines/Job;
+	public final fun launchOnSerialIO (Lkotlin/jvm/functions/Function1;)Lkotlinx/coroutines/Job;
+	public final fun prewarm ()V
+}
+
+public final class com/onesignal/common/threading/ThreadUtilsKt {
+	public static final fun launchOnDefault (Lkotlin/jvm/functions/Function1;)Lkotlinx/coroutines/Job;
+	public static final fun launchOnIO (Lkotlin/jvm/functions/Function1;)Lkotlinx/coroutines/Job;
+	public static final fun runOnSerialIO (Lkotlin/jvm/functions/Function0;)V
+	public static final fun suspendifyOnDefault (Lkotlin/jvm/functions/Function1;)V
+	public static final fun suspendifyOnIO (Lkotlin/jvm/functions/Function1;)V
+	public static final fun suspendifyOnIO (Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function0;)V
+	public static synthetic fun suspendifyOnIO$default (Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function0;ILjava/lang/Object;)V
+	public static final fun suspendifyOnMain (Lkotlin/jvm/functions/Function1;)V
+	public static final fun suspendifyOnSerialIO (Lkotlin/jvm/functions/Function1;)V
+	public static final fun suspendifyWithCompletion (ZLkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function0;)V
+	public static synthetic fun suspendifyWithCompletion$default (ZLkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function0;ILjava/lang/Object;)V
+	public static final fun suspendifyWithErrorHandling (ZLkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function0;)V
+	public static synthetic fun suspendifyWithErrorHandling$default (ZLkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function0;ILjava/lang/Object;)V
+}
+
+public final class com/onesignal/common/threading/Waiter {
+	public fun <init> ()V
+	public final fun waitForWake (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun wake ()V
+}
+
+public class com/onesignal/common/threading/WaiterWithValue {
+	public fun <init> ()V
+	public final fun waitForWake (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun wake (Ljava/lang/Object;)V
+}
+
+public final class com/onesignal/core/BuildConfig {
+	public static final field BUILD_TYPE Ljava/lang/String;
+	public static final field DEBUG Z
+	public static final field LIBRARY_PACKAGE_NAME Ljava/lang/String;
+	public static final field SDK_VERSION Ljava/lang/String;
+	public fun <init> ()V
+}
+
+public final class com/onesignal/core/activities/PermissionsActivity : androidx/activity/ComponentActivity {
+	public fun <init> ()V
+	public fun onRequestPermissionsResult (I[Ljava/lang/String;[I)V
+}
+
+public class com/onesignal/core/internal/application/ActivityLifecycleHandlerBase : com/onesignal/core/internal/application/IActivityLifecycleHandler {
+	public fun <init> ()V
+	public fun onActivityAvailable (Landroid/app/Activity;)V
+	public fun onActivityStopped (Landroid/app/Activity;)V
+}
+
+public final class com/onesignal/core/internal/application/AppEntryAction : java/lang/Enum {
+	public static final field APP_CLOSE Lcom/onesignal/core/internal/application/AppEntryAction;
+	public static final field APP_OPEN Lcom/onesignal/core/internal/application/AppEntryAction;
+	public static final field NOTIFICATION_CLICK Lcom/onesignal/core/internal/application/AppEntryAction;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public final fun isAppClose ()Z
+	public final fun isAppOpen ()Z
+	public final fun isNotificationClick ()Z
+	public static fun valueOf (Ljava/lang/String;)Lcom/onesignal/core/internal/application/AppEntryAction;
+	public static fun values ()[Lcom/onesignal/core/internal/application/AppEntryAction;
+}
+
+public class com/onesignal/core/internal/application/ApplicationLifecycleHandlerBase : com/onesignal/core/internal/application/IApplicationLifecycleHandler {
+	public fun <init> ()V
+	public fun onFocus (Z)V
+	public fun onUnfocused ()V
+}
+
+public abstract interface class com/onesignal/core/internal/application/IActivityLifecycleHandler {
+	public abstract fun onActivityAvailable (Landroid/app/Activity;)V
+	public abstract fun onActivityStopped (Landroid/app/Activity;)V
+}
+
+public abstract interface class com/onesignal/core/internal/application/IApplicationLifecycleHandler {
+	public abstract fun onFocus (Z)V
+	public abstract fun onUnfocused ()V
+}
+
+public abstract interface class com/onesignal/core/internal/application/IApplicationService {
+	public abstract fun addActivityLifecycleHandler (Lcom/onesignal/core/internal/application/IActivityLifecycleHandler;)V
+	public abstract fun addApplicationLifecycleHandler (Lcom/onesignal/core/internal/application/IApplicationLifecycleHandler;)V
+	public abstract fun getAppContext ()Landroid/content/Context;
+	public abstract fun getCurrent ()Landroid/app/Activity;
+	public abstract fun getEntryState ()Lcom/onesignal/core/internal/application/AppEntryAction;
+	public abstract fun isInForeground ()Z
+	public abstract fun removeActivityLifecycleHandler (Lcom/onesignal/core/internal/application/IActivityLifecycleHandler;)V
+	public abstract fun removeApplicationLifecycleHandler (Lcom/onesignal/core/internal/application/IApplicationLifecycleHandler;)V
+	public abstract fun setEntryState (Lcom/onesignal/core/internal/application/AppEntryAction;)V
+	public abstract fun waitUntilActivityReady (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun waitUntilSystemConditionsAvailable (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+}
+
+public abstract interface class com/onesignal/core/internal/application/OneSignalInternalActivity {
+}
+
+public final class com/onesignal/core/internal/application/impl/ActivityLifecycleInitializer : androidx/startup/Initializer {
+	public fun <init> ()V
+	public fun create (Landroid/content/Context;)Lcom/onesignal/core/internal/application/IApplicationService;
+	public synthetic fun create (Landroid/content/Context;)Ljava/lang/Object;
+	public fun dependencies ()Ljava/util/List;
+}
+
+public final class com/onesignal/core/internal/application/impl/ApplicationService : android/app/Application$ActivityLifecycleCallbacks, android/view/ViewTreeObserver$OnGlobalLayoutListener, com/onesignal/core/internal/application/IApplicationService {
+	public static final field Companion Lcom/onesignal/core/internal/application/impl/ApplicationService$Companion;
+	public fun <init> ()V
+	public fun addActivityLifecycleHandler (Lcom/onesignal/core/internal/application/IActivityLifecycleHandler;)V
+	public fun addApplicationLifecycleHandler (Lcom/onesignal/core/internal/application/IApplicationLifecycleHandler;)V
+	public final fun attachToApplication (Landroid/app/Application;)V
+	public final fun decorViewReady (Landroid/app/Activity;Ljava/lang/Runnable;)V
+	public fun getAppContext ()Landroid/content/Context;
+	public fun getCurrent ()Landroid/app/Activity;
+	public fun getEntryState ()Lcom/onesignal/core/internal/application/AppEntryAction;
+	public fun isInForeground ()Z
+	public fun onActivityCreated (Landroid/app/Activity;Landroid/os/Bundle;)V
+	public fun onActivityDestroyed (Landroid/app/Activity;)V
+	public fun onActivityPaused (Landroid/app/Activity;)V
+	public fun onActivityResumed (Landroid/app/Activity;)V
+	public fun onActivitySaveInstanceState (Landroid/app/Activity;Landroid/os/Bundle;)V
+	public fun onActivityStarted (Landroid/app/Activity;)V
+	public fun onActivityStopped (Landroid/app/Activity;)V
+	public fun onGlobalLayout ()V
+	public fun removeActivityLifecycleHandler (Lcom/onesignal/core/internal/application/IActivityLifecycleHandler;)V
+	public fun removeApplicationLifecycleHandler (Lcom/onesignal/core/internal/application/IApplicationLifecycleHandler;)V
+	public fun setCurrent (Landroid/app/Activity;)V
+	public fun setEntryState (Lcom/onesignal/core/internal/application/AppEntryAction;)V
+	public final fun start (Landroid/content/Context;)V
+	public fun waitUntilActivityReady (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public fun waitUntilSystemConditionsAvailable (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+}
+
+public final class com/onesignal/core/internal/application/impl/ApplicationService$Companion {
+	public final fun getInstance ()Lcom/onesignal/core/internal/application/impl/ApplicationService;
+	public final fun getInstanceOrNull ()Lcom/onesignal/core/internal/application/impl/ApplicationService;
+}
+
+public abstract interface class com/onesignal/core/internal/background/IBackgroundManager {
+	public abstract fun cancelRunBackgroundServices ()Z
+	public abstract fun getNeedsJobReschedule ()Z
+	public abstract fun runBackgroundServices (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun setNeedsJobReschedule (Z)V
+}
+
+public abstract interface class com/onesignal/core/internal/background/IBackgroundService {
+	public abstract fun backgroundRun (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun getScheduleBackgroundRunIn ()Ljava/lang/Long;
+}
+
+public final class com/onesignal/core/internal/config/ConfigModel : com/onesignal/common/modeling/Model {
+	public fun <init> ()V
+	public final fun getApiUrl ()Ljava/lang/String;
+	public final fun getAppId ()Ljava/lang/String;
+	public final fun getBackgroundFetchNotificationPermissionInterval ()J
+	public final fun getClearGroupOnSummaryClick ()Z
+	public final fun getConsentGiven ()Ljava/lang/Boolean;
+	public final fun getConsentRequired ()Ljava/lang/Boolean;
+	public final fun getDisableGMSMissingPrompt ()Z
+	public final fun getEnterprise ()Z
+	public final fun getFcmParams ()Lcom/onesignal/core/internal/config/FCMConfigModel;
+	public final fun getFetchIAMMinInterval ()J
+	public final fun getFirebaseAnalytics ()Z
+	public final fun getForegroundFetchNotificationPermissionInterval ()J
+	public final fun getGoogleProjectNumber ()Ljava/lang/String;
+	public final fun getHttpGetTimeout ()I
+	public final fun getHttpRetryAfterParseFailFallback ()I
+	public final fun getHttpTimeout ()I
+	public final fun getInfluenceParams ()Lcom/onesignal/core/internal/config/InfluenceConfigModel;
+	public final fun getLocationShared ()Z
+	public final fun getNotificationChannels ()Lorg/json/JSONArray;
+	public final fun getOpRepoDefaultFailRetryBackoff ()J
+	public final fun getOpRepoExecutionInterval ()J
+	public final fun getOpRepoPostCreateDelay ()J
+	public final fun getOpRepoPostCreateRetryUpTo ()J
+	public final fun getOpRepoPostWakeDelay ()J
+	public final fun getPushSubscriptionId ()Ljava/lang/String;
+	public final fun getReceiveReceiptEnabled ()Z
+	public final fun getRemoteLoggingParams ()Lcom/onesignal/core/internal/config/RemoteLoggingConfigModel;
+	public final fun getRestoreTTLFilter ()Z
+	public final fun getSdkRemoteFeatureFlagMetadata ()Ljava/lang/String;
+	public final fun getSdkRemoteFeatureFlags ()Ljava/util/List;
+	public final fun getSessionFocusTimeout ()J
+	public final fun getUnsubscribeWhenNotificationsDisabled ()Z
+	public final fun getUserRejectedGMSUpdate ()Z
+	public final fun isInitializedWithRemote ()Z
+	public final fun setApiUrl (Ljava/lang/String;)V
+	public final fun setAppId (Ljava/lang/String;)V
+	public final fun setBackgroundFetchNotificationPermissionInterval (J)V
+	public final fun setClearGroupOnSummaryClick (Z)V
+	public final fun setConsentGiven (Ljava/lang/Boolean;)V
+	public final fun setConsentRequired (Ljava/lang/Boolean;)V
+	public final fun setDisableGMSMissingPrompt (Z)V
+	public final fun setEnterprise (Z)V
+	public final fun setFetchIAMMinInterval (J)V
+	public final fun setFirebaseAnalytics (Z)V
+	public final fun setForegroundFetchNotificationPermissionInterval (J)V
+	public final fun setGoogleProjectNumber (Ljava/lang/String;)V
+	public final fun setHttpGetTimeout (I)V
+	public final fun setHttpRetryAfterParseFailFallback (I)V
+	public final fun setHttpTimeout (I)V
+	public final fun setInitializedWithRemote (Z)V
+	public final fun setLocationShared (Z)V
+	public final fun setNotificationChannels (Lorg/json/JSONArray;)V
+	public final fun setOpRepoDefaultFailRetryBackoff (J)V
+	public final fun setOpRepoExecutionInterval (J)V
+	public final fun setOpRepoPostCreateDelay (J)V
+	public final fun setOpRepoPostCreateRetryUpTo (J)V
+	public final fun setOpRepoPostWakeDelay (J)V
+	public final fun setPushSubscriptionId (Ljava/lang/String;)V
+	public final fun setReceiveReceiptEnabled (Z)V
+	public final fun setRestoreTTLFilter (Z)V
+	public final fun setSdkRemoteFeatureFlagMetadata (Ljava/lang/String;)V
+	public final fun setSdkRemoteFeatureFlags (Ljava/util/List;)V
+	public final fun setSessionFocusTimeout (J)V
+	public final fun setUnsubscribeWhenNotificationsDisabled (Z)V
+	public final fun setUserRejectedGMSUpdate (Z)V
+}
+
+public class com/onesignal/core/internal/config/ConfigModelStore : com/onesignal/common/modeling/SingletonModelStore {
+	public fun <init> (Lcom/onesignal/core/internal/preferences/IPreferencesService;)V
+}
+
+public final class com/onesignal/core/internal/config/ConfigModelStoreKt {
+	public static final field CONFIG_NAME_SPACE Ljava/lang/String;
+}
+
+public final class com/onesignal/core/internal/config/FCMConfigModel : com/onesignal/common/modeling/Model {
+	public fun <init> (Lcom/onesignal/common/modeling/Model;Ljava/lang/String;)V
+	public final fun getApiKey ()Ljava/lang/String;
+	public final fun getAppId ()Ljava/lang/String;
+	public final fun getProjectId ()Ljava/lang/String;
+	public final fun setApiKey (Ljava/lang/String;)V
+	public final fun setAppId (Ljava/lang/String;)V
+	public final fun setProjectId (Ljava/lang/String;)V
+}
+
+public final class com/onesignal/core/internal/config/InfluenceConfigModel : com/onesignal/common/modeling/Model {
+	public static final field Companion Lcom/onesignal/core/internal/config/InfluenceConfigModel$Companion;
+	public static final field DEFAULT_INDIRECT_ATTRIBUTION_WINDOW I
+	public static final field DEFAULT_NOTIFICATION_LIMIT I
+	public fun <init> (Lcom/onesignal/common/modeling/Model;Ljava/lang/String;)V
+	public final fun getIamLimit ()I
+	public final fun getIndirectIAMAttributionWindow ()I
+	public final fun getIndirectNotificationAttributionWindow ()I
+	public final fun getNotificationLimit ()I
+	public final fun isDirectEnabled ()Z
+	public final fun isIndirectEnabled ()Z
+	public final fun isUnattributedEnabled ()Z
+	public final fun setDirectEnabled (Z)V
+	public final fun setIamLimit (I)V
+	public final fun setIndirectEnabled (Z)V
+	public final fun setIndirectIAMAttributionWindow (I)V
+	public final fun setIndirectNotificationAttributionWindow (I)V
+	public final fun setNotificationLimit (I)V
+	public final fun setUnattributedEnabled (Z)V
+}
+
+public final class com/onesignal/core/internal/config/InfluenceConfigModel$Companion {
+}
+
+public final class com/onesignal/core/internal/config/RemoteLoggingConfigModel : com/onesignal/common/modeling/Model {
+	public fun <init> (Lcom/onesignal/common/modeling/Model;Ljava/lang/String;)V
+	public final fun getLogLevel ()Lcom/onesignal/debug/LogLevel;
+	public final fun isEnabled ()Z
+	public final fun setEnabled (Z)V
+	public final fun setLogLevel (Lcom/onesignal/debug/LogLevel;)V
+}
+
+public final class com/onesignal/core/internal/config/impl/IdentityVerificationService : com/onesignal/common/modeling/ISingletonModelStoreChangeHandler, com/onesignal/core/internal/startup/IStartableService {
+	public fun <init> (Lcom/onesignal/core/internal/features/IFeatureManager;Lcom/onesignal/core/internal/config/ConfigModelStore;)V
+	public final fun getIvBehaviorActive ()Z
+	public final fun getNewCodePathsRun ()Z
+	public synthetic fun onModelReplaced (Lcom/onesignal/common/modeling/Model;Ljava/lang/String;)V
+	public fun onModelReplaced (Lcom/onesignal/core/internal/config/ConfigModel;Ljava/lang/String;)V
+	public fun onModelUpdated (Lcom/onesignal/common/modeling/ModelChangedArgs;Ljava/lang/String;)V
+	public final fun setOnJwtConfigHydratedHandler (Lkotlin/jvm/functions/Function1;)V
+	public fun start ()V
+}
+
+public abstract interface class com/onesignal/core/internal/database/ICursor {
+	public abstract fun getCount ()I
+	public abstract fun getFloat (Ljava/lang/String;)F
+	public abstract fun getInt (Ljava/lang/String;)I
+	public abstract fun getLong (Ljava/lang/String;)J
+	public abstract fun getOptFloat (Ljava/lang/String;)Ljava/lang/Float;
+	public abstract fun getOptInt (Ljava/lang/String;)Ljava/lang/Integer;
+	public abstract fun getOptLong (Ljava/lang/String;)Ljava/lang/Long;
+	public abstract fun getOptString (Ljava/lang/String;)Ljava/lang/String;
+	public abstract fun getString (Ljava/lang/String;)Ljava/lang/String;
+	public abstract fun moveToFirst ()Z
+	public abstract fun moveToNext ()Z
+}
+
+public abstract interface class com/onesignal/core/internal/database/IDatabase {
+	public abstract fun delete (Ljava/lang/String;Ljava/lang/String;[Ljava/lang/String;)V
+	public abstract fun insert (Ljava/lang/String;Ljava/lang/String;Landroid/content/ContentValues;)V
+	public abstract fun insertOrThrow (Ljava/lang/String;Ljava/lang/String;Landroid/content/ContentValues;)V
+	public abstract fun query (Ljava/lang/String;[Ljava/lang/String;Ljava/lang/String;[Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/functions/Function1;)V
+	public abstract fun update (Ljava/lang/String;Landroid/content/ContentValues;Ljava/lang/String;[Ljava/lang/String;)I
+}
+
+public final class com/onesignal/core/internal/database/IDatabase$DefaultImpls {
+	public static synthetic fun query$default (Lcom/onesignal/core/internal/database/IDatabase;Ljava/lang/String;[Ljava/lang/String;Ljava/lang/String;[Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)V
+}
+
+public abstract interface class com/onesignal/core/internal/database/IDatabaseProvider {
+	public abstract fun getOs ()Lcom/onesignal/core/internal/database/IDatabase;
+}
+
+public final class com/onesignal/core/internal/database/impl/OneSignalDbContract {
+	public fun <init> ()V
+}
+
+public final class com/onesignal/core/internal/database/impl/OneSignalDbContract$InAppMessageTable : android/provider/BaseColumns {
+	public static final field COLUMN_CLICK_IDS Ljava/lang/String;
+	public static final field COLUMN_DISPLAYED_IN_SESSION Ljava/lang/String;
+	public static final field COLUMN_NAME_DISPLAY_QUANTITY Ljava/lang/String;
+	public static final field COLUMN_NAME_LAST_DISPLAY Ljava/lang/String;
+	public static final field COLUMN_NAME_MESSAGE_ID Ljava/lang/String;
+	public static final field INSTANCE Lcom/onesignal/core/internal/database/impl/OneSignalDbContract$InAppMessageTable;
+	public static final field TABLE_NAME Ljava/lang/String;
+}
+
+public final class com/onesignal/core/internal/database/impl/OneSignalDbContract$NotificationTable : android/provider/BaseColumns {
+	public static final field COLUMN_NAME_ANDROID_NOTIFICATION_ID Ljava/lang/String;
+	public static final field COLUMN_NAME_COLLAPSE_ID Ljava/lang/String;
+	public static final field COLUMN_NAME_CREATED_TIME Ljava/lang/String;
+	public static final field COLUMN_NAME_DISMISSED Ljava/lang/String;
+	public static final field COLUMN_NAME_EXPIRE_TIME Ljava/lang/String;
+	public static final field COLUMN_NAME_FULL_DATA Ljava/lang/String;
+	public static final field COLUMN_NAME_GROUP_ID Ljava/lang/String;
+	public static final field COLUMN_NAME_IS_SUMMARY Ljava/lang/String;
+	public static final field COLUMN_NAME_MESSAGE Ljava/lang/String;
+	public static final field COLUMN_NAME_NOTIFICATION_ID Ljava/lang/String;
+	public static final field COLUMN_NAME_OPENED Ljava/lang/String;
+	public static final field COLUMN_NAME_TITLE Ljava/lang/String;
+	public static final field INDEX_CREATE_ANDROID_NOTIFICATION_ID Ljava/lang/String;
+	public static final field INDEX_CREATE_COLLAPSE_ID Ljava/lang/String;
+	public static final field INDEX_CREATE_CREATED_TIME Ljava/lang/String;
+	public static final field INDEX_CREATE_EXPIRE_TIME Ljava/lang/String;
+	public static final field INDEX_CREATE_GROUP_ID Ljava/lang/String;
+	public static final field INDEX_CREATE_NOTIFICATION_ID Ljava/lang/String;
+	public static final field INSTANCE Lcom/onesignal/core/internal/database/impl/OneSignalDbContract$NotificationTable;
+	public static final field TABLE_NAME Ljava/lang/String;
+}
+
+public abstract interface class com/onesignal/core/internal/device/IDeviceService {
+	public abstract fun getDeviceType ()Lcom/onesignal/core/internal/device/IDeviceService$DeviceType;
+	public abstract fun getHasAllHMSLibrariesForPushKit ()Z
+	public abstract fun getHasFCMLibrary ()Z
+	public abstract fun getJetpackLibraryStatus ()Lcom/onesignal/core/internal/device/IDeviceService$JetpackLibraryStatus;
+	public abstract fun getSupportsHMS ()Z
+	public abstract fun isAndroidDeviceType ()Z
+	public abstract fun isFireOSDeviceType ()Z
+	public abstract fun isGMSInstalledAndEnabled ()Z
+	public abstract fun isHuaweiDeviceType ()Z
+	public abstract fun supportsGooglePush ()Z
+}
+
+public final class com/onesignal/core/internal/device/IDeviceService$DeviceType : java/lang/Enum {
+	public static final field Android Lcom/onesignal/core/internal/device/IDeviceService$DeviceType;
+	public static final field Fire Lcom/onesignal/core/internal/device/IDeviceService$DeviceType;
+	public static final field Huawei Lcom/onesignal/core/internal/device/IDeviceService$DeviceType;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public final fun getValue ()I
+	public static fun valueOf (Ljava/lang/String;)Lcom/onesignal/core/internal/device/IDeviceService$DeviceType;
+	public static fun values ()[Lcom/onesignal/core/internal/device/IDeviceService$DeviceType;
+}
+
+public final class com/onesignal/core/internal/device/IDeviceService$JetpackLibraryStatus : java/lang/Enum {
+	public static final field MISSING Lcom/onesignal/core/internal/device/IDeviceService$JetpackLibraryStatus;
+	public static final field OK Lcom/onesignal/core/internal/device/IDeviceService$JetpackLibraryStatus;
+	public static final field OUTDATED Lcom/onesignal/core/internal/device/IDeviceService$JetpackLibraryStatus;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lcom/onesignal/core/internal/device/IDeviceService$JetpackLibraryStatus;
+	public static fun values ()[Lcom/onesignal/core/internal/device/IDeviceService$JetpackLibraryStatus;
+}
+
+public abstract interface class com/onesignal/core/internal/device/IInstallIdService {
+	public abstract fun getId (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+}
+
+public final class com/onesignal/core/internal/features/FeatureActivationMode : java/lang/Enum {
+	public static final field APP_STARTUP Lcom/onesignal/core/internal/features/FeatureActivationMode;
+	public static final field IMMEDIATE Lcom/onesignal/core/internal/features/FeatureActivationMode;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lcom/onesignal/core/internal/features/FeatureActivationMode;
+	public static fun values ()[Lcom/onesignal/core/internal/features/FeatureActivationMode;
+}
+
+public final class com/onesignal/core/internal/features/FeatureFlag : java/lang/Enum {
+	public static final field SDK_CUSTOM_LOGGING Lcom/onesignal/core/internal/features/FeatureFlag;
+	public static final field SDK_IDENTITY_VERIFICATION Lcom/onesignal/core/internal/features/FeatureFlag;
+	public final fun getActivationMode ()Lcom/onesignal/core/internal/features/FeatureActivationMode;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public final fun getKey ()Ljava/lang/String;
+	public final fun isEnabledIn (Ljava/util/Set;)Z
+	public static fun valueOf (Ljava/lang/String;)Lcom/onesignal/core/internal/features/FeatureFlag;
+	public static fun values ()[Lcom/onesignal/core/internal/features/FeatureFlag;
+}
+
+public abstract interface class com/onesignal/core/internal/features/IFeatureManager {
+	public abstract fun enabledFeatureKeys ()Ljava/util/List;
+	public abstract fun isEnabled (Lcom/onesignal/core/internal/features/FeatureFlag;)Z
+	public abstract fun remoteFeatureFlagMetadata ()Ljava/util/Map;
+}
+
+public final class com/onesignal/core/internal/http/HttpResponse {
+	public fun <init> (ILjava/lang/String;Ljava/lang/Throwable;Ljava/lang/Integer;Ljava/lang/Integer;)V
+	public synthetic fun <init> (ILjava/lang/String;Ljava/lang/Throwable;Ljava/lang/Integer;Ljava/lang/Integer;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun getPayload ()Ljava/lang/String;
+	public final fun getRetryAfterSeconds ()Ljava/lang/Integer;
+	public final fun getRetryLimit ()Ljava/lang/Integer;
+	public final fun getStatusCode ()I
+	public final fun getThrowable ()Ljava/lang/Throwable;
+	public final fun isClientError ()Z
+	public final fun isSuccess ()Z
+}
+
+public abstract interface class com/onesignal/core/internal/http/IHttpClient {
+	public abstract fun delete (Ljava/lang/String;Lcom/onesignal/core/internal/http/impl/OptionalHeaders;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun get (Ljava/lang/String;Lcom/onesignal/core/internal/http/impl/OptionalHeaders;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun patch (Ljava/lang/String;Lorg/json/JSONObject;Lcom/onesignal/core/internal/http/impl/OptionalHeaders;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun post (Ljava/lang/String;Lorg/json/JSONObject;Lcom/onesignal/core/internal/http/impl/OptionalHeaders;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun put (Ljava/lang/String;Lorg/json/JSONObject;Lcom/onesignal/core/internal/http/impl/OptionalHeaders;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+}
+
+public final class com/onesignal/core/internal/http/IHttpClient$DefaultImpls {
+	public static synthetic fun delete$default (Lcom/onesignal/core/internal/http/IHttpClient;Ljava/lang/String;Lcom/onesignal/core/internal/http/impl/OptionalHeaders;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+	public static synthetic fun get$default (Lcom/onesignal/core/internal/http/IHttpClient;Ljava/lang/String;Lcom/onesignal/core/internal/http/impl/OptionalHeaders;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+	public static synthetic fun patch$default (Lcom/onesignal/core/internal/http/IHttpClient;Ljava/lang/String;Lorg/json/JSONObject;Lcom/onesignal/core/internal/http/impl/OptionalHeaders;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+	public static synthetic fun post$default (Lcom/onesignal/core/internal/http/IHttpClient;Ljava/lang/String;Lorg/json/JSONObject;Lcom/onesignal/core/internal/http/impl/OptionalHeaders;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+	public static synthetic fun put$default (Lcom/onesignal/core/internal/http/IHttpClient;Ljava/lang/String;Lorg/json/JSONObject;Lcom/onesignal/core/internal/http/impl/OptionalHeaders;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+}
+
+public final class com/onesignal/core/internal/http/OneSignalService {
+	public static final field INSTANCE Lcom/onesignal/core/internal/http/OneSignalService;
+	public static final field ONESIGNAL_API_BASE_URL Ljava/lang/String;
+}
+
+public final class com/onesignal/core/internal/http/impl/OptionalHeaders {
+	public fun <init> ()V
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/Integer;Ljava/lang/Long;Ljava/lang/String;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/Integer;Ljava/lang/Long;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Ljava/lang/Integer;
+	public final fun component4 ()Ljava/lang/Long;
+	public final fun component5 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;Ljava/lang/Integer;Ljava/lang/Long;Ljava/lang/String;)Lcom/onesignal/core/internal/http/impl/OptionalHeaders;
+	public static synthetic fun copy$default (Lcom/onesignal/core/internal/http/impl/OptionalHeaders;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Integer;Ljava/lang/Long;Ljava/lang/String;ILjava/lang/Object;)Lcom/onesignal/core/internal/http/impl/OptionalHeaders;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCacheKey ()Ljava/lang/String;
+	public final fun getJwt ()Ljava/lang/String;
+	public final fun getRetryCount ()Ljava/lang/Integer;
+	public final fun getRywToken ()Ljava/lang/String;
+	public final fun getSessionDuration ()Ljava/lang/Long;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract interface class com/onesignal/core/internal/language/ILanguageContext {
+	public abstract fun getLanguage ()Ljava/lang/String;
+	public abstract fun setLanguage (Ljava/lang/String;)V
+}
+
+public abstract interface annotation class com/onesignal/core/internal/minification/KeepStub : java/lang/annotation/Annotation {
+}
+
+public final class com/onesignal/core/internal/operations/ExecutionResponse {
+	public fun <init> (Lcom/onesignal/core/internal/operations/ExecutionResult;Ljava/util/Map;Ljava/util/List;Ljava/lang/Integer;)V
+	public synthetic fun <init> (Lcom/onesignal/core/internal/operations/ExecutionResult;Ljava/util/Map;Ljava/util/List;Ljava/lang/Integer;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun getIdTranslations ()Ljava/util/Map;
+	public final fun getOperations ()Ljava/util/List;
+	public final fun getResult ()Lcom/onesignal/core/internal/operations/ExecutionResult;
+	public final fun getRetryAfterSeconds ()Ljava/lang/Integer;
+}
+
+public final class com/onesignal/core/internal/operations/ExecutionResult : java/lang/Enum {
+	public static final field FAIL_CONFLICT Lcom/onesignal/core/internal/operations/ExecutionResult;
+	public static final field FAIL_NORETRY Lcom/onesignal/core/internal/operations/ExecutionResult;
+	public static final field FAIL_PAUSE_OPREPO Lcom/onesignal/core/internal/operations/ExecutionResult;
+	public static final field FAIL_RETRY Lcom/onesignal/core/internal/operations/ExecutionResult;
+	public static final field FAIL_UNAUTHORIZED Lcom/onesignal/core/internal/operations/ExecutionResult;
+	public static final field SUCCESS Lcom/onesignal/core/internal/operations/ExecutionResult;
+	public static final field SUCCESS_STARTING_ONLY Lcom/onesignal/core/internal/operations/ExecutionResult;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lcom/onesignal/core/internal/operations/ExecutionResult;
+	public static fun values ()[Lcom/onesignal/core/internal/operations/ExecutionResult;
+}
+
+public final class com/onesignal/core/internal/operations/GroupComparisonType : java/lang/Enum {
+	public static final field ALTER Lcom/onesignal/core/internal/operations/GroupComparisonType;
+	public static final field CREATE Lcom/onesignal/core/internal/operations/GroupComparisonType;
+	public static final field NONE Lcom/onesignal/core/internal/operations/GroupComparisonType;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lcom/onesignal/core/internal/operations/GroupComparisonType;
+	public static fun values ()[Lcom/onesignal/core/internal/operations/GroupComparisonType;
+}
+
+public abstract interface class com/onesignal/core/internal/operations/IOperationExecutor {
+	public abstract fun execute (Ljava/util/List;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun getOperations ()Ljava/util/List;
+}
+
+public abstract interface class com/onesignal/core/internal/operations/IOperationRepo {
+	public abstract fun awaitInitialized (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun containsInstanceOf (Lkotlin/reflect/KClass;)Z
+	public abstract fun enqueue (Lcom/onesignal/core/internal/operations/Operation;Z)V
+	public abstract fun enqueueAndWait (Lcom/onesignal/core/internal/operations/Operation;ZLkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun forceExecuteOperations ()V
+}
+
+public final class com/onesignal/core/internal/operations/IOperationRepo$DefaultImpls {
+	public static synthetic fun enqueue$default (Lcom/onesignal/core/internal/operations/IOperationRepo;Lcom/onesignal/core/internal/operations/Operation;ZILjava/lang/Object;)V
+	public static synthetic fun enqueueAndWait$default (Lcom/onesignal/core/internal/operations/IOperationRepo;Lcom/onesignal/core/internal/operations/Operation;ZLkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+}
+
+public abstract class com/onesignal/core/internal/operations/Operation : com/onesignal/common/modeling/Model {
+	public fun <init> (Ljava/lang/String;)V
+	public abstract fun getApplyToRecordId ()Ljava/lang/String;
+	public abstract fun getCanStartExecute ()Z
+	public abstract fun getCreateComparisonKey ()Ljava/lang/String;
+	public final fun getExternalId ()Ljava/lang/String;
+	public abstract fun getGroupComparisonType ()Lcom/onesignal/core/internal/operations/GroupComparisonType;
+	public abstract fun getModifyComparisonKey ()Ljava/lang/String;
+	public final fun getName ()Ljava/lang/String;
+	public fun getRequiresJwt ()Z
+	public fun toString ()Ljava/lang/String;
+	public fun translateIds (Ljava/util/Map;)V
+}
+
+public final class com/onesignal/core/internal/permissions/AlertDialogPrepromptForAndroidSettings {
+	public static final field INSTANCE Lcom/onesignal/core/internal/permissions/AlertDialogPrepromptForAndroidSettings;
+	public final fun show (Landroid/app/Activity;Ljava/lang/String;Ljava/lang/String;Lcom/onesignal/core/internal/permissions/AlertDialogPrepromptForAndroidSettings$Callback;)V
+	public final fun show (Landroid/app/Activity;Ljava/lang/String;Ljava/lang/String;Lcom/onesignal/core/internal/permissions/AlertDialogPrepromptForAndroidSettings$Callback;Lkotlin/jvm/functions/Function0;)V
+}
+
+public abstract interface class com/onesignal/core/internal/permissions/AlertDialogPrepromptForAndroidSettings$Callback {
+	public abstract fun onAccept ()V
+	public abstract fun onDecline ()V
+}
+
+public abstract interface class com/onesignal/core/internal/permissions/IRequestPermissionService {
+	public abstract fun registerAsCallback (Ljava/lang/String;Lcom/onesignal/core/internal/permissions/IRequestPermissionService$PermissionCallback;)V
+	public abstract fun startPrompt (ZLjava/lang/String;Ljava/lang/String;Ljava/lang/Class;)V
+}
+
+public abstract interface class com/onesignal/core/internal/permissions/IRequestPermissionService$PermissionCallback {
+	public abstract fun onAccept ()V
+	public abstract fun onReject (Z)V
+}
+
+public final class com/onesignal/core/internal/permissions/PermissionsViewModel : androidx/lifecycle/ViewModel {
+	public static final field Companion Lcom/onesignal/core/internal/permissions/PermissionsViewModel$Companion;
+	public static final field DELAY_TIME_CALLBACK_CALL I
+	public static final field INTENT_EXTRA_ANDROID_PERMISSION_STRING Ljava/lang/String;
+	public static final field INTENT_EXTRA_CALLBACK_CLASS Ljava/lang/String;
+	public static final field INTENT_EXTRA_PERMISSION_TYPE Ljava/lang/String;
+	public static final field ONESIGNAL_PERMISSION_REQUEST_CODE I
+	public fun <init> ()V
+	public final fun getPermissionRequestType ()Ljava/lang/String;
+	public final fun getShouldFinish ()Lkotlinx/coroutines/flow/StateFlow;
+	public final fun getWaiting ()Lkotlinx/coroutines/flow/StateFlow;
+	public final fun initialize (Landroid/app/Activity;Ljava/lang/String;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun onRequestPermissionsResult ([Ljava/lang/String;[IZ)V
+	public static synthetic fun onRequestPermissionsResult$default (Lcom/onesignal/core/internal/permissions/PermissionsViewModel;[Ljava/lang/String;[IZILjava/lang/Object;)V
+	public final fun recordRationaleState (Z)V
+	public final fun resetWaitingState ()V
+	public final fun shouldRequestPermission ()Z
+}
+
+public final class com/onesignal/core/internal/permissions/PermissionsViewModel$Companion {
+}
+
+public abstract interface class com/onesignal/core/internal/preferences/IPreferencesService {
+	public abstract fun getBool (Ljava/lang/String;Ljava/lang/String;Ljava/lang/Boolean;)Ljava/lang/Boolean;
+	public abstract fun getInt (Ljava/lang/String;Ljava/lang/String;Ljava/lang/Integer;)Ljava/lang/Integer;
+	public abstract fun getLong (Ljava/lang/String;Ljava/lang/String;Ljava/lang/Long;)Ljava/lang/Long;
+	public abstract fun getString (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;
+	public abstract fun getStringSet (Ljava/lang/String;Ljava/lang/String;Ljava/util/Set;)Ljava/util/Set;
+	public abstract fun saveBool (Ljava/lang/String;Ljava/lang/String;Ljava/lang/Boolean;)V
+	public abstract fun saveInt (Ljava/lang/String;Ljava/lang/String;Ljava/lang/Integer;)V
+	public abstract fun saveLong (Ljava/lang/String;Ljava/lang/String;Ljava/lang/Long;)V
+	public abstract fun saveString (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
+	public abstract fun saveStringSet (Ljava/lang/String;Ljava/lang/String;Ljava/util/Set;)V
+}
+
+public final class com/onesignal/core/internal/preferences/IPreferencesService$DefaultImpls {
+	public static synthetic fun getBool$default (Lcom/onesignal/core/internal/preferences/IPreferencesService;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Boolean;ILjava/lang/Object;)Ljava/lang/Boolean;
+	public static synthetic fun getInt$default (Lcom/onesignal/core/internal/preferences/IPreferencesService;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Integer;ILjava/lang/Object;)Ljava/lang/Integer;
+	public static synthetic fun getLong$default (Lcom/onesignal/core/internal/preferences/IPreferencesService;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Long;ILjava/lang/Object;)Ljava/lang/Long;
+	public static synthetic fun getString$default (Lcom/onesignal/core/internal/preferences/IPreferencesService;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Ljava/lang/String;
+	public static synthetic fun getStringSet$default (Lcom/onesignal/core/internal/preferences/IPreferencesService;Ljava/lang/String;Ljava/lang/String;Ljava/util/Set;ILjava/lang/Object;)Ljava/util/Set;
+}
+
+public final class com/onesignal/core/internal/preferences/PreferenceOneSignalKeys {
+	public static final field INSTANCE Lcom/onesignal/core/internal/preferences/PreferenceOneSignalKeys;
+	public static final field MODEL_STORE_PREFIX Ljava/lang/String;
+	public static final field PREFS_LEGACY_APP_ID Ljava/lang/String;
+	public static final field PREFS_LEGACY_PLAYER_ID Ljava/lang/String;
+	public static final field PREFS_LEGACY_USER_SYNCVALUES Ljava/lang/String;
+	public static final field PREFS_OS_CACHED_IAMS Ljava/lang/String;
+	public static final field PREFS_OS_CLICKED_CLICK_IDS_IAMS Ljava/lang/String;
+	public static final field PREFS_OS_DISMISSED_IAMS Ljava/lang/String;
+	public static final field PREFS_OS_ETAG_PREFIX Ljava/lang/String;
+	public static final field PREFS_OS_HTTP_CACHE_PREFIX Ljava/lang/String;
+	public static final field PREFS_OS_IAM_LAST_DISMISSED_TIME Ljava/lang/String;
+	public static final field PREFS_OS_IMPRESSIONED_IAMS Ljava/lang/String;
+	public static final field PREFS_OS_INSTALL_ID Ljava/lang/String;
+	public static final field PREFS_OS_JWT_TOKENS Ljava/lang/String;
+	public static final field PREFS_OS_LAST_LOCATION_TIME Ljava/lang/String;
+	public static final field PREFS_OS_LOCATION_SHARED Ljava/lang/String;
+	public static final field PREFS_OS_PAGE_IMPRESSIONED_IAMS Ljava/lang/String;
+	public static final field PREFS_OS_PROMPTED_PERMISSION_PREFIX Ljava/lang/String;
+	public static final field PREFS_OS_UNATTRIBUTED_UNIQUE_OUTCOME_EVENTS_SENT Ljava/lang/String;
+	public static final field PREFS_OS_USER_RESOLVED_PERMISSION_PREFIX Ljava/lang/String;
+}
+
+public final class com/onesignal/core/internal/preferences/PreferencePlayerPurchasesKeys {
+	public static final field INSTANCE Lcom/onesignal/core/internal/preferences/PreferencePlayerPurchasesKeys;
+	public static final field PREFS_EXISTING_PURCHASES Ljava/lang/String;
+	public static final field PREFS_PURCHASE_TOKENS Ljava/lang/String;
+}
+
+public final class com/onesignal/core/internal/preferences/PreferenceStoreFix {
+	public static final field INSTANCE Lcom/onesignal/core/internal/preferences/PreferenceStoreFix;
+	public final fun ensureNoObfuscatedPrefStore (Landroid/content/Context;)V
+}
+
+public final class com/onesignal/core/internal/preferences/PreferenceStores {
+	public static final field INSTANCE Lcom/onesignal/core/internal/preferences/PreferenceStores;
+	public static final field ONESIGNAL Ljava/lang/String;
+	public static final field PLAYER_PURCHASES Ljava/lang/String;
+}
+
+public final class com/onesignal/core/internal/preferences/PreferencesExtensionV4Kt {
+	public static final fun clearLegacyPlayerId (Lcom/onesignal/core/internal/preferences/IPreferencesService;)V
+	public static final fun getLegacyAppId (Lcom/onesignal/core/internal/preferences/IPreferencesService;)Ljava/lang/String;
+	public static final fun getLegacyPlayerId (Lcom/onesignal/core/internal/preferences/IPreferencesService;)Ljava/lang/String;
+	public static final fun getLegacyUserSyncValues (Lcom/onesignal/core/internal/preferences/IPreferencesService;)Ljava/lang/String;
+}
+
+public abstract interface class com/onesignal/core/internal/startup/IBootstrapService {
+	public abstract fun bootstrap ()V
+}
+
+public abstract interface class com/onesignal/core/internal/startup/IStartableService {
+	public abstract fun start ()V
+}
+
+public abstract interface class com/onesignal/core/internal/time/ITime {
+	public abstract fun getCurrentTimeMillis ()J
+	public abstract fun getProcessUptimeMillis ()J
+}
+
+public final class com/onesignal/core/services/SyncJobService : android/app/job/JobService {
+	public fun <init> ()V
+	public fun onStartJob (Landroid/app/job/JobParameters;)Z
+	public fun onStopJob (Landroid/app/job/JobParameters;)Z
+}
+
+public abstract interface class com/onesignal/debug/IDebugManager {
+	public abstract fun addLogListener (Lcom/onesignal/debug/ILogListener;)V
+	public abstract fun getAlertLevel ()Lcom/onesignal/debug/LogLevel;
+	public abstract fun getLogLevel ()Lcom/onesignal/debug/LogLevel;
+	public abstract fun removeLogListener (Lcom/onesignal/debug/ILogListener;)V
+	public abstract fun setAlertLevel (Lcom/onesignal/debug/LogLevel;)V
+	public abstract fun setLogLevel (Lcom/onesignal/debug/LogLevel;)V
+}
+
+public abstract interface class com/onesignal/debug/ILogListener {
+	public abstract fun onLogEvent (Lcom/onesignal/debug/OneSignalLogEvent;)V
+}
+
+public final class com/onesignal/debug/LogLevel : java/lang/Enum {
+	public static final field Companion Lcom/onesignal/debug/LogLevel$Companion;
+	public static final field DEBUG Lcom/onesignal/debug/LogLevel;
+	public static final field ERROR Lcom/onesignal/debug/LogLevel;
+	public static final field FATAL Lcom/onesignal/debug/LogLevel;
+	public static final field INFO Lcom/onesignal/debug/LogLevel;
+	public static final field NONE Lcom/onesignal/debug/LogLevel;
+	public static final field VERBOSE Lcom/onesignal/debug/LogLevel;
+	public static final field WARN Lcom/onesignal/debug/LogLevel;
+	public static final fun fromInt (I)Lcom/onesignal/debug/LogLevel;
+	public static final fun fromString (Ljava/lang/String;)Lcom/onesignal/debug/LogLevel;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lcom/onesignal/debug/LogLevel;
+	public static fun values ()[Lcom/onesignal/debug/LogLevel;
+}
+
+public final class com/onesignal/debug/LogLevel$Companion {
+	public final fun fromInt (I)Lcom/onesignal/debug/LogLevel;
+	public final fun fromString (Ljava/lang/String;)Lcom/onesignal/debug/LogLevel;
+}
+
+public final class com/onesignal/debug/OneSignalLogEvent {
+	public fun <init> (Lcom/onesignal/debug/LogLevel;Ljava/lang/String;)V
+	public final fun component1 ()Lcom/onesignal/debug/LogLevel;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun copy (Lcom/onesignal/debug/LogLevel;Ljava/lang/String;)Lcom/onesignal/debug/OneSignalLogEvent;
+	public static synthetic fun copy$default (Lcom/onesignal/debug/OneSignalLogEvent;Lcom/onesignal/debug/LogLevel;Ljava/lang/String;ILjava/lang/Object;)Lcom/onesignal/debug/OneSignalLogEvent;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getEntry ()Ljava/lang/String;
+	public final fun getLevel ()Lcom/onesignal/debug/LogLevel;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/onesignal/debug/internal/logging/Logging {
+	public static final field INSTANCE Lcom/onesignal/debug/internal/logging/Logging;
+	public final fun addListener (Lcom/onesignal/debug/ILogListener;)V
+	public static final fun atLogLevel (Lcom/onesignal/debug/LogLevel;)Z
+	public static final fun debug (Ljava/lang/String;Ljava/lang/Throwable;)V
+	public static synthetic fun debug$default (Ljava/lang/String;Ljava/lang/Throwable;ILjava/lang/Object;)V
+	public static final fun error (Ljava/lang/String;Ljava/lang/Throwable;)V
+	public static synthetic fun error$default (Ljava/lang/String;Ljava/lang/Throwable;ILjava/lang/Object;)V
+	public static final fun fatal (Ljava/lang/String;Ljava/lang/Throwable;)V
+	public static synthetic fun fatal$default (Ljava/lang/String;Ljava/lang/Throwable;ILjava/lang/Object;)V
+	public final fun getApplicationService ()Lcom/onesignal/core/internal/application/IApplicationService;
+	public static final fun getLogLevel ()Lcom/onesignal/debug/LogLevel;
+	public static final fun getVisualLogLevel ()Lcom/onesignal/debug/LogLevel;
+	public static final fun info (Ljava/lang/String;Ljava/lang/Throwable;)V
+	public static synthetic fun info$default (Ljava/lang/String;Ljava/lang/Throwable;ILjava/lang/Object;)V
+	public static final fun log (Lcom/onesignal/debug/LogLevel;Ljava/lang/String;)V
+	public static final fun log (Lcom/onesignal/debug/LogLevel;Ljava/lang/String;Ljava/lang/Throwable;)V
+	public final fun removeListener (Lcom/onesignal/debug/ILogListener;)V
+	public final fun setApplicationService (Lcom/onesignal/core/internal/application/IApplicationService;)V
+	public static final fun setLogLevel (Lcom/onesignal/debug/LogLevel;)V
+	public final fun setLoggerTelemetry (Lcom/onesignal/logger/ILogTelemetryRemote;Lkotlin/jvm/functions/Function1;)V
+	public static synthetic fun setLoggerTelemetry$default (Lcom/onesignal/debug/internal/logging/Logging;Lcom/onesignal/logger/ILogTelemetryRemote;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)V
+	public final fun setOtelTelemetry (Lcom/onesignal/otel/IOtelOpenTelemetryRemote;Lkotlin/jvm/functions/Function1;)V
+	public static synthetic fun setOtelTelemetry$default (Lcom/onesignal/debug/internal/logging/Logging;Lcom/onesignal/otel/IOtelOpenTelemetryRemote;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)V
+	public static final fun setVisualLogLevel (Lcom/onesignal/debug/LogLevel;)V
+	public static final fun verbose (Ljava/lang/String;Ljava/lang/Throwable;)V
+	public static synthetic fun verbose$default (Ljava/lang/String;Ljava/lang/Throwable;ILjava/lang/Object;)V
+	public static final fun warn (Ljava/lang/String;Ljava/lang/Throwable;)V
+	public static synthetic fun warn$default (Ljava/lang/String;Ljava/lang/Throwable;ILjava/lang/Object;)V
+}
+
+public abstract interface class com/onesignal/inAppMessages/IInAppMessage {
+	public abstract fun getMessageId ()Ljava/lang/String;
+}
+
+public abstract interface class com/onesignal/inAppMessages/IInAppMessageClickEvent {
+	public abstract fun getMessage ()Lcom/onesignal/inAppMessages/IInAppMessage;
+	public abstract fun getResult ()Lcom/onesignal/inAppMessages/IInAppMessageClickResult;
+}
+
+public abstract interface class com/onesignal/inAppMessages/IInAppMessageClickListener {
+	public abstract fun onClick (Lcom/onesignal/inAppMessages/IInAppMessageClickEvent;)V
+}
+
+public abstract interface class com/onesignal/inAppMessages/IInAppMessageClickResult {
+	public abstract fun getActionId ()Ljava/lang/String;
+	public abstract fun getClosingMessage ()Z
+	public abstract fun getUrl ()Ljava/lang/String;
+	public abstract fun getUrlTarget ()Lcom/onesignal/inAppMessages/InAppMessageActionUrlType;
+}
+
+public abstract interface class com/onesignal/inAppMessages/IInAppMessageDidDismissEvent {
+	public abstract fun getMessage ()Lcom/onesignal/inAppMessages/IInAppMessage;
+}
+
+public abstract interface class com/onesignal/inAppMessages/IInAppMessageDidDisplayEvent {
+	public abstract fun getMessage ()Lcom/onesignal/inAppMessages/IInAppMessage;
+}
+
+public abstract interface class com/onesignal/inAppMessages/IInAppMessageLifecycleListener {
+	public abstract fun onDidDismiss (Lcom/onesignal/inAppMessages/IInAppMessageDidDismissEvent;)V
+	public abstract fun onDidDisplay (Lcom/onesignal/inAppMessages/IInAppMessageDidDisplayEvent;)V
+	public abstract fun onWillDismiss (Lcom/onesignal/inAppMessages/IInAppMessageWillDismissEvent;)V
+	public abstract fun onWillDisplay (Lcom/onesignal/inAppMessages/IInAppMessageWillDisplayEvent;)V
+}
+
+public abstract interface class com/onesignal/inAppMessages/IInAppMessageWillDismissEvent {
+	public abstract fun getMessage ()Lcom/onesignal/inAppMessages/IInAppMessage;
+}
+
+public abstract interface class com/onesignal/inAppMessages/IInAppMessageWillDisplayEvent {
+	public abstract fun getMessage ()Lcom/onesignal/inAppMessages/IInAppMessage;
+}
+
+public abstract interface class com/onesignal/inAppMessages/IInAppMessagesManager {
+	public abstract fun addClickListener (Lcom/onesignal/inAppMessages/IInAppMessageClickListener;)V
+	public abstract fun addLifecycleListener (Lcom/onesignal/inAppMessages/IInAppMessageLifecycleListener;)V
+	public abstract fun addTrigger (Ljava/lang/String;Ljava/lang/String;)V
+	public abstract fun addTriggers (Ljava/util/Map;)V
+	public abstract fun clearTriggers ()V
+	public abstract fun getPaused ()Z
+	public abstract fun removeClickListener (Lcom/onesignal/inAppMessages/IInAppMessageClickListener;)V
+	public abstract fun removeLifecycleListener (Lcom/onesignal/inAppMessages/IInAppMessageLifecycleListener;)V
+	public abstract fun removeTrigger (Ljava/lang/String;)V
+	public abstract fun removeTriggers (Ljava/util/Collection;)V
+	public abstract fun setPaused (Z)V
+}
+
+public final class com/onesignal/inAppMessages/InAppMessageActionUrlType : java/lang/Enum {
+	public static final field BROWSER Lcom/onesignal/inAppMessages/InAppMessageActionUrlType;
+	public static final field Companion Lcom/onesignal/inAppMessages/InAppMessageActionUrlType$Companion;
+	public static final field IN_APP_WEBVIEW Lcom/onesignal/inAppMessages/InAppMessageActionUrlType;
+	public static final field REPLACE_CONTENT Lcom/onesignal/inAppMessages/InAppMessageActionUrlType;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public fun toString ()Ljava/lang/String;
+	public static fun valueOf (Ljava/lang/String;)Lcom/onesignal/inAppMessages/InAppMessageActionUrlType;
+	public static fun values ()[Lcom/onesignal/inAppMessages/InAppMessageActionUrlType;
+}
+
+public final class com/onesignal/inAppMessages/InAppMessageActionUrlType$Companion {
+	public final fun fromString (Ljava/lang/String;)Lcom/onesignal/inAppMessages/InAppMessageActionUrlType;
+}
+
+public abstract interface class com/onesignal/location/ILocationManager {
+	public abstract fun isShared ()Z
+	public abstract fun requestPermission (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun setShared (Z)V
+}
+
+public final class com/onesignal/notifications/BackgroundImageLayout {
+	public fun <init> ()V
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun getBodyTextColor ()Ljava/lang/String;
+	public final fun getImage ()Ljava/lang/String;
+	public final fun getTitleTextColor ()Ljava/lang/String;
+}
+
+public abstract interface class com/onesignal/notifications/IActionButton {
+	public abstract fun getIcon ()Ljava/lang/String;
+	public abstract fun getId ()Ljava/lang/String;
+	public abstract fun getText ()Ljava/lang/String;
+}
+
+public abstract interface class com/onesignal/notifications/IDisplayableMutableNotification : com/onesignal/notifications/IDisplayableNotification, com/onesignal/notifications/IMutableNotification {
+}
+
+public abstract interface class com/onesignal/notifications/IDisplayableNotification : com/onesignal/notifications/INotification {
+	public abstract fun display ()V
+}
+
+public abstract interface class com/onesignal/notifications/IMutableNotification : com/onesignal/notifications/INotification {
+	public abstract fun setExtender (Landroidx/core/app/NotificationCompat$Extender;)V
+}
+
+public abstract interface class com/onesignal/notifications/INotification {
+	public abstract fun getActionButtons ()Ljava/util/List;
+	public abstract fun getAdditionalData ()Lorg/json/JSONObject;
+	public abstract fun getAndroidNotificationId ()I
+	public abstract fun getBackgroundImageLayout ()Lcom/onesignal/notifications/BackgroundImageLayout;
+	public abstract fun getBigPicture ()Ljava/lang/String;
+	public abstract fun getBody ()Ljava/lang/String;
+	public abstract fun getCollapseId ()Ljava/lang/String;
+	public abstract fun getFromProjectNumber ()Ljava/lang/String;
+	public abstract fun getGroupKey ()Ljava/lang/String;
+	public abstract fun getGroupMessage ()Ljava/lang/String;
+	public abstract fun getGroupedNotifications ()Ljava/util/List;
+	public abstract fun getLargeIcon ()Ljava/lang/String;
+	public abstract fun getLaunchURL ()Ljava/lang/String;
+	public abstract fun getLedColor ()Ljava/lang/String;
+	public abstract fun getLockScreenVisibility ()I
+	public abstract fun getNotificationId ()Ljava/lang/String;
+	public abstract fun getPriority ()I
+	public abstract fun getRawPayload ()Ljava/lang/String;
+	public abstract fun getSentTime ()J
+	public abstract fun getSmallIcon ()Ljava/lang/String;
+	public abstract fun getSmallIconAccentColor ()Ljava/lang/String;
+	public abstract fun getSound ()Ljava/lang/String;
+	public abstract fun getTemplateId ()Ljava/lang/String;
+	public abstract fun getTemplateName ()Ljava/lang/String;
+	public abstract fun getTitle ()Ljava/lang/String;
+	public abstract fun getTtl ()I
+}
+
+public abstract interface class com/onesignal/notifications/INotificationClickEvent {
+	public abstract fun getNotification ()Lcom/onesignal/notifications/INotification;
+	public abstract fun getResult ()Lcom/onesignal/notifications/INotificationClickResult;
+}
+
+public abstract interface class com/onesignal/notifications/INotificationClickListener {
+	public abstract fun onClick (Lcom/onesignal/notifications/INotificationClickEvent;)V
+}
+
+public abstract interface class com/onesignal/notifications/INotificationClickResult {
+	public abstract fun getActionId ()Ljava/lang/String;
+	public abstract fun getUrl ()Ljava/lang/String;
+}
+
+public abstract interface class com/onesignal/notifications/INotificationLifecycleListener {
+	public abstract fun onWillDisplay (Lcom/onesignal/notifications/INotificationWillDisplayEvent;)V
+}
+
+public abstract interface class com/onesignal/notifications/INotificationReceivedEvent {
+	public abstract fun getContext ()Landroid/content/Context;
+	public abstract fun getNotification ()Lcom/onesignal/notifications/IDisplayableMutableNotification;
+	public abstract fun preventDefault ()V
+	public abstract fun preventDefault (Z)V
+}
+
+public abstract interface class com/onesignal/notifications/INotificationServiceExtension {
+	public abstract fun onNotificationReceived (Lcom/onesignal/notifications/INotificationReceivedEvent;)V
+}
+
+public abstract interface class com/onesignal/notifications/INotificationWillDisplayEvent {
+	public abstract fun getNotification ()Lcom/onesignal/notifications/IDisplayableNotification;
+	public abstract fun preventDefault ()V
+	public abstract fun preventDefault (Z)V
+}
+
+public abstract interface class com/onesignal/notifications/INotificationsManager {
+	public abstract fun addClickListener (Lcom/onesignal/notifications/INotificationClickListener;)V
+	public abstract fun addForegroundLifecycleListener (Lcom/onesignal/notifications/INotificationLifecycleListener;)V
+	public abstract fun addPermissionObserver (Lcom/onesignal/notifications/IPermissionObserver;)V
+	public abstract fun clearAllNotifications ()V
+	public abstract fun getCanRequestPermission ()Z
+	public abstract fun getPermission ()Z
+	public abstract fun removeClickListener (Lcom/onesignal/notifications/INotificationClickListener;)V
+	public abstract fun removeForegroundLifecycleListener (Lcom/onesignal/notifications/INotificationLifecycleListener;)V
+	public abstract fun removeGroupedNotifications (Ljava/lang/String;)V
+	public abstract fun removeNotification (I)V
+	public abstract fun removePermissionObserver (Lcom/onesignal/notifications/IPermissionObserver;)V
+	public abstract fun requestPermission (ZLkotlin/coroutines/Continuation;)Ljava/lang/Object;
+}
+
+public abstract interface class com/onesignal/notifications/IPermissionObserver {
+	public abstract fun onNotificationPermissionChange (Z)V
+}
+
+public abstract interface class com/onesignal/session/ISessionManager {
+	public abstract fun addOutcome (Ljava/lang/String;)V
+	public abstract fun addOutcomeWithValue (Ljava/lang/String;F)V
+	public abstract fun addUniqueOutcome (Ljava/lang/String;)V
+}
+
+public abstract interface class com/onesignal/session/internal/influence/IInfluenceManager {
+	public abstract fun getInfluences ()Ljava/util/List;
+	public abstract fun onDirectInfluenceFromIAM (Ljava/lang/String;)V
+	public abstract fun onDirectInfluenceFromNotification (Ljava/lang/String;)V
+	public abstract fun onInAppMessageDismissed ()V
+	public abstract fun onInAppMessageDisplayed (Ljava/lang/String;)V
+	public abstract fun onNotificationReceived (Ljava/lang/String;)V
+}
+
+public final class com/onesignal/session/internal/influence/Influence {
+	public static final field Companion Lcom/onesignal/session/internal/influence/Influence$Companion;
+	public static final field INFLUENCE_CHANNEL Ljava/lang/String;
+	public static final field INFLUENCE_IDS Ljava/lang/String;
+	public static final field INFLUENCE_TYPE Ljava/lang/String;
+	public fun <init> (Lcom/onesignal/session/internal/influence/InfluenceChannel;Lcom/onesignal/session/internal/influence/InfluenceType;Lorg/json/JSONArray;)V
+	public fun <init> (Ljava/lang/String;)V
+	public final fun copy ()Lcom/onesignal/session/internal/influence/Influence;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getDirectId ()Ljava/lang/String;
+	public final fun getIds ()Lorg/json/JSONArray;
+	public final fun getInfluenceChannel ()Lcom/onesignal/session/internal/influence/InfluenceChannel;
+	public final fun getInfluenceType ()Lcom/onesignal/session/internal/influence/InfluenceType;
+	public fun hashCode ()I
+	public final fun setIds (Lorg/json/JSONArray;)V
+	public final fun setInfluenceType (Lcom/onesignal/session/internal/influence/InfluenceType;)V
+	public final fun toJSONString ()Ljava/lang/String;
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/onesignal/session/internal/influence/Influence$Companion {
+}
+
+public final class com/onesignal/session/internal/influence/InfluenceChannel : java/lang/Enum {
+	public static final field Companion Lcom/onesignal/session/internal/influence/InfluenceChannel$Companion;
+	public static final field IAM Lcom/onesignal/session/internal/influence/InfluenceChannel;
+	public static final field NOTIFICATION Lcom/onesignal/session/internal/influence/InfluenceChannel;
+	public final fun equalsName (Ljava/lang/String;)Z
+	public static final fun fromString (Ljava/lang/String;)Lcom/onesignal/session/internal/influence/InfluenceChannel;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public fun toString ()Ljava/lang/String;
+	public static fun valueOf (Ljava/lang/String;)Lcom/onesignal/session/internal/influence/InfluenceChannel;
+	public static fun values ()[Lcom/onesignal/session/internal/influence/InfluenceChannel;
+}
+
+public final class com/onesignal/session/internal/influence/InfluenceChannel$Companion {
+	public final fun fromString (Ljava/lang/String;)Lcom/onesignal/session/internal/influence/InfluenceChannel;
+}
+
+public final class com/onesignal/session/internal/influence/InfluenceType : java/lang/Enum {
+	public static final field Companion Lcom/onesignal/session/internal/influence/InfluenceType$Companion;
+	public static final field DIRECT Lcom/onesignal/session/internal/influence/InfluenceType;
+	public static final field DISABLED Lcom/onesignal/session/internal/influence/InfluenceType;
+	public static final field INDIRECT Lcom/onesignal/session/internal/influence/InfluenceType;
+	public static final field UNATTRIBUTED Lcom/onesignal/session/internal/influence/InfluenceType;
+	public static final fun fromString (Ljava/lang/String;)Lcom/onesignal/session/internal/influence/InfluenceType;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public final fun isAttributed ()Z
+	public final fun isDirect ()Z
+	public final fun isDisabled ()Z
+	public final fun isIndirect ()Z
+	public final fun isUnattributed ()Z
+	public static fun valueOf (Ljava/lang/String;)Lcom/onesignal/session/internal/influence/InfluenceType;
+	public static fun values ()[Lcom/onesignal/session/internal/influence/InfluenceType;
+}
+
+public final class com/onesignal/session/internal/influence/InfluenceType$Companion {
+	public final fun fromString (Ljava/lang/String;)Lcom/onesignal/session/internal/influence/InfluenceType;
+}
+
+public abstract interface class com/onesignal/session/internal/outcomes/IOutcomeEvent {
+	public abstract fun getName ()Ljava/lang/String;
+	public abstract fun getNotificationIds ()Lorg/json/JSONArray;
+	public abstract fun getSession ()Lcom/onesignal/session/internal/influence/InfluenceType;
+	public abstract fun getSessionTime ()J
+	public abstract fun getTimestamp ()J
+	public abstract fun getWeight ()F
+}
+
+public abstract interface class com/onesignal/session/internal/outcomes/IOutcomeEventsController {
+	public abstract fun sendOutcomeEvent (Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun sendOutcomeEventWithValue (Ljava/lang/String;FLkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun sendSessionEndOutcomeEvent (JLkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun sendUniqueOutcomeEvent (Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+}
+
+public final class com/onesignal/session/internal/outcomes/migrations/RemoveInvalidSessionTimeRecords {
+	public static final field INSTANCE Lcom/onesignal/session/internal/outcomes/migrations/RemoveInvalidSessionTimeRecords;
+	public final fun run (Lcom/onesignal/core/internal/database/IDatabaseProvider;)V
+}
+
+public abstract interface class com/onesignal/session/internal/session/ISessionLifecycleHandler {
+	public abstract fun onSessionActive ()V
+	public abstract fun onSessionEnded (J)V
+	public abstract fun onSessionStarted ()V
+}
+
+public abstract interface class com/onesignal/session/internal/session/ISessionService : com/onesignal/common/events/IEventNotifier {
+	public abstract fun getStartTime ()J
+}
+
+public final class com/onesignal/session/internal/session/SessionModel : com/onesignal/common/modeling/Model {
+	public fun <init> ()V
+	public final fun getActiveDuration ()J
+	public final fun getFocusTime ()J
+	public final fun getSessionId ()Ljava/lang/String;
+	public final fun getStartTime ()J
+	public final fun isValid ()Z
+	public final fun setActiveDuration (J)V
+	public final fun setFocusTime (J)V
+	public final fun setSessionId (Ljava/lang/String;)V
+	public final fun setStartTime (J)V
+	public final fun setValid (Z)V
+}
+
+public class com/onesignal/session/internal/session/SessionModelStore : com/onesignal/common/modeling/SingletonModelStore {
+	public fun <init> (Lcom/onesignal/core/internal/preferences/IPreferencesService;)V
+}
+
+public abstract interface class com/onesignal/user/IUserManager {
+	public abstract fun addAlias (Ljava/lang/String;Ljava/lang/String;)V
+	public abstract fun addAliases (Ljava/util/Map;)V
+	public abstract fun addEmail (Ljava/lang/String;)V
+	public abstract fun addObserver (Lcom/onesignal/user/state/IUserStateObserver;)V
+	public abstract fun addSms (Ljava/lang/String;)V
+	public abstract fun addTag (Ljava/lang/String;Ljava/lang/String;)V
+	public abstract fun addTags (Ljava/util/Map;)V
+	public abstract fun getExternalId ()Ljava/lang/String;
+	public abstract fun getOnesignalId ()Ljava/lang/String;
+	public abstract fun getPushSubscription ()Lcom/onesignal/user/subscriptions/IPushSubscription;
+	public abstract fun getTags ()Ljava/util/Map;
+	public abstract fun removeAlias (Ljava/lang/String;)V
+	public abstract fun removeAliases (Ljava/util/Collection;)V
+	public abstract fun removeEmail (Ljava/lang/String;)V
+	public abstract fun removeObserver (Lcom/onesignal/user/state/IUserStateObserver;)V
+	public abstract fun removeSms (Ljava/lang/String;)V
+	public abstract fun removeTag (Ljava/lang/String;)V
+	public abstract fun removeTags (Ljava/util/Collection;)V
+	public abstract fun setLanguage (Ljava/lang/String;)V
+	public abstract fun trackEvent (Ljava/lang/String;Ljava/util/Map;)V
+}
+
+public final class com/onesignal/user/IUserManager$DefaultImpls {
+	public static synthetic fun trackEvent$default (Lcom/onesignal/user/IUserManager;Ljava/lang/String;Ljava/util/Map;ILjava/lang/Object;)V
+}
+
+public final class com/onesignal/user/internal/AppIdResolution {
+	public fun <init> (Ljava/lang/String;ZZ)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Z
+	public final fun component3 ()Z
+	public final fun copy (Ljava/lang/String;ZZ)Lcom/onesignal/user/internal/AppIdResolution;
+	public static synthetic fun copy$default (Lcom/onesignal/user/internal/AppIdResolution;Ljava/lang/String;ZZILjava/lang/Object;)Lcom/onesignal/user/internal/AppIdResolution;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAppId ()Ljava/lang/String;
+	public final fun getFailed ()Z
+	public final fun getForceCreateUser ()Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/onesignal/user/internal/AppIdResolutionKt {
+	public static final fun resolveAppId (Ljava/lang/String;Lcom/onesignal/core/internal/config/ConfigModel;Lcom/onesignal/core/internal/preferences/IPreferencesService;)Lcom/onesignal/user/internal/AppIdResolution;
+}
+
+public final class com/onesignal/user/internal/UserSwitcher {
+	public fun <init> (Lcom/onesignal/core/internal/preferences/IPreferencesService;Lcom/onesignal/core/internal/operations/IOperationRepo;Lcom/onesignal/common/services/ServiceProvider;Lcom/onesignal/common/IDManager;Lcom/onesignal/user/internal/identity/IdentityModelStore;Lcom/onesignal/user/internal/properties/PropertiesModelStore;Lcom/onesignal/user/internal/subscriptions/SubscriptionModelStore;Lcom/onesignal/core/internal/config/ConfigModel;Lcom/onesignal/common/OneSignalUtils;Ljava/lang/String;Ljava/lang/String;Lcom/onesignal/common/AndroidUtils;Lkotlin/jvm/functions/Function0;)V
+	public synthetic fun <init> (Lcom/onesignal/core/internal/preferences/IPreferencesService;Lcom/onesignal/core/internal/operations/IOperationRepo;Lcom/onesignal/common/services/ServiceProvider;Lcom/onesignal/common/IDManager;Lcom/onesignal/user/internal/identity/IdentityModelStore;Lcom/onesignal/user/internal/properties/PropertiesModelStore;Lcom/onesignal/user/internal/subscriptions/SubscriptionModelStore;Lcom/onesignal/core/internal/config/ConfigModel;Lcom/onesignal/common/OneSignalUtils;Ljava/lang/String;Ljava/lang/String;Lcom/onesignal/common/AndroidUtils;Lkotlin/jvm/functions/Function0;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun createAndSwitchToNewUser (ZLkotlin/jvm/functions/Function2;)V
+	public static synthetic fun createAndSwitchToNewUser$default (Lcom/onesignal/user/internal/UserSwitcher;ZLkotlin/jvm/functions/Function2;ILjava/lang/Object;)V
+	public final fun createPushSubscriptionFromLegacySync (Ljava/lang/String;Lorg/json/JSONObject;Lcom/onesignal/core/internal/config/ConfigModel;Lcom/onesignal/user/internal/subscriptions/SubscriptionModelStore;Landroid/content/Context;)Z
+	public final fun initUser (Z)V
+}
+
+public final class com/onesignal/user/internal/backend/CreateUserResponse {
+	public fun <init> (Ljava/util/Map;Lcom/onesignal/user/internal/backend/PropertiesObject;Ljava/util/List;Lcom/onesignal/common/consistency/RywData;)V
+	public synthetic fun <init> (Ljava/util/Map;Lcom/onesignal/user/internal/backend/PropertiesObject;Ljava/util/List;Lcom/onesignal/common/consistency/RywData;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun getIdentities ()Ljava/util/Map;
+	public final fun getProperties ()Lcom/onesignal/user/internal/backend/PropertiesObject;
+	public final fun getRywData ()Lcom/onesignal/common/consistency/RywData;
+	public final fun getSubscriptions ()Ljava/util/List;
+}
+
+public abstract interface class com/onesignal/user/internal/backend/IIdentityBackendService {
+	public abstract fun deleteAlias (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun setAlias (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/Map;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+}
+
+public final class com/onesignal/user/internal/backend/IIdentityBackendService$DefaultImpls {
+	public static synthetic fun deleteAlias$default (Lcom/onesignal/user/internal/backend/IIdentityBackendService;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+	public static synthetic fun setAlias$default (Lcom/onesignal/user/internal/backend/IIdentityBackendService;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/Map;Ljava/lang/String;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+}
+
+public abstract interface class com/onesignal/user/internal/backend/ISubscriptionBackendService {
+	public abstract fun createSubscription (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lcom/onesignal/user/internal/backend/SubscriptionObject;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun deleteSubscription (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun getIdentityFromSubscription (Ljava/lang/String;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun transferSubscription (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun updateSubscription (Ljava/lang/String;Ljava/lang/String;Lcom/onesignal/user/internal/backend/SubscriptionObject;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+}
+
+public final class com/onesignal/user/internal/backend/ISubscriptionBackendService$DefaultImpls {
+	public static synthetic fun createSubscription$default (Lcom/onesignal/user/internal/backend/ISubscriptionBackendService;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lcom/onesignal/user/internal/backend/SubscriptionObject;Ljava/lang/String;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+	public static synthetic fun deleteSubscription$default (Lcom/onesignal/user/internal/backend/ISubscriptionBackendService;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+	public static synthetic fun transferSubscription$default (Lcom/onesignal/user/internal/backend/ISubscriptionBackendService;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+	public static synthetic fun updateSubscription$default (Lcom/onesignal/user/internal/backend/ISubscriptionBackendService;Ljava/lang/String;Ljava/lang/String;Lcom/onesignal/user/internal/backend/SubscriptionObject;Ljava/lang/String;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+}
+
+public abstract interface class com/onesignal/user/internal/backend/IUserBackendService {
+	public abstract fun createUser (Ljava/lang/String;Ljava/util/Map;Ljava/util/List;Ljava/util/Map;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun getUser (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun updateUser (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lcom/onesignal/user/internal/backend/PropertiesObject;ZLcom/onesignal/user/internal/backend/PropertiesDeltasObject;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+}
+
+public final class com/onesignal/user/internal/backend/IUserBackendService$DefaultImpls {
+	public static synthetic fun createUser$default (Lcom/onesignal/user/internal/backend/IUserBackendService;Ljava/lang/String;Ljava/util/Map;Ljava/util/List;Ljava/util/Map;Ljava/lang/String;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+	public static synthetic fun getUser$default (Lcom/onesignal/user/internal/backend/IUserBackendService;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+	public static synthetic fun updateUser$default (Lcom/onesignal/user/internal/backend/IUserBackendService;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lcom/onesignal/user/internal/backend/PropertiesObject;ZLcom/onesignal/user/internal/backend/PropertiesDeltasObject;Ljava/lang/String;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+}
+
+public final class com/onesignal/user/internal/backend/IdentityConstants {
+	public static final field EXTERNAL_ID Ljava/lang/String;
+	public static final field INSTANCE Lcom/onesignal/user/internal/backend/IdentityConstants;
+	public static final field ONESIGNAL_ID Ljava/lang/String;
+}
+
+public final class com/onesignal/user/internal/backend/PropertiesDeltasObject {
+	public fun <init> ()V
+	public fun <init> (Ljava/lang/Long;Ljava/lang/Integer;Ljava/math/BigDecimal;Ljava/util/List;)V
+	public synthetic fun <init> (Ljava/lang/Long;Ljava/lang/Integer;Ljava/math/BigDecimal;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun getAmountSpent ()Ljava/math/BigDecimal;
+	public final fun getHasAtLeastOnePropertySet ()Z
+	public final fun getPurchases ()Ljava/util/List;
+	public final fun getSessionCount ()Ljava/lang/Integer;
+	public final fun getSessionTime ()Ljava/lang/Long;
+}
+
+public final class com/onesignal/user/internal/backend/PropertiesObject {
+	public fun <init> ()V
+	public fun <init> (Ljava/util/Map;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Double;Ljava/lang/Double;)V
+	public synthetic fun <init> (Ljava/util/Map;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Double;Ljava/lang/Double;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun getCountry ()Ljava/lang/String;
+	public final fun getHasAtLeastOnePropertySet ()Z
+	public final fun getLanguage ()Ljava/lang/String;
+	public final fun getLatitude ()Ljava/lang/Double;
+	public final fun getLongitude ()Ljava/lang/Double;
+	public final fun getTags ()Ljava/util/Map;
+	public final fun getTimezoneId ()Ljava/lang/String;
+}
+
+public final class com/onesignal/user/internal/backend/PurchaseObject {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/math/BigDecimal;)V
+	public final fun getAmount ()Ljava/math/BigDecimal;
+	public final fun getIso ()Ljava/lang/String;
+	public final fun getSku ()Ljava/lang/String;
+}
+
+public final class com/onesignal/user/internal/backend/SubscriptionObject {
+	public fun <init> ()V
+	public fun <init> (Ljava/lang/String;Lcom/onesignal/user/internal/backend/SubscriptionObjectType;Ljava/lang/String;Ljava/lang/Boolean;Ljava/lang/Integer;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Boolean;Ljava/lang/Integer;Ljava/lang/String;Ljava/lang/String;)V
+	public synthetic fun <init> (Ljava/lang/String;Lcom/onesignal/user/internal/backend/SubscriptionObjectType;Ljava/lang/String;Ljava/lang/Boolean;Ljava/lang/Integer;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Boolean;Ljava/lang/Integer;Ljava/lang/String;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun getAppVersion ()Ljava/lang/String;
+	public final fun getCarrier ()Ljava/lang/String;
+	public final fun getDeviceModel ()Ljava/lang/String;
+	public final fun getDeviceOS ()Ljava/lang/String;
+	public final fun getEnabled ()Ljava/lang/Boolean;
+	public final fun getId ()Ljava/lang/String;
+	public final fun getNetType ()Ljava/lang/Integer;
+	public final fun getNotificationTypes ()Ljava/lang/Integer;
+	public final fun getRooted ()Ljava/lang/Boolean;
+	public final fun getSdk ()Ljava/lang/String;
+	public final fun getToken ()Ljava/lang/String;
+	public final fun getType ()Lcom/onesignal/user/internal/backend/SubscriptionObjectType;
+}
+
+public final class com/onesignal/user/internal/backend/SubscriptionObjectType : java/lang/Enum {
+	public static final field ANDROID_PUSH Lcom/onesignal/user/internal/backend/SubscriptionObjectType;
+	public static final field CHROME_EXTENSION Lcom/onesignal/user/internal/backend/SubscriptionObjectType;
+	public static final field CHROME_PUSH Lcom/onesignal/user/internal/backend/SubscriptionObjectType;
+	public static final field Companion Lcom/onesignal/user/internal/backend/SubscriptionObjectType$Companion;
+	public static final field EMAIL Lcom/onesignal/user/internal/backend/SubscriptionObjectType;
+	public static final field FIREFOX_PUSH Lcom/onesignal/user/internal/backend/SubscriptionObjectType;
+	public static final field FIREOS_PUSH Lcom/onesignal/user/internal/backend/SubscriptionObjectType;
+	public static final field HUAWEI_PUSH Lcom/onesignal/user/internal/backend/SubscriptionObjectType;
+	public static final field IOS_PUSH Lcom/onesignal/user/internal/backend/SubscriptionObjectType;
+	public static final field MACOS_PUSH Lcom/onesignal/user/internal/backend/SubscriptionObjectType;
+	public static final field SAFARI_PUSH Lcom/onesignal/user/internal/backend/SubscriptionObjectType;
+	public static final field SAFARI_PUSH_LEGACY Lcom/onesignal/user/internal/backend/SubscriptionObjectType;
+	public static final field SMS Lcom/onesignal/user/internal/backend/SubscriptionObjectType;
+	public static final field WINDOWS_PUSH Lcom/onesignal/user/internal/backend/SubscriptionObjectType;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public final fun getValue ()Ljava/lang/String;
+	public static fun valueOf (Ljava/lang/String;)Lcom/onesignal/user/internal/backend/SubscriptionObjectType;
+	public static fun values ()[Lcom/onesignal/user/internal/backend/SubscriptionObjectType;
+}
+
+public final class com/onesignal/user/internal/backend/SubscriptionObjectType$Companion {
+	public final fun fromDeviceType (Lcom/onesignal/core/internal/device/IDeviceService$DeviceType;)Lcom/onesignal/user/internal/backend/SubscriptionObjectType;
+	public final fun fromString (Ljava/lang/String;)Lcom/onesignal/user/internal/backend/SubscriptionObjectType;
+}
+
+public final class com/onesignal/user/internal/backend/impl/JSONConverter {
+	public static final field INSTANCE Lcom/onesignal/user/internal/backend/impl/JSONConverter;
+	public final fun convertToCreateUserResponse (Lorg/json/JSONObject;)Lcom/onesignal/user/internal/backend/CreateUserResponse;
+	public final fun convertToJSON (Lcom/onesignal/user/internal/backend/PropertiesDeltasObject;)Lorg/json/JSONObject;
+	public final fun convertToJSON (Lcom/onesignal/user/internal/backend/PropertiesObject;)Lorg/json/JSONObject;
+	public final fun convertToJSON (Lcom/onesignal/user/internal/backend/SubscriptionObject;)Lorg/json/JSONObject;
+	public final fun convertToJSON (Ljava/util/List;)Lorg/json/JSONArray;
+}
+
+public abstract interface class com/onesignal/user/internal/builduser/IRebuildUserService {
+	public abstract fun getRebuildOperationsIfCurrentUser (Ljava/lang/String;Ljava/lang/String;)Ljava/util/List;
+}
+
+public final class com/onesignal/user/internal/builduser/impl/RebuildUserService : com/onesignal/user/internal/builduser/IRebuildUserService {
+	public fun <init> (Lcom/onesignal/user/internal/identity/IdentityModelStore;Lcom/onesignal/user/internal/properties/PropertiesModelStore;Lcom/onesignal/user/internal/subscriptions/SubscriptionModelStore;Lcom/onesignal/core/internal/config/ConfigModelStore;)V
+	public fun getRebuildOperationsIfCurrentUser (Ljava/lang/String;Ljava/lang/String;)Ljava/util/List;
+}
+
+public abstract interface class com/onesignal/user/internal/customEvents/ICustomEventBackendService {
+	public abstract fun sendCustomEvent (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;JLjava/lang/String;Ljava/lang/String;Lcom/onesignal/user/internal/customEvents/impl/CustomEventMetadata;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+}
+
+public final class com/onesignal/user/internal/customEvents/ICustomEventBackendService$DefaultImpls {
+	public static synthetic fun sendCustomEvent$default (Lcom/onesignal/user/internal/customEvents/ICustomEventBackendService;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;JLjava/lang/String;Ljava/lang/String;Lcom/onesignal/user/internal/customEvents/impl/CustomEventMetadata;Ljava/lang/String;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+}
+
+public abstract interface class com/onesignal/user/internal/customEvents/ICustomEventController {
+	public abstract fun sendCustomEvent (Ljava/lang/String;Ljava/util/Map;)V
+}
+
+public final class com/onesignal/user/internal/customEvents/impl/CustomEventController : com/onesignal/user/internal/customEvents/ICustomEventController {
+	public fun <init> (Lcom/onesignal/user/internal/identity/IdentityModelStore;Lcom/onesignal/core/internal/config/ConfigModelStore;Lcom/onesignal/core/internal/time/ITime;Lcom/onesignal/core/internal/operations/IOperationRepo;)V
+	public fun sendCustomEvent (Ljava/lang/String;Ljava/util/Map;)V
+}
+
+public final class com/onesignal/user/internal/customEvents/impl/CustomEventMetadata {
+	public static final field Companion Lcom/onesignal/user/internal/customEvents/impl/CustomEventMetadata$Companion;
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
+	public final fun getAppVersion ()Ljava/lang/String;
+	public final fun getDeviceModel ()Ljava/lang/String;
+	public final fun getDeviceOS ()Ljava/lang/String;
+	public final fun getDeviceType ()Ljava/lang/String;
+	public final fun getSdk ()Ljava/lang/String;
+	public final fun getType ()Ljava/lang/String;
+	public final fun toJSONObject ()Lorg/json/JSONObject;
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/onesignal/user/internal/customEvents/impl/CustomEventMetadata$Companion {
+}
+
+public final class com/onesignal/user/internal/identity/IdentityModel : com/onesignal/common/modeling/MapModel {
+	public fun <init> ()V
+	public final fun containsValue (Ljava/lang/Object;)Z
+	public fun containsValue (Ljava/lang/String;)Z
+	public final fun get (Ljava/lang/Object;)Ljava/lang/String;
+	public fun get (Ljava/lang/String;)Ljava/lang/String;
+	public final fun getExternalId ()Ljava/lang/String;
+	public final fun getOnesignalId ()Ljava/lang/String;
+	public final fun getOrDefault (Ljava/lang/Object;Ljava/lang/String;)Ljava/lang/String;
+	public fun getOrDefault (Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;
+	public final fun remove (Ljava/lang/Object;)Ljava/lang/String;
+	public fun remove (Ljava/lang/String;)Ljava/lang/String;
+	public final fun setExternalId (Ljava/lang/String;)V
+	public final fun setOnesignalId (Ljava/lang/String;)V
+}
+
+public class com/onesignal/user/internal/identity/IdentityModelStore : com/onesignal/common/modeling/SingletonModelStore {
+	public fun <init> (Lcom/onesignal/core/internal/preferences/IPreferencesService;)V
+}
+
+public final class com/onesignal/user/internal/identity/IdentityModelStoreKt {
+	public static final field IDENTITY_NAME_SPACE Ljava/lang/String;
+	public static final fun hasOneSignalId (Lcom/onesignal/user/internal/identity/IdentityModelStore;)Z
+}
+
+public abstract interface class com/onesignal/user/internal/jwt/IJwtUpdateListener {
+	public abstract fun onJwtUpdated (Ljava/lang/String;)V
+}
+
+public final class com/onesignal/user/internal/jwt/JwtTokenStore {
+	public fun <init> (Lcom/onesignal/core/internal/preferences/IPreferencesService;)V
+	public final fun addInternalUpdateListener (Lcom/onesignal/user/internal/jwt/IJwtUpdateListener;)V
+	public final fun addUserJwtInvalidatedListener (Lcom/onesignal/IUserJwtInvalidatedListener;)V
+	public final fun getJwt (Ljava/lang/String;)Ljava/lang/String;
+	public final fun invalidateJwt (Ljava/lang/String;)V
+	public final fun pruneToExternalIds (Ljava/util/Set;)V
+	public final fun putJwt (Ljava/lang/String;Ljava/lang/String;)V
+	public final fun removeInternalUpdateListener (Lcom/onesignal/user/internal/jwt/IJwtUpdateListener;)V
+	public final fun removeUserJwtInvalidatedListener (Lcom/onesignal/IUserJwtInvalidatedListener;)V
+}
+
+public abstract interface class com/onesignal/user/internal/migrations/IMigrationRecovery : com/onesignal/core/internal/startup/IStartableService {
+	public abstract fun isInBadState ()Z
+	public abstract fun recover ()V
+	public abstract fun recoveryMessage ()Ljava/lang/String;
+}
+
+public abstract class com/onesignal/user/internal/migrations/MigrationRecovery : com/onesignal/user/internal/migrations/IMigrationRecovery {
+	public fun <init> ()V
+	public fun start ()V
+}
+
+public final class com/onesignal/user/internal/migrations/RecoverConfigPushSubscription : com/onesignal/user/internal/migrations/MigrationRecovery {
+	public fun <init> (Lcom/onesignal/core/internal/config/ConfigModelStore;Lcom/onesignal/user/internal/subscriptions/SubscriptionModelStore;)V
+	public final fun getActivePushSubscription ()Lcom/onesignal/user/internal/subscriptions/SubscriptionModel;
+	public fun isInBadState ()Z
+	public fun recover ()V
+	public fun recoveryMessage ()Ljava/lang/String;
+}
+
+public final class com/onesignal/user/internal/migrations/RecoverFromDroppedLoginBug : com/onesignal/core/internal/startup/IStartableService {
+	public fun <init> (Lcom/onesignal/core/internal/operations/IOperationRepo;Lcom/onesignal/user/internal/identity/IdentityModelStore;Lcom/onesignal/core/internal/config/ConfigModelStore;)V
+	public fun start ()V
+}
+
+public final class com/onesignal/user/internal/operations/CreateSubscriptionOperation : com/onesignal/core/internal/operations/Operation {
+	public fun <init> ()V
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lcom/onesignal/user/internal/subscriptions/SubscriptionType;ZLjava/lang/String;Lcom/onesignal/user/internal/subscriptions/SubscriptionStatus;)V
+	public final fun getAddress ()Ljava/lang/String;
+	public final fun getAppId ()Ljava/lang/String;
+	public fun getApplyToRecordId ()Ljava/lang/String;
+	public fun getCanStartExecute ()Z
+	public fun getCreateComparisonKey ()Ljava/lang/String;
+	public final fun getEnabled ()Z
+	public fun getGroupComparisonType ()Lcom/onesignal/core/internal/operations/GroupComparisonType;
+	public fun getModifyComparisonKey ()Ljava/lang/String;
+	public final fun getOnesignalId ()Ljava/lang/String;
+	public final fun getStatus ()Lcom/onesignal/user/internal/subscriptions/SubscriptionStatus;
+	public final fun getSubscriptionId ()Ljava/lang/String;
+	public final fun getType ()Lcom/onesignal/user/internal/subscriptions/SubscriptionType;
+	public fun translateIds (Ljava/util/Map;)V
+}
+
+public final class com/onesignal/user/internal/operations/DeleteAliasOperation : com/onesignal/core/internal/operations/Operation {
+	public fun <init> ()V
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
+	public final fun getAppId ()Ljava/lang/String;
+	public fun getApplyToRecordId ()Ljava/lang/String;
+	public fun getCanStartExecute ()Z
+	public fun getCreateComparisonKey ()Ljava/lang/String;
+	public fun getGroupComparisonType ()Lcom/onesignal/core/internal/operations/GroupComparisonType;
+	public final fun getLabel ()Ljava/lang/String;
+	public fun getModifyComparisonKey ()Ljava/lang/String;
+	public final fun getOnesignalId ()Ljava/lang/String;
+	public fun translateIds (Ljava/util/Map;)V
+}
+
+public final class com/onesignal/user/internal/operations/DeleteSubscriptionOperation : com/onesignal/core/internal/operations/Operation {
+	public fun <init> ()V
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
+	public final fun getAppId ()Ljava/lang/String;
+	public fun getApplyToRecordId ()Ljava/lang/String;
+	public fun getCanStartExecute ()Z
+	public fun getCreateComparisonKey ()Ljava/lang/String;
+	public fun getGroupComparisonType ()Lcom/onesignal/core/internal/operations/GroupComparisonType;
+	public fun getModifyComparisonKey ()Ljava/lang/String;
+	public final fun getOnesignalId ()Ljava/lang/String;
+	public final fun getSubscriptionId ()Ljava/lang/String;
+	public fun translateIds (Ljava/util/Map;)V
+}
+
+public final class com/onesignal/user/internal/operations/DeleteTagOperation : com/onesignal/core/internal/operations/Operation {
+	public fun <init> ()V
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
+	public final fun getAppId ()Ljava/lang/String;
+	public fun getApplyToRecordId ()Ljava/lang/String;
+	public fun getCanStartExecute ()Z
+	public fun getCreateComparisonKey ()Ljava/lang/String;
+	public fun getGroupComparisonType ()Lcom/onesignal/core/internal/operations/GroupComparisonType;
+	public final fun getKey ()Ljava/lang/String;
+	public fun getModifyComparisonKey ()Ljava/lang/String;
+	public final fun getOnesignalId ()Ljava/lang/String;
+	public fun translateIds (Ljava/util/Map;)V
+}
+
+public final class com/onesignal/user/internal/operations/LoginUserFromSubscriptionOperation : com/onesignal/core/internal/operations/Operation {
+	public fun <init> ()V
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
+	public final fun getAppId ()Ljava/lang/String;
+	public fun getApplyToRecordId ()Ljava/lang/String;
+	public fun getCanStartExecute ()Z
+	public fun getCreateComparisonKey ()Ljava/lang/String;
+	public fun getGroupComparisonType ()Lcom/onesignal/core/internal/operations/GroupComparisonType;
+	public fun getModifyComparisonKey ()Ljava/lang/String;
+	public final fun getOnesignalId ()Ljava/lang/String;
+	public final fun getSubscriptionId ()Ljava/lang/String;
+}
+
+public final class com/onesignal/user/internal/operations/LoginUserOperation : com/onesignal/core/internal/operations/Operation {
+	public fun <init> ()V
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun getAppId ()Ljava/lang/String;
+	public fun getApplyToRecordId ()Ljava/lang/String;
+	public fun getCanStartExecute ()Z
+	public fun getCreateComparisonKey ()Ljava/lang/String;
+	public final fun getExistingOnesignalId ()Ljava/lang/String;
+	public fun getGroupComparisonType ()Lcom/onesignal/core/internal/operations/GroupComparisonType;
+	public fun getModifyComparisonKey ()Ljava/lang/String;
+	public final fun getOnesignalId ()Ljava/lang/String;
+	public fun translateIds (Ljava/util/Map;)V
+}
+
+public final class com/onesignal/user/internal/operations/PurchaseInfo : com/onesignal/common/modeling/Model {
+	public fun <init> ()V
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/math/BigDecimal;)V
+	public final fun getAmount ()Ljava/math/BigDecimal;
+	public final fun getIso ()Ljava/lang/String;
+	public final fun getSku ()Ljava/lang/String;
+}
+
+public final class com/onesignal/user/internal/operations/RefreshUserOperation : com/onesignal/core/internal/operations/Operation {
+	public fun <init> ()V
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
+	public final fun getAppId ()Ljava/lang/String;
+	public fun getApplyToRecordId ()Ljava/lang/String;
+	public fun getCanStartExecute ()Z
+	public fun getCreateComparisonKey ()Ljava/lang/String;
+	public fun getGroupComparisonType ()Lcom/onesignal/core/internal/operations/GroupComparisonType;
+	public fun getModifyComparisonKey ()Ljava/lang/String;
+	public final fun getOnesignalId ()Ljava/lang/String;
+	public fun translateIds (Ljava/util/Map;)V
+}
+
+public final class com/onesignal/user/internal/operations/SetAliasOperation : com/onesignal/core/internal/operations/Operation {
+	public fun <init> ()V
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
+	public final fun getAppId ()Ljava/lang/String;
+	public fun getApplyToRecordId ()Ljava/lang/String;
+	public fun getCanStartExecute ()Z
+	public fun getCreateComparisonKey ()Ljava/lang/String;
+	public fun getGroupComparisonType ()Lcom/onesignal/core/internal/operations/GroupComparisonType;
+	public final fun getLabel ()Ljava/lang/String;
+	public fun getModifyComparisonKey ()Ljava/lang/String;
+	public final fun getOnesignalId ()Ljava/lang/String;
+	public final fun getValue ()Ljava/lang/String;
+	public fun translateIds (Ljava/util/Map;)V
+}
+
+public final class com/onesignal/user/internal/operations/SetPropertyOperation : com/onesignal/core/internal/operations/Operation {
+	public fun <init> ()V
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;)V
+	public final fun getAppId ()Ljava/lang/String;
+	public fun getApplyToRecordId ()Ljava/lang/String;
+	public fun getCanStartExecute ()Z
+	public fun getCreateComparisonKey ()Ljava/lang/String;
+	public fun getGroupComparisonType ()Lcom/onesignal/core/internal/operations/GroupComparisonType;
+	public fun getModifyComparisonKey ()Ljava/lang/String;
+	public final fun getOnesignalId ()Ljava/lang/String;
+	public final fun getProperty ()Ljava/lang/String;
+	public final fun getValue ()Ljava/lang/Object;
+	public fun translateIds (Ljava/util/Map;)V
+}
+
+public final class com/onesignal/user/internal/operations/SetTagOperation : com/onesignal/core/internal/operations/Operation {
+	public fun <init> ()V
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
+	public final fun getAppId ()Ljava/lang/String;
+	public fun getApplyToRecordId ()Ljava/lang/String;
+	public fun getCanStartExecute ()Z
+	public fun getCreateComparisonKey ()Ljava/lang/String;
+	public fun getGroupComparisonType ()Lcom/onesignal/core/internal/operations/GroupComparisonType;
+	public final fun getKey ()Ljava/lang/String;
+	public fun getModifyComparisonKey ()Ljava/lang/String;
+	public final fun getOnesignalId ()Ljava/lang/String;
+	public final fun getValue ()Ljava/lang/String;
+	public fun translateIds (Ljava/util/Map;)V
+}
+
+public final class com/onesignal/user/internal/operations/TrackCustomEventOperation : com/onesignal/core/internal/operations/Operation {
+	public fun <init> ()V
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;JLjava/lang/String;Ljava/lang/String;)V
+	public final fun getAppId ()Ljava/lang/String;
+	public fun getApplyToRecordId ()Ljava/lang/String;
+	public fun getCanStartExecute ()Z
+	public fun getCreateComparisonKey ()Ljava/lang/String;
+	public final fun getEventName ()Ljava/lang/String;
+	public final fun getEventProperties ()Ljava/lang/String;
+	public fun getGroupComparisonType ()Lcom/onesignal/core/internal/operations/GroupComparisonType;
+	public fun getModifyComparisonKey ()Ljava/lang/String;
+	public final fun getOnesignalId ()Ljava/lang/String;
+	public final fun getTimeStamp ()J
+	public final fun setEventName (Ljava/lang/String;)V
+	public final fun setEventProperties (Ljava/lang/String;)V
+	public fun translateIds (Ljava/util/Map;)V
+}
+
+public final class com/onesignal/user/internal/operations/TrackPurchaseOperation : com/onesignal/core/internal/operations/Operation {
+	public fun <init> ()V
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ZLjava/math/BigDecimal;Ljava/util/List;)V
+	public final fun getAmountSpent ()Ljava/math/BigDecimal;
+	public final fun getAppId ()Ljava/lang/String;
+	public fun getApplyToRecordId ()Ljava/lang/String;
+	public fun getCanStartExecute ()Z
+	public fun getCreateComparisonKey ()Ljava/lang/String;
+	public fun getGroupComparisonType ()Lcom/onesignal/core/internal/operations/GroupComparisonType;
+	public fun getModifyComparisonKey ()Ljava/lang/String;
+	public final fun getOnesignalId ()Ljava/lang/String;
+	public final fun getPurchases ()Ljava/util/List;
+	public final fun getTreatNewAsExisting ()Z
+	public fun translateIds (Ljava/util/Map;)V
+}
+
+public final class com/onesignal/user/internal/operations/TrackSessionEndOperation : com/onesignal/core/internal/operations/Operation {
+	public fun <init> ()V
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;J)V
+	public final fun getAppId ()Ljava/lang/String;
+	public fun getApplyToRecordId ()Ljava/lang/String;
+	public fun getCanStartExecute ()Z
+	public fun getCreateComparisonKey ()Ljava/lang/String;
+	public fun getGroupComparisonType ()Lcom/onesignal/core/internal/operations/GroupComparisonType;
+	public fun getModifyComparisonKey ()Ljava/lang/String;
+	public final fun getOnesignalId ()Ljava/lang/String;
+	public final fun getSessionTime ()J
+	public fun translateIds (Ljava/util/Map;)V
+}
+
+public final class com/onesignal/user/internal/operations/TrackSessionStartOperation : com/onesignal/core/internal/operations/Operation {
+	public fun <init> ()V
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
+	public final fun getAppId ()Ljava/lang/String;
+	public fun getApplyToRecordId ()Ljava/lang/String;
+	public fun getCanStartExecute ()Z
+	public fun getCreateComparisonKey ()Ljava/lang/String;
+	public fun getGroupComparisonType ()Lcom/onesignal/core/internal/operations/GroupComparisonType;
+	public fun getModifyComparisonKey ()Ljava/lang/String;
+	public final fun getOnesignalId ()Ljava/lang/String;
+	public fun translateIds (Ljava/util/Map;)V
+}
+
+public final class com/onesignal/user/internal/operations/TransferSubscriptionOperation : com/onesignal/core/internal/operations/Operation {
+	public fun <init> ()V
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
+	public final fun getAppId ()Ljava/lang/String;
+	public fun getApplyToRecordId ()Ljava/lang/String;
+	public fun getCanStartExecute ()Z
+	public fun getCreateComparisonKey ()Ljava/lang/String;
+	public fun getGroupComparisonType ()Lcom/onesignal/core/internal/operations/GroupComparisonType;
+	public fun getModifyComparisonKey ()Ljava/lang/String;
+	public final fun getOnesignalId ()Ljava/lang/String;
+	public final fun getSubscriptionId ()Ljava/lang/String;
+	public fun translateIds (Ljava/util/Map;)V
+}
+
+public final class com/onesignal/user/internal/operations/UpdateSubscriptionOperation : com/onesignal/core/internal/operations/Operation {
+	public fun <init> ()V
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lcom/onesignal/user/internal/subscriptions/SubscriptionType;ZLjava/lang/String;Lcom/onesignal/user/internal/subscriptions/SubscriptionStatus;)V
+	public final fun getAddress ()Ljava/lang/String;
+	public final fun getAppId ()Ljava/lang/String;
+	public fun getApplyToRecordId ()Ljava/lang/String;
+	public fun getCanStartExecute ()Z
+	public fun getCreateComparisonKey ()Ljava/lang/String;
+	public final fun getEnabled ()Z
+	public fun getGroupComparisonType ()Lcom/onesignal/core/internal/operations/GroupComparisonType;
+	public fun getModifyComparisonKey ()Ljava/lang/String;
+	public final fun getOnesignalId ()Ljava/lang/String;
+	public final fun getStatus ()Lcom/onesignal/user/internal/subscriptions/SubscriptionStatus;
+	public final fun getSubscriptionId ()Ljava/lang/String;
+	public final fun getType ()Lcom/onesignal/user/internal/subscriptions/SubscriptionType;
+	public fun translateIds (Ljava/util/Map;)V
+}
+
+public final class com/onesignal/user/internal/operations/impl/states/NewRecordsState {
+	public fun <init> (Lcom/onesignal/core/internal/time/ITime;Lcom/onesignal/core/internal/config/ConfigModelStore;)V
+	public final fun add (Ljava/lang/String;)V
+	public final fun canAccess (Ljava/lang/String;)Z
+	public final fun isInMissingRetryWindow (Ljava/lang/String;)Z
+}
+
+public final class com/onesignal/user/internal/properties/PropertiesModel : com/onesignal/common/modeling/Model {
+	public fun <init> ()V
+	public final fun getCountry ()Ljava/lang/String;
+	public final fun getLanguage ()Ljava/lang/String;
+	public final fun getLocationAccuracy ()Ljava/lang/Float;
+	public final fun getLocationBackground ()Ljava/lang/Boolean;
+	public final fun getLocationLatitude ()Ljava/lang/Double;
+	public final fun getLocationLongitude ()Ljava/lang/Double;
+	public final fun getLocationTimestamp ()Ljava/lang/Long;
+	public final fun getLocationType ()Ljava/lang/Integer;
+	public final fun getOnesignalId ()Ljava/lang/String;
+	public final fun getTags ()Lcom/onesignal/common/modeling/MapModel;
+	public final fun getTimezone ()Ljava/lang/String;
+	public final fun setCountry (Ljava/lang/String;)V
+	public final fun setLanguage (Ljava/lang/String;)V
+	public final fun setLocationAccuracy (Ljava/lang/Float;)V
+	public final fun setLocationBackground (Ljava/lang/Boolean;)V
+	public final fun setLocationLatitude (Ljava/lang/Double;)V
+	public final fun setLocationLongitude (Ljava/lang/Double;)V
+	public final fun setLocationTimestamp (Ljava/lang/Long;)V
+	public final fun setLocationType (Ljava/lang/Integer;)V
+	public final fun setOnesignalId (Ljava/lang/String;)V
+	public final fun setTimezone (Ljava/lang/String;)V
+}
+
+public class com/onesignal/user/internal/properties/PropertiesModelStore : com/onesignal/common/modeling/SingletonModelStore {
+	public fun <init> (Lcom/onesignal/core/internal/preferences/IPreferencesService;)V
+}
+
+public final class com/onesignal/user/internal/service/UserRefreshService : com/onesignal/core/internal/startup/IStartableService, com/onesignal/session/internal/session/ISessionLifecycleHandler {
+	public fun <init> (Lcom/onesignal/core/internal/application/IApplicationService;Lcom/onesignal/session/internal/session/ISessionService;Lcom/onesignal/core/internal/operations/IOperationRepo;Lcom/onesignal/core/internal/config/ConfigModelStore;Lcom/onesignal/user/internal/identity/IdentityModelStore;)V
+	public fun onSessionActive ()V
+	public fun onSessionEnded (J)V
+	public fun onSessionStarted ()V
+	public fun start ()V
+}
+
+public abstract interface class com/onesignal/user/internal/subscriptions/ISubscriptionChangedHandler {
+	public abstract fun onSubscriptionAdded (Lcom/onesignal/user/subscriptions/ISubscription;)V
+	public abstract fun onSubscriptionChanged (Lcom/onesignal/user/subscriptions/ISubscription;Lcom/onesignal/common/modeling/ModelChangedArgs;)V
+	public abstract fun onSubscriptionRemoved (Lcom/onesignal/user/subscriptions/ISubscription;)V
+}
+
+public abstract interface class com/onesignal/user/internal/subscriptions/ISubscriptionManager : com/onesignal/common/events/IEventNotifier {
+	public abstract fun addEmailSubscription (Ljava/lang/String;)V
+	public abstract fun addOrUpdatePushSubscriptionToken (Ljava/lang/String;Lcom/onesignal/user/internal/subscriptions/SubscriptionStatus;)V
+	public abstract fun addSmsSubscription (Ljava/lang/String;)V
+	public abstract fun getPushSubscriptionModel ()Lcom/onesignal/user/internal/subscriptions/SubscriptionModel;
+	public abstract fun getSubscriptions ()Lcom/onesignal/user/internal/subscriptions/SubscriptionList;
+	public abstract fun removeEmailSubscription (Ljava/lang/String;)V
+	public abstract fun removeSmsSubscription (Ljava/lang/String;)V
+	public abstract fun setSubscriptions (Lcom/onesignal/user/internal/subscriptions/SubscriptionList;)V
+}
+
+public final class com/onesignal/user/internal/subscriptions/SubscriptionList {
+	public fun <init> (Ljava/util/List;Lcom/onesignal/user/subscriptions/IPushSubscription;)V
+	public final fun getByEmail (Ljava/lang/String;)Lcom/onesignal/user/subscriptions/IEmailSubscription;
+	public final fun getBySMS (Ljava/lang/String;)Lcom/onesignal/user/subscriptions/ISmsSubscription;
+	public final fun getCollection ()Ljava/util/List;
+	public final fun getEmails ()Ljava/util/List;
+	public final fun getPush ()Lcom/onesignal/user/subscriptions/IPushSubscription;
+	public final fun getSmss ()Ljava/util/List;
+}
+
+public final class com/onesignal/user/internal/subscriptions/SubscriptionModel : com/onesignal/common/modeling/Model {
+	public fun <init> ()V
+	public final fun getAddress ()Ljava/lang/String;
+	public final fun getAppVersion ()Ljava/lang/String;
+	public final fun getCarrier ()Ljava/lang/String;
+	public final fun getDeviceOS ()Ljava/lang/String;
+	public final fun getOptedIn ()Z
+	public final fun getSdk ()Ljava/lang/String;
+	public final fun getStatus ()Lcom/onesignal/user/internal/subscriptions/SubscriptionStatus;
+	public final fun getType ()Lcom/onesignal/user/internal/subscriptions/SubscriptionType;
+	public final fun isDisabledInternally ()Z
+	public final fun setAddress (Ljava/lang/String;)V
+	public final fun setAppVersion (Ljava/lang/String;)V
+	public final fun setCarrier (Ljava/lang/String;)V
+	public final fun setDeviceOS (Ljava/lang/String;)V
+	public final fun setDisabledInternally (Z)V
+	public final fun setOptedIn (Z)V
+	public final fun setSdk (Ljava/lang/String;)V
+	public final fun setStatus (Lcom/onesignal/user/internal/subscriptions/SubscriptionStatus;)V
+	public final fun setType (Lcom/onesignal/user/internal/subscriptions/SubscriptionType;)V
+}
+
+public class com/onesignal/user/internal/subscriptions/SubscriptionModelStore : com/onesignal/common/modeling/SimpleModelStore {
+	public fun <init> (Lcom/onesignal/core/internal/preferences/IPreferencesService;)V
+	public fun replaceAll (Ljava/util/List;Ljava/lang/String;)V
+	public synthetic fun transformJsonForPersistence (Lcom/onesignal/common/modeling/Model;Lorg/json/JSONObject;)Lorg/json/JSONObject;
+	protected fun transformJsonForPersistence (Lcom/onesignal/user/internal/subscriptions/SubscriptionModel;Lorg/json/JSONObject;)Lorg/json/JSONObject;
+}
+
+public final class com/onesignal/user/internal/subscriptions/SubscriptionStatus : java/lang/Enum {
+	public static final field Companion Lcom/onesignal/user/internal/subscriptions/SubscriptionStatus$Companion;
+	public static final field DISABLED_FROM_REST_API_DEFAULT_REASON Lcom/onesignal/user/internal/subscriptions/SubscriptionStatus;
+	public static final field ERROR Lcom/onesignal/user/internal/subscriptions/SubscriptionStatus;
+	public static final field FIREBASE_FCM_ERROR_IOEXCEPTION_AUTHENTICATION_FAILED Lcom/onesignal/user/internal/subscriptions/SubscriptionStatus;
+	public static final field FIREBASE_FCM_ERROR_IOEXCEPTION_OTHER Lcom/onesignal/user/internal/subscriptions/SubscriptionStatus;
+	public static final field FIREBASE_FCM_ERROR_IOEXCEPTION_SERVICE_NOT_AVAILABLE Lcom/onesignal/user/internal/subscriptions/SubscriptionStatus;
+	public static final field FIREBASE_FCM_ERROR_MISC_EXCEPTION Lcom/onesignal/user/internal/subscriptions/SubscriptionStatus;
+	public static final field FIREBASE_FCM_INIT_ERROR Lcom/onesignal/user/internal/subscriptions/SubscriptionStatus;
+	public static final field HMS_API_EXCEPTION_OTHER Lcom/onesignal/user/internal/subscriptions/SubscriptionStatus;
+	public static final field HMS_ARGUMENTS_INVALID Lcom/onesignal/user/internal/subscriptions/SubscriptionStatus;
+	public static final field HMS_TOKEN_TIMEOUT Lcom/onesignal/user/internal/subscriptions/SubscriptionStatus;
+	public static final field INVALID_FCM_SENDER_ID Lcom/onesignal/user/internal/subscriptions/SubscriptionStatus;
+	public static final field MISSING_FIREBASE_FCM_LIBRARY Lcom/onesignal/user/internal/subscriptions/SubscriptionStatus;
+	public static final field MISSING_HMS_PUSHKIT_LIBRARY Lcom/onesignal/user/internal/subscriptions/SubscriptionStatus;
+	public static final field MISSING_JETPACK_LIBRARY Lcom/onesignal/user/internal/subscriptions/SubscriptionStatus;
+	public static final field NO_PERMISSION Lcom/onesignal/user/internal/subscriptions/SubscriptionStatus;
+	public static final field OUTDATED_GOOGLE_PLAY_SERVICES_APP Lcom/onesignal/user/internal/subscriptions/SubscriptionStatus;
+	public static final field OUTDATED_JETPACK_LIBRARY Lcom/onesignal/user/internal/subscriptions/SubscriptionStatus;
+	public static final field SUBSCRIBED Lcom/onesignal/user/internal/subscriptions/SubscriptionStatus;
+	public static final field UNSUBSCRIBE Lcom/onesignal/user/internal/subscriptions/SubscriptionStatus;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public final fun getValue ()I
+	public final fun isRetryableTokenError ()Z
+	public static fun valueOf (Ljava/lang/String;)Lcom/onesignal/user/internal/subscriptions/SubscriptionStatus;
+	public static fun values ()[Lcom/onesignal/user/internal/subscriptions/SubscriptionStatus;
+}
+
+public final class com/onesignal/user/internal/subscriptions/SubscriptionStatus$Companion {
+	public final fun fromInt (I)Lcom/onesignal/user/internal/subscriptions/SubscriptionStatus;
+}
+
+public final class com/onesignal/user/internal/subscriptions/SubscriptionType : java/lang/Enum {
+	public static final field EMAIL Lcom/onesignal/user/internal/subscriptions/SubscriptionType;
+	public static final field PUSH Lcom/onesignal/user/internal/subscriptions/SubscriptionType;
+	public static final field SMS Lcom/onesignal/user/internal/subscriptions/SubscriptionType;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lcom/onesignal/user/internal/subscriptions/SubscriptionType;
+	public static fun values ()[Lcom/onesignal/user/internal/subscriptions/SubscriptionType;
+}
+
+public abstract interface class com/onesignal/user/state/IUserStateObserver {
+	public abstract fun onUserStateChange (Lcom/onesignal/user/state/UserChangedState;)V
+}
+
+public final class com/onesignal/user/state/UserChangedState {
+	public fun <init> (Lcom/onesignal/user/state/UserState;)V
+	public final fun getCurrent ()Lcom/onesignal/user/state/UserState;
+	public final fun toJSONObject ()Lorg/json/JSONObject;
+}
+
+public final class com/onesignal/user/state/UserState {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;)V
+	public final fun getExternalId ()Ljava/lang/String;
+	public final fun getOnesignalId ()Ljava/lang/String;
+	public final fun toJSONObject ()Lorg/json/JSONObject;
+}
+
+public abstract interface class com/onesignal/user/subscriptions/IEmailSubscription : com/onesignal/user/subscriptions/ISubscription {
+	public abstract fun getEmail ()Ljava/lang/String;
+}
+
+public abstract interface class com/onesignal/user/subscriptions/IPushSubscription : com/onesignal/user/subscriptions/ISubscription {
+	public abstract fun addObserver (Lcom/onesignal/user/subscriptions/IPushSubscriptionObserver;)V
+	public abstract fun getOptedIn ()Z
+	public abstract fun getToken ()Ljava/lang/String;
+	public abstract fun optIn ()V
+	public abstract fun optOut ()V
+	public abstract fun removeObserver (Lcom/onesignal/user/subscriptions/IPushSubscriptionObserver;)V
+}
+
+public abstract interface class com/onesignal/user/subscriptions/IPushSubscriptionObserver {
+	public abstract fun onPushSubscriptionChange (Lcom/onesignal/user/subscriptions/PushSubscriptionChangedState;)V
+}
+
+public abstract interface class com/onesignal/user/subscriptions/ISmsSubscription : com/onesignal/user/subscriptions/ISubscription {
+	public abstract fun getNumber ()Ljava/lang/String;
+}
+
+public abstract interface class com/onesignal/user/subscriptions/ISubscription {
+	public abstract fun getId ()Ljava/lang/String;
+}
+
+public final class com/onesignal/user/subscriptions/PushSubscriptionChangedState {
+	public fun <init> (Lcom/onesignal/user/subscriptions/PushSubscriptionState;Lcom/onesignal/user/subscriptions/PushSubscriptionState;)V
+	public final fun getCurrent ()Lcom/onesignal/user/subscriptions/PushSubscriptionState;
+	public final fun getPrevious ()Lcom/onesignal/user/subscriptions/PushSubscriptionState;
+	public final fun toJSONObject ()Lorg/json/JSONObject;
+}
+
+public final class com/onesignal/user/subscriptions/PushSubscriptionState {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Z)V
+	public final fun getId ()Ljava/lang/String;
+	public final fun getOptedIn ()Z
+	public final fun getToken ()Ljava/lang/String;
+	public final fun toJSONObject ()Lorg/json/JSONObject;
+}
+
