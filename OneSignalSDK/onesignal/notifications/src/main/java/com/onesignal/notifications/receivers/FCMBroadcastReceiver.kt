@@ -4,8 +4,6 @@ import android.app.Activity
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import com.onesignal.common.threading.OneSignalDispatchers
-import com.onesignal.common.threading.suspendifyOnIngress
 import com.onesignal.notifications.internal.ingress.NotificationIngress
 
 // This is the entry point when a FCM payload is received from the Google Play services app
@@ -24,28 +22,18 @@ class FCMBroadcastReceiver : BroadcastReceiver() {
             return
         }
 
-        // FCM can cold-start the process before initWithContext. Warm dispatchers before goAsync()
-        // so the prewarm daemon gets a head start during the handoff, making the dispatchers more
-        // likely to be warm by the time the suspendifyOnIO below submits its work.
-        OneSignalDispatchers.prewarm()
+        runIngressHandoff("FCMBroadcastReceiver") {
+            if (!isFCMMessage(intent)) {
+                setSuccessfulResultCode()
+                return@runIngressHandoff
+            }
 
-        val completion = BroadcastCompletion("FCMBroadcastReceiver", goAsync())
-        // process in background
-        suspendifyOnIngress(
-            block = {
-                if (!isFCMMessage(intent)) {
-                    setSuccessfulResultCode()
-                    return@suspendifyOnIngress
-                }
-
-                if (NotificationIngress.persistFcm(context, intent, bundle)) {
-                    setAbort()
-                } else {
-                    setSuccessfulResultCode()
-                }
-            },
-            onComplete = { completion.finish() },
-        )
+            if (NotificationIngress.persistFcm(context, intent, bundle)) {
+                setAbort()
+            } else {
+                setSuccessfulResultCode()
+            }
+        }
     }
 
     private fun setSuccessfulResultCode() {

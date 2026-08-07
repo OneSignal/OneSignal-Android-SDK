@@ -96,6 +96,13 @@ object OneSignalDispatchers {
         }
     }
 
+    private data class LaneConfig(
+        val corePoolSize: Int,
+        val maxPoolSize: Int,
+        val threadName: String,
+        val priority: Int = Thread.NORM_PRIORITY,
+    )
+
     /**
      * A stable dispatcher that queues work until its backing executor has been built and
      * prestarted on the bootstrap thread. CoroutineScope.launch can therefore return its real Job
@@ -309,72 +316,66 @@ object OneSignalDispatchers {
         val DefaultScope = CoroutineScope(SupervisorJob() + Default)
         val SerialIOScope = CoroutineScope(SupervisorJob() + SerialIO)
         val IngressScope = CoroutineScope(SupervisorJob() + Ingress)
+        private val gates = listOf(IO, Default, SerialIO, Ingress)
+        private val scopes = listOf(IOScope, DefaultScope, SerialIOScope, IngressScope)
 
         fun prewarm() {
-            IO.requestWarmup()
-            Default.requestWarmup()
-            SerialIO.requestWarmup()
-            Ingress.requestWarmup()
+            gates.forEach { it.requestWarmup() }
         }
 
         fun shutdown() {
-            IOScope.cancel()
-            DefaultScope.cancel()
-            SerialIOScope.cancel()
-            IngressScope.cancel()
-            IO.close()
-            Default.close()
-            SerialIO.close()
-            Ingress.close()
+            scopes.forEach { it.cancel() }
+            gates.forEach { it.close() }
         }
     }
 
-    @Suppress("LongMethod")
     private fun createTarget(lane: Lane): LaneTarget {
         beforeLaneCreateForTest?.invoke(lane.name)
+        val config = lane.config()
         val executor =
-            when (lane) {
-                Lane.IO ->
-                    ThreadPoolExecutor(
-                        IO_CORE_POOL_SIZE,
-                        IO_MAX_POOL_SIZE,
-                        KEEP_ALIVE_TIME_SECONDS,
-                        TimeUnit.SECONDS,
-                        LinkedBlockingQueue(QUEUE_CAPACITY),
-                        OptimizedThreadFactory(IO_THREAD_NAME_PREFIX, Thread.NORM_PRIORITY - 1),
-                    )
-                Lane.DEFAULT ->
-                    ThreadPoolExecutor(
-                        DEFAULT_CORE_POOL_SIZE,
-                        DEFAULT_MAX_POOL_SIZE,
-                        KEEP_ALIVE_TIME_SECONDS,
-                        TimeUnit.SECONDS,
-                        LinkedBlockingQueue(QUEUE_CAPACITY),
-                        OptimizedThreadFactory(DEFAULT_THREAD_NAME_PREFIX),
-                    )
-                Lane.SERIAL_IO ->
-                    ThreadPoolExecutor(
-                        1,
-                        1,
-                        KEEP_ALIVE_TIME_SECONDS,
-                        TimeUnit.SECONDS,
-                        LinkedBlockingQueue(QUEUE_CAPACITY),
-                        OptimizedThreadFactory(SERIAL_IO_THREAD_NAME, Thread.NORM_PRIORITY - 1),
-                    )
-                Lane.INGRESS ->
-                    ThreadPoolExecutor(
-                        1,
-                        1,
-                        KEEP_ALIVE_TIME_SECONDS,
-                        TimeUnit.SECONDS,
-                        LinkedBlockingQueue(QUEUE_CAPACITY),
-                        OptimizedThreadFactory(INGRESS_THREAD_NAME, Thread.NORM_PRIORITY - 1),
-                    )
-            }
+            ThreadPoolExecutor(
+                config.corePoolSize,
+                config.maxPoolSize,
+                KEEP_ALIVE_TIME_SECONDS,
+                TimeUnit.SECONDS,
+                LinkedBlockingQueue(QUEUE_CAPACITY),
+                OptimizedThreadFactory(config.threadName, config.priority),
+            )
         executor.allowCoreThreadTimeOut(false)
         executor.prestartAllCoreThreads()
         return LaneTarget(executor.asCoroutineDispatcher(), executor)
     }
+
+    private fun Lane.config(): LaneConfig =
+        when (this) {
+            Lane.IO ->
+                LaneConfig(
+                    IO_CORE_POOL_SIZE,
+                    IO_MAX_POOL_SIZE,
+                    IO_THREAD_NAME_PREFIX,
+                    Thread.NORM_PRIORITY - 1,
+                )
+            Lane.DEFAULT ->
+                LaneConfig(
+                    DEFAULT_CORE_POOL_SIZE,
+                    DEFAULT_MAX_POOL_SIZE,
+                    DEFAULT_THREAD_NAME_PREFIX,
+                )
+            Lane.SERIAL_IO ->
+                LaneConfig(
+                    1,
+                    1,
+                    SERIAL_IO_THREAD_NAME,
+                    Thread.NORM_PRIORITY - 1,
+                )
+            Lane.INGRESS ->
+                LaneConfig(
+                    1,
+                    1,
+                    INGRESS_THREAD_NAME,
+                    Thread.NORM_PRIORITY - 1,
+                )
+        }
 
     private fun createFallbackTarget(lane: Lane): LaneTarget {
         val dispatcher =

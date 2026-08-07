@@ -4,8 +4,20 @@ import android.content.BroadcastReceiver
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
+import com.onesignal.common.threading.OneSignalDispatchers
+import com.onesignal.common.threading.suspendifyOnIngress
 import com.onesignal.debug.internal.logging.Logging
 import java.util.concurrent.atomic.AtomicBoolean
+
+internal fun BroadcastReceiver.runIngressHandoff(
+    receiverName: String,
+    timeoutMs: Long? = null,
+    block: suspend () -> Unit,
+) {
+    OneSignalDispatchers.prewarm()
+    val completion = BroadcastCompletion(receiverName, goAsync(), timeoutMs)
+    suspendifyOnIngress(block = block, onComplete = { completion.finish() })
+}
 
 internal class BroadcastCompletion(
     private val receiverName: String,

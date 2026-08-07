@@ -82,22 +82,22 @@ internal object NotificationIngress {
             .enqueueUniqueWork(DRAIN_WORK_NAME, ExistingWorkPolicy.KEEP, request)
     }
 
-    @Suppress("TooGenericExceptionCaught")
     private fun scheduleDrainBestEffort(context: Context) {
         if (drainSchedulerForTest != null) {
-            try {
-                scheduleDrain(context)
-            } catch (e: Exception) {
-                Logging.warn("Notification ingress persisted; drain scheduling will retry on next startup", e)
-            }
+            scheduleDrainSafely(context)
             return
         }
         OneSignalDispatchers.launchOnIO {
-            try {
-                scheduleDrain(context)
-            } catch (e: Exception) {
-                Logging.warn("Notification ingress persisted; drain scheduling will retry on next startup", e)
-            }
+            scheduleDrainSafely(context)
+        }
+    }
+
+    @Suppress("TooGenericExceptionCaught")
+    private fun scheduleDrainSafely(context: Context) {
+        try {
+            scheduleDrain(context)
+        } catch (e: Exception) {
+            Logging.warn("Notification ingress persisted; drain scheduling will retry on next startup", e)
         }
     }
 

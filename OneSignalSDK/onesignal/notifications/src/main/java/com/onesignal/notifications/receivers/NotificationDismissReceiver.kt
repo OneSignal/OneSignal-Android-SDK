@@ -27,8 +27,6 @@ package com.onesignal.notifications.receivers
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import com.onesignal.common.threading.OneSignalDispatchers
-import com.onesignal.common.threading.suspendifyOnIngress
 import com.onesignal.notifications.internal.ingress.NotificationIngress
 
 class NotificationDismissReceiver : BroadcastReceiver() {
@@ -36,17 +34,8 @@ class NotificationDismissReceiver : BroadcastReceiver() {
         context: Context,
         intent: Intent,
     ) {
-        // A dismiss can cold-start the process before initWithContext. Warm dispatchers before
-        // goAsync() so the daemon has lead time before the first suspendifyOnIO dispatch.
-        OneSignalDispatchers.prewarm()
-
-        val completion = BroadcastCompletion("NotificationDismissReceiver", goAsync())
-
-        suspendifyOnIngress(
-            block = {
-                NotificationIngress.persistDismiss(context, intent)
-            },
-            onComplete = { completion.finish() },
-        )
+        runIngressHandoff("NotificationDismissReceiver") {
+            NotificationIngress.persistDismiss(context, intent)
+        }
     }
 }
