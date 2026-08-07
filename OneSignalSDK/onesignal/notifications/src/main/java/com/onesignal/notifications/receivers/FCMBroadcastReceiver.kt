@@ -4,11 +4,7 @@ import android.app.Activity
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import com.onesignal.OneSignal
-import com.onesignal.common.threading.OneSignalDispatchers
-import com.onesignal.common.threading.suspendifyOnIO
-import com.onesignal.debug.internal.logging.Logging
-import com.onesignal.notifications.internal.bundle.INotificationBundleProcessor
+import com.onesignal.notifications.internal.ingress.NotificationIngress
 
 // This is the entry point when a FCM payload is received from the Google Play services app
 // OneSignal does not use FirebaseMessagingService.onMessageReceived as it does not allow multiple
@@ -26,39 +22,17 @@ class FCMBroadcastReceiver : BroadcastReceiver() {
             return
         }
 
-        // FCM can cold-start the process before initWithContext. Warm dispatchers before goAsync()
-        // so the prewarm daemon gets a head start during the handoff, making the dispatchers more
-        // likely to be warm by the time the suspendifyOnIO below submits its work.
-        OneSignalDispatchers.prewarm()
-
-        val pendingResult: BroadcastReceiver.PendingResult? = goAsync()
-        // process in background
-        suspendifyOnIO {
-            if (!OneSignal.initWithContext(context.applicationContext)) {
-                Logging.warn("FCMBroadcastReceiver skipped due to failed OneSignal init")
-                pendingResult?.finish()
-                return@suspendifyOnIO
-            }
-
-            val bundleProcessor = OneSignal.getService<INotificationBundleProcessor>()
-
+        runIngressHandoff("FCMBroadcastReceiver") {
             if (!isFCMMessage(intent)) {
                 setSuccessfulResultCode()
-                pendingResult?.finish()
-                return@suspendifyOnIO
+                return@runIngressHandoff
             }
 
-            val processedResult = bundleProcessor.processBundleFromReceiver(context, bundle)
-
-            // Prevent other FCM receivers from firing if work manager is processing the notification
-            if (processedResult?.isWorkManagerProcessing == true) {
+            if (NotificationIngress.persistFcm(context, intent, bundle)) {
                 setAbort()
-                pendingResult?.finish()
-                return@suspendifyOnIO
+            } else {
+                setSuccessfulResultCode()
             }
-
-            setSuccessfulResultCode()
-            pendingResult?.finish()
         }
     }
 

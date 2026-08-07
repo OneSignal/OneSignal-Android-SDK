@@ -18,6 +18,7 @@ import org.json.JSONObject
 import java.util.concurrent.ConcurrentHashMap
 
 internal class NotificationGenerationWorkManager : INotificationGenerationWorkManager {
+    @Suppress("ReturnCount", "TooGenericExceptionCaught")
     override fun beginEnqueueingWork(
         context: Context,
         osNotificationId: String,
@@ -39,26 +40,30 @@ internal class NotificationGenerationWorkManager : INotificationGenerationWorkMa
             return true
         }
 
-        // TODO: Need to figure out how to implement the isHighPriority param
-        val inputData =
-            Data.Builder()
-                .putString(OS_ID_DATA_PARAM, id)
-                .putInt(ANDROID_NOTIF_ID_WORKER_DATA_PARAM, androidNotificationId)
-                .putString(JSON_PAYLOAD_WORKER_DATA_PARAM, jsonPayload.toString())
-                .putLong(TIMESTAMP_WORKER_DATA_PARAM, timestamp)
-                .putBoolean(IS_RESTORING_WORKER_DATA_PARAM, isRestoring)
-                .build()
-        val workRequest =
-            OneTimeWorkRequest.Builder(NotificationGenerationWorker::class.java)
-                .setInputData(inputData)
-                .build()
-        Logging.debug(
-            "NotificationWorkManager enqueueing notification work with notificationId: $osNotificationId and jsonPayload: $jsonPayload",
-        )
-        OSWorkManagerHelper.getInstance(context)
-            .enqueueUniqueWork(osNotificationId, ExistingWorkPolicy.KEEP, workRequest)
-
-        return true
+        return try {
+            // TODO: Need to figure out how to implement the isHighPriority param
+            val inputData =
+                Data.Builder()
+                    .putString(OS_ID_DATA_PARAM, id)
+                    .putInt(ANDROID_NOTIF_ID_WORKER_DATA_PARAM, androidNotificationId)
+                    .putString(JSON_PAYLOAD_WORKER_DATA_PARAM, jsonPayload.toString())
+                    .putLong(TIMESTAMP_WORKER_DATA_PARAM, timestamp)
+                    .putBoolean(IS_RESTORING_WORKER_DATA_PARAM, isRestoring)
+                    .build()
+            val workRequest =
+                OneTimeWorkRequest.Builder(NotificationGenerationWorker::class.java)
+                    .setInputData(inputData)
+                    .build()
+            Logging.debug(
+                "NotificationWorkManager enqueueing notification work with notificationId: $osNotificationId and jsonPayload: $jsonPayload",
+            )
+            OSWorkManagerHelper.getInstance(context)
+                .enqueueUniqueWork(osNotificationId, ExistingWorkPolicy.KEEP, workRequest)
+            true
+        } catch (e: Exception) {
+            removeNotificationIdProcessed(id)
+            throw e
+        }
     }
 
     class NotificationGenerationWorker(context: Context, workerParams: WorkerParameters) : CoroutineWorker(context, workerParams) {
@@ -71,12 +76,13 @@ internal class NotificationGenerationWorkManager : INotificationGenerationWorkMa
             val notificationProcessor: INotificationGenerationProcessor = OneSignal.getService()
             val inputData = inputData
             val id = inputData.getString(OS_ID_DATA_PARAM) ?: return Result.failure()
+            val payload = inputData.getString(JSON_PAYLOAD_WORKER_DATA_PARAM) ?: return Result.failure()
 
             return try {
                 Logging.debug("NotificationWorker running doWork with data: $inputData")
 
                 val androidNotificationId = inputData.getInt(ANDROID_NOTIF_ID_WORKER_DATA_PARAM, 0)
-                val jsonPayload = JSONObject(inputData.getString(JSON_PAYLOAD_WORKER_DATA_PARAM))
+                val jsonPayload = JSONObject(payload)
                 val timestamp =
                     inputData.getLong(
                         TIMESTAMP_WORKER_DATA_PARAM,
@@ -96,7 +102,7 @@ internal class NotificationGenerationWorkManager : INotificationGenerationWorkMa
                 Logging.error("Error occurred doing work for job with id: $id", e)
                 Result.failure()
             } finally {
-                removeNotificationIdProcessed(id!!)
+                removeNotificationIdProcessed(id)
             }
         }
     }
