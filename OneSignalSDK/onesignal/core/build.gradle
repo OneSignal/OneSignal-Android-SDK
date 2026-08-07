@@ -114,6 +114,12 @@ dependencies {
 
     // com.tdunning:json is needed for non-Robolectric tests.
     testImplementation("com.tdunning:json:$tdunningJsonForTest")
+
+    // The Java interop tests are the one place we assert what a Java caller sees, so they have to
+    // be written in Java. Robolectric only ships a JUnit 4 runner, and this module runs on the
+    // JUnit Platform for Kotest, so the vintage engine is what lets both live in one source set.
+    testImplementation("junit:junit:$junit4Version")
+    testRuntimeOnly("org.junit.vintage:junit-vintage-engine:$junitVintageVersion")
 }
 
 apply from: '../detekt.gradle'
