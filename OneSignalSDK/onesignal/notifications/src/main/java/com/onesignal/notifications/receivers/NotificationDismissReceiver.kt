@@ -27,13 +27,9 @@ package com.onesignal.notifications.receivers
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import com.onesignal.OneSignal
 import com.onesignal.common.threading.OneSignalDispatchers
-import com.onesignal.common.threading.suspendifyOnIO
-import com.onesignal.debug.internal.logging.Logging
-import com.onesignal.notifications.internal.open.INotificationOpenedProcessor
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import com.onesignal.common.threading.suspendifyOnIngress
+import com.onesignal.notifications.internal.ingress.NotificationIngress
 
 class NotificationDismissReceiver : BroadcastReceiver() {
     override fun onReceive(
@@ -44,23 +40,13 @@ class NotificationDismissReceiver : BroadcastReceiver() {
         // goAsync() so the daemon has lead time before the first suspendifyOnIO dispatch.
         OneSignalDispatchers.prewarm()
 
-        val pendingResult: BroadcastReceiver.PendingResult? = goAsync()
+        val completion = BroadcastCompletion("NotificationDismissReceiver", goAsync())
 
-        suspendifyOnIO(
+        suspendifyOnIngress(
             block = {
-                if (!OneSignal.initWithContext(context.applicationContext)) {
-                    Logging.warn("NotificationOpenedReceiver skipped due to failed OneSignal init")
-                    return@suspendifyOnIO
-                }
-
-                val notificationOpenedProcessor = OneSignal.getService<INotificationOpenedProcessor>()
-
-                // init OneSignal in background but process in main
-                withContext(Dispatchers.Main) {
-                    notificationOpenedProcessor.processFromContext(context, intent)
-                }
+                NotificationIngress.persistDismiss(context, intent)
             },
-            onComplete = { pendingResult?.finish() },
+            onComplete = { completion.finish() },
         )
     }
 }

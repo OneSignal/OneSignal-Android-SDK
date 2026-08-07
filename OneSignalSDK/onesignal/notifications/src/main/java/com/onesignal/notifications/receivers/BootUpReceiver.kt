@@ -29,11 +29,9 @@ package com.onesignal.notifications.receivers
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import com.onesignal.OneSignal
 import com.onesignal.common.threading.OneSignalDispatchers
-import com.onesignal.common.threading.suspendifyOnIO
-import com.onesignal.debug.internal.logging.Logging
-import com.onesignal.notifications.internal.restoration.INotificationRestoreWorkManager
+import com.onesignal.common.threading.suspendifyOnIngress
+import com.onesignal.notifications.internal.ingress.NotificationIngress
 
 class BootUpReceiver : BroadcastReceiver() {
     override fun onReceive(
@@ -44,19 +42,18 @@ class BootUpReceiver : BroadcastReceiver() {
         // goAsync() so the daemon has lead time before the first suspendifyOnIO dispatch.
         OneSignalDispatchers.prewarm()
 
-        val pendingResult: BroadcastReceiver.PendingResult? = goAsync()
-        // in background, init onesignal and begin enqueueing restore work
-        suspendifyOnIO(
+        val completion =
+            BroadcastCompletion(
+                "BootUpReceiver",
+                goAsync(),
+                BroadcastCompletion.RECONSTRUCTIBLE_WORK_TIMEOUT_MS,
+            )
+        // Persist the reconstructible restore request without waiting for full SDK initialization.
+        suspendifyOnIngress(
             block = {
-                if (!OneSignal.initWithContext(context.applicationContext)) {
-                    Logging.warn("NotificationRestoreReceiver skipped due to failed OneSignal init")
-                    return@suspendifyOnIO
-                }
-
-                val restoreWorkManager = OneSignal.getService<INotificationRestoreWorkManager>()
-                restoreWorkManager.beginEnqueueingWork(context, true)
+                NotificationIngress.enqueueRestore(context)
             },
-            onComplete = { pendingResult?.finish() },
+            onComplete = { completion.finish() },
         )
     }
 }

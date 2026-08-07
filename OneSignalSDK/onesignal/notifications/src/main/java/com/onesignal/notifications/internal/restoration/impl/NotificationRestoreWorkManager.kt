@@ -12,38 +12,32 @@ import com.onesignal.notifications.internal.common.OSWorkManagerHelper
 import com.onesignal.notifications.internal.restoration.INotificationRestoreProcessor
 import com.onesignal.notifications.internal.restoration.INotificationRestoreWorkManager
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 
 internal class NotificationRestoreWorkManager : INotificationRestoreWorkManager {
-    // Notifications will never be force removed when the app's process is running,
-    //   so we only need to restore at most once per cold start of the app.
-    private var restored = false
-    private val lock = Any()
-
+    @Suppress("TooGenericExceptionCaught")
     override fun beginEnqueueingWork(
         context: Context,
         shouldDelay: Boolean,
     ) {
-        // Only allow one piece of work to be enqueued.
-        synchronized(lock) {
-            if (restored) {
-                return
-            }
+        if (!restored.compareAndSet(false, true)) return
 
-            restored = true
+        try {
+            val restoreDelayInSeconds = if (shouldDelay) 15 else 0
+            val workRequest =
+                OneTimeWorkRequest.Builder(NotificationRestoreWorker::class.java)
+                    .setInitialDelay(restoreDelayInSeconds.toLong(), TimeUnit.SECONDS)
+                    .build()
+            OSWorkManagerHelper.getInstance(context)
+                .enqueueUniqueWork(
+                    NOTIFICATION_RESTORE_WORKER_IDENTIFIER,
+                    ExistingWorkPolicy.KEEP,
+                    workRequest,
+                )
+        } catch (e: Exception) {
+            restored.set(false)
+            throw e
         }
-
-        // When boot or upgrade, add a 15 second delay to alleviate app doing to much work all at once
-        val restoreDelayInSeconds = if (shouldDelay) 15 else 0
-        val workRequest =
-            OneTimeWorkRequest.Builder(NotificationRestoreWorker::class.java)
-                .setInitialDelay(restoreDelayInSeconds.toLong(), TimeUnit.SECONDS)
-                .build()
-        OSWorkManagerHelper.getInstance(context!!)
-            .enqueueUniqueWork(
-                NOTIFICATION_RESTORE_WORKER_IDENTIFIER,
-                ExistingWorkPolicy.KEEP,
-                workRequest,
-            )
     }
 
     class NotificationRestoreWorker(context: Context, workerParams: WorkerParameters) : CoroutineWorker(context, workerParams) {
@@ -69,6 +63,8 @@ internal class NotificationRestoreWorkManager : INotificationRestoreWorkManager 
     }
 
     companion object {
-        private val NOTIFICATION_RESTORE_WORKER_IDENTIFIER = NotificationRestoreWorker::class.java.canonicalName
+        private val NOTIFICATION_RESTORE_WORKER_IDENTIFIER =
+            NotificationRestoreWorker::class.java.canonicalName ?: NotificationRestoreWorker::class.java.name
+        private val restored = AtomicBoolean(false)
     }
 }

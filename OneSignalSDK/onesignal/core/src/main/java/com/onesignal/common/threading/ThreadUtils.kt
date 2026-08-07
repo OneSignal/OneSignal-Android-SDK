@@ -1,3 +1,5 @@
+@file:Suppress("TooManyFunctions")
+
 package com.onesignal.common.threading
 
 import com.onesignal.debug.internal.logging.Logging
@@ -65,6 +67,28 @@ fun suspendifyOnIO(
  */
 fun suspendifyOnIO(block: suspend () -> Unit) {
     suspendifyWithCompletion(useIO = true, block = block, onComplete = null)
+}
+
+/** Runs short, deadline-sensitive ingress work on its isolated serial dispatcher. */
+fun suspendifyOnIngress(
+    block: suspend () -> Unit,
+    onComplete: (() -> Unit)? = null,
+) {
+    val job =
+        OneSignalDispatchers.launchOnIngress {
+            try {
+                block()
+            } catch (e: Exception) {
+                Logging.error("Exception in suspendifyOnIngress", e)
+            }
+        }
+    job.invokeOnCompletion {
+        try {
+            onComplete?.invoke()
+        } catch (e: Exception) {
+            Logging.error("Exception in suspendifyOnIngress onComplete", e)
+        }
+    }
 }
 
 /**

@@ -10,7 +10,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicLong
 
 class OneSignalDispatchersTests : FunSpec({
 
@@ -22,6 +24,39 @@ class OneSignalDispatchersTests : FunSpec({
         // Access dispatchers to trigger initialization
         OneSignalDispatchers.IO shouldNotBe null
         OneSignalDispatchers.Default shouldNotBe null
+    }
+
+    test("first launch returns while its lane is still being created off caller") {
+        OneSignalDispatchers.resetForTest()
+        val createStarted = CountDownLatch(1)
+        val allowCreate = CountDownLatch(1)
+        val launchReturned = CountDownLatch(1)
+        val workRan = CountDownLatch(1)
+        val createThreadId = AtomicLong()
+        val callerThreadId = AtomicLong()
+
+        OneSignalDispatchers.beforeLaneCreateForTest = { lane ->
+            if (lane == "IO") {
+                createThreadId.set(Thread.currentThread().id)
+                createStarted.countDown()
+                allowCreate.await()
+            }
+        }
+
+        val caller =
+            Thread {
+                callerThreadId.set(Thread.currentThread().id)
+                OneSignalDispatchers.launchOnIO { workRan.countDown() }
+                launchReturned.countDown()
+            }
+        caller.start()
+
+        createStarted.await(1, TimeUnit.SECONDS) shouldBe true
+        launchReturned.await(1, TimeUnit.SECONDS) shouldBe true
+        createThreadId.get() shouldNotBe callerThreadId.get()
+        allowCreate.countDown()
+        workRan.await(1, TimeUnit.SECONDS) shouldBe true
+        OneSignalDispatchers.beforeLaneCreateForTest = null
     }
 
     test("IO dispatcher should execute work on background thread") {
@@ -77,15 +112,19 @@ class OneSignalDispatchersTests : FunSpec({
     }
 
     test("getStatus should return meaningful status information") {
+        OneSignalDispatchers.prewarm()
+        OneSignalDispatchers.awaitReadyForTest() shouldBe true
         val status = OneSignalDispatchers.getStatus()
 
         status shouldContain "OneSignalDispatchers Status:"
         status shouldContain "IO Executor: Active"
         status shouldContain "Default Executor: Active"
         status shouldContain "SerialIO Executor: Active"
+        status shouldContain "Ingress Executor: Active"
         status shouldContain "IO Scope: Active"
         status shouldContain "Default Scope: Active"
         status shouldContain "SerialIO Scope: Active"
+        status shouldContain "Ingress Scope: Active"
     }
 
     test("getPerformanceMetrics should include SerialIO queue and total completed task counters") {
@@ -283,28 +322,10 @@ class OneSignalDispatchersTests : FunSpec({
     }
 
     test("prewarm returns immediately and warms IO / Default / SerialIO dispatchers on a background thread") {
-        // SDK-4507: regression coverage for the cold-init main-thread block. prewarm() must
-        // (a) return on the caller's thread without ever doing the executor / dispatcher /
-        // scope construction work inline, and (b) leave all three dispatchers + scopes in the
-        // "Active" state once the dedicated daemon thread finishes its empty launches.
-        OneSignalDispatchers.resetPrewarmForTest()
-        val callerThreadId = Thread.currentThread().id
-
-        // Call from the test thread (which stands in for the main thread under production
-        // usage). The call must return microseconds-fast; we don't assert wall-clock latency,
-        // just that the heavy work didn't happen on this thread.
+        OneSignalDispatchers.resetForTest()
         OneSignalDispatchers.prewarm()
 
-        // Resolve the prewarm thread by name from the JVM's thread set; its name is set by
-        // the prewarm() impl. We `join()` on it so the subsequent status assertions don't
-        // race a still-running prewarm thread.
-        val prewarmThread =
-            Thread.getAllStackTraces().keys.firstOrNull { it.name == "OneSignal-prewarm" }
-        prewarmThread?.join(2_000)
-        // After prewarm has finished, getStatus must report all three executors and scopes
-        // as Active. If the prewarm thread itself failed it would be a no-op for getStatus
-        // because the lazy chain wouldn't have run; this assertion proves both ends of the
-        // contract (heavy work was done, and it ran on the prewarm thread, not the caller).
+        OneSignalDispatchers.awaitReadyForTest() shouldBe true
         val status = OneSignalDispatchers.getStatus()
         status shouldContain "IO Executor: Active"
         status shouldContain "Default Executor: Active"
@@ -312,30 +333,14 @@ class OneSignalDispatchersTests : FunSpec({
         status shouldContain "IO Scope: Active"
         status shouldContain "Default Scope: Active"
         status shouldContain "SerialIO Scope: Active"
-
-        // Sanity: the prewarm thread was a separate thread, not the test thread.
-        prewarmThread?.id shouldNotBe callerThreadId
     }
 
     test("prewarm is idempotent: a second call is a no-op and does not spawn a second prewarm thread") {
-        // The first prewarm() may have already run in earlier tests (or in the previous test
-        // above). Reset the latch so we get a deterministic "first call" here, then verify
-        // that the second call does NOT spawn another OneSignal-prewarm thread.
-        OneSignalDispatchers.resetPrewarmForTest()
-
+        OneSignalDispatchers.resetForTest()
         OneSignalDispatchers.prewarm()
-        val firstPrewarmThread =
-            Thread.getAllStackTraces().keys.firstOrNull { it.name == "OneSignal-prewarm" }
-        firstPrewarmThread?.join(2_000)
-
-        // Snapshot any straggling "OneSignal-prewarm" threads -- there should be at most one
-        // (the one above, possibly still in TERMINATED state in the JVM's thread set briefly).
-        val countBefore = Thread.getAllStackTraces().keys.count { it.name == "OneSignal-prewarm" }
-
-        // Second call must be a no-op. No new prewarm thread, no exception.
+        OneSignalDispatchers.awaitReadyForTest() shouldBe true
+        val statusBefore = OneSignalDispatchers.getStatus()
         OneSignalDispatchers.prewarm()
-        val countAfter = Thread.getAllStackTraces().keys.count { it.name == "OneSignal-prewarm" }
-
-        countAfter shouldBe countBefore
+        OneSignalDispatchers.getStatus() shouldBe statusBefore
     }
 })

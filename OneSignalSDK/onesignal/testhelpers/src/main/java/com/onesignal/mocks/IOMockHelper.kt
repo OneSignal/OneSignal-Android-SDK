@@ -2,6 +2,7 @@ package com.onesignal.mocks
 
 import com.onesignal.common.threading.OneSignalDispatchers
 import com.onesignal.common.threading.runOnSerialIO
+import com.onesignal.common.threading.suspendifyOnIngress
 import com.onesignal.common.threading.suspendifyOnIO
 import com.onesignal.common.threading.suspendifyOnMain
 import com.onesignal.common.threading.suspendifyOnSerialIO
@@ -149,6 +150,18 @@ object IOMockHelper : BeforeSpecListener, AfterSpecListener, BeforeTestListener,
             }
         }
 
+        every { suspendifyOnIngress(any<suspend () -> Unit>(), any<() -> Unit>()) } answers {
+            val block = firstArg<suspend () -> Unit>()
+            val onComplete = secondArg<() -> Unit>()
+            trackAsyncWork {
+                try {
+                    block()
+                } finally {
+                    onComplete()
+                }
+            }
+        }
+
         every { suspendifyOnSerialIO(any<suspend () -> Unit>()) } answers {
             val block = firstArg<suspend () -> Unit>()
             trackAsyncWork(block)
@@ -185,6 +198,12 @@ object IOMockHelper : BeforeSpecListener, AfterSpecListener, BeforeTestListener,
             val block = firstArg<suspend () -> Unit>()
             trackAsyncWork(block)
             // Return a mock Job (launchOnDefault returns a Job)
+            mockk<Job>(relaxed = true)
+        }
+
+        every { OneSignalDispatchers.launchOnIngress(any<suspend () -> Unit>()) } answers {
+            val block = firstArg<suspend () -> Unit>()
+            trackAsyncWork(block)
             mockk<Job>(relaxed = true)
         }
     }
