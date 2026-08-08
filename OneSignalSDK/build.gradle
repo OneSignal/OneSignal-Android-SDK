@@ -20,6 +20,10 @@ buildscript {
         kotlinxSerializationJsonVersion = '1.6.3'
         kotestVersion = '5.8.0'
         ioMockVersion = '1.13.2'
+        // JUnit 4 for the Java interop tests. The vintage engine runs them on the JUnit Platform
+        // that Kotest already uses, so its version tracks that platform (5.x) rather than JUnit 4.
+        junit4Version = '4.13.2'
+        junitVintageVersion = '5.8.2'
         // AndroidX Lifecycle and Activity versions
         lifecycleVersion = '2.6.2'
         activityVersion = '1.7.2'
