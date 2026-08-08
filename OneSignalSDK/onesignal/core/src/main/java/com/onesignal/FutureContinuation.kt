@@ -9,6 +9,7 @@ import java.util.concurrent.ExecutionException
 import java.util.concurrent.Future
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
+import java.util.concurrent.atomic.AtomicReference
 import kotlin.coroutines.Continuation
 import kotlin.coroutines.CoroutineContext
 
@@ -49,16 +50,24 @@ class FutureContinuation<R> internal constructor() : Continuation<R>, Future<R> 
 
     private val completed = CountDownLatch(1)
 
-    @Volatile
-    private var value: R? = null
+    /**
+     * The one outcome, claimed by compare-and-set.
+     *
+     * A single slot rather than separate value and failure fields so that resuming once is enforced
+     * rather than merely asked for, and so that two resumes cannot interleave into a state that is
+     * neither of the results which arrived.
+     */
+    private val outcome = AtomicReference<Result<R>?>(null)
 
-    @Volatile
-    private var failure: Throwable? = null
-
+    /**
+     * @throws IllegalStateException if this instance has already been resumed. Accepting a second
+     * result quietly would leave the [Future] reporting an outcome belonging to some other call,
+     * which is worse than failing where the mistake was made.
+     */
     override fun resumeWith(result: Result<R>) {
-        failure = result.exceptionOrNull()
-        if (failure == null) {
-            value = result.getOrNull()
+        check(outcome.compareAndSet(null, result)) {
+            "This FutureContinuation has already been resumed. Each one backs a single call, so use " +
+                "a fresh Continue.future() for every suspending call."
         }
         completed.countDown()
     }
@@ -71,7 +80,9 @@ class FutureContinuation<R> internal constructor() : Continuation<R>, Future<R> 
      * answer is needed on the main thread.
      * @throws ExecutionException if the call threw. The original throwable is the [Throwable.cause].
      * @throws CancellationException if the call was cancelled.
+     * @throws InterruptedException if the waiting thread is interrupted.
      */
+    @Throws(InterruptedException::class, ExecutionException::class)
     override fun get(): R {
         refuseMainThread()
         completed.await()
@@ -84,6 +95,7 @@ class FutureContinuation<R> internal constructor() : Continuation<R>, Future<R> 
      * Throws as [get] does, plus [TimeoutException] if the call had not completed in time. A
      * timeout leaves the underlying call running — this bridge has no handle on it, see [cancel].
      */
+    @Throws(InterruptedException::class, ExecutionException::class, TimeoutException::class)
     override fun get(
         timeout: Long,
         unit: TimeUnit,
@@ -97,7 +109,7 @@ class FutureContinuation<R> internal constructor() : Continuation<R>, Future<R> 
 
     override fun isDone(): Boolean = completed.count == 0L
 
-    override fun isCancelled(): Boolean = isDone && failure is CancellationException
+    override fun isCancelled(): Boolean = outcome.get()?.exceptionOrNull() is CancellationException
 
     /**
      * Always returns `false`: this continuation is handed to a suspending function that the caller
@@ -108,16 +120,13 @@ class FutureContinuation<R> internal constructor() : Continuation<R>, Future<R> 
     override fun cancel(mayInterruptIfRunning: Boolean): Boolean = false
 
     private fun valueOrThrow(): R {
-        when (val thrown = failure) {
-            null -> {
-                @Suppress("UNCHECKED_CAST")
-                return value as R
-            }
-            // Future specifies CancellationException directly and everything else wrapped, which
-            // also keeps a cancelled call from being mistaken for a failed one.
-            is CancellationException -> throw thrown
-            else -> throw ExecutionException(thrown)
-        }
+        // Only reached once the latch has opened, which cannot happen before the slot is filled.
+        val result = outcome.get()!!
+        val thrown = result.exceptionOrNull() ?: return result.getOrThrow()
+        // Future specifies CancellationException directly and everything else wrapped, which also
+        // keeps a cancelled call from being mistaken for a failed one.
+        if (thrown is CancellationException) throw thrown
+        throw ExecutionException(thrown)
     }
 
     // Refused whether or not the value has already arrived. Allowing the already-complete case

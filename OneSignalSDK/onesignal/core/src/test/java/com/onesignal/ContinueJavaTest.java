@@ -2,6 +2,7 @@ package com.onesignal;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
@@ -162,6 +163,38 @@ public class ContinueJavaTest {
             ExecutionException thrown = (ExecutionException) wrapper.getCause();
             assertEquals("boom", thrown.getCause().getMessage());
         }
+    }
+
+    /**
+     * The point of this test is the {@code catch} clause, not the assertion. Kotlin emits no throws
+     * clause unless asked, and without one javac rejects catching {@link ExecutionException} here as
+     * unreachable — so this compiling is the guarantee that a Java caller can handle a failed call.
+     *
+     * <p>Deliberately hand-rolled rather than going through {@link #offMainThread}: routing get()
+     * through {@code Callable.call() throws Exception} satisfies the compiler on its own and would
+     * hide a missing throws clause entirely, which is how this went unnoticed the first time.
+     */
+    @Test
+    public void javaCanCatchExecutionExceptionFromGet() throws Exception {
+        FutureContinuation<String> future = Continue.future();
+        JavaInteropFixture.boom(future);
+
+        AtomicReference<ExecutionException> caught = new AtomicReference<>();
+        Thread thread = new Thread(() -> {
+            try {
+                future.get();
+            } catch (ExecutionException e) {
+                caught.set(e);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        });
+        thread.start();
+        thread.join(5_000);
+        assertFalse("the background thread never finished", thread.isAlive());
+
+        assertNotNull("get() did not report the failure", caught.get());
+        assertEquals("boom", caught.get().getCause().getMessage());
     }
 
     @Test

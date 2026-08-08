@@ -30,6 +30,32 @@ class FutureContinuationTests : FunSpec({
         offMainThread { future.get() } shouldBe "os-1"
     }
 
+    // The KDoc asks for one instance per call. Enforced rather than trusted, because a second result
+    // would otherwise silently replace the outcome of the call the caller is actually waiting on —
+    // and the class KDoc originally demonstrated exactly that mistake.
+    test("a second resume is refused instead of replacing the first outcome") {
+        val future = Continue.future<String>()
+        future.resumeWith(Result.success("first"))
+
+        shouldThrow<IllegalStateException> {
+            future.resumeWith(Result.success("second"))
+        }
+
+        offMainThread { future.get() } shouldBe "first"
+    }
+
+    test("a failure cannot be overwritten by a later success") {
+        val future = Continue.future<String>()
+        future.resumeWith(Result.failure(IllegalArgumentException("boom")))
+
+        shouldThrow<IllegalStateException> {
+            future.resumeWith(Result.success("late"))
+        }
+
+        val thrown = shouldThrow<ExecutionException> { offMainThread { future.get() } }
+        thrown.cause!!.message shouldBe "boom"
+    }
+
     test("isDone flips only once the call has completed") {
         val future = Continue.future<String>()
 
