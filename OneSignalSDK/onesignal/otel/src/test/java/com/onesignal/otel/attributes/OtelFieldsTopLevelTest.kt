@@ -110,13 +110,13 @@ class OtelFieldsTopLevelTest : FunSpec({
         setupDefaultMocks(
             kotlinVersion = "1.9.25",
             additionalVersionAttributes =
-                mapOf(
-                    "java_version" to "17",
-                    "kotlin_version" to "should-not-win",
-                    "install_id" to "forged-install",
-                    "ossdk.ndk_version" to "26.1",
-                    "agp_version" to "  ",
-                ),
+            mapOf(
+                "java_version" to "17",
+                "kotlin_version" to "should-not-win",
+                "install_id" to "forged-install",
+                "ossdk.ndk_version" to "26.1",
+                "agp_version" to "  ",
+            ),
         )
 
         runBlocking {
