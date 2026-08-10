@@ -28,6 +28,10 @@ internal class LoggerPlatformProviderAdapter(
     override val osBuildId: String get() = delegate.osBuildId
     override val sdkWrapper: String? get() = delegate.sdkWrapper
     override val sdkWrapperVersion: String? get() = delegate.sdkWrapperVersion
+    override val kotlinVersion: String? get() = delegate.kotlinVersion
+    override val swiftVersion: String? get() = delegate.swiftVersion
+    override val additionalVersionAttributes: Map<String, String>
+        get() = delegate.additionalVersionAttributes
     override val enabledFeatureFlags: List<String> get() = delegate.enabledFeatureFlags
 
     override val appId: String? get() = delegate.appId

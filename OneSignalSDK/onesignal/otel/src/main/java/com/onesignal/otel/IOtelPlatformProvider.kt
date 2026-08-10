@@ -26,6 +26,29 @@ interface IOtelPlatformProvider {
     val sdkWrapperVersion: String?
 
     /**
+     * Kotlin language / stdlib version of the host app when applicable
+     * (e.g. [KotlinVersion.CURRENT]). Null on non-Kotlin hosts. Emitted as
+     * `ossdk.kotlin_version` when non-blank. Defaults to null for compatibility.
+     */
+    val kotlinVersion: String?
+        get() = null
+
+    /**
+     * Swift language version when applicable. Null on Android / non-Swift hosts.
+     * Emitted as `ossdk.swift_version` when non-blank. Defaults to null.
+     */
+    val swiftVersion: String?
+        get() = null
+
+    /**
+     * Extra static version labels for dashboard filtering (`ossdk.<key>`).
+     * Dedicated [kotlinVersion] / [swiftVersion] and core resource attrs win on clash.
+     * Defaults to empty.
+     */
+    val additionalVersionAttributes: Map<String, String>
+        get() = emptyMap()
+
+    /**
      * The canonical keys of feature flags currently enabled for this device, as resolved by
      * the platform's feature flag source (on Android, a constructor-injected `IFeatureManager`).
      * Read fresh on every access so per-event OTel attributes always reflect the current state.

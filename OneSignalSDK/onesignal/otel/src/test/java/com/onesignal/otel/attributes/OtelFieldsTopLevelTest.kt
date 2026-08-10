@@ -17,7 +17,10 @@ class OtelFieldsTopLevelTest : FunSpec({
     fun setupDefaultMocks(
         installId: String = "test-install-id",
         sdkWrapper: String? = null,
-        sdkWrapperVersion: String? = null
+        sdkWrapperVersion: String? = null,
+        kotlinVersion: String? = null,
+        swiftVersion: String? = null,
+        additionalVersionAttributes: Map<String, String> = emptyMap(),
     ) {
         coEvery { mockPlatformProvider.getInstallId() } returns installId
         every { mockPlatformProvider.sdkBase } returns "android"
@@ -31,6 +34,9 @@ class OtelFieldsTopLevelTest : FunSpec({
         every { mockPlatformProvider.osBuildId } returns "TEST123"
         every { mockPlatformProvider.sdkWrapper } returns sdkWrapper
         every { mockPlatformProvider.sdkWrapperVersion } returns sdkWrapperVersion
+        every { mockPlatformProvider.kotlinVersion } returns kotlinVersion
+        every { mockPlatformProvider.swiftVersion } returns swiftVersion
+        every { mockPlatformProvider.additionalVersionAttributes } returns additionalVersionAttributes
     }
 
     beforeEach { clearMocks(mockPlatformProvider) }
@@ -51,6 +57,8 @@ class OtelFieldsTopLevelTest : FunSpec({
             attributes["os.name"] shouldBe "Android"
             attributes["os.version"] shouldBe "10"
             attributes["os.build_id"] shouldBe "TEST123"
+            attributes.keys shouldNotContain "ossdk.kotlin_version"
+            attributes.keys shouldNotContain "ossdk.swift_version"
         }
     }
 
@@ -73,6 +81,53 @@ class OtelFieldsTopLevelTest : FunSpec({
 
             attributes.keys shouldNotContain "ossdk.sdk_wrapper"
             attributes.keys shouldNotContain "ossdk.sdk_wrapper_version"
+        }
+    }
+
+    test("getAttributes should include kotlin and swift versions when provided") {
+        setupDefaultMocks(kotlinVersion = "1.9.25", swiftVersion = "5.10")
+
+        runBlocking {
+            val attributes = fields.getAttributes()
+
+            attributes["ossdk.kotlin_version"] shouldBe "1.9.25"
+            attributes["ossdk.swift_version"] shouldBe "5.10"
+        }
+    }
+
+    test("getAttributes should omit blank language versions") {
+        setupDefaultMocks(kotlinVersion = "   ", swiftVersion = "")
+
+        runBlocking {
+            val attributes = fields.getAttributes()
+
+            attributes.keys shouldNotContain "ossdk.kotlin_version"
+            attributes.keys shouldNotContain "ossdk.swift_version"
+        }
+    }
+
+    test("getAttributes should merge additionalVersionAttributes under ossdk prefix") {
+        setupDefaultMocks(
+            kotlinVersion = "1.9.25",
+            additionalVersionAttributes =
+                mapOf(
+                    "java_version" to "17",
+                    "kotlin_version" to "should-not-win",
+                    "install_id" to "forged-install",
+                    "ossdk.ndk_version" to "26.1",
+                    "agp_version" to "  ",
+                ),
+        )
+
+        runBlocking {
+            val attributes = fields.getAttributes()
+
+            attributes["ossdk.java_version"] shouldBe "17"
+            attributes["ossdk.ndk_version"] shouldBe "26.1"
+            attributes["ossdk.kotlin_version"] shouldBe "1.9.25"
+            attributes["ossdk.install_id"] shouldBe "test-install-id"
+            attributes.keys shouldNotContain "ossdk.ossdk.ndk_version"
+            attributes.keys shouldNotContain "ossdk.agp_version"
         }
     }
 

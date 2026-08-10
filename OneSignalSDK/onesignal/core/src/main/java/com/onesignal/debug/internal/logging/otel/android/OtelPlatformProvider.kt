@@ -64,6 +64,10 @@ internal class OtelPlatformProvider(
 
     override val sdkWrapperVersion: String? = OneSignalWrapper.sdkVersion
 
+    // Host language version for remote-log dashboard filtering (ossdk.kotlin_version).
+    // KotlinVersion.CURRENT reflects the stdlib the SDK was compiled against.
+    override val kotlinVersion: String? = KotlinVersion.CURRENT.toString()
+
     // Read through the supplier on every access so per-event attributes always reflect the
     // current featureStates snapshot (including IMMEDIATE-mode flag changes). The supplier is
     // an immutable constructor val that resolves IFeatureManager lazily — this lets the OTel

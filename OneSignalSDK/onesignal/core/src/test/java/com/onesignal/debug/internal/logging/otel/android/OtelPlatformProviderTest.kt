@@ -218,6 +218,24 @@ class OtelPlatformProviderTest : FunSpec({
         result shouldBe null
     }
 
+    test("kotlinVersion returns KotlinVersion.CURRENT") {
+        val provider = createAndroidOtelPlatformProvider(appContext!!) { emptyFeatureManager() }
+
+        provider.kotlinVersion shouldBe KotlinVersion.CURRENT.toString()
+    }
+
+    test("swiftVersion defaults to null on Android") {
+        val provider = createAndroidOtelPlatformProvider(appContext!!) { emptyFeatureManager() }
+
+        provider.swiftVersion shouldBe null
+    }
+
+    test("additionalVersionAttributes defaults to empty on Android") {
+        val provider = createAndroidOtelPlatformProvider(appContext!!) { emptyFeatureManager() }
+
+        provider.additionalVersionAttributes shouldBe emptyMap()
+    }
+
     // ===== Lazy ID Properties Tests =====
 
     test("appId returns resolved appId from OtelIdResolver") {
