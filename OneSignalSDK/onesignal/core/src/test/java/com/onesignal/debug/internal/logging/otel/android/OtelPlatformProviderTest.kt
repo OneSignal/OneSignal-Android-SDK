@@ -15,6 +15,7 @@ import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.user.internal.backend.IdentityConstants
 import io.kotest.core.spec.style.FunSpec
+import io.kotest.matchers.collections.shouldNotContain
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.string.shouldContain
@@ -230,10 +231,17 @@ class OtelPlatformProviderTest : FunSpec({
         provider.swiftVersion shouldBe null
     }
 
-    test("additionalVersionAttributes defaults to empty on Android") {
+    test("additionalVersionAttributes includes java_version and android_api_level") {
         val provider = createAndroidOtelPlatformProvider(appContext!!) { emptyFeatureManager() }
+        val attrs = provider.additionalVersionAttributes
 
-        provider.additionalVersionAttributes shouldBe emptyMap()
+        attrs["android_api_level"] shouldBe Build.VERSION.SDK_INT.toString()
+        // Robolectric / ART expose a non-blank Java language level via the spec property.
+        val javaVersion = System.getProperty("java.specification.version")
+        if (!javaVersion.isNullOrBlank()) {
+            attrs["java_version"] shouldBe javaVersion
+        }
+        attrs.keys.shouldNotContain("kotlin_version")
     }
 
     // ===== Lazy ID Properties Tests =====

@@ -68,6 +68,19 @@ internal class OtelPlatformProvider(
     // KotlinVersion.CURRENT reflects the stdlib the SDK was compiled against.
     override val kotlinVersion: String? = KotlinVersion.CURRENT.toString()
 
+    // Extra toolchain labels under ossdk.* for dashboard filtering. Prefer values that are
+    // stable for the process lifetime and cheap to read:
+    // - java_version: ART's reported Java language level (spec version, e.g. "17")
+    // - android_api_level: device API level (SDK_INT) — complementary to os.version (RELEASE)
+    // Build-time-only values (AGP, compileSdk, NDK) are not available here at runtime.
+    override val additionalVersionAttributes: Map<String, String> =
+        buildMap {
+            System.getProperty("java.specification.version")
+                ?.takeIf { it.isNotBlank() }
+                ?.let { put("java_version", it) }
+            put("android_api_level", Build.VERSION.SDK_INT.toString())
+        }
+
     // Read through the supplier on every access so per-event attributes always reflect the
     // current featureStates snapshot (including IMMEDIATE-mode flag changes). The supplier is
     // an immutable constructor val that resolves IFeatureManager lazily — this lets the OTel
