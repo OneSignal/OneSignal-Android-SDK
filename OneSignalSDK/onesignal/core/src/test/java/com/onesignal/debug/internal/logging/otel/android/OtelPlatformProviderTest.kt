@@ -231,16 +231,13 @@ class OtelPlatformProviderTest : FunSpec({
         provider.swiftVersion shouldBe null
     }
 
-    test("additionalVersionAttributes includes java_version and android_api_level") {
+    test("additionalVersionAttributes includes android_api_level only") {
         val provider = createAndroidOtelPlatformProvider(appContext!!) { emptyFeatureManager() }
         val attrs = provider.additionalVersionAttributes
 
-        attrs["android_api_level"] shouldBe Build.VERSION.SDK_INT.toString()
-        // Robolectric / ART expose a non-blank Java language level via the spec property.
-        val javaVersion = System.getProperty("java.specification.version")
-        if (!javaVersion.isNullOrBlank()) {
-            attrs["java_version"] shouldBe javaVersion
-        }
+        attrs shouldBe mapOf("android_api_level" to Build.VERSION.SDK_INT.toString())
+        // java.specification.version is hardcoded to "0.9" on-device ART — never emit it.
+        attrs.keys.shouldNotContain("java_version")
         attrs.keys.shouldNotContain("kotlin_version")
     }
 

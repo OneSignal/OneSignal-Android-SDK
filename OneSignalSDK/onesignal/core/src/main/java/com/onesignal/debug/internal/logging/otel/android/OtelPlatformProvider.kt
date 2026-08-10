@@ -68,18 +68,18 @@ internal class OtelPlatformProvider(
     // KotlinVersion.CURRENT reflects the stdlib the SDK was compiled against.
     override val kotlinVersion: String? = KotlinVersion.CURRENT.toString()
 
+    // Android has no Swift toolchain.
+    override val swiftVersion: String? = null
+
     // Extra toolchain labels under ossdk.* for dashboard filtering. Prefer values that are
-    // stable for the process lifetime and cheap to read:
-    // - java_version: ART's reported Java language level (spec version, e.g. "17")
+    // stable for the process lifetime and cheap to read.
     // - android_api_level: device API level (SDK_INT) — complementary to os.version (RELEASE)
-    // Build-time-only values (AGP, compileSdk, NDK) are not available here at runtime.
+    // Do NOT emit java_version from System.getProperty("java.specification.version"):
+    // on-device ART hardcodes that property to "0.9" (see AndroidHardcodedSystemProperties).
+    // Robolectric returns the host JDK version and would mask that in unit tests.
+    // Build-time-only values (AGP, compileSdk, NDK, real javac target) are unavailable at runtime.
     override val additionalVersionAttributes: Map<String, String> =
-        buildMap {
-            System.getProperty("java.specification.version")
-                ?.takeIf { it.isNotBlank() }
-                ?.let { put("java_version", it) }
-            put("android_api_level", Build.VERSION.SDK_INT.toString())
-        }
+        mapOf("android_api_level" to Build.VERSION.SDK_INT.toString())
 
     // Read through the supplier on every access so per-event attributes always reflect the
     // current featureStates snapshot (including IMMEDIATE-mode flag changes). The supplier is

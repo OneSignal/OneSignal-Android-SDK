@@ -115,7 +115,9 @@ class OtelFieldsTopLevelTest : FunSpec({
                 "kotlin_version" to "should-not-win",
                 "install_id" to "forged-install",
                 "ossdk.ndk_version" to "26.1",
-                "agp_version" to "  ",
+                // Leading whitespace must still strip ossdk. (no ossdk.ossdk.*).
+                "  ossdk.agp_version" to "8.8.2",
+                "agp_blank" to "  ",
             ),
         )
 
@@ -124,10 +126,12 @@ class OtelFieldsTopLevelTest : FunSpec({
 
             attributes["ossdk.java_version"] shouldBe "17"
             attributes["ossdk.ndk_version"] shouldBe "26.1"
+            attributes["ossdk.agp_version"] shouldBe "8.8.2"
             attributes["ossdk.kotlin_version"] shouldBe "1.9.25"
             attributes["ossdk.install_id"] shouldBe "test-install-id"
             attributes.keys shouldNotContain "ossdk.ossdk.ndk_version"
-            attributes.keys shouldNotContain "ossdk.agp_version"
+            attributes.keys shouldNotContain "ossdk.ossdk.agp_version"
+            attributes.keys shouldNotContain "ossdk.agp_blank"
         }
     }
 
