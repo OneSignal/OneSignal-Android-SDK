@@ -3,10 +3,11 @@ package com.onesignal
 /**
  * Implemented by every payload that can travel inside a [OneSignalResult].
  *
- * The contract exists so the envelope can be projected onto the wire shape without knowing which
- * payload it is carrying. It is not intended to be implemented outside the SDK.
+ * Sealed so a new member is never a silent source-compatible break for external implementors — this
+ * contract exists so the envelope can project onto the wire shape without knowing which payload it
+ * is carrying, and is not intended to be implemented outside the SDK.
  */
-interface OneSignalResultData {
+sealed interface OneSignalResultData {
     /** Projects this payload onto the cross-SDK wire shape consumed by the wrapper bridges. */
     fun toMap(): Map<String, Any?>
 }

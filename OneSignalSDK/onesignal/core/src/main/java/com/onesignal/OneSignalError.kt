@@ -1,5 +1,9 @@
 package com.onesignal
 
+import com.onesignal.common.toList
+import com.onesignal.common.toMap
+import org.json.JSONArray
+import org.json.JSONObject
 import java.util.Collections
 
 /** Whether the SDK produced a failure locally or OneSignal's backend returned it. */
@@ -48,8 +52,12 @@ enum class ErrorCode(val source: ErrorSource) {
  * { "success": false, "data": null,
  *   "error": [ { "code": "STORAGE_LOCKED", "source": "CLIENT", "backendCode": null, "message": "..." } ] }
  * ```
+ *
+ * The constructor is private on purpose. An `internal` constructor still emits as JVM-public, so
+ * Java outside this module could build an error with no reasons and leave [first] throwing; private
+ * closes that hole. Callers construct through [of] or [fromWire].
  */
-class OneSignalError internal constructor(
+class OneSignalError private constructor(
     error: List<Detail>,
     /**
      * The throwable behind the failure, when there was one.
@@ -59,7 +67,7 @@ class OneSignalError internal constructor(
      * Java callers do not lose the stack when the suspend APIs report a failure instead of
      * throwing it.
      */
-    val cause: Throwable? = null,
+    val cause: Throwable?,
 ) {
     /**
      * Why the call failed. Never empty.
@@ -83,7 +91,7 @@ class OneSignalError internal constructor(
      * Nested rather than top-level so the name cannot collide with `kotlin.Error`, which is
      * auto-imported everywhere, or shadow `java.lang.Error` in a Java file that imports it.
      */
-    class Detail internal constructor(
+    class Detail private constructor(
         /** A stable code, safe to branch on. Never localized. */
         val code: ErrorCode,
         /**
@@ -92,9 +100,9 @@ class OneSignalError internal constructor(
          * Left as a raw number on purpose: the backend adds codes on its own schedule, and an SDK
          * release must not be the thing that unblocks recognizing one.
          */
-        val backendCode: Int? = null,
+        val backendCode: Int?,
         /** A human-readable description intended for logs and diagnostics, not for end users. */
-        val message: String? = null,
+        val message: String?,
         /**
          * Who the failure came from.
          *
@@ -103,7 +111,7 @@ class OneSignalError internal constructor(
          * backend failure as a client one. Defaults to the source [code] implies, which is right
          * for everything the SDK raises locally.
          */
-        val source: ErrorSource = code.source,
+        val source: ErrorSource,
     ) {
         /** Projects this reason onto the cross-SDK wire shape consumed by the wrapper bridges. */
         fun toMap(): Map<String, Any?> =
@@ -146,6 +154,13 @@ class OneSignalError internal constructor(
                 )
             }
 
+            fun of(
+                code: ErrorCode,
+                backendCode: Int? = null,
+                message: String? = null,
+                source: ErrorSource = code.source,
+            ): Detail = Detail(code, backendCode, message, source)
+
             private fun codeOf(name: String?): ErrorCode = ErrorCode.entries.firstOrNull { it.name == name } ?: ErrorCode.UNKNOWN
 
             private fun sourceOf(name: String?): ErrorSource? = ErrorSource.entries.firstOrNull { it.name == name }
@@ -168,7 +183,13 @@ class OneSignalError internal constructor(
             message: String? = null,
             backendCode: Int? = null,
             cause: Throwable? = null,
-        ): OneSignalError = OneSignalError(listOf(Detail(code, backendCode, message)), cause)
+        ): OneSignalError = OneSignalError(listOf(Detail.of(code, backendCode, message)), cause)
+
+        /** Builds a multi-reason error. [reasons] must not be empty. */
+        fun of(
+            reasons: List<Detail>,
+            cause: Throwable? = null,
+        ): OneSignalError = OneSignalError(reasons, cause)
 
         /**
          * Rebuilds an error from its wire shape.
@@ -185,12 +206,19 @@ class OneSignalError internal constructor(
             val reasons =
                 when (raw) {
                     is List<*> -> raw.map { reasonOf(it) }
+                    // org.json is what a bridge naturally parses with, and JSONArray is not a
+                    // java.util.List. Convert rather than treating the whole array as one reason.
+                    is JSONArray -> raw.toList().orEmpty().map { reasonOf(it) }
                     else -> listOf(reasonOf(raw))
                 }
-            return OneSignalError(reasons.ifEmpty { listOf(Detail(ErrorCode.UNKNOWN)) })
+            return OneSignalError(reasons.ifEmpty { listOf(Detail.of(ErrorCode.UNKNOWN)) }, cause = null)
         }
 
         private fun reasonOf(raw: Any?): Detail =
-            if (raw is Map<*, *>) Detail.fromMap(raw) else Detail(ErrorCode.UNKNOWN, message = raw?.toString())
+            when (raw) {
+                is Map<*, *> -> Detail.fromMap(raw)
+                is JSONObject -> Detail.fromMap(raw.toMap())
+                else -> Detail.of(ErrorCode.UNKNOWN, message = raw?.toString())
+            }
     }
 }

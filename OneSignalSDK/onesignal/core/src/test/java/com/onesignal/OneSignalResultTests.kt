@@ -51,10 +51,10 @@ class OneSignalResultTests : FunSpec({
 
     test("an error can carry several reasons at once") {
         val error =
-            OneSignalError(
+            OneSignalError.of(
                 listOf(
-                    OneSignalError.Detail(ErrorCode.BACKEND_ERROR, 100, "Invalid API Key"),
-                    OneSignalError.Detail(ErrorCode.BACKEND_ERROR, 144, "Invalid external ID"),
+                    OneSignalError.Detail.of(ErrorCode.BACKEND_ERROR, 100, "Invalid API Key"),
+                    OneSignalError.Detail.of(ErrorCode.BACKEND_ERROR, 144, "Invalid external ID"),
                 ),
             )
 
@@ -63,10 +63,10 @@ class OneSignalResultTests : FunSpec({
         error.toList().map { it["backendCode"] } shouldBe listOf(100, 144)
     }
 
-    // first is documented as always safe to read, so the constructor has to refuse the one input
-    // that would make it throw.
+    // first is documented as always safe to read, so the factories have to refuse the one input
+    // that would make it throw. The constructor is private; this is the supported construction path.
     test("an error cannot be built with no reasons") {
-        shouldThrow<IllegalArgumentException> { OneSignalError(emptyList()) }
+        shouldThrow<IllegalArgumentException> { OneSignalError.of(emptyList()) }
     }
 
     test("a reason with no message keeps the exception text free of a bare null") {
@@ -281,7 +281,8 @@ class OneSignalResultTests : FunSpec({
     }
 
     // org.json is what a bridge naturally parses with, and JSONArray is not a java.util.List. Reading
-    // the error with a cast that doubles as the predicate turned that into a blank success.
+    // the error with a cast that doubled as the predicate turned that into a blank success; treating
+    // the whole array as one opaque reason would also lose the codes. Convert and parse each entry.
     test("an error arriving as a JSONArray still reports a failure") {
         val fromBridge =
             mapOf(
@@ -294,7 +295,9 @@ class OneSignalResultTests : FunSpec({
 
         restored.isSuccess.shouldBeFalse()
         restored.data.shouldBeNull()
-        restored.error.shouldNotBeNull()
+        restored.error!!.first.code shouldBe ErrorCode.STORAGE_LOCKED
+        restored.error!!.first.message shouldBe "device locked"
+        restored.error!!.first.source shouldBe ErrorSource.CLIENT
     }
 
     test("an error list holding a reason that is not a map reports a failure instead of throwing") {
@@ -323,15 +326,37 @@ class OneSignalResultTests : FunSpec({
     }
 
     // isSuccess reads error while getOrThrow reads data, so an envelope carrying neither or both
-    // makes the two disagree. The constructor is the only place that can rule it out.
+    // makes the two disagree. The constructor is private and the factories only emit one side; the
+    // require stays as defense for a future factory bug and is reached here via reflection so the
+    // JVM-public accidental entry point Fadi flagged cannot reopen quietly.
     test("a result cannot be built carrying neither data nor error") {
-        shouldThrow<IllegalArgumentException> { OneSignalResult<LoginData>(null, null) }
+        val ctor =
+            OneSignalResult::class.java.getDeclaredConstructor(
+                OneSignalResultData::class.java,
+                OneSignalError::class.java,
+            )
+        ctor.isAccessible = true
+
+        val thrown =
+            shouldThrow<java.lang.reflect.InvocationTargetException> {
+                ctor.newInstance(null, null)
+            }
+        thrown.cause.shouldBeInstanceOf<IllegalArgumentException>()
     }
 
     test("a result cannot be built carrying both data and error") {
-        shouldThrow<IllegalArgumentException> {
-            OneSignalResult(LoginData("os-1", "ext-1"), OneSignalError.of(ErrorCode.UNKNOWN))
-        }
+        val ctor =
+            OneSignalResult::class.java.getDeclaredConstructor(
+                OneSignalResultData::class.java,
+                OneSignalError::class.java,
+            )
+        ctor.isAccessible = true
+
+        val thrown =
+            shouldThrow<java.lang.reflect.InvocationTargetException> {
+                ctor.newInstance(LoginData("os-1", "ext-1"), OneSignalError.of(ErrorCode.UNKNOWN))
+            }
+        thrown.cause.shouldBeInstanceOf<IllegalArgumentException>()
     }
 
     // The copy stops a caller emptying the list that was passed in, but Java can still clear the
@@ -373,8 +398,9 @@ class OneSignalResultTests : FunSpec({
 
     // The mirror of the error case: data was read with a cast that doubled as the presence check,
     // so a payload the parser could not type read as no payload at all and was replaced with a
-    // blank one, under a result still claiming success.
-    test("a payload arriving as a JSONObject reports a failure instead of a blank success") {
+    // blank one, under a result still claiming success. JSONObject is the bridge's natural map
+    // shape, so convert it rather than reporting a failure that contradicts a successful producer.
+    test("a payload arriving as a JSONObject is read as a success") {
         val fromBridge =
             mapOf(
                 "success" to true,
@@ -384,9 +410,9 @@ class OneSignalResultTests : FunSpec({
 
         val restored = OneSignalResult.fromMap(fromBridge, LoginData::fromMap)
 
-        restored.isSuccess.shouldBeFalse()
-        restored.data.shouldBeNull()
-        restored.error!!.first.code shouldBe ErrorCode.UNKNOWN
+        restored.isSuccess.shouldBeTrue()
+        restored.data!!.onesignalId shouldBe "os-1"
+        restored.data!!.externalId shouldBe "ext-1"
     }
 
     test("a payload that is not a map at all reports a failure") {
@@ -405,14 +431,14 @@ class OneSignalResultTests : FunSpec({
     test("an unreadable payload is named by its type without its contents being echoed") {
         val restored =
             OneSignalResult.fromMap(
-                mapOf("data" to JSONObject("""{"onesignalId":"os-1","externalId":"user@example.com"}""")),
+                mapOf("data" to listOf("os-1", "ext-1")),
                 LoginData::fromMap,
             )
 
         val message = restored.error!!.first.message!!
-        message shouldContain "JSONObject"
-        message shouldNotContain "user@example.com"
+        message shouldContain "ArrayList"
         message shouldNotContain "os-1"
+        message shouldNotContain "ext-1"
     }
 
     // Regression guard, not evidence: this passes before the fix too. The empty payload types

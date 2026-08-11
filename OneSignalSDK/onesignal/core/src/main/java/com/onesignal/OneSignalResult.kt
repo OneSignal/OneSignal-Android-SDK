@@ -1,5 +1,8 @@
 package com.onesignal
 
+import com.onesignal.common.toMap
+import org.json.JSONObject
+
 /**
  * The outcome of an asynchronous OneSignal call: either a [data] payload or an [error], never both
  * and never neither.
@@ -15,6 +18,10 @@ package com.onesignal
  * The presence of [error] is what defines the outcome; [isSuccess] and the wire-level `success`
  * flag are both derived from it, so the two can never disagree.
  *
+ * The constructor is private on purpose. An `internal` constructor still emits as JVM-public, so
+ * Java outside this module could build an envelope that violates the either/or invariant; private
+ * closes that hole. Callers construct through [success], [failure], or [fromMap].
+ *
  * From Kotlin:
  * ```kotlin
  * val result = OneSignal.login("user-123")
@@ -26,7 +33,7 @@ package com.onesignal
  * if (result.isSuccess()) { result.getData(); } else { result.getError(); }
  * ```
  */
-class OneSignalResult<T : OneSignalResultData> internal constructor(
+class OneSignalResult<T : OneSignalResultData> private constructor(
     /** The payload on success, `null` on failure. */
     val data: T?,
     /** The failure detail on failure, `null` on success. */
@@ -92,12 +99,12 @@ class OneSignalResult<T : OneSignalResultData> internal constructor(
          * Such a cast reports a value the parser could not type as a value that was never sent,
          * which turns a failure into an empty success and an unreadable payload into a blank one.
          *
-         * A payload that is present but unreadable is reported as a failure. That contradicts the
-         * producer, which was reporting success, and it is still the lesser harm: the envelope's
-         * whole purpose is that [isSuccess] tells a caller whether [data] can be trusted, and a
-         * fabricated payload is indistinguishable at the call site from one the producer really
-         * sent. A caller handed a failure retries or reports it; a caller handed a blank payload
-         * logs someone in as nobody.
+         * A payload that is present but unreadable (neither a [Map] nor a [JSONObject]) is reported
+         * as a failure. That contradicts the producer, which was reporting success, and it is still
+         * the lesser harm: the envelope's whole purpose is that [isSuccess] tells a caller whether
+         * [data] can be trusted, and a fabricated payload is indistinguishable at the call site from
+         * one the producer really sent. A caller handed a failure retries or reports it; a caller
+         * handed a blank payload logs someone in as nobody.
          */
         fun <T : OneSignalResultData> fromMap(
             map: Map<String, Any?>,
@@ -114,6 +121,9 @@ class OneSignalResult<T : OneSignalResultData> internal constructor(
                 // is a failure.
                 null -> success(dataParser(emptyMap<Any?, Any?>()))
                 is Map<*, *> -> success(dataParser(payload))
+                // org.json is what a bridge naturally parses with. JSONObject is not a kotlin Map,
+                // but it is a map on the wire — convert rather than report a blank failure.
+                is JSONObject -> success(dataParser(payload.toMap()))
                 else -> failure(ErrorCode.UNKNOWN, unreadablePayload(payload))
             }
         }

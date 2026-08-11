@@ -147,6 +147,7 @@ public final class com/onesignal/OneSignal {
 }
 
 public final class com/onesignal/OneSignalError {
+	public synthetic fun <init> (Ljava/util/List;Ljava/lang/Throwable;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun getCause ()Ljava/lang/Throwable;
 	public final fun getError ()Ljava/util/List;
 	public final fun getFirst ()Lcom/onesignal/OneSignalError$Detail;
@@ -155,6 +156,7 @@ public final class com/onesignal/OneSignalError {
 }
 
 public final class com/onesignal/OneSignalError$Detail {
+	public synthetic fun <init> (Lcom/onesignal/ErrorCode;Ljava/lang/Integer;Ljava/lang/String;Lcom/onesignal/ErrorSource;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun getBackendCode ()Ljava/lang/Integer;
 	public final fun getCode ()Lcom/onesignal/ErrorCode;
 	public final fun getMessage ()Ljava/lang/String;
@@ -168,6 +170,7 @@ public final class com/onesignal/OneSignalException : java/lang/Exception {
 }
 
 public final class com/onesignal/OneSignalResult {
+	public synthetic fun <init> (Lcom/onesignal/OneSignalResultData;Lcom/onesignal/OneSignalError;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun getData ()Lcom/onesignal/OneSignalResultData;
 	public final fun getError ()Lcom/onesignal/OneSignalError;
 	public final fun getOrNull ()Lcom/onesignal/OneSignalResultData;
