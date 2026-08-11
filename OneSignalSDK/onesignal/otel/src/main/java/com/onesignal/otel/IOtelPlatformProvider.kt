@@ -30,10 +30,9 @@ interface IOtelPlatformProvider {
      * (e.g. [KotlinVersion.CURRENT]). Null on non-Kotlin hosts. Emitted as
      * `ossdk.kotlin_version` when non-blank.
      *
-     * Required on implementors — Kotlin interface defaults are not reliable JVM
-     * default methods here (no `-Xjvm-default=all`), so a missing override on an
-     * older binary would throw [AbstractMethodError] when read. This interface
-     * ships with its Android implementor in the same artifact.
+     * SDK-internal injection seam only — the sole production implementor is
+     * `OtelPlatformProvider` in `:core`. Not a public compatibility surface for
+     * app or wrapper authors.
      */
     val kotlinVersion: String?
 
@@ -41,7 +40,7 @@ interface IOtelPlatformProvider {
      * Swift language version when applicable. Null on Android / non-Swift hosts.
      * Emitted as `ossdk.swift_version` when non-blank.
      *
-     * Required for the same binary-compat reason as [kotlinVersion].
+     * Same SDK-internal caveat as [kotlinVersion].
      */
     val swiftVersion: String?
 
@@ -49,7 +48,7 @@ interface IOtelPlatformProvider {
      * Extra static version labels for dashboard filtering (`ossdk.<key>`).
      * Dedicated [kotlinVersion] / [swiftVersion] and core resource attrs win on clash.
      *
-     * Required for the same binary-compat reason as [kotlinVersion].
+     * Same SDK-internal caveat as [kotlinVersion].
      */
     val additionalVersionAttributes: Map<String, String>
 
