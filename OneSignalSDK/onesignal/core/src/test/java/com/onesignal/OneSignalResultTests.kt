@@ -8,8 +8,11 @@ import io.kotest.matchers.booleans.shouldBeTrue
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldContain
+import io.kotest.matchers.string.shouldNotContain
 import io.kotest.matchers.types.shouldBeInstanceOf
 import org.json.JSONArray
+import org.json.JSONObject
 
 class OneSignalResultTests : FunSpec({
 
@@ -366,6 +369,64 @@ class OneSignalResultTests : FunSpec({
         restored.error!!.first.source shouldBe ErrorSource.BACKEND
         // Also checked through the wire projection, since toMap and fromMap have to stay symmetric.
         restored.error!!.toList().first()["source"] shouldBe "BACKEND"
+    }
+
+    // The mirror of the error case: data was read with a cast that doubled as the presence check,
+    // so a payload the parser could not type read as no payload at all and was replaced with a
+    // blank one, under a result still claiming success.
+    test("a payload arriving as a JSONObject reports a failure instead of a blank success") {
+        val fromBridge =
+            mapOf(
+                "success" to true,
+                "data" to JSONObject("""{"onesignalId":"os-1","externalId":"ext-1"}"""),
+                "error" to null,
+            )
+
+        val restored = OneSignalResult.fromMap(fromBridge, LoginData::fromMap)
+
+        restored.isSuccess.shouldBeFalse()
+        restored.data.shouldBeNull()
+        restored.error!!.first.code shouldBe ErrorCode.UNKNOWN
+    }
+
+    test("a payload that is not a map at all reports a failure") {
+        val restored =
+            OneSignalResult.fromMap(
+                mapOf("success" to true, "data" to "os-1", "error" to null),
+                LoginData::fromMap,
+            )
+
+        restored.isSuccess.shouldBeFalse()
+        restored.error!!.first.code shouldBe ErrorCode.UNKNOWN
+    }
+
+    // Naming the type is enough to diagnose the bridge; the payload itself is identity data and has
+    // no business being copied into an error message that will be logged.
+    test("an unreadable payload is named by its type without its contents being echoed") {
+        val restored =
+            OneSignalResult.fromMap(
+                mapOf("data" to JSONObject("""{"onesignalId":"os-1","externalId":"user@example.com"}""")),
+                LoginData::fromMap,
+            )
+
+        val message = restored.error!!.first.message!!
+        message shouldContain "JSONObject"
+        message shouldNotContain "user@example.com"
+        message shouldNotContain "os-1"
+    }
+
+    // Regression guard, not evidence: this passes before the fix too. The empty payload types
+    // serialize to no fields, so an absent or null data has to keep meaning an empty payload
+    // rather than being swept up as unreadable.
+    test("an absent or null payload still yields an empty payload rather than a failure") {
+        listOf(mapOf("success" to true), mapOf("success" to true, "data" to null)).forEach { envelope ->
+            withClue("envelope $envelope") {
+                val restored = OneSignalResult.fromMap(envelope, InitData::fromMap)
+
+                restored.isSuccess.shouldBeTrue()
+                restored.data.shouldNotBeNull()
+            }
+        }
     }
 
     test("a reason with no source on the wire falls back to the source its code implies") {

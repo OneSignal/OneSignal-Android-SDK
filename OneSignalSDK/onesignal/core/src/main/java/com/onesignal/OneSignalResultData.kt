@@ -44,7 +44,7 @@ class LoginData internal constructor(
         private const val KEY_ONESIGNAL_ID = "onesignalId"
         private const val KEY_EXTERNAL_ID = "externalId"
 
-        fun fromMap(map: Map<String, Any?>): LoginData =
+        fun fromMap(map: Map<*, *>): LoginData =
             LoginData(
                 onesignalId = map[KEY_ONESIGNAL_ID] as? String ?: "",
                 externalId = map[KEY_EXTERNAL_ID] as? String ?: "",
@@ -60,7 +60,7 @@ class LogoutData internal constructor() : OneSignalResultData {
 
     internal companion object {
         fun fromMap(
-            @Suppress("UNUSED_PARAMETER") map: Map<String, Any?>,
+            @Suppress("UNUSED_PARAMETER") map: Map<*, *>,
         ): LogoutData = LogoutData()
     }
 }
@@ -73,7 +73,7 @@ class UpdateUserJwtData internal constructor() : OneSignalResultData {
 
     internal companion object {
         fun fromMap(
-            @Suppress("UNUSED_PARAMETER") map: Map<String, Any?>,
+            @Suppress("UNUSED_PARAMETER") map: Map<*, *>,
         ): UpdateUserJwtData = UpdateUserJwtData()
     }
 }
@@ -86,7 +86,7 @@ class InitData internal constructor() : OneSignalResultData {
 
     internal companion object {
         fun fromMap(
-            @Suppress("UNUSED_PARAMETER") map: Map<String, Any?>,
+            @Suppress("UNUSED_PARAMETER") map: Map<*, *>,
         ): InitData = InitData()
     }
 }

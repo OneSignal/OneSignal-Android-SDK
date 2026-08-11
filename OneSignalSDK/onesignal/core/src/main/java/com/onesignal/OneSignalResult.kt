@@ -88,23 +88,40 @@ class OneSignalResult<T : OneSignalResultData> internal constructor(
          * carrying an error. Unrecognized keys are ignored so a newer producer can add fields
          * without breaking an older consumer.
          *
-         * `error` is tested for presence, never for shape. A cast doing double duty as the
-         * predicate would read an error the parser could not type as no error at all, and report
-         * the failure as an empty success.
+         * Neither `error` nor `data` is read with a cast that doubles as its own presence check.
+         * Such a cast reports a value the parser could not type as a value that was never sent,
+         * which turns a failure into an empty success and an unreadable payload into a blank one.
+         *
+         * A payload that is present but unreadable is reported as a failure. That contradicts the
+         * producer, which was reporting success, and it is still the lesser harm: the envelope's
+         * whole purpose is that [isSuccess] tells a caller whether [data] can be trusted, and a
+         * fabricated payload is indistinguishable at the call site from one the producer really
+         * sent. A caller handed a failure retries or reports it; a caller handed a blank payload
+         * logs someone in as nobody.
          */
-        @Suppress("UNCHECKED_CAST")
         fun <T : OneSignalResultData> fromMap(
             map: Map<String, Any?>,
-            dataParser: (Map<String, Any?>) -> T,
+            dataParser: (Map<*, *>) -> T,
         ): OneSignalResult<T> {
             val reasons = map[KEY_ERROR]
             if (reasons != null) {
                 return failure(OneSignalError.fromWire(reasons))
             }
 
-            val dataMap = map[KEY_DATA] as? Map<String, Any?> ?: emptyMap()
-            return success(dataParser(dataMap))
+            return when (val payload = map[KEY_DATA]) {
+                // Absent or null is a payload with no fields, which is exactly what the empty
+                // payload types serialize to. Only a payload sent in a shape that cannot be read
+                // is a failure.
+                null -> success(dataParser(emptyMap<Any?, Any?>()))
+                is Map<*, *> -> success(dataParser(payload))
+                else -> failure(ErrorCode.UNKNOWN, unreadablePayload(payload))
+            }
         }
+
+        // The type is enough to diagnose the producer. The payload itself is identity data, and an
+        // error message is somewhere it would be logged.
+        private fun unreadablePayload(payload: Any): String =
+            "Result data could not be read: expected a map but received ${payload::class.simpleName}."
     }
 }
 
