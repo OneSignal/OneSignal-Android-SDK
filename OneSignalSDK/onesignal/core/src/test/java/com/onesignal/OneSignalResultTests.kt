@@ -1,6 +1,7 @@
 package com.onesignal
 
 import io.kotest.assertions.throwables.shouldThrow
+import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.booleans.shouldBeFalse
 import io.kotest.matchers.booleans.shouldBeTrue
@@ -8,6 +9,7 @@ import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
+import org.json.JSONArray
 
 class OneSignalResultTests : FunSpec({
 
@@ -37,10 +39,10 @@ class OneSignalResultTests : FunSpec({
         val client = OneSignalResult.failure<LoginData>(ErrorCode.STORAGE_LOCKED, "device locked")
         val backend = OneSignalResult.failure<LoginData>(ErrorCode.BACKEND_ERROR, "Invalid API Key", backendCode = 100)
 
-        client.error!!.first.code.source shouldBe ErrorSource.CLIENT
+        client.error!!.first.source shouldBe ErrorSource.CLIENT
         client.error!!.first.backendCode.shouldBeNull()
 
-        backend.error!!.first.code.source shouldBe ErrorSource.BACKEND
+        backend.error!!.first.source shouldBe ErrorSource.BACKEND
         backend.error!!.first.backendCode shouldBe 100
     }
 
@@ -243,5 +245,137 @@ class OneSignalResultTests : FunSpec({
         restored.isSuccess.shouldBeFalse()
         restored.data.shouldBeNull()
         restored.error!!.first.code shouldBe ErrorCode.STORAGE_LOCKED
+    }
+
+    // The version above only holds when the error happens to be a well-typed List. The rule is that
+    // a present error wins whatever shape it arrives in, so the awkward shapes are checked too.
+    test("error presence wins over a contradictory success flag whatever shape the error arrives in") {
+        val shapes =
+            listOf(
+                JSONArray("""[{"code":"STORAGE_LOCKED"}]"""),
+                mapOf("code" to "STORAGE_LOCKED"),
+                "STORAGE_LOCKED",
+                listOf("STORAGE_LOCKED"),
+            )
+
+        shapes.forEach { shape ->
+            val restored =
+                OneSignalResult.fromMap(
+                    mapOf(
+                        "success" to true,
+                        "data" to mapOf("onesignalId" to "os-1", "externalId" to "ext-1"),
+                        "error" to shape,
+                    ),
+                    LoginData::fromMap,
+                )
+
+            withClue("error carried as ${shape.javaClass.simpleName}") {
+                restored.isSuccess.shouldBeFalse()
+                restored.data.shouldBeNull()
+                restored.error.shouldNotBeNull()
+            }
+        }
+    }
+
+    // org.json is what a bridge naturally parses with, and JSONArray is not a java.util.List. Reading
+    // the error with a cast that doubles as the predicate turned that into a blank success.
+    test("an error arriving as a JSONArray still reports a failure") {
+        val fromBridge =
+            mapOf(
+                "success" to false,
+                "data" to null,
+                "error" to JSONArray("""[{"code":"STORAGE_LOCKED","source":"CLIENT","message":"device locked"}]"""),
+            )
+
+        val restored = OneSignalResult.fromMap(fromBridge, LoginData::fromMap)
+
+        restored.isSuccess.shouldBeFalse()
+        restored.data.shouldBeNull()
+        restored.error.shouldNotBeNull()
+    }
+
+    test("an error list holding a reason that is not a map reports a failure instead of throwing") {
+        val restored =
+            OneSignalResult.fromMap(
+                mapOf("success" to false, "data" to null, "error" to listOf("something broke")),
+                LoginData::fromMap,
+            )
+
+        restored.isSuccess.shouldBeFalse()
+        restored.error!!.first.code shouldBe ErrorCode.UNKNOWN
+        restored.error!!.first.message shouldBe "something broke"
+    }
+
+    test("a reason list mixing a readable reason with an unreadable one keeps both") {
+        val restored =
+            OneSignalResult.fromMap(
+                mapOf("error" to listOf(mapOf("code" to "STORAGE_LOCKED"), 42)),
+                LoginData::fromMap,
+            )
+
+        restored.error!!.error.size shouldBe 2
+        restored.error!!.error[0].code shouldBe ErrorCode.STORAGE_LOCKED
+        restored.error!!.error[1].code shouldBe ErrorCode.UNKNOWN
+        restored.error!!.error[1].message shouldBe "42"
+    }
+
+    // isSuccess reads error while getOrThrow reads data, so an envelope carrying neither or both
+    // makes the two disagree. The constructor is the only place that can rule it out.
+    test("a result cannot be built carrying neither data nor error") {
+        shouldThrow<IllegalArgumentException> { OneSignalResult<LoginData>(null, null) }
+    }
+
+    test("a result cannot be built carrying both data and error") {
+        shouldThrow<IllegalArgumentException> {
+            OneSignalResult(LoginData("os-1", "ext-1"), OneSignalError.of(ErrorCode.UNKNOWN))
+        }
+    }
+
+    // The copy stops a caller emptying the list that was passed in, but Java can still clear the
+    // copy itself, and first is documented as always safe to read.
+    test("the reason list handed to callers cannot be emptied") {
+        val restored =
+            OneSignalResult.fromMap(
+                mapOf("error" to listOf(mapOf("code" to "BACKEND_ERROR"), mapOf("code" to "STORAGE_LOCKED"))),
+                LoginData::fromMap,
+            )
+
+        @Suppress("UNCHECKED_CAST")
+        shouldThrow<UnsupportedOperationException> { (restored.error!!.error as MutableList<Any?>).clear() }
+
+        restored.error!!.first.code shouldBe ErrorCode.BACKEND_ERROR
+    }
+
+    // Attribution is the point of source. Re-deriving it from a code that has already degraded to
+    // UNKNOWN hands back a client-attributed error carrying a backend code.
+    test("an unrecognized code keeps the source the producer sent") {
+        val fromNewerProducer =
+            mapOf(
+                "success" to false,
+                "data" to null,
+                "error" to
+                    listOf(
+                        mapOf("code" to "RATE_LIMITED", "source" to "BACKEND", "backendCode" to 429, "message" to "slow down"),
+                    ),
+            )
+
+        val restored = OneSignalResult.fromMap(fromNewerProducer, LoginData::fromMap)
+
+        restored.error!!.first.code shouldBe ErrorCode.UNKNOWN
+        restored.error!!.first.backendCode shouldBe 429
+        restored.error!!.first.source shouldBe ErrorSource.BACKEND
+        // Also checked through the wire projection, since toMap and fromMap have to stay symmetric.
+        restored.error!!.toList().first()["source"] shouldBe "BACKEND"
+    }
+
+    test("a reason with no source on the wire falls back to the source its code implies") {
+        val restored =
+            OneSignalResult.fromMap(
+                mapOf("error" to listOf(mapOf("code" to "BACKEND_ERROR", "backendCode" to 100))),
+                LoginData::fromMap,
+            )
+
+        restored.error!!.first.source shouldBe ErrorSource.BACKEND
+        restored.error!!.toList().first()["source"] shouldBe "BACKEND"
     }
 })

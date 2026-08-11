@@ -1,5 +1,7 @@
 package com.onesignal
 
+import java.util.Collections
+
 /** Whether the SDK produced a failure locally or OneSignal's backend returned it. */
 enum class ErrorSource {
     CLIENT,
@@ -62,10 +64,11 @@ class OneSignalError internal constructor(
     /**
      * Why the call failed. Never empty.
      *
-     * Copied rather than aliased so that a caller holding the original list cannot empty it
-     * afterwards and leave [first] throwing.
+     * Copied so a caller holding the original list cannot empty it afterwards, and unmodifiable so
+     * the copy itself cannot be emptied either. Java sees a plain `List` and `clear()` is one
+     * keystroke away from `get()`; both would leave [first] throwing.
      */
-    val error: List<Detail> = error.toList()
+    val error: List<Detail> = Collections.unmodifiableList(error.toList())
 
     init {
         // [first] is documented as always safe to read, and the wire projection of an empty error
@@ -92,17 +95,26 @@ class OneSignalError internal constructor(
         val backendCode: Int? = null,
         /** A human-readable description intended for logs and diagnostics, not for end users. */
         val message: String? = null,
+        /**
+         * Who the failure came from.
+         *
+         * Carried rather than derived from [code] on demand, because a code this SDK does not
+         * recognize degrades to [ErrorCode.UNKNOWN] and re-deriving from that would report a
+         * backend failure as a client one. Defaults to the source [code] implies, which is right
+         * for everything the SDK raises locally.
+         */
+        val source: ErrorSource = code.source,
     ) {
         /** Projects this reason onto the cross-SDK wire shape consumed by the wrapper bridges. */
         fun toMap(): Map<String, Any?> =
             mapOf(
                 KEY_CODE to code.name,
-                KEY_SOURCE to code.source.name,
+                KEY_SOURCE to source.name,
                 KEY_BACKEND_CODE to backendCode,
                 KEY_MESSAGE to message,
             )
 
-        override fun toString(): String = "Detail(code=$code, backendCode=$backendCode, message=$message)"
+        override fun toString(): String = "Detail(code=$code, source=$source, backendCode=$backendCode, message=$message)"
 
         internal companion object {
             // Private because `const val` in an internal companion still compiles to a public
@@ -115,18 +127,28 @@ class OneSignalError internal constructor(
             /**
              * Rebuilds a reason from its wire shape.
              *
+             * Reads a raw map because the bridges do not all hand over `Map<String, Any?>`
+             * specifically, and because an unchecked cast that failed would be indistinguishable
+             * from a reason that was never there.
+             *
              * An unrecognized code degrades to [ErrorCode.UNKNOWN] rather than throwing, so a
              * wrapper built against an older SDK survives a newer producer emitting a code it has
-             * never heard of. The original text is preserved on [message] either way.
+             * never heard of. [message], [backendCode] and [source] are preserved either way, which
+             * is what keeps a degraded reason diagnosable.
              */
-            fun fromMap(map: Map<String, Any?>): Detail =
-                Detail(
-                    code = codeOf(map[KEY_CODE] as? String),
+            fun fromMap(map: Map<*, *>): Detail {
+                val code = codeOf(map[KEY_CODE] as? String)
+                return Detail(
+                    code = code,
                     backendCode = (map[KEY_BACKEND_CODE] as? Number)?.toInt(),
                     message = map[KEY_MESSAGE] as? String,
+                    source = sourceOf(map[KEY_SOURCE] as? String) ?: code.source,
                 )
+            }
 
             private fun codeOf(name: String?): ErrorCode = ErrorCode.entries.firstOrNull { it.name == name } ?: ErrorCode.UNKNOWN
+
+            private fun sourceOf(name: String?): ErrorSource? = ErrorSource.entries.firstOrNull { it.name == name }
         }
     }
 
@@ -149,12 +171,26 @@ class OneSignalError internal constructor(
         ): OneSignalError = OneSignalError(listOf(Detail(code, backendCode, message)), cause)
 
         /**
-         * Rebuilds an error from its wire shape. A payload carrying no recognizable reason still
-         * yields a usable error rather than an empty list, so [first] is always safe.
+         * Rebuilds an error from its wire shape.
+         *
+         * Takes the raw value rather than a typed list because the bridges do not all hand over a
+         * [List] — org.json's array is not one. Anything a producer put under `error` is a failure
+         * being reported, so an unreadable shape becomes a reason carrying its own text rather than
+         * being dropped, which would silently turn the failure into a success.
+         *
+         * A payload carrying no recognizable reason still yields a usable error rather than an
+         * empty list, so [first] is always safe.
          */
-        fun fromList(reasons: List<Map<String, Any?>>): OneSignalError =
-            OneSignalError(
-                reasons.map { Detail.fromMap(it) }.takeIf { it.isNotEmpty() } ?: listOf(Detail(ErrorCode.UNKNOWN)),
-            )
+        fun fromWire(raw: Any?): OneSignalError {
+            val reasons =
+                when (raw) {
+                    is List<*> -> raw.map { reasonOf(it) }
+                    else -> listOf(reasonOf(raw))
+                }
+            return OneSignalError(reasons.ifEmpty { listOf(Detail(ErrorCode.UNKNOWN)) })
+        }
+
+        private fun reasonOf(raw: Any?): Detail =
+            if (raw is Map<*, *>) Detail.fromMap(raw) else Detail(ErrorCode.UNKNOWN, message = raw?.toString())
     }
 }

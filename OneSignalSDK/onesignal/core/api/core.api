@@ -158,6 +158,7 @@ public final class com/onesignal/OneSignalError$Detail {
 	public final fun getBackendCode ()Ljava/lang/Integer;
 	public final fun getCode ()Lcom/onesignal/ErrorCode;
 	public final fun getMessage ()Ljava/lang/String;
+	public final fun getSource ()Lcom/onesignal/ErrorSource;
 	public final fun toMap ()Ljava/util/Map;
 	public fun toString ()Ljava/lang/String;
 }

@@ -32,6 +32,13 @@ class OneSignalResult<T : OneSignalResultData> internal constructor(
     /** The failure detail on failure, `null` on success. */
     val error: OneSignalError?,
 ) {
+    init {
+        // [isSuccess] reads error while [getOrThrow] reads data, so an envelope carrying neither or
+        // both leaves the two disagreeing with nothing to arbitrate. Mirrors the same guard in
+        // OneSignalError, and means no caller of this constructor can build a result that lies.
+        require((data == null) != (error == null)) { "OneSignalResult carries exactly one of data or error." }
+    }
+
     /** `true` when the call completed successfully. Equivalent to `error == null`. */
     val isSuccess: Boolean
         get() = error == null
@@ -43,7 +50,7 @@ class OneSignalResult<T : OneSignalResultData> internal constructor(
      * Returns the payload, or throws [OneSignalException] when the call failed. Use this only where
      * a failure genuinely cannot be handled locally.
      */
-    fun getOrThrow(): T = data ?: throw OneSignalException(error ?: unexpectedMissingError())
+    fun getOrThrow(): T = data ?: throw OneSignalException(checkNotNull(error))
 
     /** Projects the envelope onto the cross-SDK wire shape consumed by the wrapper bridges. */
     fun toMap(): Map<String, Any?> =
@@ -54,8 +61,6 @@ class OneSignalResult<T : OneSignalResultData> internal constructor(
         )
 
     override fun toString(): String = if (isSuccess) "OneSignalResult(success, data=$data)" else "OneSignalResult(failure, error=$error)"
-
-    private fun unexpectedMissingError() = OneSignalError.of(ErrorCode.UNKNOWN, "Result carried neither data nor error.")
 
     internal companion object {
         // Private because `const val` in an internal companion still compiles to a public static
@@ -82,15 +87,19 @@ class OneSignalResult<T : OneSignalResultData> internal constructor(
          * truth, which keeps a malformed producer from yielding a result that claims success while
          * carrying an error. Unrecognized keys are ignored so a newer producer can add fields
          * without breaking an older consumer.
+         *
+         * `error` is tested for presence, never for shape. A cast doing double duty as the
+         * predicate would read an error the parser could not type as no error at all, and report
+         * the failure as an empty success.
          */
         @Suppress("UNCHECKED_CAST")
         fun <T : OneSignalResultData> fromMap(
             map: Map<String, Any?>,
             dataParser: (Map<String, Any?>) -> T,
         ): OneSignalResult<T> {
-            val reasons = map[KEY_ERROR] as? List<Map<String, Any?>>
+            val reasons = map[KEY_ERROR]
             if (reasons != null) {
-                return failure(OneSignalError.fromList(reasons))
+                return failure(OneSignalError.fromWire(reasons))
             }
 
             val dataMap = map[KEY_DATA] as? Map<String, Any?> ?: emptyMap()
