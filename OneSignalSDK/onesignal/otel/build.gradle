@@ -42,7 +42,8 @@ android {
 
 ext {
     projectName = "OneSignal SDK Otel"
-    projectDescription = "OneSignal Android SDK - OpenTelemetry Module"
+    // Published for SDK packaging only — not a supported public API for app/wrapper authors.
+    projectDescription = "OneSignal Android SDK - OpenTelemetry Module (internal; not for public use)"
 }
 
 dependencies {

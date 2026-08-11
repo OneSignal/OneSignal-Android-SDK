@@ -3,6 +3,14 @@ package com.onesignal.otel
 /**
  * Platform-agnostic provider interface for injecting platform-specific values.
  * All Android/iOS specific values should be provided through this interface.
+ *
+ * **SDK-internal only — not a public implementor surface.** Although `:otel` is a
+ * published artifact and [OtelFactory] accepts this type, app and wrapper authors
+ * must not implement or depend on this interface. The sole production implementor
+ * is `OtelPlatformProvider` in `:core`.
+ *
+ * New abstract members are a deliberate source-compatibility break for any
+ * external implementor; there are no known consumers outside the SDK.
  */
 interface IOtelPlatformProvider {
     // Top-level attributes (static, calculated once)
