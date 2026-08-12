@@ -1,3 +1,11 @@
+pluginManagement {
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+
 // Allows running the :app project above with the local source for development of the SDK.
 // This means we can keep the example app as-is so it stays as a real world example.
 gradle.rootProject {

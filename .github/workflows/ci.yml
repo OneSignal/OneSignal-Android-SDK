@@ -173,7 +173,11 @@ jobs:
       - name: "[Build] Demo app (minified GMS + Huawei release)"
         working-directory: OneSignalSDK
         run: |
-          ./gradlew :app:assembleGmsRelease :app:assembleHuaweiRelease --console=plain
+          ./gradlew :OneSignal:otel:checkOtelIsolation :app:assembleGmsRelease :app:assembleHuaweiRelease --console=plain
+      - name: "[Build] Demo app with host OpenTelemetry 1.64 (SDK-5006 clash regression)"
+        working-directory: OneSignalSDK
+        run: |
+          ./gradlew :app:assembleGmsRelease -PsimulateOtelClash --console=plain
 
   # Keep the existing required check stable while the workloads run independently.
   build:

@@ -1,13 +1,13 @@
 package com.onesignal.otel.crash
 
 import com.onesignal.otel.IOtelLogger
-import com.onesignal.otel.IOtelOpenTelemetryCrash
+import com.onesignal.otel.IOtelSdkTelemetry
 import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.api.logs.Severity
 import java.time.Instant
 
 internal class OtelCrashReporter(
-    private val openTelemetry: IOtelOpenTelemetryCrash,
+    private val openTelemetry: IOtelSdkTelemetry,
     private val logger: IOtelLogger,
 ) : com.onesignal.otel.IOtelCrashReporter {
     companion object {

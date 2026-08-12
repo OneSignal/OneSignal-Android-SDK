@@ -1,5 +1,6 @@
 package com.onesignal.debug.internal.crash
 
+import com.onesignal.otel.IOtelCrashReporter
 import com.onesignal.otel.IOtelLogger
 import com.onesignal.otel.IOtelOpenTelemetryCrash
 import com.onesignal.otel.crash.IOtelAnrDetector
@@ -63,6 +64,7 @@ class OtelAnrDetectorTest : FunSpec({
         backgroundThresholdMs = 10_000L,
         isAppInForeground = inForeground,
         platform = platform,
+        crashReporter = mockk<IOtelCrashReporter>(relaxed = true),
     )
 
     test("OtelAnrDetector implements IOtelAnrDetector") {

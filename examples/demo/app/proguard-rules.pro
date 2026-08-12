@@ -22,4 +22,7 @@
 
 # No app-level -dontwarn for OneSignal OTel here: when com.onesignal:core pulls in com.onesignal:otel
 # (implementation dependency), AGP merges otel's consumer-rules.pro for R8 (SDK-4207 / #2596).
-# Older SDK lines without otel never put those optional classes on the classpath, so duplicates are unnecessary.
+# OpenTelemetry Java packages are relocated into com.onesignal.shaded.opentelemetry inside the otel
+# AAR (SDK-5006 / #2714), so a host OpenTelemetry BOM (e.g. Embrace 1.64) cannot clash with
+# OneSignal at R8 time. Older SDK lines without otel never put those optional classes on the
+# classpath, so duplicates are unnecessary.

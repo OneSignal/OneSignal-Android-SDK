@@ -107,6 +107,9 @@ object OtelFactory {
         openTelemetryCrash: IOtelOpenTelemetryCrash,
         logger: IOtelLogger,
     ): IOtelCrashReporter {
+        require(openTelemetryCrash is IOtelSdkTelemetry) {
+            "openTelemetryCrash must be a OneSignal-created telemetry instance"
+        }
         return OtelCrashReporter(openTelemetryCrash, logger)
     }
 }

@@ -20,7 +20,7 @@ internal fun LogRecordBuilder.setAllAttributes(attributes: Map<String, String>):
 internal abstract class OneSignalOpenTelemetryBase(
     private val osTopLevelFields: OtelFieldsTopLevel,
     private val osPerEventFields: OtelFieldsPerEvent,
-) : IOtelOpenTelemetry {
+) : IOtelSdkTelemetry {
     private val lock = Any()
     private var sdkCachedValue: OpenTelemetrySdk? = null
 
@@ -79,7 +79,7 @@ internal class OneSignalOpenTelemetryRemote(
     osTopLevelFields: OtelFieldsTopLevel,
     osPerEventFields: OtelFieldsPerEvent,
 ) : OneSignalOpenTelemetryBase(osTopLevelFields, osPerEventFields),
-    IOtelOpenTelemetryRemote {
+    IOtelSdkRemoteTelemetry {
 
     private val appId: String get() = platformProvider.appIdForHeaders
 
@@ -119,7 +119,7 @@ internal class OneSignalOpenTelemetryCrashLocal(
     osTopLevelFields: OtelFieldsTopLevel,
     osPerEventFields: OtelFieldsPerEvent,
 ) : OneSignalOpenTelemetryBase(osTopLevelFields, osPerEventFields),
-    IOtelOpenTelemetryCrash {
+    IOtelSdkCrashTelemetry {
     override fun getSdkInstance(attributes: Map<String, String>): OpenTelemetrySdk =
         OpenTelemetrySdk
             .builder()
