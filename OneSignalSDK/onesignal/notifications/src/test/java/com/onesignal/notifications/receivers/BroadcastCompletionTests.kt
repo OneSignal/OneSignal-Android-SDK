@@ -1,13 +1,12 @@
 package com.onesignal.notifications.receivers
 
 import android.content.BroadcastReceiver
-import android.os.Looper
 import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
 import io.kotest.core.spec.style.FunSpec
+import io.kotest.matchers.shouldBe
+import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
-import org.robolectric.Shadows.shadowOf
-import java.time.Duration
 
 @RobolectricTest
 class BroadcastCompletionTests : FunSpec({
@@ -23,10 +22,13 @@ class BroadcastCompletionTests : FunSpec({
 
     test("reconstructible work finishes at its deadline") {
         val pendingResult = mockk<BroadcastReceiver.PendingResult>(relaxed = true)
-        BroadcastCompletion("test", pendingResult, 100)
+        var finishThread = ""
+        every { pendingResult.finish() } answers {
+            finishThread = Thread.currentThread().name
+        }
+        BroadcastCompletion("test", pendingResult, 50)
 
-        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(100))
-
-        verify(exactly = 1) { pendingResult.finish() }
+        verify(exactly = 1, timeout = 1_000) { pendingResult.finish() }
+        finishThread shouldBe "OS_BroadcastDeadline"
     }
 })

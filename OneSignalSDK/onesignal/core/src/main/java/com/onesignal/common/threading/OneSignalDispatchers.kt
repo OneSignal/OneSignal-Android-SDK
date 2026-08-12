@@ -58,6 +58,9 @@ object OneSignalDispatchers {
     @Volatile
     internal var beforeLaneCreateForTest: ((String) -> Unit)? = null
 
+    @Volatile
+    internal var beforeFallbackCreateForTest: ((String) -> Unit)? = null
+
     private class OptimizedThreadFactory(
         private val namePrefix: String,
         private val priority: Int = Thread.NORM_PRIORITY,
@@ -160,18 +163,29 @@ object OneSignalDispatchers {
 
         @Suppress("TooGenericExceptionCaught")
         fun initialize() {
-            val newTarget =
+            createTargetOrFallback()?.let(::drainPending)
+        }
+
+        @Suppress("TooGenericExceptionCaught")
+        private fun createTargetOrFallback(): LaneTarget? =
+            try {
+                createTarget(lane)
+            } catch (e: Exception) {
+                Logging.warn("OneSignalDispatchers: Using fallback for $lane lane: ${e.message}", e)
                 try {
-                    createTarget(lane)
-                } catch (e: Exception) {
-                    Logging.warn("OneSignalDispatchers: Using fallback for $lane lane: ${e.message}", e)
                     createFallbackTarget(lane)
                 } catch (t: Throwable) {
-                    Logging.warn("OneSignalDispatchers: Failed to initialize $lane lane: ${t.message}", t)
-                    failPending("OneSignal $lane dispatcher failed to initialize")
-                    return
+                    Logging.warn("OneSignalDispatchers: Fallback failed for $lane lane: ${t.message}", t)
+                    failPending("OneSignal $lane dispatcher fallback failed")
+                    null
                 }
+            } catch (t: Throwable) {
+                Logging.warn("OneSignalDispatchers: Failed to initialize $lane lane: ${t.message}", t)
+                failPending("OneSignal $lane dispatcher failed to initialize")
+                null
+            }
 
+        private fun drainPending(newTarget: LaneTarget) {
             while (true) {
                 val next =
                     synchronized(lock) {
@@ -278,17 +292,7 @@ object OneSignalDispatchers {
             if (!running.compareAndSet(false, true)) return
             try {
                 Thread(
-                    {
-                        while (true) {
-                            val gate = queue.poll()
-                            if (gate != null) {
-                                gate.initialize()
-                                continue
-                            }
-                            running.set(false)
-                            if (queue.isEmpty() || !running.compareAndSet(false, true)) return@Thread
-                        }
-                    },
+                    ::runLoop,
                     "$BASE_THREAD_NAME-bootstrap",
                 ).apply {
                     isDaemon = true
@@ -302,6 +306,24 @@ object OneSignalDispatchers {
                     val gate = queue.poll() ?: break
                     gate.bootstrapFailed()
                 }
+            }
+        }
+
+        @Suppress("TooGenericExceptionCaught")
+        private fun runLoop() {
+            try {
+                while (true) {
+                    val gate = queue.poll() ?: return
+                    try {
+                        gate.initialize()
+                    } catch (t: Throwable) {
+                        Logging.warn("OneSignalDispatchers: Bootstrap failed for a lane: ${t.message}", t)
+                        gate.bootstrapFailed()
+                    }
+                }
+            } finally {
+                running.set(false)
+                if (queue.isNotEmpty()) startIfNeeded()
             }
         }
     }
@@ -378,6 +400,7 @@ object OneSignalDispatchers {
         }
 
     private fun createFallbackTarget(lane: Lane): LaneTarget {
+        beforeFallbackCreateForTest?.invoke(lane.name)
         val dispatcher =
             when (lane) {
                 Lane.IO -> Dispatchers.IO
@@ -487,6 +510,7 @@ object OneSignalDispatchers {
         }
         resetPrewarmForTest()
         beforeLaneCreateForTest = null
+        beforeFallbackCreateForTest = null
     }
 
     @Suppress("ComplexMethod")
@@ -506,7 +530,7 @@ object OneSignalDispatchers {
             - Ingress Queue: ${ingress?.queue?.size ?: "n/a"} pending tasks
             - Total completed tasks: ${(io?.completedTaskCount ?: 0L) + (default?.completedTaskCount ?: 0L) + (serial?.completedTaskCount ?: 0L) + (ingress?.completedTaskCount ?: 0L)}
             - Memory usage: ~${((io?.activeCount ?: 0) + (default?.activeCount ?: 0) + (serial?.activeCount ?: 0) + (ingress?.activeCount ?: 0)) * 1024}KB (thread stacks, ~1MB each)
-            """.trimIndent()
+        """.trimIndent()
     }
 
     internal fun getStatus(): String {

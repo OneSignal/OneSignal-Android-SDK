@@ -22,7 +22,10 @@ class FCMBroadcastReceiver : BroadcastReceiver() {
             return
         }
 
-        runIngressHandoff("FCMBroadcastReceiver") {
+        runIngressHandoff(
+            "FCMBroadcastReceiver",
+            BroadcastCompletion.RECONSTRUCTIBLE_WORK_TIMEOUT_MS,
+        ) {
             if (!isFCMMessage(intent)) {
                 setSuccessfulResultCode()
                 return@runIngressHandoff

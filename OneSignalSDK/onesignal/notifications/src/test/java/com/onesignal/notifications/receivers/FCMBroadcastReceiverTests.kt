@@ -73,4 +73,31 @@ class FCMBroadcastReceiverTests : FunSpec({
 
         verify(exactly = 0) { OneSignalDispatchers.prewarm() }
     }
+
+    test("FCMBroadcastReceiver does not claim payloads rejected by durable ingress") {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val intent =
+            Intent("com.google.android.c2dm.intent.RECEIVE").apply {
+                putExtra("from", "sender")
+                putExtra("message_type", "gcm")
+            }
+        every { NotificationIngress.persistFcm(any(), any(), any()) } returns false
+
+        FCMBroadcastReceiver().onReceive(context, intent)
+
+        verify(exactly = 1) { NotificationIngress.persistFcm(context, intent, any()) }
+    }
+
+    test("FCMBroadcastReceiver ignores non-GCM message types") {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val intent =
+            Intent("com.google.android.c2dm.intent.RECEIVE").apply {
+                putExtra("from", "sender")
+                putExtra("message_type", "deleted_messages")
+            }
+
+        FCMBroadcastReceiver().onReceive(context, intent)
+
+        verify(exactly = 0) { NotificationIngress.persistFcm(any(), any(), any()) }
+    }
 })

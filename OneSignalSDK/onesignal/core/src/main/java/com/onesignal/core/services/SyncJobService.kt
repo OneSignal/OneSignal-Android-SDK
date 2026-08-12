@@ -45,6 +45,7 @@ class SyncJobService : JobService() {
     }
 
     private class JobRun(val parameters: JobParameters) {
+        val jobId = parameters.jobId
         val state = AtomicReference(RunState.RUNNING)
         val job = AtomicReference<Job?>()
     }
@@ -105,7 +106,7 @@ class SyncJobService : JobService() {
         val run = activeRun.get()
         val stopped =
             run != null &&
-                run.parameters === jobParameters &&
+                run.jobId == jobParameters.jobId &&
                 run.state.compareAndSet(RunState.RUNNING, RunState.STOPPED)
         if (stopped) {
             activeRun.compareAndSet(run, null)

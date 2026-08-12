@@ -66,5 +66,9 @@ internal class NotificationRestoreWorkManager : INotificationRestoreWorkManager 
         private val NOTIFICATION_RESTORE_WORKER_IDENTIFIER =
             NotificationRestoreWorker::class.java.canonicalName ?: NotificationRestoreWorker::class.java.name
         private val restored = AtomicBoolean(false)
+
+        internal fun resetForTest() {
+            restored.set(false)
+        }
     }
 }

@@ -9,9 +9,9 @@ import android.os.Bundle
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequest
+import androidx.work.Operation
 import androidx.work.WorkerParameters
 import com.onesignal.OneSignal
-import com.onesignal.common.threading.OneSignalDispatchers
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.startup.IStartableService
 import com.onesignal.debug.internal.logging.Logging
@@ -44,7 +44,7 @@ internal object NotificationIngress {
                 createdAtMs = System.currentTimeMillis(),
             )
         IngressStore.get(context).put(record)
-        scheduleDrainBestEffort(context)
+        scheduleDrainDurably(context)
         return true
     }
 
@@ -65,7 +65,7 @@ internal object NotificationIngress {
                 createdAtMs = System.currentTimeMillis(),
             )
         IngressStore.get(context).put(record)
-        scheduleDrainBestEffort(context)
+        scheduleDrainDurably(context)
     }
 
     fun enqueueRestore(context: Context) {
@@ -73,32 +73,21 @@ internal object NotificationIngress {
     }
 
     fun scheduleDrain(context: Context) {
+        enqueueDrain(context)
+    }
+
+    private fun scheduleDrainDurably(context: Context) {
+        enqueueDrain(context)?.result?.get()
+    }
+
+    private fun enqueueDrain(context: Context): Operation? {
         drainSchedulerForTest?.let {
             it(context)
-            return
+            return null
         }
         val request = OneTimeWorkRequest.Builder(NotificationIngressDrainWorker::class.java).build()
-        OSWorkManagerHelper.getInstance(context.applicationContext)
-            .enqueueUniqueWork(DRAIN_WORK_NAME, ExistingWorkPolicy.KEEP, request)
-    }
-
-    private fun scheduleDrainBestEffort(context: Context) {
-        if (drainSchedulerForTest != null) {
-            scheduleDrainSafely(context)
-            return
-        }
-        OneSignalDispatchers.launchOnIO {
-            scheduleDrainSafely(context)
-        }
-    }
-
-    @Suppress("TooGenericExceptionCaught")
-    private fun scheduleDrainSafely(context: Context) {
-        try {
-            scheduleDrain(context)
-        } catch (e: Exception) {
-            Logging.warn("Notification ingress persisted; drain scheduling will retry on next startup", e)
-        }
+        return OSWorkManagerHelper.getInstance(context.applicationContext)
+            .enqueueUniqueWork(DRAIN_WORK_NAME, ExistingWorkPolicy.APPEND_OR_REPLACE, request)
     }
 
     internal fun pendingCountForTest(context: Context): Int = IngressStore.get(context).count()
@@ -107,6 +96,21 @@ internal object NotificationIngress {
         drainSchedulerForTest = null
         IngressStore.get(context).clear()
     }
+
+    internal fun putRawForTest(
+        context: Context,
+        id: String,
+        kind: String,
+        payload: String,
+        createdAtMs: Long = System.currentTimeMillis(),
+    ) {
+        IngressStore.get(context).putRaw(id, kind, payload, createdAtMs)
+    }
+
+    internal fun attemptCountForTest(
+        context: Context,
+        id: String,
+    ): Int? = IngressStore.get(context).attemptCount(id)
 }
 
 internal class NotificationIngressDrainStarter(
@@ -129,22 +133,65 @@ internal class NotificationIngressDrainWorker(
     @Suppress("TooGenericExceptionCaught")
     override suspend fun doWork(): Result {
         val store = IngressStore.get(applicationContext)
-        if (!OneSignal.initWithContext(applicationContext)) return Result.retry()
+        if (!OneSignal.initWithContext(applicationContext)) {
+            return if (runAttemptCount + 1 >= MAX_INIT_ATTEMPTS) Result.failure() else Result.retry()
+        }
 
-        return try {
-            for (record in store.list()) {
-                when (record.kind) {
-                    IngressKind.FCM -> processFcm(record)
-                    IngressKind.DISMISS -> processDismiss(record)
-                }
+        var retryNeeded = false
+        for (record in store.list()) {
+            retryNeeded = processRecord(store, record) || retryNeeded
+        }
+        return if (retryNeeded) Result.retry() else Result.success()
+    }
+
+    @Suppress("TooGenericExceptionCaught")
+    private suspend fun processRecord(
+        store: IngressStore,
+        record: IngressRecord,
+    ): Boolean =
+        when {
+            record.kind == null -> {
+                Logging.warn("Dropping notification ingress ${record.id} with unknown kind")
                 store.delete(record.id)
+                false
             }
-            Result.success()
-        } catch (e: Exception) {
-            Logging.error("Notification ingress drain failed", e)
-            Result.retry()
+            isExpired(record) -> {
+                Logging.warn("Dropping expired notification ingress ${record.id}")
+                store.delete(record.id)
+                false
+            }
+            else ->
+                try {
+                    when (record.kind) {
+                        IngressKind.FCM -> processFcm(record)
+                        IngressKind.DISMISS -> processDismiss(record)
+                    }
+                    store.delete(record.id)
+                    false
+                } catch (e: Exception) {
+                    handleRecordFailure(store, record, e)
+                }
+        }
+
+    private fun handleRecordFailure(
+        store: IngressStore,
+        record: IngressRecord,
+        error: Exception,
+    ): Boolean {
+        val nextAttempt = record.attemptCount + 1
+        return if (nextAttempt >= MAX_RECORD_ATTEMPTS) {
+            Logging.error("Dropping notification ingress ${record.id} after $nextAttempt attempts", error)
+            store.delete(record.id)
+            false
+        } else {
+            Logging.warn("Notification ingress ${record.id} failed attempt $nextAttempt", error)
+            store.setAttemptCount(record.id, nextAttempt)
+            true
         }
     }
+
+    private fun isExpired(record: IngressRecord): Boolean =
+        System.currentTimeMillis() - record.createdAtMs >= MAX_RECORD_AGE_MS
 
     private fun processFcm(record: IngressRecord) {
         val bundle = BundleCodec.decode(record.payload)
@@ -157,6 +204,12 @@ internal class NotificationIngressDrainWorker(
         OneSignal.getService<INotificationOpenedProcessor>()
             .processFromContext(applicationContext, intent)
     }
+
+    companion object {
+        internal const val MAX_RECORD_ATTEMPTS = 3
+        internal const val MAX_INIT_ATTEMPTS = 3
+        internal const val MAX_RECORD_AGE_MS = 24 * 60 * 60 * 1_000L
+    }
 }
 
 private enum class IngressKind {
@@ -166,10 +219,11 @@ private enum class IngressKind {
 
 private data class IngressRecord(
     val id: String,
-    val kind: IngressKind,
+    val kind: IngressKind?,
     val action: String?,
     val payload: String,
     val createdAtMs: Long,
+    val attemptCount: Int = 0,
 )
 
 private class IngressStore private constructor(context: Context) :
@@ -182,7 +236,8 @@ private class IngressStore private constructor(context: Context) :
                 kind TEXT NOT NULL,
                 action TEXT,
                 payload TEXT NOT NULL,
-                created_at INTEGER NOT NULL
+                created_at INTEGER NOT NULL,
+                attempt_count INTEGER NOT NULL DEFAULT 0
             )
             """.trimIndent(),
         )
@@ -193,21 +248,28 @@ private class IngressStore private constructor(context: Context) :
         oldVersion: Int,
         newVersion: Int,
     ) {
-        database.execSQL("DROP TABLE IF EXISTS $TABLE")
-        onCreate(database)
+        if (oldVersion < SCHEMA_WITH_ATTEMPTS_VERSION) {
+            database.execSQL("ALTER TABLE $TABLE ADD COLUMN attempt_count INTEGER NOT NULL DEFAULT 0")
+        }
     }
 
     fun put(record: IngressRecord) {
         val values =
             ContentValues().apply {
                 put("id", record.id)
-                put("kind", record.kind.name)
+                put("kind", requireNotNull(record.kind).name)
                 put("action", record.action)
                 put("payload", record.payload)
                 put("created_at", record.createdAtMs)
+                put(ATTEMPT_COUNT_COLUMN, record.attemptCount)
             }
-        check(writableDatabase.insertWithOnConflict(TABLE, null, values, SQLiteDatabase.CONFLICT_REPLACE) != -1L) {
-            "Unable to persist notification ingress"
+        val inserted = writableDatabase.insertWithOnConflict(TABLE, null, values, SQLiteDatabase.CONFLICT_IGNORE)
+        if (inserted == -1L) {
+            values.remove("created_at")
+            values.remove(ATTEMPT_COUNT_COLUMN)
+            check(writableDatabase.update(TABLE, values, "id = ?", arrayOf(record.id)) == 1) {
+                "Unable to update notification ingress"
+            }
         }
     }
 
@@ -215,7 +277,7 @@ private class IngressStore private constructor(context: Context) :
         val records = mutableListOf<IngressRecord>()
         readableDatabase.query(
             TABLE,
-            arrayOf("id", "kind", "action", "payload", "created_at"),
+            arrayOf("id", "kind", "action", "payload", "created_at", ATTEMPT_COUNT_COLUMN),
             null,
             null,
             null,
@@ -226,10 +288,11 @@ private class IngressStore private constructor(context: Context) :
                 records +=
                     IngressRecord(
                         id = cursor.getString(ID_COLUMN_INDEX),
-                        kind = IngressKind.valueOf(cursor.getString(KIND_COLUMN_INDEX)),
+                        kind = enumValues<IngressKind>().firstOrNull { it.name == cursor.getString(KIND_COLUMN_INDEX) },
                         action = cursor.getString(ACTION_COLUMN_INDEX),
                         payload = cursor.getString(PAYLOAD_COLUMN_INDEX),
                         createdAtMs = cursor.getLong(CREATED_AT_COLUMN_INDEX),
+                        attemptCount = cursor.getInt(ATTEMPT_COUNT_COLUMN_INDEX),
                     )
             }
         }
@@ -238,6 +301,44 @@ private class IngressStore private constructor(context: Context) :
 
     fun delete(id: String) {
         writableDatabase.delete(TABLE, "id = ?", arrayOf(id))
+    }
+
+    fun setAttemptCount(
+        id: String,
+        attemptCount: Int,
+    ) {
+        val values = ContentValues().apply { put(ATTEMPT_COUNT_COLUMN, attemptCount) }
+        writableDatabase.update(TABLE, values, "id = ?", arrayOf(id))
+    }
+
+    fun attemptCount(id: String): Int? =
+        readableDatabase.query(
+            TABLE,
+            arrayOf(ATTEMPT_COUNT_COLUMN),
+            "id = ?",
+            arrayOf(id),
+            null,
+            null,
+            null,
+        ).use { cursor ->
+            if (cursor.moveToFirst()) cursor.getInt(0) else null
+        }
+
+    fun putRaw(
+        id: String,
+        kind: String,
+        payload: String,
+        createdAtMs: Long,
+    ) {
+        val values =
+            ContentValues().apply {
+                put("id", id)
+                put("kind", kind)
+                put("payload", payload)
+                put("created_at", createdAtMs)
+                put(ATTEMPT_COUNT_COLUMN, 0)
+            }
+        writableDatabase.insertWithOnConflict(TABLE, null, values, SQLiteDatabase.CONFLICT_REPLACE)
     }
 
     fun count(): Int =
@@ -252,13 +353,16 @@ private class IngressStore private constructor(context: Context) :
 
     companion object {
         private const val DATABASE_NAME = "OneSignalIngress.db"
-        private const val DATABASE_VERSION = 1
+        private const val SCHEMA_WITH_ATTEMPTS_VERSION = 2
+        private const val DATABASE_VERSION = SCHEMA_WITH_ATTEMPTS_VERSION
         private const val TABLE = "notification_ingress"
+        private const val ATTEMPT_COUNT_COLUMN = "attempt_count"
         private const val ID_COLUMN_INDEX = 0
         private const val KIND_COLUMN_INDEX = 1
         private const val ACTION_COLUMN_INDEX = 2
         private const val PAYLOAD_COLUMN_INDEX = 3
         private const val CREATED_AT_COLUMN_INDEX = 4
+        private const val ATTEMPT_COUNT_COLUMN_INDEX = 5
 
         @Volatile
         private var instance: IngressStore? = null

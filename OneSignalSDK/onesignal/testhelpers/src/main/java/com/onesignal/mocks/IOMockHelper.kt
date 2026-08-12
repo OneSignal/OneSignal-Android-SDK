@@ -2,8 +2,8 @@ package com.onesignal.mocks
 
 import com.onesignal.common.threading.OneSignalDispatchers
 import com.onesignal.common.threading.runOnSerialIO
-import com.onesignal.common.threading.suspendifyOnIngress
 import com.onesignal.common.threading.suspendifyOnIO
+import com.onesignal.common.threading.suspendifyOnIngress
 import com.onesignal.common.threading.suspendifyOnMain
 import com.onesignal.common.threading.suspendifyOnSerialIO
 import io.kotest.core.listeners.AfterSpecListener

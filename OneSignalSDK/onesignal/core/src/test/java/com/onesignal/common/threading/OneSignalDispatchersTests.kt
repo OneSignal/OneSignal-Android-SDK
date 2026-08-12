@@ -59,6 +59,26 @@ class OneSignalDispatchersTests : FunSpec({
         OneSignalDispatchers.beforeLaneCreateForTest = null
     }
 
+    test("fallback initialization failure does not wedge subsequent lanes") {
+        OneSignalDispatchers.resetForTest()
+        val failedJobCompleted = CountDownLatch(1)
+        val defaultWorkRan = CountDownLatch(1)
+        OneSignalDispatchers.beforeLaneCreateForTest = { lane ->
+            if (lane == "IO") throw IllegalStateException("primary failed")
+        }
+        OneSignalDispatchers.beforeFallbackCreateForTest = { lane ->
+            if (lane == "IO") throw AssertionError("fallback failed")
+        }
+
+        OneSignalDispatchers.launchOnIO {}.invokeOnCompletion { failedJobCompleted.countDown() }
+        failedJobCompleted.await(1, TimeUnit.SECONDS) shouldBe true
+
+        OneSignalDispatchers.beforeLaneCreateForTest = null
+        OneSignalDispatchers.beforeFallbackCreateForTest = null
+        OneSignalDispatchers.launchOnDefault { defaultWorkRan.countDown() }
+        defaultWorkRan.await(1, TimeUnit.SECONDS) shouldBe true
+    }
+
     test("IO dispatcher should execute work on background thread") {
         val mainThreadId = Thread.currentThread().id
         var backgroundThreadId: Long? = null
