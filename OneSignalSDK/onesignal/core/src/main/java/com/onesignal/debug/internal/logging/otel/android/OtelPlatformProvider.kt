@@ -64,20 +64,13 @@ internal class OtelPlatformProvider(
 
     override val sdkWrapperVersion: String? = OneSignalWrapper.sdkVersion
 
-    // Host language version for remote-log dashboard filtering (ossdk.kotlin_version).
-    // KotlinVersion.CURRENT reflects the stdlib the SDK was compiled against.
+    // Compile-time Kotlin stdlib, not the host app's Kotlin.
     override val kotlinVersion: String? = KotlinVersion.CURRENT.toString()
 
-    // Android has no Swift toolchain.
     override val swiftVersion: String? = null
 
-    // Extra toolchain labels under ossdk.* for dashboard filtering. Prefer values that are
-    // stable for the process lifetime and cheap to read.
-    // - android_api_level: device API level (SDK_INT) — complementary to os.version (RELEASE)
-    // Do NOT emit java_version from System.getProperty("java.specification.version"):
-    // on-device ART hardcodes that property to "0.9" (see AndroidHardcodedSystemProperties).
-    // Robolectric returns the host JDK version and would mask that in unit tests.
-    // Build-time-only values (AGP, compileSdk, NDK, real javac target) are unavailable at runtime.
+    // Device API level; complementary to os.version (RELEASE).
+    // Do not emit java_version — ART hardcodes java.specification.version to "0.9".
     override val additionalVersionAttributes: Map<String, String> =
         mapOf("android_api_level" to Build.VERSION.SDK_INT.toString())
 
