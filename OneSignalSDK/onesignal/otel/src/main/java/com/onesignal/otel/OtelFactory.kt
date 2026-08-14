@@ -10,6 +10,9 @@ import com.onesignal.otel.crash.OtelCrashUploader
  * Factory class for creating Otel components.
  * This allows for fast initialization of the crash handler with all dependencies
  * pre-populated.
+ *
+ * SDK-internal only — not for public use by app or wrapper authors. Callers must
+ * supply an [IOtelPlatformProvider] owned by the SDK (see that type's KDoc).
  */
 object OtelFactory {
     /**

@@ -15,6 +15,7 @@ import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.user.internal.backend.IdentityConstants
 import io.kotest.core.spec.style.FunSpec
+import io.kotest.matchers.collections.shouldNotContain
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.string.shouldContain
@@ -216,6 +217,28 @@ class OtelPlatformProviderTest : FunSpec({
 
         // Then
         result shouldBe null
+    }
+
+    test("kotlinVersion returns KotlinVersion.CURRENT") {
+        val provider = createAndroidOtelPlatformProvider(appContext!!) { emptyFeatureManager() }
+
+        provider.kotlinVersion shouldBe KotlinVersion.CURRENT.toString()
+    }
+
+    test("swiftVersion defaults to null on Android") {
+        val provider = createAndroidOtelPlatformProvider(appContext!!) { emptyFeatureManager() }
+
+        provider.swiftVersion shouldBe null
+    }
+
+    test("additionalVersionAttributes includes android_api_level only") {
+        val provider = createAndroidOtelPlatformProvider(appContext!!) { emptyFeatureManager() }
+        val attrs = provider.additionalVersionAttributes
+
+        attrs shouldBe mapOf("android_api_level" to Build.VERSION.SDK_INT.toString())
+        // java.specification.version is hardcoded to "0.9" on-device ART — never emit it.
+        attrs.keys.shouldNotContain("java_version")
+        attrs.keys.shouldNotContain("kotlin_version")
     }
 
     // ===== Lazy ID Properties Tests =====

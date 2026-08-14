@@ -64,6 +64,16 @@ internal class OtelPlatformProvider(
 
     override val sdkWrapperVersion: String? = OneSignalWrapper.sdkVersion
 
+    // Compile-time Kotlin stdlib, not the host app's Kotlin.
+    override val kotlinVersion: String? = KotlinVersion.CURRENT.toString()
+
+    override val swiftVersion: String? = null
+
+    // Device API level; complementary to os.version (RELEASE).
+    // Do not emit java_version — ART hardcodes java.specification.version to "0.9".
+    override val additionalVersionAttributes: Map<String, String> =
+        mapOf("android_api_level" to Build.VERSION.SDK_INT.toString())
+
     // Read through the supplier on every access so per-event attributes always reflect the
     // current featureStates snapshot (including IMMEDIATE-mode flag changes). The supplier is
     // an immutable constructor val that resolves IFeatureManager lazily — this lets the OTel

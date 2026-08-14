@@ -3,6 +3,14 @@ package com.onesignal.otel
 /**
  * Platform-agnostic provider interface for injecting platform-specific values.
  * All Android/iOS specific values should be provided through this interface.
+ *
+ * **SDK-internal only — not a public implementor surface.** Although `:otel` is a
+ * published artifact and [OtelFactory] accepts this type, app and wrapper authors
+ * must not implement or depend on this interface. The sole production implementor
+ * is `OtelPlatformProvider` in `:core`.
+ *
+ * New abstract members are a deliberate source-compatibility break for any
+ * external implementor; there are no known consumers outside the SDK.
  */
 interface IOtelPlatformProvider {
     // Top-level attributes (static, calculated once)
@@ -24,6 +32,33 @@ interface IOtelPlatformProvider {
     val osBuildId: String
     val sdkWrapper: String?
     val sdkWrapperVersion: String?
+
+    /**
+     * Kotlin language / stdlib version of the host app when applicable
+     * (e.g. [KotlinVersion.CURRENT]). Null on non-Kotlin hosts. Emitted as
+     * `ossdk.kotlin_version` when non-blank.
+     *
+     * SDK-internal injection seam only — the sole production implementor is
+     * `OtelPlatformProvider` in `:core`. Not a public compatibility surface for
+     * app or wrapper authors.
+     */
+    val kotlinVersion: String?
+
+    /**
+     * Swift language version when applicable. Null on Android / non-Swift hosts.
+     * Emitted as `ossdk.swift_version` when non-blank.
+     *
+     * Same SDK-internal caveat as [kotlinVersion].
+     */
+    val swiftVersion: String?
+
+    /**
+     * Extra static version labels for dashboard filtering (`ossdk.<key>`).
+     * Dedicated [kotlinVersion] / [swiftVersion] and core resource attrs win on clash.
+     *
+     * Same SDK-internal caveat as [kotlinVersion].
+     */
+    val additionalVersionAttributes: Map<String, String>
 
     /**
      * The canonical keys of feature flags currently enabled for this device, as resolved by
