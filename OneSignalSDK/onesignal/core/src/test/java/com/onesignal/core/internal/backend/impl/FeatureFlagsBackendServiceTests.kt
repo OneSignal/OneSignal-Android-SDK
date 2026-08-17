@@ -53,7 +53,8 @@ class FeatureFlagsBackendServiceTests : FunSpec({
 
         val outcome = FeatureFlagsBackendService(http).fetchRemoteFeatureFlags("appId")
 
-        outcome.shouldBeInstanceOf<RemoteFeatureFlagsFetchOutcome.Unavailable>()
+        val unavailable = outcome.shouldBeInstanceOf<RemoteFeatureFlagsFetchOutcome.Unavailable>()
+        unavailable.isClientError shouldBe true
         val warns = logsForService().filter { it.level == LogLevel.WARN }
         warns shouldHaveSize 1
         warns[0].entry.contains("status=403") shouldBe true
@@ -66,6 +67,7 @@ class FeatureFlagsBackendServiceTests : FunSpec({
 
         FeatureFlagsBackendService(http).fetchRemoteFeatureFlags("appId")
             .shouldBeInstanceOf<RemoteFeatureFlagsFetchOutcome.Unavailable>()
+            .isClientError shouldBe true
         val warns = logsForService().filter { it.level == LogLevel.WARN }
         warns shouldHaveSize 1
         warns[0].entry.contains("status=404") shouldBe true
@@ -77,6 +79,7 @@ class FeatureFlagsBackendServiceTests : FunSpec({
 
         FeatureFlagsBackendService(http).fetchRemoteFeatureFlags("appId")
             .shouldBeInstanceOf<RemoteFeatureFlagsFetchOutcome.Unavailable>()
+            .isClientError shouldBe false
         logsForService().any { it.level == LogLevel.WARN } shouldBe false
         val debugs = logsForService().filter { it.level == LogLevel.DEBUG }
         debugs.any { it.entry.contains("status=500") && it.entry.contains("body=boom") } shouldBe true
@@ -88,6 +91,7 @@ class FeatureFlagsBackendServiceTests : FunSpec({
 
         FeatureFlagsBackendService(http).fetchRemoteFeatureFlags("appId")
             .shouldBeInstanceOf<RemoteFeatureFlagsFetchOutcome.Unavailable>()
+            .isClientError shouldBe false
         logsForService().any { it.level == LogLevel.WARN } shouldBe false
         val debugs = logsForService().filter { it.level == LogLevel.DEBUG }
         debugs.any { it.entry.contains("status=0") && it.entry.contains("body=<empty>") } shouldBe true

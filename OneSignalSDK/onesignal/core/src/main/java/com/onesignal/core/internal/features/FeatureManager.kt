@@ -11,11 +11,22 @@ import com.onesignal.features.FeatureFlagsJsonParser
 import kotlinx.serialization.json.JsonObject
 import com.onesignal.features.FeatureManager as SharedFeatureManager
 
+/**
+ * Resolves backend-driven [FeatureFlag] state for the current device run.
+ * Catalog and latching live in shared [SharedFeatureManager]; this host hydrates
+ * from [ConfigModel] and applies [com.onesignal.features.FeatureActivationMode]
+ * rules via [SharedFeatureManager.refresh].
+ */
 interface IFeatureManager {
+    /**
+     * Whether [feature] is enabled for the current run, after remote config and
+     * [com.onesignal.features.FeatureActivationMode] latching.
+     */
     fun isEnabled(feature: FeatureFlag): Boolean
 
     /**
-     * Canonical keys enabled for this process after latching. Order is not guaranteed.
+     * Canonical keys enabled for this process after latching.
+     * Order follows [FeatureFlag] declaration order.
      */
     fun enabledFeatureKeys(): List<String>
 
@@ -110,8 +121,15 @@ internal class FeatureManager(
                 "OneSignal: Local feature override enabled for testing only: $localFeatureOverrides",
             )
         }
-        synchronized(latchLock) {
-            latch.refresh(model.sdkRemoteFeatureFlags, applyAppStartupFlags, localFeatureOverrides)
+        val deferred =
+            synchronized(latchLock) {
+                latch.refresh(model.sdkRemoteFeatureFlags, applyAppStartupFlags, localFeatureOverrides)
+            }
+        for (change in deferred) {
+            Logging.info(
+                "OneSignal: Feature ${change.key} changed remotely to ${change.desiredEnabled} " +
+                    "but is NEXT_RUN, keeping current run value=${change.latchedEnabled}",
+            )
         }
     }
 

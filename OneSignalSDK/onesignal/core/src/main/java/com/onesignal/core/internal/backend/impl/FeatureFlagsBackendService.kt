@@ -52,8 +52,7 @@ internal class FeatureFlagsBackendService(
                 val msg =
                     "FeatureFlagsBackendService: non-success status=${outcome.statusCode} " +
                         "body=${outcome.bodySnippet}"
-                val status = outcome.statusCode
-                if (status != null && status in 400 until 500) {
+                if (outcome.isClientError) {
                     Logging.warn(msg)
                 } else {
                     Logging.debug(msg)
