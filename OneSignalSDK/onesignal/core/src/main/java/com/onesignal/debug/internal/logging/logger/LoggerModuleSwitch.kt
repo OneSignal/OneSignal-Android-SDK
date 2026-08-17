@@ -9,10 +9,10 @@ import com.onesignal.debug.internal.logging.otel.android.OtelIdResolver
  *  - the legacy OpenTelemetry-based `otel` module (default), or
  *  - the new, multiplatform, OpenTelemetry-free `logger` module.
  *
- * The choice is driven by the [com.onesignal.core.internal.features.FeatureFlag.SDK_CUSTOM_LOGGING]
+ * The choice is driven by the [com.onesignal.features.FeatureFlag.SDK_CUSTOM_LOGGING]
  * remote feature flag, read from the cached config in SharedPreferences via [OtelIdResolver]. Because
  * the value comes from the config the *previous* session persisted, enabling/disabling the flag takes
- * effect on the next app start — never mid-session (the flag is [FeatureActivationMode.APP_STARTUP]).
+ * effect on the next app start — never mid-session (the flag is APP_STARTUP).
  *
  * The flag is read directly from prefs (not through [com.onesignal.core.internal.features.FeatureManager])
  * because the module decision is made during early init, before service bootstrap. It is read fresh on

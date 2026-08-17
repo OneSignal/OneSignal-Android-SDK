@@ -3,6 +3,7 @@ package com.onesignal.core.internal.features
 import com.onesignal.common.modeling.ModelChangeTags
 import com.onesignal.core.internal.config.ConfigModel
 import com.onesignal.core.internal.config.ConfigModelStore
+import com.onesignal.features.FeatureFlag
 import com.onesignal.user.internal.jwt.JwtRequirement
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe

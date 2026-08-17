@@ -300,7 +300,7 @@ class ConfigModel : Model() {
      * Feature ids from the Turbine SDK feature-flags HTTP endpoint
      * ([com.onesignal.core.internal.backend.IFeatureFlagsBackendService]), updated while the app is
      * foreground. [com.onesignal.core.internal.features.FeatureManager] unions these with any local
-     * test overrides when evaluating [com.onesignal.core.internal.features.FeatureFlag] entries.
+     * test overrides when evaluating [com.onesignal.features.FeatureFlag] entries.
      */
     var sdkRemoteFeatureFlags: List<String>
         get() = getListProperty(::sdkRemoteFeatureFlags.name) { emptyList() }

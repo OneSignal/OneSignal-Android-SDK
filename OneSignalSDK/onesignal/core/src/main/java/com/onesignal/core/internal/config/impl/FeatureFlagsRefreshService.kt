@@ -8,13 +8,13 @@ import com.onesignal.common.threading.runOnSerialIO
 import com.onesignal.core.internal.application.IApplicationLifecycleHandler
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.backend.IFeatureFlagsBackendService
-import com.onesignal.core.internal.backend.RemoteFeatureFlagsFetchOutcome
-import com.onesignal.core.internal.backend.impl.FeatureFlagsJsonParser
 import com.onesignal.core.internal.config.ConfigModel
 import com.onesignal.core.internal.config.ConfigModelChangeTags
 import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.startup.IStartableService
 import com.onesignal.debug.internal.logging.Logging
+import com.onesignal.features.FeatureFlagsJsonParser
+import com.onesignal.features.RemoteFeatureFlagsFetchOutcome
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -153,7 +153,7 @@ internal class FeatureFlagsRefreshService(
     private suspend fun fetchAndApply(appId: String) {
         val result =
             when (val outcome = featureFlagsBackend.fetchRemoteFeatureFlags(appId)) {
-                RemoteFeatureFlagsFetchOutcome.Unavailable -> return
+                is RemoteFeatureFlagsFetchOutcome.Unavailable -> return
                 is RemoteFeatureFlagsFetchOutcome.Success -> outcome.result
             }
         val current = configModelStore.model

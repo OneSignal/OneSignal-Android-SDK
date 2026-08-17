@@ -1,16 +1,18 @@
 package com.onesignal.core.internal.backend.impl
 
 import com.onesignal.common.OneSignalUtils
-import com.onesignal.core.internal.backend.RemoteFeatureFlagsFetchOutcome
 import com.onesignal.core.internal.http.HttpResponse
 import com.onesignal.core.internal.http.IHttpClient
 import com.onesignal.debug.ILogListener
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.OneSignalLogEvent
 import com.onesignal.debug.internal.logging.Logging
+import com.onesignal.features.RemoteFeatureFlagsFetchOutcome
+import com.onesignal.features.TurbineSdkFeatureFlagsPath
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.types.shouldBeInstanceOf
 import io.mockk.coEvery
 import io.mockk.mockk
 
@@ -51,7 +53,7 @@ class FeatureFlagsBackendServiceTests : FunSpec({
 
         val outcome = FeatureFlagsBackendService(http).fetchRemoteFeatureFlags("appId")
 
-        outcome shouldBe RemoteFeatureFlagsFetchOutcome.Unavailable
+        outcome.shouldBeInstanceOf<RemoteFeatureFlagsFetchOutcome.Unavailable>()
         val warns = logsForService().filter { it.level == LogLevel.WARN }
         warns shouldHaveSize 1
         warns[0].entry.contains("status=403") shouldBe true
@@ -62,8 +64,8 @@ class FeatureFlagsBackendServiceTests : FunSpec({
         val http = mockk<IHttpClient>()
         coEvery { http.get(any(), any()) } returns HttpResponse(404, """{"errors":["Not Found"]}""")
 
-        FeatureFlagsBackendService(http).fetchRemoteFeatureFlags("appId") shouldBe
-            RemoteFeatureFlagsFetchOutcome.Unavailable
+        FeatureFlagsBackendService(http).fetchRemoteFeatureFlags("appId")
+            .shouldBeInstanceOf<RemoteFeatureFlagsFetchOutcome.Unavailable>()
         val warns = logsForService().filter { it.level == LogLevel.WARN }
         warns shouldHaveSize 1
         warns[0].entry.contains("status=404") shouldBe true
@@ -73,8 +75,8 @@ class FeatureFlagsBackendServiceTests : FunSpec({
         val http = mockk<IHttpClient>()
         coEvery { http.get(any(), any()) } returns HttpResponse(500, "boom")
 
-        FeatureFlagsBackendService(http).fetchRemoteFeatureFlags("appId") shouldBe
-            RemoteFeatureFlagsFetchOutcome.Unavailable
+        FeatureFlagsBackendService(http).fetchRemoteFeatureFlags("appId")
+            .shouldBeInstanceOf<RemoteFeatureFlagsFetchOutcome.Unavailable>()
         logsForService().any { it.level == LogLevel.WARN } shouldBe false
         val debugs = logsForService().filter { it.level == LogLevel.DEBUG }
         debugs.any { it.entry.contains("status=500") && it.entry.contains("body=boom") } shouldBe true
@@ -84,8 +86,8 @@ class FeatureFlagsBackendServiceTests : FunSpec({
         val http = mockk<IHttpClient>()
         coEvery { http.get(any(), any()) } returns HttpResponse(0, null)
 
-        FeatureFlagsBackendService(http).fetchRemoteFeatureFlags("appId") shouldBe
-            RemoteFeatureFlagsFetchOutcome.Unavailable
+        FeatureFlagsBackendService(http).fetchRemoteFeatureFlags("appId")
+            .shouldBeInstanceOf<RemoteFeatureFlagsFetchOutcome.Unavailable>()
         logsForService().any { it.level == LogLevel.WARN } shouldBe false
         val debugs = logsForService().filter { it.level == LogLevel.DEBUG }
         debugs.any { it.entry.contains("status=0") && it.entry.contains("body=<empty>") } shouldBe true
@@ -95,8 +97,8 @@ class FeatureFlagsBackendServiceTests : FunSpec({
         val http = mockk<IHttpClient>()
         coEvery { http.get(any(), any()) } returns HttpResponse(200, """{"errors":["Forbidden"]}""")
 
-        FeatureFlagsBackendService(http).fetchRemoteFeatureFlags("appId") shouldBe
-            RemoteFeatureFlagsFetchOutcome.Unavailable
+        FeatureFlagsBackendService(http).fetchRemoteFeatureFlags("appId")
+            .shouldBeInstanceOf<RemoteFeatureFlagsFetchOutcome.Unavailable>()
         val warns =
             logsForService().filter {
                 it.level == LogLevel.WARN && it.entry.contains("not valid Turbine feature-flags JSON")
@@ -116,8 +118,8 @@ class FeatureFlagsBackendServiceTests : FunSpec({
         val http = mockk<IHttpClient>()
         coEvery { http.get(any(), any()) } returns HttpResponse(200, htmlBody)
 
-        FeatureFlagsBackendService(http).fetchRemoteFeatureFlags("appId") shouldBe
-            RemoteFeatureFlagsFetchOutcome.Unavailable
+        FeatureFlagsBackendService(http).fetchRemoteFeatureFlags("appId")
+            .shouldBeInstanceOf<RemoteFeatureFlagsFetchOutcome.Unavailable>()
         val warns =
             logsForService().filter {
                 it.level == LogLevel.WARN && it.entry.contains("not valid Turbine feature-flags JSON")
@@ -163,52 +165,13 @@ class FeatureFlagsBackendServiceTests : FunSpec({
         coEvery { http.get(any(), any()) } returns HttpResponse(200, null)
 
         val outcome = FeatureFlagsBackendService(http).fetchRemoteFeatureFlags("appId")
-        outcome shouldBe RemoteFeatureFlagsFetchOutcome.Unavailable
+        outcome.shouldBeInstanceOf<RemoteFeatureFlagsFetchOutcome.Unavailable>()
         val warns = logsForService().filter { it.level == LogLevel.WARN }
         warns.any { it.entry.contains("empty body for success status=200") } shouldBe true
     }
 
-    test("buildFeatureFlagsGetPath matches Turbine /apps/:app_id/sdk/features/:platform/:sdk_version") {
-        FeatureFlagsBackendService.buildFeatureFlagsGetPath(
-            appId = "14719551-23f1-4d20-8dab-81496ffca5ea",
-            platform = FeatureFlagsBackendService.TURBINE_FEATURES_PLATFORM_ANDROID,
-            sdkVersion = "050801",
-        ) shouldBe "apps/14719551-23f1-4d20-8dab-81496ffca5ea/sdk/features/android/050801"
-    }
-
-    test("buildFeatureFlagsGetPath encodes prerelease sdk version label") {
-        FeatureFlagsBackendService.buildFeatureFlagsGetPath(
-            appId = "14719551-23f1-4d20-8dab-81496ffca5ea",
-            platform = FeatureFlagsBackendService.TURBINE_FEATURES_PLATFORM_ANDROID,
-            sdkVersion = "050801-beta",
-        ) shouldBe "apps/14719551-23f1-4d20-8dab-81496ffca5ea/sdk/features/android/050801-beta"
-    }
-
-    test("isValidFeaturesSdkVersionLabel accepts only 6-digit labels with optional -suffix") {
-        val valid =
-            listOf(
-                "050801",
-                "050801-beta",
-                "050801-beta1",
-                "010203-rc.2",
-                "000000",
-            )
-        val invalid =
-            listOf(
-                "5.8.1",
-                "05080",
-                "0508010",
-                "",
-                "050801-",
-                "050801/",
-                "v050801",
-            )
-        valid.forEach { FeatureFlagsBackendService.isValidFeaturesSdkVersionLabel(it) shouldBe true }
-        invalid.forEach { FeatureFlagsBackendService.isValidFeaturesSdkVersionLabel(it) shouldBe false }
-    }
-
     test("OneSignalUtils.sdkVersion from BuildConfig matches Turbine label rules") {
-        FeatureFlagsBackendService.isValidFeaturesSdkVersionLabel(OneSignalUtils.sdkVersion) shouldBe true
+        TurbineSdkFeatureFlagsPath.isValidFeaturesSdkVersionLabel(OneSignalUtils.sdkVersion) shouldBe true
     }
 })
 

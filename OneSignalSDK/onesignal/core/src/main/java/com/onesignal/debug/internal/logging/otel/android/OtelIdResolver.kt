@@ -4,10 +4,10 @@ import android.content.Context
 import com.onesignal.common.IDManager
 import com.onesignal.common.toList
 import com.onesignal.core.internal.config.ConfigModel
-import com.onesignal.core.internal.features.FeatureFlag
 import com.onesignal.core.internal.preferences.PreferenceOneSignalKeys
 import com.onesignal.core.internal.preferences.PreferenceStores
 import com.onesignal.debug.internal.logging.Logging
+import com.onesignal.features.FeatureFlag
 import com.onesignal.user.internal.backend.IdentityConstants
 import org.json.JSONArray
 import org.json.JSONObject
