@@ -15,7 +15,6 @@ import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.runs
-import kotlinx.serialization.json.jsonPrimitive
 
 class FeatureManagerTests : FunSpec({
     fun stubConfigModel(model: ConfigModel) {
@@ -73,7 +72,8 @@ class FeatureManagerTests : FunSpec({
         val manager = FeatureManager(configModelStore)
 
         val meta = requireNotNull(manager.remoteFeatureFlagMetadata())
-        requireNotNull(meta.getValue("X")["note"]).jsonPrimitive.content shouldBe "y"
+        meta.getValue("X").contains("\"note\"") shouldBe true
+        meta.getValue("X").contains("y") shouldBe true
     }
 
     test("remoteFeatureFlagMetadata is null when config has no stored metadata") {

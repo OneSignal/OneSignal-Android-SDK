@@ -9,12 +9,13 @@ import com.onesignal.features.FeatureFlagsClient
 import com.onesignal.features.FeatureFlagsHttpResponse
 import com.onesignal.features.IFeatureFlagsHttp
 import com.onesignal.features.RemoteFeatureFlagsFetchOutcome
+import com.onesignal.features.RemoteFeatureFlagsUnavailableReason
 
 /**
  * Android host for the shared Turbine feature-flags client.
  *
  * This class is the platform adapter iOS should mirror: wrap native HTTP as
- * [IFeatureFlagsHttp], construct [FeatureFlagsClient], log [Unavailable] at the
+ * [IFeatureFlagsHttp], construct [FeatureFlagsClient], log unavailable outcomes at the
  * right severity, and leave path/parse/orchestration in KMP.
  */
 internal class FeatureFlagsBackendService(
@@ -32,23 +33,28 @@ internal class FeatureFlagsBackendService(
                 platform = TURBINE_FEATURES_PLATFORM_ANDROID,
                 sdkVersion = sdkVersion,
             )
-        if (outcome is RemoteFeatureFlagsFetchOutcome.Unavailable) {
-            logUnavailable(outcome, sdkVersion)
+        if (outcome.isUnavailable) {
+            logUnavailable(outcome, appId, sdkVersion)
         }
         return outcome
     }
 
     private fun logUnavailable(
-        outcome: RemoteFeatureFlagsFetchOutcome.Unavailable,
+        outcome: RemoteFeatureFlagsFetchOutcome,
+        appId: String,
         sdkVersion: String,
     ) {
         when (outcome.reason) {
-            RemoteFeatureFlagsFetchOutcome.Unavailable.Reason.INVALID_SDK_VERSION ->
+            RemoteFeatureFlagsUnavailableReason.INVALID_APP_ID ->
+                Logging.warn(
+                    "FeatureFlagsBackendService: app id not usable for Turbine path: '$appId'",
+                )
+            RemoteFeatureFlagsUnavailableReason.INVALID_SDK_VERSION ->
                 Logging.warn(
                     "FeatureFlagsBackendService: sdk version not usable for Turbine path (expected " +
                         "6-digit label optional -suffix, e.g. 050801 or 050801-beta): '$sdkVersion'",
                 )
-            RemoteFeatureFlagsFetchOutcome.Unavailable.Reason.NON_SUCCESS_HTTP -> {
+            RemoteFeatureFlagsUnavailableReason.NON_SUCCESS_HTTP -> {
                 val msg =
                     "FeatureFlagsBackendService: non-success status=${outcome.statusCode} " +
                         "body=${outcome.bodySnippet}"
@@ -58,15 +64,17 @@ internal class FeatureFlagsBackendService(
                     Logging.debug(msg)
                 }
             }
-            RemoteFeatureFlagsFetchOutcome.Unavailable.Reason.EMPTY_BODY ->
+            RemoteFeatureFlagsUnavailableReason.EMPTY_BODY ->
                 Logging.warn(
                     "FeatureFlagsBackendService: empty body for success status=${outcome.statusCode}",
                 )
-            RemoteFeatureFlagsFetchOutcome.Unavailable.Reason.INVALID_JSON ->
+            RemoteFeatureFlagsUnavailableReason.INVALID_JSON ->
                 Logging.warn(
                     "FeatureFlagsBackendService: response body is not valid Turbine feature-flags JSON: " +
                         outcome.bodySnippet,
                 )
+            null ->
+                Logging.warn("FeatureFlagsBackendService: unavailable without reason")
         }
     }
 

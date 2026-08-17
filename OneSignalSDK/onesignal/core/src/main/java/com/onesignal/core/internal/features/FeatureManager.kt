@@ -8,7 +8,6 @@ import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.features.FeatureFlag
 import com.onesignal.features.FeatureFlagsJsonParser
-import kotlinx.serialization.json.JsonObject
 import com.onesignal.features.FeatureManager as SharedFeatureManager
 
 /**
@@ -32,9 +31,10 @@ interface IFeatureManager {
 
     /**
      * Per-flag payloads persisted on [ConfigModel.sdkRemoteFeatureFlagMetadata].
-     * `null` when nothing has been stored yet.
+     * Values are JSON object text (flag id → object). `null` when nothing has been
+     * stored yet.
      */
-    fun remoteFeatureFlagMetadata(): Map<String, JsonObject>?
+    fun remoteFeatureFlagMetadata(): Map<String, String>?
 }
 
 /**
@@ -45,15 +45,12 @@ interface IFeatureManager {
  * [SharedFeatureManager.refresh] with cached keys at process start
  * (`applyAppStartupFlags = true`) and again after later fetches (`false`).
  *
- * KMP [SharedFeatureManager] is not itself synchronized (`@Volatile` is unavailable on
- * Kotlin/Native 1.9). This host serializes [isEnabled] / refresh on [latchLock].
- * iOS should do the same with a serial queue around the shared latch.
+ * Shared [SharedFeatureManager] is thread-safe; this host does not add an extra lock.
  */
 @Suppress("TooGenericExceptionCaught")
 internal class FeatureManager(
     private val configModelStore: ConfigModelStore,
 ) : IFeatureManager, ISingletonModelStoreChangeHandler<ConfigModel> {
-    private val latchLock = Any()
     private val latch = SharedFeatureManager()
 
     init {
@@ -66,13 +63,11 @@ internal class FeatureManager(
         configModelStore.subscribe(this)
     }
 
-    override fun isEnabled(feature: FeatureFlag): Boolean =
-        synchronized(latchLock) { latch.isEnabled(feature) }
+    override fun isEnabled(feature: FeatureFlag): Boolean = latch.isEnabled(feature)
 
-    override fun enabledFeatureKeys(): List<String> =
-        synchronized(latchLock) { latch.enabledFeatureKeys() }
+    override fun enabledFeatureKeys(): List<String> = latch.enabledFeatureKeys()
 
-    override fun remoteFeatureFlagMetadata(): Map<String, JsonObject>? {
+    override fun remoteFeatureFlagMetadata(): Map<String, String>? {
         val raw = configModelStore.model.sdkRemoteFeatureFlagMetadata
         if (raw.isNullOrBlank()) {
             return null
@@ -122,9 +117,7 @@ internal class FeatureManager(
             )
         }
         val deferred =
-            synchronized(latchLock) {
-                latch.refresh(model.sdkRemoteFeatureFlags, applyAppStartupFlags, localFeatureOverrides)
-            }
+            latch.refresh(model.sdkRemoteFeatureFlags, applyAppStartupFlags, localFeatureOverrides)
         for (change in deferred) {
             Logging.info(
                 "OneSignal: Feature ${change.key} changed remotely to ${change.desiredEnabled} " +

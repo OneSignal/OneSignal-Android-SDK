@@ -8,18 +8,17 @@ import com.onesignal.debug.LogLevel
 import com.onesignal.debug.OneSignalLogEvent
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.features.RemoteFeatureFlagsFetchOutcome
+import com.onesignal.features.RemoteFeatureFlagsUnavailableReason
 import com.onesignal.features.TurbineSdkFeatureFlagsPath
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
-import io.kotest.matchers.types.shouldBeInstanceOf
 import io.mockk.coEvery
 import io.mockk.mockk
 
 /**
  * Verifies that [FeatureFlagsBackendService] surfaces enough diagnostic information for a
- * developer to understand why a remote feature-flags fetch returned
- * [RemoteFeatureFlagsFetchOutcome.Unavailable]. In particular:
+ * developer to understand why a remote feature-flags fetch returned unavailable. In particular:
  * - 4xx failures (e.g. 403 Forbidden for apps not enrolled in Turbine) should log at [LogLevel.WARN]
  *   and include a body snippet so the Turbine error payload shows up in logcat by default.
  * - 5xx / transient failures should stay at [LogLevel.DEBUG] to avoid noisy logs for flaky networks.
@@ -53,8 +52,8 @@ class FeatureFlagsBackendServiceTests : FunSpec({
 
         val outcome = FeatureFlagsBackendService(http).fetchRemoteFeatureFlags("appId")
 
-        val unavailable = outcome.shouldBeInstanceOf<RemoteFeatureFlagsFetchOutcome.Unavailable>()
-        unavailable.isClientError shouldBe true
+        outcome.shouldBeUnavailable(RemoteFeatureFlagsUnavailableReason.NON_SUCCESS_HTTP)
+        outcome.isClientError shouldBe true
         val warns = logsForService().filter { it.level == LogLevel.WARN }
         warns shouldHaveSize 1
         warns[0].entry.contains("status=403") shouldBe true
@@ -65,9 +64,9 @@ class FeatureFlagsBackendServiceTests : FunSpec({
         val http = mockk<IHttpClient>()
         coEvery { http.get(any(), any()) } returns HttpResponse(404, """{"errors":["Not Found"]}""")
 
-        FeatureFlagsBackendService(http).fetchRemoteFeatureFlags("appId")
-            .shouldBeInstanceOf<RemoteFeatureFlagsFetchOutcome.Unavailable>()
-            .isClientError shouldBe true
+        val outcome = FeatureFlagsBackendService(http).fetchRemoteFeatureFlags("appId")
+        outcome.shouldBeUnavailable(RemoteFeatureFlagsUnavailableReason.NON_SUCCESS_HTTP)
+        outcome.isClientError shouldBe true
         val warns = logsForService().filter { it.level == LogLevel.WARN }
         warns shouldHaveSize 1
         warns[0].entry.contains("status=404") shouldBe true
@@ -77,9 +76,9 @@ class FeatureFlagsBackendServiceTests : FunSpec({
         val http = mockk<IHttpClient>()
         coEvery { http.get(any(), any()) } returns HttpResponse(500, "boom")
 
-        FeatureFlagsBackendService(http).fetchRemoteFeatureFlags("appId")
-            .shouldBeInstanceOf<RemoteFeatureFlagsFetchOutcome.Unavailable>()
-            .isClientError shouldBe false
+        val outcome = FeatureFlagsBackendService(http).fetchRemoteFeatureFlags("appId")
+        outcome.shouldBeUnavailable(RemoteFeatureFlagsUnavailableReason.NON_SUCCESS_HTTP)
+        outcome.isClientError shouldBe false
         logsForService().any { it.level == LogLevel.WARN } shouldBe false
         val debugs = logsForService().filter { it.level == LogLevel.DEBUG }
         debugs.any { it.entry.contains("status=500") && it.entry.contains("body=boom") } shouldBe true
@@ -89,9 +88,9 @@ class FeatureFlagsBackendServiceTests : FunSpec({
         val http = mockk<IHttpClient>()
         coEvery { http.get(any(), any()) } returns HttpResponse(0, null)
 
-        FeatureFlagsBackendService(http).fetchRemoteFeatureFlags("appId")
-            .shouldBeInstanceOf<RemoteFeatureFlagsFetchOutcome.Unavailable>()
-            .isClientError shouldBe false
+        val outcome = FeatureFlagsBackendService(http).fetchRemoteFeatureFlags("appId")
+        outcome.shouldBeUnavailable(RemoteFeatureFlagsUnavailableReason.NON_SUCCESS_HTTP)
+        outcome.isClientError shouldBe false
         logsForService().any { it.level == LogLevel.WARN } shouldBe false
         val debugs = logsForService().filter { it.level == LogLevel.DEBUG }
         debugs.any { it.entry.contains("status=0") && it.entry.contains("body=<empty>") } shouldBe true
@@ -102,7 +101,7 @@ class FeatureFlagsBackendServiceTests : FunSpec({
         coEvery { http.get(any(), any()) } returns HttpResponse(200, """{"errors":["Forbidden"]}""")
 
         FeatureFlagsBackendService(http).fetchRemoteFeatureFlags("appId")
-            .shouldBeInstanceOf<RemoteFeatureFlagsFetchOutcome.Unavailable>()
+            .shouldBeUnavailable(RemoteFeatureFlagsUnavailableReason.INVALID_JSON)
         val warns =
             logsForService().filter {
                 it.level == LogLevel.WARN && it.entry.contains("not valid Turbine feature-flags JSON")
@@ -123,7 +122,7 @@ class FeatureFlagsBackendServiceTests : FunSpec({
         coEvery { http.get(any(), any()) } returns HttpResponse(200, htmlBody)
 
         FeatureFlagsBackendService(http).fetchRemoteFeatureFlags("appId")
-            .shouldBeInstanceOf<RemoteFeatureFlagsFetchOutcome.Unavailable>()
+            .shouldBeUnavailable(RemoteFeatureFlagsUnavailableReason.INVALID_JSON)
         val warns =
             logsForService().filter {
                 it.level == LogLevel.WARN && it.entry.contains("not valid Turbine feature-flags JSON")
@@ -169,9 +168,18 @@ class FeatureFlagsBackendServiceTests : FunSpec({
         coEvery { http.get(any(), any()) } returns HttpResponse(200, null)
 
         val outcome = FeatureFlagsBackendService(http).fetchRemoteFeatureFlags("appId")
-        outcome.shouldBeInstanceOf<RemoteFeatureFlagsFetchOutcome.Unavailable>()
+        outcome.shouldBeUnavailable(RemoteFeatureFlagsUnavailableReason.EMPTY_BODY)
         val warns = logsForService().filter { it.level == LogLevel.WARN }
         warns.any { it.entry.contains("empty body for success status=200") } shouldBe true
+    }
+
+    test("path-shaping app id returns Unavailable without HTTP and logs at WARN") {
+        val http = mockk<IHttpClient>(relaxed = true)
+
+        val outcome = FeatureFlagsBackendService(http).fetchRemoteFeatureFlags("app/../other")
+        outcome.shouldBeUnavailable(RemoteFeatureFlagsUnavailableReason.INVALID_APP_ID)
+        val warns = logsForService().filter { it.level == LogLevel.WARN }
+        warns.any { it.entry.contains("app id not usable") } shouldBe true
     }
 
     test("OneSignalUtils.sdkVersion from BuildConfig matches Turbine label rules") {
@@ -179,9 +187,14 @@ class FeatureFlagsBackendServiceTests : FunSpec({
     }
 })
 
+private fun RemoteFeatureFlagsFetchOutcome.shouldBeUnavailable(
+    reason: RemoteFeatureFlagsUnavailableReason,
+) {
+    check(isUnavailable) { "expected Unavailable, got $this" }
+    this.reason shouldBe reason
+}
+
 private fun RemoteFeatureFlagsFetchOutcome.shouldBeSuccessWithEmptyKeys() {
-    check(this is RemoteFeatureFlagsFetchOutcome.Success) {
-        "expected Success, got $this"
-    }
-    this.result.enabledKeys shouldBe emptyList()
+    check(isSuccess) { "expected Success, got $this" }
+    requireNotNull(result).enabledKeys shouldBe emptyList()
 }
