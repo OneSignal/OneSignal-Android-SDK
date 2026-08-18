@@ -7,7 +7,7 @@ import com.onesignal.core.internal.config.ConfigModel
 import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.features.FeatureFlag
-import com.onesignal.features.FeatureFlagsJsonParser
+import com.onesignal.features.FeatureFlagMetadata
 import com.onesignal.features.FeatureManager as SharedFeatureManager
 
 /**
@@ -68,11 +68,11 @@ internal class FeatureManager(
     override fun enabledFeatureKeys(): List<String> = latch.enabledFeatureKeys()
 
     override fun remoteFeatureFlagMetadata(): Map<String, String>? {
-        val raw = configModelStore.model.sdkRemoteFeatureFlagMetadata
-        if (raw.isNullOrBlank()) {
-            return null
-        }
-        return FeatureFlagsJsonParser.parseStoredMetadataMap(raw)
+        val parsed =
+            FeatureFlagMetadata.parse(
+                configModelStore.model.sdkRemoteFeatureFlagMetadata,
+            ) ?: return null
+        return parsed.ids().associateWith { id -> parsed.jsonObjectForId(id).orEmpty() }
     }
 
     @Suppress("TooGenericExceptionCaught")
