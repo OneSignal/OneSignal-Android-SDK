@@ -3,6 +3,11 @@ package com.onesignal.core.internal.features
 import com.onesignal.common.modeling.ModelChangeTags
 import com.onesignal.core.internal.config.ConfigModel
 import com.onesignal.core.internal.config.ConfigModelStore
+import com.onesignal.debug.ILogListener
+import com.onesignal.debug.LogLevel
+import com.onesignal.debug.OneSignalLogEvent
+import com.onesignal.debug.internal.logging.Logging
+import com.onesignal.features.FeatureFlag
 import com.onesignal.user.internal.jwt.JwtRequirement
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
@@ -10,7 +15,6 @@ import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.runs
-import kotlinx.serialization.json.jsonPrimitive
 
 class FeatureManagerTests : FunSpec({
     fun stubConfigModel(model: ConfigModel) {
@@ -68,7 +72,8 @@ class FeatureManagerTests : FunSpec({
         val manager = FeatureManager(configModelStore)
 
         val meta = requireNotNull(manager.remoteFeatureFlagMetadata())
-        requireNotNull(meta.getValue("X")["note"]).jsonPrimitive.content shouldBe "y"
+        meta.getValue("X").contains("\"note\"") shouldBe true
+        meta.getValue("X").contains("y") shouldBe true
     }
 
     test("remoteFeatureFlagMetadata is null when config has no stored metadata") {
@@ -127,5 +132,42 @@ class FeatureManagerTests : FunSpec({
 
         // Feature flag flips in-memory because IDENTITY_VERIFICATION is IMMEDIATE.
         manager.isEnabled(FeatureFlag.SDK_IDENTITY_VERIFICATION) shouldBe true
+    }
+
+    test("APP_STARTUP custom logging stays latched mid-session and logs NEXT_RUN") {
+        val initialModel = mockk<ConfigModel>()
+        stubConfigModel(initialModel)
+        every { initialModel.sdkRemoteFeatureFlags } returns listOf(FeatureFlag.SDK_CUSTOM_LOGGING.key)
+        val configModelStore = mockk<ConfigModelStore>()
+        every { configModelStore.model } returns initialModel
+        every { configModelStore.subscribe(any()) } just runs
+
+        val originalLogLevel = Logging.logLevel
+        Logging.logLevel = LogLevel.NONE
+        val capturedLogs = mutableListOf<OneSignalLogEvent>()
+        val listener = ILogListener { event -> capturedLogs.add(event) }
+        Logging.addListener(listener)
+        try {
+            val manager = FeatureManager(configModelStore)
+            manager.isEnabled(FeatureFlag.SDK_CUSTOM_LOGGING) shouldBe true
+
+            val updatedModel = mockk<ConfigModel>()
+            stubConfigModel(updatedModel)
+            every { updatedModel.sdkRemoteFeatureFlags } returns emptyList()
+            every { configModelStore.model } returns updatedModel
+
+            manager.onModelReplaced(updatedModel, ModelChangeTags.HYDRATE)
+
+            manager.isEnabled(FeatureFlag.SDK_CUSTOM_LOGGING) shouldBe true
+            capturedLogs.any {
+                it.level == LogLevel.INFO &&
+                    it.entry.contains(FeatureFlag.SDK_CUSTOM_LOGGING.key) &&
+                    it.entry.contains("NEXT_RUN") &&
+                    it.entry.contains("keeping current run value=true")
+            } shouldBe true
+        } finally {
+            Logging.removeListener(listener)
+            Logging.logLevel = originalLogLevel
+        }
     }
 })

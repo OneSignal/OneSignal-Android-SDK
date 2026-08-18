@@ -8,8 +8,6 @@ import com.onesignal.common.threading.runOnSerialIO
 import com.onesignal.core.internal.application.IApplicationLifecycleHandler
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.backend.IFeatureFlagsBackendService
-import com.onesignal.core.internal.backend.RemoteFeatureFlagsFetchOutcome
-import com.onesignal.core.internal.backend.impl.FeatureFlagsJsonParser
 import com.onesignal.core.internal.config.ConfigModel
 import com.onesignal.core.internal.config.ConfigModelChangeTags
 import com.onesignal.core.internal.config.ConfigModelStore
@@ -151,13 +149,13 @@ internal class FeatureFlagsRefreshService(
     }
 
     private suspend fun fetchAndApply(appId: String) {
-        val result =
-            when (val outcome = featureFlagsBackend.fetchRemoteFeatureFlags(appId)) {
-                RemoteFeatureFlagsFetchOutcome.Unavailable -> return
-                is RemoteFeatureFlagsFetchOutcome.Success -> outcome.result
-            }
+        val outcome = featureFlagsBackend.fetchRemoteFeatureFlags(appId)
+        if (!outcome.isSuccess) {
+            return
+        }
+        val result = outcome.result ?: return
         val current = configModelStore.model
-        val newMetaString = FeatureFlagsJsonParser.encodeMetadata(result.metadata)
+        val newMetaString = result.metadataJson
         val beforeKeys = current.sdkRemoteFeatureFlags.toSet()
         val afterKeys = result.enabledKeys.toSet()
         if (afterKeys == beforeKeys && newMetaString == current.sdkRemoteFeatureFlagMetadata) {

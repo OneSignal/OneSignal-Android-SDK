@@ -6,10 +6,10 @@ import androidx.test.core.app.ApplicationProvider
 import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
 import com.onesignal.common.IDManager.LOCAL_PREFIX
 import com.onesignal.core.internal.config.ConfigModel
-import com.onesignal.core.internal.features.FeatureFlag
 import com.onesignal.core.internal.preferences.PreferenceOneSignalKeys
 import com.onesignal.core.internal.preferences.PreferenceStores
 import com.onesignal.debug.LogLevel
+import com.onesignal.features.FeatureFlag
 import com.onesignal.user.internal.backend.IdentityConstants
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
