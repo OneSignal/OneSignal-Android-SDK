@@ -56,13 +56,13 @@ class OneSignalOpenTelemetryTest : FunSpec({
     }
 
     test("remote telemetry should have logExporter") {
-        val remoteTelemetry = OtelFactory.createRemoteTelemetry(mockPlatformProvider)
+        val remoteTelemetry = OtelFactory.createRemoteTelemetry(mockPlatformProvider) as IOtelSdkRemoteTelemetry
 
         remoteTelemetry.logExporter shouldNotBe null
     }
 
     test("remote telemetry getLogger should return LogRecordBuilder") {
-        val remoteTelemetry = OtelFactory.createRemoteTelemetry(mockPlatformProvider)
+        val remoteTelemetry = OtelFactory.createRemoteTelemetry(mockPlatformProvider) as IOtelSdkRemoteTelemetry
 
         runBlocking {
             val logger = remoteTelemetry.getLogger()
@@ -71,7 +71,7 @@ class OneSignalOpenTelemetryTest : FunSpec({
     }
 
     test("remote telemetry forceFlush should not throw") {
-        val remoteTelemetry = OtelFactory.createRemoteTelemetry(mockPlatformProvider)
+        val remoteTelemetry = OtelFactory.createRemoteTelemetry(mockPlatformProvider) as IOtelSdkRemoteTelemetry
 
         runBlocking {
             // Should not throw
@@ -111,7 +111,7 @@ class OneSignalOpenTelemetryTest : FunSpec({
         every { mockPlatformProvider.crashStoragePath } returns tempDir
 
         try {
-            val crashTelemetry = OtelFactory.createCrashLocalTelemetry(mockPlatformProvider)
+            val crashTelemetry = OtelFactory.createCrashLocalTelemetry(mockPlatformProvider) as IOtelSdkCrashTelemetry
 
             runBlocking {
                 val logger = crashTelemetry.getLogger()
@@ -140,7 +140,7 @@ class OneSignalOpenTelemetryTest : FunSpec({
     // ===== SDK Caching Tests =====
 
     test("remote telemetry should cache SDK instance") {
-        val remoteTelemetry = OtelFactory.createRemoteTelemetry(mockPlatformProvider)
+        val remoteTelemetry = OtelFactory.createRemoteTelemetry(mockPlatformProvider) as IOtelSdkRemoteTelemetry
 
         runBlocking {
             val logger1 = remoteTelemetry.getLogger()

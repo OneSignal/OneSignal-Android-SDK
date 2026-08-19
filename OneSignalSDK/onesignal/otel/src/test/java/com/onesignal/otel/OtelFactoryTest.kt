@@ -105,6 +105,7 @@ class OtelFactoryTest : FunSpec({
         val telemetry = OtelFactory.createRemoteTelemetry(mockPlatformProvider)
 
         // Then
+        telemetry.shouldBeInstanceOf<IOtelSdkRemoteTelemetry>()
         telemetry.logExporter shouldNotBe null
     }
 

@@ -13,7 +13,7 @@ import io.opentelemetry.api.logs.Severity
 import kotlinx.coroutines.runBlocking
 
 class OtelLoggingHelperTest : FunSpec({
-    val mockTelemetry = mockk<IOtelOpenTelemetryRemote>(relaxed = true)
+    val mockTelemetry = mockk<IOtelSdkRemoteTelemetry>(relaxed = true)
     val mockLogRecordBuilder = mockk<LogRecordBuilder>(relaxed = true)
 
     beforeEach {

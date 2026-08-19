@@ -175,3 +175,28 @@ dependencies {
     "huaweiImplementation"("com.huawei.hms:push:6.3.0.304")
     "huaweiImplementation"("com.huawei.hms:location:4.0.0.300")
 }
+
+// Simulates a host app (or another SDK such as Embrace) that pulls OpenTelemetry 1.64
+// while OneSignal still compiles against 1.55 + disk-buffering 1.51.0-alpha.
+// Used by CI to prove the relocated OTel copy in com.onesignal:otel does not clash
+// (SDK-5006 / https://github.com/OneSignal/OneSignal-Android-SDK/issues/2714).
+if (project.hasProperty("simulateOtelClash")) {
+    configurations.configureEach {
+        resolutionStrategy {
+            force("io.opentelemetry:opentelemetry-api:1.64.0")
+            force("io.opentelemetry:opentelemetry-sdk:1.64.0")
+            force("io.opentelemetry:opentelemetry-sdk-common:1.64.0")
+            force("io.opentelemetry:opentelemetry-sdk-logs:1.64.0")
+            force("io.opentelemetry:opentelemetry-sdk-metrics:1.64.0")
+            force("io.opentelemetry:opentelemetry-sdk-trace:1.64.0")
+            force("io.opentelemetry:opentelemetry-exporter-otlp:1.64.0")
+            force("io.opentelemetry:opentelemetry-exporter-otlp-common:1.64.0")
+        }
+    }
+    dependencies {
+        implementation(platform("io.opentelemetry:opentelemetry-bom:1.64.0"))
+        implementation("io.opentelemetry:opentelemetry-api")
+        implementation("io.opentelemetry:opentelemetry-sdk")
+        implementation("io.opentelemetry:opentelemetry-sdk-logs")
+    }
+}

@@ -44,8 +44,8 @@ internal class OtelAnrDetector(
     // Android touch points (main-thread Handler, stack capture) plus the monotonic clock, injectable
     // so the whole watchdog runs deterministically off-device.
     private val platform: AnrWatchdogPlatform = AndroidAnrWatchdogPlatform(),
+    private val crashReporter: IOtelCrashReporter = OtelFactory.createCrashReporter(openTelemetryCrash, logger),
 ) : IOtelAnrDetector {
-    private val crashReporter: IOtelCrashReporter = OtelFactory.createCrashReporter(openTelemetryCrash, logger)
     private val isMonitoring = AtomicBoolean(false)
 
     private val evaluator = AnrCheckEvaluator(

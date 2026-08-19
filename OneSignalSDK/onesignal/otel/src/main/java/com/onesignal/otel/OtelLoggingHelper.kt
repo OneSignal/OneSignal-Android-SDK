@@ -55,7 +55,7 @@ object OtelLoggingHelper {
             }
             .build()
 
-        val logRecordBuilder = telemetry.getLogger()
+        val logRecordBuilder = (telemetry as IOtelSdkTelemetry).getLogger()
         logRecordBuilder.setAllAttributes(attributes)
         logRecordBuilder.setSeverity(severity)
         logRecordBuilder.setBody(message)

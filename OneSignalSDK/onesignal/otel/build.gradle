@@ -1,3 +1,14 @@
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
+    dependencies {
+        classpath 'com.gradleup.shadow:shadow-gradle-plugin:8.3.6'
+    }
+}
+
 plugins {
     id 'com.android.library'
     id 'kotlin-android'
@@ -5,6 +16,8 @@ plugins {
     id 'com.vanniktech.maven.publish'
     id 'io.gitlab.arturbosch.detekt'
 }
+
+import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 
 android {
     namespace 'com.onesignal.otel'
@@ -46,16 +59,49 @@ ext {
     projectDescription = "OneSignal Android SDK - OpenTelemetry Module (internal; not for public use)"
 }
 
+configurations {
+    otelShade {
+        canBeConsumed = false
+        canBeResolved = true
+        visible = false
+        // Shared host libraries stay as normal Maven transitives so we do not
+        // duplicate OkHttp / Kotlin / annotations inside the AAR.
+        exclude group: 'com.squareup.okhttp3'
+        exclude group: 'com.squareup.okio'
+        exclude group: 'org.jetbrains.kotlin'
+        exclude group: 'org.jetbrains.kotlinx'
+        exclude group: 'androidx.annotation'
+        exclude group: 'org.jetbrains', module: 'annotations'
+        exclude group: 'com.google.code.findbugs'
+        exclude group: 'org.codehaus.mojo'
+        exclude group: 'com.google.guava'
+        exclude group: 'com.google.errorprone'
+        exclude group: 'com.google.auto.value'
+        exclude group: 'com.fasterxml.jackson.core'
+        exclude group: 'com.google.code.gson'
+        exclude group: 'javax.annotation'
+        exclude group: 'org.checkerframework'
+        exclude group: 'io.grpc'
+        exclude group: 'io.netty'
+    }
+}
+
+def addOtelDependencies(String configurationName) {
+    dependencies.add(configurationName, dependencies.platform("io.opentelemetry:opentelemetry-bom:$rootProject.opentelemetryBomVersion"))
+    ['opentelemetry-api', 'opentelemetry-sdk', 'opentelemetry-exporter-otlp'].each { artifact ->
+        dependencies.add(configurationName, "io.opentelemetry:$artifact")
+    }
+    dependencies.add(configurationName, "io.opentelemetry.semconv:opentelemetry-semconv:$rootProject.opentelemetrySemconvVersion")
+    dependencies.add(configurationName, "io.opentelemetry.contrib:opentelemetry-disk-buffering:$rootProject.opentelemetryDiskBufferingVersion")
+}
+
 dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion"
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutinesVersion"
 
-    implementation platform("io.opentelemetry:opentelemetry-bom:$rootProject.opentelemetryBomVersion")
-    implementation('io.opentelemetry:opentelemetry-api')
-    implementation('io.opentelemetry:opentelemetry-sdk')
-    implementation('io.opentelemetry:opentelemetry-exporter-otlp')
-    implementation("io.opentelemetry.semconv:opentelemetry-semconv:$rootProject.opentelemetrySemconvVersion")
-    implementation("io.opentelemetry.contrib:opentelemetry-disk-buffering:$rootProject.opentelemetryDiskBufferingVersion")
+    // OTLP HTTP export talks to OkHttp by class name. Keep OkHttp as a normal
+    // transitive so the host app can share a single copy; do not relocate it.
+    implementation 'com.squareup.okhttp3:okhttp:4.12.0'
 
     testImplementation(project(':OneSignal:testhelpers'))
     testImplementation("io.kotest:kotest-runner-junit5:$kotestVersion")
@@ -64,6 +110,171 @@ dependencies {
     testImplementation("io.mockk:mockk:$ioMockVersion")
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:$coroutinesVersion")
+}
+
+// Compile against upstream OpenTelemetry. The release AAR embeds a relocated
+// copy instead of publishing these as Maven transitives (SDK-5006 / #2714).
+addOtelDependencies('compileOnly')
+addOtelDependencies('otelShade')
+
+// Unit tests and non-published variants keep unshaded OpenTelemetry on the
+// runtime classpath so existing io.opentelemetry test code keeps compiling.
+addOtelDependencies('debugImplementation')
+addOtelDependencies('originalImplementation')
+addOtelDependencies('unityImplementation')
+addOtelDependencies('testImplementation')
+
+/**
+ * Relocate OpenTelemetry into a OneSignal-private package and embed it in the
+ * published release AAR (SDK-5006 / #2714).
+ *
+ * Host apps (and other SDKs such as Embrace) keep their own `io.opentelemetry`
+ * artifacts. Gradle will no longer unify those with OneSignal's copy, so a newer
+ * BOM cannot delete classes that `opentelemetry-disk-buffering` still references.
+ * Consumer R8 also never sees OneSignal's `io.opentelemetry` types, so we do not
+ * ship `-dontwarn io.opentelemetry.**` rules that would suppress diagnostics for
+ * everyone else in the app.
+ *
+ * Debug / original / unity variants keep unshaded OpenTelemetry on the runtime
+ * classpath so `testDebugUnitTest` can still compile against `io.opentelemetry`.
+ */
+afterEvaluate {
+    def kotlinCompile = tasks.named('compileReleaseKotlin')
+    def javaCompile = tasks.named('compileReleaseJavaWithJavac')
+    def shadowTask = tasks.register('relocateReleaseOtel', ShadowJar) {
+        group = 'onesignal'
+        description = 'Relocate OpenTelemetry packages for the release AAR'
+        dependsOn kotlinCompile, javaCompile
+        duplicatesStrategy = DuplicatesStrategy.INCLUDE
+        zip64 = true
+        mergeServiceFiles()
+        configurations = [project.configurations.otelShade]
+        relocate 'io.opentelemetry', 'com.onesignal.shaded.opentelemetry'
+        exclude 'META-INF/MANIFEST.MF'
+        exclude 'META-INF/*.SF'
+        exclude 'META-INF/*.DSA'
+        exclude 'META-INF/*.RSA'
+        exclude 'module-info.class'
+        exclude 'META-INF/versions/**/module-info.class'
+        exclude 'META-INF/maven/**'
+        // OneSignal only uses OTLP/HTTP. Dropping the unused gRPC exporter path
+        // means consumer R8 never sees io.grpc / Guava-future references, so we
+        // do not ship host-wide -dontwarn io.grpc.** rules (SDK-5006).
+        exclude 'io/opentelemetry/exporter/internal/grpc/**'
+        exclude 'io/opentelemetry/exporter/otlp/**/OtlpGrpc*.class'
+        exclude 'io/opentelemetry/exporter/otlp/**/Marshaler*Grpc*.class'
+        exclude 'io/opentelemetry/exporter/otlp/internal/OtlpGrpc*.class'
+        exclude 'io/opentelemetry/exporter/sender/okhttp/internal/OkHttpGrpc*.class'
+        exclude 'META-INF/services/io.opentelemetry.exporter.internal.grpc.GrpcSenderProvider'
+        from kotlinCompile
+        from javaCompile.map { it.destinationDirectory }
+        archiveFileName.set('classes.jar')
+        destinationDirectory.set(layout.buildDirectory.dir('shaded/release'))
+    }
+
+    def installShadedClasses = { task ->
+        task.dependsOn shadowTask
+        task.doLast {
+            def shadedJar = shadowTask.get().archiveFile.get().asFile
+            def outputs = task.outputs.files.files
+            outputs.each { out ->
+                if (out.isFile()) {
+                    copy {
+                        from shadedJar
+                        into out.parentFile
+                        rename { out.name }
+                    }
+                } else if (out.isDirectory()) {
+                    delete out
+                    copy {
+                        from zipTree(shadedJar)
+                        into out
+                    }
+                }
+            }
+        }
+    }
+
+    tasks.named('bundleLibRuntimeToJarRelease').configure { installShadedClasses(it) }
+    tasks.named('bundleLibRuntimeToDirRelease').configure { installShadedClasses(it) }
+
+    tasks.named('bundleReleaseAar').configure { bundle ->
+        bundle.dependsOn shadowTask
+        bundle.doLast {
+            def aar = bundle.archiveFile.get().asFile
+            def shadedJar = shadowTask.get().archiveFile.get().asFile
+            def unpackDir = file("${bundle.temporaryDir}/aar-unpack")
+            def tmpAar = file("${bundle.temporaryDir}/otel-release-shaded.aar")
+            delete unpackDir, tmpAar
+            copy {
+                from zipTree(aar)
+                into unpackDir
+            }
+            copy {
+                from shadedJar
+                into unpackDir
+                rename { 'classes.jar' }
+            }
+            ant.zip(destfile: tmpAar, basedir: unpackDir)
+            ant.copy(file: tmpAar, tofile: aar, overwrite: true)
+        }
+    }
+}
+
+tasks.register('checkOtelIsolation') {
+    group = 'verification'
+    description = 'Assert the release AAR embeds relocated OpenTelemetry and does not leak io.opentelemetry Maven artifacts'
+    dependsOn 'bundleReleaseAar'
+    doLast {
+        def leaked = configurations.releaseRuntimeClasspath
+            .resolvedConfiguration
+            .resolvedArtifacts
+            .findAll { it.moduleVersion.id.group.startsWith('io.opentelemetry') }
+            .collect { it.moduleVersion.id.toString() }
+        if (!leaked.isEmpty()) {
+            throw new GradleException(
+                "otel releaseRuntimeClasspath still leaks OpenTelemetry artifacts (SDK-5006): ${leaked}"
+            )
+        }
+
+        def aarDir = file("${layout.buildDirectory.get()}/outputs/aar")
+        def aar = file("${aarDir}/otel-release.aar")
+        if (!aar.exists()) {
+            def matches = fileTree(aarDir) { include '*.aar' }.files
+            if (matches.size() == 1) {
+                aar = matches.first()
+            } else {
+                throw new GradleException("Could not find otel-release.aar under ${aarDir}")
+            }
+        }
+
+        def unzipDir = file("${layout.buildDirectory.get()}/otel-isolation-check")
+        delete unzipDir
+        copy {
+            from zipTree(aar)
+            into unzipDir
+        }
+        def classesJar = file("${unzipDir}/classes.jar")
+        if (!classesJar.exists()) {
+            throw new GradleException("otel-release.aar is missing classes.jar")
+        }
+
+        def classFiles = zipTree(classesJar).matching { include '**/*.class' }.files.collect { it.path.replace(File.separator, '/') }
+        def hasShaded = classFiles.any { it.contains('/com/onesignal/shaded/opentelemetry/') }
+        def hasUnshaded = classFiles.any { it.contains('/io/opentelemetry/') }
+        if (!hasShaded) {
+            throw new GradleException('Expected relocated com.onesignal.shaded.opentelemetry classes in otel-release.aar')
+        }
+        if (hasUnshaded) {
+            throw new GradleException('Unshaded io.opentelemetry classes leaked into otel-release.aar')
+        }
+    }
+}
+
+afterEvaluate {
+    tasks.named('check').configure {
+        dependsOn 'checkOtelIsolation'
+    }
 }
 
 apply from: '../detekt.gradle'

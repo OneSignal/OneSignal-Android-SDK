@@ -1,8 +1,8 @@
 package com.onesignal.otel.crash
 
 import com.onesignal.otel.IOtelLogger
-import com.onesignal.otel.IOtelOpenTelemetryRemote
 import com.onesignal.otel.IOtelPlatformProvider
+import com.onesignal.otel.IOtelSdkRemoteTelemetry
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.mockk.every
@@ -18,7 +18,7 @@ import org.junit.Test
 import java.io.File
 
 class OtelCrashUploaderTest {
-    private lateinit var mockRemoteTelemetry: IOtelOpenTelemetryRemote
+    private lateinit var mockRemoteTelemetry: IOtelSdkRemoteTelemetry
     private lateinit var mockPlatformProvider: IOtelPlatformProvider
     private lateinit var mockLogger: IOtelLogger
     private lateinit var mockExporter: LogRecordExporter

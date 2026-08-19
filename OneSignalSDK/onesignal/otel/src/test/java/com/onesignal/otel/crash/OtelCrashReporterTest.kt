@@ -2,7 +2,7 @@ package com.onesignal.otel.crash
 
 import com.onesignal.otel.IOtelCrashReporter
 import com.onesignal.otel.IOtelLogger
-import com.onesignal.otel.IOtelOpenTelemetryCrash
+import com.onesignal.otel.IOtelSdkCrashTelemetry
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
@@ -22,7 +22,7 @@ import io.opentelemetry.sdk.common.CompletableResultCode
 import kotlinx.coroutines.runBlocking
 
 class OtelCrashReporterTest : FunSpec({
-    val mockOpenTelemetry = mockk<IOtelOpenTelemetryCrash>(relaxed = true)
+    val mockOpenTelemetry = mockk<IOtelSdkCrashTelemetry>(relaxed = true)
     val mockLogger = mockk<IOtelLogger>(relaxed = true)
     val mockLogRecordBuilder = mockk<LogRecordBuilder>(relaxed = true)
     val mockCompletableResult = mockk<CompletableResultCode>(relaxed = true)

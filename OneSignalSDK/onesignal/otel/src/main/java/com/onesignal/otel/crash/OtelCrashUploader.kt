@@ -3,6 +3,7 @@ package com.onesignal.otel.crash
 import com.onesignal.otel.IOtelLogger
 import com.onesignal.otel.IOtelOpenTelemetryRemote
 import com.onesignal.otel.IOtelPlatformProvider
+import com.onesignal.otel.IOtelSdkRemoteTelemetry
 import com.onesignal.otel.config.OtelConfigCrashFile
 import io.opentelemetry.sdk.logs.data.LogRecordData
 import kotlinx.coroutines.delay
@@ -85,7 +86,7 @@ class OtelCrashUploader(
     }
 
     internal fun sendCrashReports(reports: Iterator<Collection<LogRecordData>>) {
-        val networkExporter = openTelemetryRemote.logExporter
+        val networkExporter = (openTelemetryRemote as IOtelSdkRemoteTelemetry).logExporter
         var failed = false
         var sentBatches = 0
         // NOTE: next() will delete the previous report, so we only want to send
