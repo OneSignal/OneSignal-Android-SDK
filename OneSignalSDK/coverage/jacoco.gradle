@@ -16,16 +16,6 @@ subprojects {
                     testCoverageEnabled = true
                 }
             }
-
-            testOptions {
-                // Robolectric loads classes through its own classloader, which leaves them without
-                //   a code source location. JaCoCo skips those by default, so Robolectric tests
-                //   would contribute no coverage at all.
-                unitTests.all { test ->
-                    test.jacoco.includeNoLocationClasses = true
-                    test.jacoco.excludes = ['jdk.internal.*']
-                }
-            }
         }
         
         def coverageExcludes = [
