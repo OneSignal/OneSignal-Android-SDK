@@ -25,16 +25,6 @@
 -dontwarn com.google.firebase.**
 -dontwarn com.google.android.gms.**
 
-# PushRegistratorFCM looks up FirebaseMessaging.register() by name, because this module compiles
-# against firebase-messaging 24.x where the method does not exist yet. Nothing references it
-# symbolically, it carries no @Keep, and firebase-messaging ships no consumer rules, so R8 full mode
-# (AGP 8+) renames it along with the rest of the class, causing:
-# java.lang.NoSuchMethodException: com.google.firebase.messaging.FirebaseMessaging.register []
-# keepclassmembers rather than keep, so Huawei apps that exclude firebase-messaging are unaffected.
--keepclassmembers class com.google.firebase.messaging.FirebaseMessaging {
-    public *** register();
-}
-
 # ADM handlers are instantiated by name from the app manifest AND their on* lifecycle callbacks
 # (onMessage/onRegistered/onRegistrationError/onUnregistered) are invoked by the ADM framework, not
 # the SDK, so keep both constructors and those methods. (Amazon-device-only path, untestable in CI.)
