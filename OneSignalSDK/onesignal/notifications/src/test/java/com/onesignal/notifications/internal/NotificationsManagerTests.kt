@@ -1,5 +1,8 @@
 package com.onesignal.notifications.internal
 
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
 import com.onesignal.common.threading.runOnSerialIO
@@ -7,6 +10,7 @@ import com.onesignal.common.threading.suspendifyOnIO
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
+import com.onesignal.notifications.NotificationChannelState
 import com.onesignal.notifications.internal.data.INotificationRepository
 import com.onesignal.notifications.internal.lifecycle.INotificationLifecycleService
 import com.onesignal.notifications.internal.permissions.INotificationPermissionController
@@ -14,6 +18,7 @@ import com.onesignal.notifications.internal.restoration.INotificationRestoreWork
 import com.onesignal.notifications.internal.summary.INotificationSummaryManager
 import com.onesignal.notifications.shadows.ShadowRoboNotificationManager
 import io.kotest.core.spec.style.FunSpec
+import io.kotest.matchers.shouldBe
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
@@ -117,5 +122,14 @@ class NotificationsManagerTests : FunSpec({
             runOnSerialIO(any<() -> Unit>())
             runOnSerialIO(any<() -> Unit>())
         }
+    }
+
+    test("getNotificationChannelState returns the state from the application context") {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val channel = NotificationChannel("manager-channel", "Manager channel", NotificationManager.IMPORTANCE_DEFAULT)
+        notificationManager.createNotificationChannel(channel)
+
+        newManager().getNotificationChannelState(channel.id) shouldBe NotificationChannelState.ENABLED
     }
 })

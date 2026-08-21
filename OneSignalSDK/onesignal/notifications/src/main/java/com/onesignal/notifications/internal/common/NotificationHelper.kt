@@ -14,6 +14,7 @@ import com.onesignal.common.AndroidUtils
 import com.onesignal.core.internal.time.ITime
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.notifications.INotification
+import com.onesignal.notifications.NotificationChannelState
 import com.onesignal.notifications.internal.NotificationClickEvent
 import com.onesignal.notifications.internal.NotificationClickResult
 import org.json.JSONArray
@@ -141,6 +142,47 @@ object NotificationHelper {
         } catch (t: Throwable) {
         }
         return true
+    }
+
+    /**
+     * Gets the state of an Android notification channel independently of app-level permission.
+     */
+    @Suppress("TooGenericExceptionCaught")
+    internal fun getNotificationChannelState(
+        context: Context,
+        channelId: String,
+    ): NotificationChannelState {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
+            return NotificationChannelState.NOT_SUPPORTED
+        }
+
+        return try {
+            val notificationManager = getNotificationManager(context)
+            val channel = notificationManager.getNotificationChannel(channelId)
+
+            when {
+                channel == null -> NotificationChannelState.NOT_FOUND
+                channel.importance == NotificationManager.IMPORTANCE_NONE ->
+                    NotificationChannelState.DISABLED
+                isChannelGroupBlocked(notificationManager, channel.group) ->
+                    NotificationChannelState.DISABLED
+                else -> NotificationChannelState.ENABLED
+            }
+        } catch (t: Throwable) {
+            Logging.warn("Could not determine notification channel state for '$channelId'.", t)
+            NotificationChannelState.UNKNOWN
+        }
+    }
+
+    private fun isChannelGroupBlocked(
+        notificationManager: NotificationManager,
+        groupId: String?,
+    ): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P || groupId == null) {
+            return false
+        }
+
+        return notificationManager.getNotificationChannelGroup(groupId)?.isBlocked == true
     }
 
     fun getNotificationManager(context: Context): NotificationManager {

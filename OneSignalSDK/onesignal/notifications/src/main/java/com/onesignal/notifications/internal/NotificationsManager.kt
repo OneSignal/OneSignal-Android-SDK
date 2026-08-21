@@ -11,6 +11,7 @@ import com.onesignal.notifications.INotificationClickListener
 import com.onesignal.notifications.INotificationLifecycleListener
 import com.onesignal.notifications.INotificationsManager
 import com.onesignal.notifications.IPermissionObserver
+import com.onesignal.notifications.NotificationChannelState
 import com.onesignal.notifications.internal.common.NotificationHelper
 import com.onesignal.notifications.internal.data.INotificationRepository
 import com.onesignal.notifications.internal.lifecycle.INotificationLifecycleService
@@ -47,6 +48,11 @@ internal class NotificationsManager(
 
     override val canRequestPermission: Boolean
         get() = _notificationPermissionController.canRequestPermission
+
+    override fun getNotificationChannelState(channelId: String): NotificationChannelState {
+        Logging.debug("NotificationsManager.getNotificationChannelState(channelId: $channelId)")
+        return NotificationHelper.getNotificationChannelState(_applicationService.appContext, channelId)
+    }
 
     private val permissionChangedNotifier = EventProducer<IPermissionObserver>()
 

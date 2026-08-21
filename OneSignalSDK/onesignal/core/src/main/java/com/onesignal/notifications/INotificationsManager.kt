@@ -3,6 +3,7 @@ package com.onesignal.notifications
 /**
  * The entry point to the notification SDK for OneSignal.
  */
+@Suppress("TooManyFunctions")
 interface INotificationsManager {
     /**
      * Whether this app has push notification permission.
@@ -13,6 +14,23 @@ interface INotificationsManager {
      * Whether this app can request push notification permission.
      */
     val canRequestPermission: Boolean
+
+    /**
+     * Gets the state of an Android notification channel on this device.
+     *
+     * This reports only the channel state. Use [permission] to determine whether notifications
+     * are enabled for the app. On Android 9.0 and newer, a channel that belongs to a blocked
+     * channel group is [NotificationChannelState.DISABLED].
+     *
+     * @param channelId The on-device Android notification channel ID. For a OneSignal dashboard
+     * category, use its `android_channel_id`.
+     *
+     * @return [NotificationChannelState.ENABLED] or [NotificationChannelState.DISABLED] when the
+     * channel exists, [NotificationChannelState.NOT_SUPPORTED] on devices before Android 8.0,
+     * [NotificationChannelState.NOT_FOUND] when the channel does not exist, or
+     * [NotificationChannelState.UNKNOWN] when its state cannot be determined.
+     */
+    fun getNotificationChannelState(channelId: String): NotificationChannelState
 
     /**
      * Prompt the user for permission to push notifications.  This will display the native

@@ -12,11 +12,14 @@ import com.onesignal.notifications.IPermissionObserver
  * appropriate notifications module.
  */
 @KeepStub
+@Suppress("TooManyFunctions")
 internal class MisconfiguredNotificationsManager : INotificationsManager {
     override val permission
         get() = throw EXCEPTION
     override val canRequestPermission
         get() = throw EXCEPTION
+
+    override fun getNotificationChannelState(channelId: String) = throw EXCEPTION
 
     override suspend fun requestPermission(fallbackToSettings: Boolean) = throw EXCEPTION
 
