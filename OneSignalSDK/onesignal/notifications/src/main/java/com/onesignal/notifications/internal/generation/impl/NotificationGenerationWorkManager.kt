@@ -110,7 +110,7 @@ internal class NotificationGenerationWorkManager : INotificationGenerationWorkMa
 
         private val notificationIds = ConcurrentHashMap<String, Boolean>()
 
-        private fun readRestoreReason(inputData: Data): NotificationRestoreReason? {
+        internal fun readRestoreReason(inputData: Data): NotificationRestoreReason? {
             val name = inputData.getString(RESTORE_REASON_WORKER_DATA_PARAM)
             if (name != null) {
                 return NotificationRestoreReason.values().firstOrNull { it.name == name }
