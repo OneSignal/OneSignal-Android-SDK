@@ -202,7 +202,6 @@ internal class NotificationDisplayer(
                 NotificationCompat.Builder::class.java.getDeclaredField("mNotification")
             mNotificationField.isAccessible = true
             var mNotification = mNotificationField[notificationBuilder] as Notification
-            notificationJob.orgFlags = mNotification.flags
             notificationJob.orgSound = mNotification.sound
             notificationBuilder!!.extend(notificationJob.notification!!.notificationExtender!!)
             mNotification = mNotificationField[notificationBuilder] as Notification
