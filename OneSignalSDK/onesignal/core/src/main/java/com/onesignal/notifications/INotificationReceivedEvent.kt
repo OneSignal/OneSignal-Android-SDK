@@ -51,8 +51,9 @@ interface INotificationReceivedEvent {
      *
      * Skip one-time work like analytics. Still call `notification.setExtender(...)` so a rebuilt
      * notification keeps your customizations.
-     * Call `preventDefault(true)` to drop it. The no-argument [preventDefault] waits up to 30
-     * seconds for `notification.display()`.
+     * Call `preventDefault(true)` to stop a shade restore from coming back. A group-collapse
+     * rebuild is left in place. The no-argument [preventDefault] waits up to 30 seconds for
+     * `notification.display()`.
      */
     val restoring: Boolean
         get() = false
