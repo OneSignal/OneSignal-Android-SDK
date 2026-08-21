@@ -13,6 +13,7 @@ import com.onesignal.notifications.internal.NotificationReceivedEvent
 import com.onesignal.notifications.internal.NotificationWillDisplayEvent
 import com.onesignal.notifications.internal.common.NotificationConstants
 import com.onesignal.notifications.internal.common.NotificationGenerationJob
+import com.onesignal.notifications.internal.common.NotificationRestoreReason
 import com.onesignal.notifications.internal.data.INotificationRepository
 import com.onesignal.notifications.internal.display.INotificationDisplayer
 import com.onesignal.notifications.internal.generation.INotificationGenerationProcessor
@@ -44,7 +45,7 @@ internal class NotificationGenerationProcessor(
         context: Context,
         androidNotificationId: Int,
         jsonPayload: JSONObject,
-        isRestoring: Boolean,
+        restoreReason: NotificationRestoreReason?,
         timestamp: Long,
     ) {
         if (!_lifecycleService.canReceiveNotification(jsonPayload)) {
@@ -52,6 +53,7 @@ internal class NotificationGenerationProcessor(
             return
         }
 
+        val isRestoring = restoreReason != null
         val notification = Notification(null, jsonPayload, androidNotificationId, _time)
 
         // When restoring it will always be seen as a duplicate, because we are restoring...
@@ -66,10 +68,12 @@ internal class NotificationGenerationProcessor(
         var didDisplay = false
         var wantsToDisplay = true
 
-        Logging.info("Fire remoteNotificationReceived")
+        Logging.info(
+            "Fire remoteNotificationReceived with androidNotificationId: $androidNotificationId and restoreReason: $restoreReason",
+        )
 
         try {
-            val notificationReceivedEvent = NotificationReceivedEvent(context, notification)
+            val notificationReceivedEvent = NotificationReceivedEvent(context, notification, isRestoring)
             withTimeout(EXTERNAL_CALLBACKS_TIMEOUT) {
                 launchOnIO {
                     _lifecycleService.externalRemoteNotificationReceived(notificationReceivedEvent)
@@ -92,7 +96,7 @@ internal class NotificationGenerationProcessor(
         }
 
         var shouldDisplay =
-            processHandlerResponse(notificationJob, wantsToDisplay, isRestoring)
+            processHandlerResponse(notificationJob, wantsToDisplay, restoreReason)
                 ?: return
 
         if (shouldDisplay) {
@@ -127,7 +131,7 @@ internal class NotificationGenerationProcessor(
                     )
                 }
 
-                shouldDisplay = processHandlerResponse(notificationJob, wantsToDisplay, isRestoring)
+                shouldDisplay = processHandlerResponse(notificationJob, wantsToDisplay, restoreReason)
                     ?: return
             }
 
@@ -155,14 +159,14 @@ internal class NotificationGenerationProcessor(
      *
      * @param notificationJob The notification job covering the context the handler was called under.
      * @param wantsToDisplay Whether the SDK (and callback) wants to display the notification.
-     * @param isRestoring Whether this notification is being processed because of a restore.
+     * @param restoreReason Why the notification is being shown again, or null if it just arrived.
      *
      * @return true if the job should continue display, false if the job should continue but not display, null if processing should stop.
      */
     private suspend fun processHandlerResponse(
         notificationJob: NotificationGenerationJob,
         wantsToDisplay: Boolean,
-        isRestoring: Boolean,
+        restoreReason: NotificationRestoreReason?,
     ): Boolean? {
         if (wantsToDisplay) {
             val canDisplay = AndroidUtils.isStringNotEmpty(notificationJob.notification.body)
@@ -184,15 +188,20 @@ internal class NotificationGenerationProcessor(
 
         // Processing should stop, save the notification as processed to prevent possible duplicate
         // calls from canonical ids.
-        if (isRestoring) {
-            // If we are not displaying a restored notification make sure we mark it as dismissed
-            // This will prevent it from being restored again
-            markNotificationAsDismissed(notificationJob)
-        } else {
-            // indicate the notification job did not display. We process it as "opened" to prevent
-            // a duplicate from coming in and us having to process it again.
-            notificationJob.isNotificationToDisplay = false
-            postProcessNotification(notificationJob, true, false)
+        when (restoreReason) {
+            // Restore can include notifications still on screen. Don't cancel them.
+            NotificationRestoreReason.SHADE_RESTORE ->
+                _dataController.markAsDismissedWithoutCancel(notificationJob.androidId)
+
+            // Still in the shade. The user did not dismiss it.
+            NotificationRestoreReason.GROUP_REGROUP -> Unit
+
+            null -> {
+                // indicate the notification job did not display. We process it as "opened" to prevent
+                // a duplicate from coming in and us having to process it again.
+                notificationJob.isNotificationToDisplay = false
+                postProcessNotification(notificationJob, true, false)
+            }
         }
 
         return null

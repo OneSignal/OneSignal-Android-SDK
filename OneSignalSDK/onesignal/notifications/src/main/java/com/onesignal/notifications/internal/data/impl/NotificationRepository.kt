@@ -121,19 +121,27 @@ internal class NotificationRepository(
         }
     }
 
-    override suspend fun markAsDismissed(androidId: Int): Boolean {
+    override suspend fun markAsDismissed(androidId: Int): Boolean = markAsDismissed(androidId, cancelFromShade = true)
+
+    override suspend fun markAsDismissedWithoutCancel(androidId: Int): Boolean = markAsDismissed(androidId, cancelFromShade = false)
+
+    private suspend fun markAsDismissed(
+        androidId: Int,
+        cancelFromShade: Boolean,
+    ): Boolean {
         var didDismiss: Boolean = false
 
         withContext(Dispatchers.IO) {
-            didDismiss = internalMarkAsDismissed(androidId)
+            didDismiss = internalMarkAsDismissed(androidId, cancelFromShade)
         }
 
         return didDismiss
     }
 
-    private fun internalMarkAsDismissed(androidId: Int): Boolean {
-        val appContext = _applicationService.appContext
-
+    private fun internalMarkAsDismissed(
+        androidId: Int,
+        cancelFromShade: Boolean,
+    ): Boolean {
         val whereStr: String =
             OneSignalDbContract.NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID.toString() + " = " + androidId + " AND " +
                 OneSignalDbContract.NotificationTable.COLUMN_NAME_OPENED + " = 0 AND " +
@@ -146,8 +154,11 @@ internal class NotificationRepository(
 
         _badgeCountUpdater.update()
 
-        val notificationManager: NotificationManager = NotificationHelper.getNotificationManager(appContext)
-        notificationManager.cancel(androidId)
+        if (cancelFromShade) {
+            val notificationManager: NotificationManager =
+                NotificationHelper.getNotificationManager(_applicationService.appContext)
+            notificationManager.cancel(androidId)
+        }
 
         return didDismiss
     }
@@ -424,7 +435,7 @@ internal class NotificationRepository(
 
                     while (it.moveToNext()) {
                         val existingId = it.getInt(OneSignalDbContract.NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID)
-                        internalMarkAsDismissed(existingId)
+                        internalMarkAsDismissed(existingId, cancelFromShade = true)
                         if (--notificationsToClear <= 0) break
                     }
                 }

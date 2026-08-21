@@ -46,6 +46,19 @@ interface INotificationReceivedEvent {
     val notification: IDisplayableMutableNotification
 
     /**
+     * True when OneSignal is showing this notification again after your app already received it.
+     * Happens after a reboot or app update, and when a group collapses to one notification.
+     *
+     * Skip one-time work like analytics. Still call `notification.setExtender(...)` so a rebuilt
+     * notification keeps your customizations.
+     * Call `preventDefault(true)` to stop a shade restore from coming back. A group-collapse
+     * rebuild is left in place. The no-argument [preventDefault] waits up to 30 seconds for
+     * `notification.display()`.
+     */
+    val restoring: Boolean
+        get() = false
+
+    /**
      * Call this to prevent OneSignal from displaying the notification automatically. The notification
      * can still be manually displayed using `notification.display()`.
      */

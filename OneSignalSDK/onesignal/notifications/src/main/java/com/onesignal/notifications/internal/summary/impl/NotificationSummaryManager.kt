@@ -5,6 +5,7 @@ import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.time.ITime
 import com.onesignal.notifications.internal.common.NotificationGenerationJob
 import com.onesignal.notifications.internal.common.NotificationHelper
+import com.onesignal.notifications.internal.common.NotificationRestoreReason
 import com.onesignal.notifications.internal.data.INotificationRepository
 import com.onesignal.notifications.internal.display.ISummaryNotificationDisplayer
 import com.onesignal.notifications.internal.restoration.INotificationRestoreProcessor
@@ -87,7 +88,10 @@ internal class NotificationSummaryManager(
     private suspend fun restoreSummary(group: String) {
         val notifications = _dataController.listNotificationsForGroup(group)
         for (notification in notifications)
-            _notificationRestoreProcessor.processNotification(notification)
+            _notificationRestoreProcessor.processNotification(
+                notification,
+                NotificationRestoreReason.GROUP_REGROUP,
+            )
     }
 
     /**
