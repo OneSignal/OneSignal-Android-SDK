@@ -30,11 +30,28 @@ import android.app.job.JobParameters
 import android.app.job.JobService
 import com.onesignal.OneSignal
 import com.onesignal.common.threading.OneSignalDispatchers
-import com.onesignal.common.threading.suspendifyOnIO
+import com.onesignal.common.threading.launchOnIO
 import com.onesignal.core.internal.background.IBackgroundManager
 import com.onesignal.debug.internal.logging.Logging
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
+import java.util.concurrent.atomic.AtomicReference
 
 class SyncJobService : JobService() {
+    private enum class RunState {
+        RUNNING,
+        STOPPED,
+        FINISHED,
+    }
+
+    private class JobRun(val parameters: JobParameters) {
+        val jobId = parameters.jobId
+        val state = AtomicReference(RunState.RUNNING)
+        val job = AtomicReference<Job?>()
+    }
+
+    private val activeRun = AtomicReference<JobRun?>()
+
     override fun onStartJob(jobParameters: JobParameters): Boolean {
         // Android delivers JobService.onStartJob on the main thread. The suspendifyOnIO call
         // below is the SDK's first IO-pool consumer on cold start in this process, and the
@@ -45,52 +62,56 @@ class SyncJobService : JobService() {
         // be too late because the cold-init cost has already been paid on entry to the helper.
         OneSignalDispatchers.prewarm()
 
-        suspendifyOnIO {
-            var reschedule = false
-
-            try {
-                // Init OneSignal in background
-                if (!OneSignal.initWithContext(this)) {
-                    return@suspendifyOnIO
-                }
-
-                val backgroundService = OneSignal.getService<IBackgroundManager>()
-                backgroundService.runBackgroundServices()
-
-                Logging.debug("LollipopSyncRunnable:JobFinished needsJobReschedule: " + backgroundService.needsJobReschedule)
-
-                // Reschedule if needed
-                reschedule = backgroundService.needsJobReschedule
-                backgroundService.needsJobReschedule = false
-            } finally {
-                // Always call jobFinished to finish the job; onStopJob will handle the case when init failed
-                jobFinished(jobParameters, reschedule)
-            }
+        val run = JobRun(jobParameters)
+        activeRun.getAndSet(run)?.let { previous ->
+            previous.state.compareAndSet(RunState.RUNNING, RunState.STOPPED)
+            previous.job.get()?.cancel()
+        }
+        val job = launchOnIO { executeRun(run) }
+        run.job.set(job)
+        if (run.state.get() == RunState.STOPPED) {
+            job.cancel()
         }
 
-        // Returning true means the job will always continue running and do everything else in IO thread
-        // When initWithContext failed, the background task will simply end
         return true
     }
 
-    override fun onStopJob(jobParameters: JobParameters): Boolean {
-        /*
-         * After 5.4, onStartJob calls initWithContext in background. That introduced a small possibility
-         * when onStopJob is called before the initialization completes in the background. When that happens,
-         * OneSignal.getService will run into a NPE. In that case, we just need to omit the job and do not
-         * reschedule.
-         */
-
-        // Additional hardening in the event of getService failure
+    private suspend fun executeRun(run: JobRun) {
+        var reschedule = false
         try {
-            // We assume init has been called via onStartJob\
+            if (!OneSignal.initWithContext(this)) {
+                return
+            }
+
             val backgroundService = OneSignal.getService<IBackgroundManager>()
-            val reschedule = backgroundService.cancelRunBackgroundServices()
-            Logging.debug("SyncJobService onStopJob called, system conditions not available reschedule: $reschedule")
-            return reschedule
+            backgroundService.runBackgroundServices()
+            reschedule = backgroundService.needsJobReschedule
+            backgroundService.needsJobReschedule = false
+            Logging.debug("LollipopSyncRunnable:JobFinished needsJobReschedule: $reschedule")
+        } catch (e: CancellationException) {
+            reschedule = true
+            throw e
         } catch (e: Exception) {
-            Logging.error("SyncJobService onStopJob failed, omit and do not reschedule")
-            return false
+            reschedule = true
+            Logging.error("SyncJobService background execution failed", e)
+        } finally {
+            if (run.state.compareAndSet(RunState.RUNNING, RunState.FINISHED)) {
+                activeRun.compareAndSet(run, null)
+                jobFinished(run.parameters, reschedule)
+            }
         }
+    }
+
+    override fun onStopJob(jobParameters: JobParameters): Boolean {
+        val run = activeRun.get()
+        val stopped =
+            run != null &&
+                run.jobId == jobParameters.jobId &&
+                run.state.compareAndSet(RunState.RUNNING, RunState.STOPPED)
+        if (stopped) {
+            activeRun.compareAndSet(run, null)
+            run?.job?.get()?.cancel()
+        }
+        return stopped
     }
 }

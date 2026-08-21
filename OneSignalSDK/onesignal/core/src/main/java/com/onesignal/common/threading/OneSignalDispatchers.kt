@@ -10,13 +10,15 @@ import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import java.util.concurrent.ExecutorService
-import java.util.concurrent.Executors
+import java.util.concurrent.CancellationException
+import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.ThreadFactory
 import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
+import kotlin.coroutines.CoroutineContext
 
 /**
  * Optimized threading manager for the OneSignal SDK.
@@ -31,6 +33,7 @@ import java.util.concurrent.atomic.AtomicInteger
  *
  * Made public to allow mocking in tests via IOMockHelper.
  */
+@Suppress("TooManyFunctions", "StringLiteralDuplication")
 object OneSignalDispatchers {
     // Optimized pool sizes based on CPU cores and workload analysis
     private const val IO_CORE_POOL_SIZE = 2 // Increased for better concurrency
@@ -41,6 +44,8 @@ object OneSignalDispatchers {
         30L // Keep threads alive longer to reduce recreation
     private const val QUEUE_CAPACITY =
         200 // Increased to handle more queued operations during init, while still preventing memory bloat
+    private const val TEST_READY_TIMEOUT_MS = 2_000L
+    private const val TEST_READY_POLL_MS = 5L
     internal const val BASE_THREAD_NAME = "OneSignal" // Base thread name prefix
     private const val IO_THREAD_NAME_PREFIX =
         "$BASE_THREAD_NAME-IO" // Thread name prefix for I/O operations
@@ -48,6 +53,13 @@ object OneSignalDispatchers {
         "$BASE_THREAD_NAME-Default" // Thread name prefix for CPU operations
     private const val SERIAL_IO_THREAD_NAME =
         "$BASE_THREAD_NAME-SerialIO" // Single, named thread for order-sensitive work
+    private const val INGRESS_THREAD_NAME = "$BASE_THREAD_NAME-Ingress"
+
+    @Volatile
+    internal var beforeLaneCreateForTest: ((String) -> Unit)? = null
+
+    @Volatile
+    internal var beforeFallbackCreateForTest: ((String) -> Unit)? = null
 
     private class OptimizedThreadFactory(
         private val namePrefix: String,
@@ -63,129 +75,347 @@ object OneSignalDispatchers {
         }
     }
 
+    private enum class Lane {
+        IO,
+        DEFAULT,
+        SERIAL_IO,
+        INGRESS,
+    }
+
+    private enum class LaneState {
+        COLD,
+        STARTING,
+        DRAINING,
+        READY,
+        CLOSED,
+    }
+
+    private class LaneTarget(
+        val dispatcher: CoroutineDispatcher,
+        val executor: ThreadPoolExecutor?,
+    ) {
+        fun close() {
+            executor?.shutdownNow()
+        }
+    }
+
+    private data class LaneConfig(
+        val corePoolSize: Int,
+        val maxPoolSize: Int,
+        val threadName: String,
+        val priority: Int = Thread.NORM_PRIORITY,
+    )
+
     /**
-     * Holds one generation of executors, dispatchers, and scopes. Everything stays lazily
-     * initialized (so production cold-start only pays for what the first caller actually uses),
-     * but bundling them lets the test-only [resetForTest] hook atomically swap in a clean
-     * generation and tear down the old one — including [shutdownNow] to interrupt worker threads
-     * that are parked in non-cancellable JVM waits (e.g. `CountDownLatch.await()` from a prior
-     * spec), which a plain coroutine cancellation cannot free.
+     * A stable dispatcher that queues work until its backing executor has been built and
+     * prestarted on the bootstrap thread. CoroutineScope.launch can therefore return its real Job
+     * without forcing executor construction or waiting on a lazy lock on the caller thread.
      */
-    private class Pools {
-        val ioExecutorLazy =
-            lazy {
-                try {
-                    ThreadPoolExecutor(
-                        IO_CORE_POOL_SIZE,
-                        IO_MAX_POOL_SIZE,
-                        KEEP_ALIVE_TIME_SECONDS,
-                        TimeUnit.SECONDS,
-                        LinkedBlockingQueue(QUEUE_CAPACITY),
-                        OptimizedThreadFactory(
-                            namePrefix = IO_THREAD_NAME_PREFIX,
-                            priority = Thread.NORM_PRIORITY - 1,
-                            // Slightly lower priority for I/O tasks
-                        ),
-                    ).apply {
-                        allowCoreThreadTimeOut(false) // Keep core threads alive
+    private class GateDispatcher(
+        private val lane: Lane,
+        private val requestBootstrap: (GateDispatcher) -> Unit,
+    ) : CoroutineDispatcher() {
+        private val lock = Any()
+        private val pending = ArrayDeque<Pair<CoroutineContext, Runnable>>()
+        private var state = LaneState.COLD
+        private var target: LaneTarget? = null
+
+        override fun dispatch(
+            context: CoroutineContext,
+            block: Runnable,
+        ) {
+            var readyDispatcher: CoroutineDispatcher? = null
+            var shouldBootstrap = false
+            var rejected = false
+
+            synchronized(lock) {
+                when (state) {
+                    LaneState.COLD -> {
+                        pending.addLast(context to block)
+                        state = LaneState.STARTING
+                        shouldBootstrap = true
                     }
-                } catch (e: Exception) {
-                    Logging.error("OneSignalDispatchers: Failed to create IO executor: ${e.message}")
-                    throw e // Let the dispatcher fallback handle this
+                    LaneState.STARTING, LaneState.DRAINING -> pending.addLast(context to block)
+                    LaneState.READY -> readyDispatcher = target!!.dispatcher
+                    LaneState.CLOSED -> rejected = true
                 }
             }
-        val ioExecutor: ThreadPoolExecutor get() = ioExecutorLazy.value
 
-        /** Single-thread executor for order-sensitive lifecycle work (focus / unfocus handlers). */
-        val serialIOExecutorLazy =
-            lazy {
-                try {
-                    Executors.newSingleThreadExecutor(
-                        OptimizedThreadFactory(
-                            namePrefix = SERIAL_IO_THREAD_NAME,
-                            priority = Thread.NORM_PRIORITY - 1,
-                        ),
-                    )
-                } catch (e: Exception) {
-                    Logging.error("OneSignalDispatchers: Failed to create SerialIO executor: ${e.message}")
-                    throw e
-                }
+            when {
+                shouldBootstrap -> requestBootstrap(this)
+                readyDispatcher != null -> dispatchSafely(readyDispatcher!!, context, block)
+                rejected -> cancelAndComplete(context, block, "OneSignal dispatcher generation is closed")
             }
-        val serialIOExecutor: ExecutorService get() = serialIOExecutorLazy.value
+        }
 
-        val defaultExecutorLazy =
-            lazy {
-                try {
-                    ThreadPoolExecutor(
-                        DEFAULT_CORE_POOL_SIZE,
-                        DEFAULT_MAX_POOL_SIZE,
-                        KEEP_ALIVE_TIME_SECONDS,
-                        TimeUnit.SECONDS,
-                        LinkedBlockingQueue(QUEUE_CAPACITY),
-                        OptimizedThreadFactory(DEFAULT_THREAD_NAME_PREFIX),
-                    ).apply {
-                        allowCoreThreadTimeOut(false) // Keep core threads alive
+        fun requestWarmup() {
+            val shouldBootstrap =
+                synchronized(lock) {
+                    if (state == LaneState.COLD) {
+                        state = LaneState.STARTING
+                        true
+                    } else {
+                        false
                     }
-                } catch (e: Exception) {
-                    Logging.error("OneSignalDispatchers: Failed to create Default executor: ${e.message}")
-                    throw e // Let the dispatcher fallback handle this
                 }
-            }
-        val defaultExecutor: ThreadPoolExecutor get() = defaultExecutorLazy.value
-
-        // Dispatchers - also lazy initialized
-        val IO: CoroutineDispatcher by lazy {
-            try {
-                ioExecutor.asCoroutineDispatcher()
-            } catch (e: Exception) {
-                Logging.error("OneSignalDispatchers: Using fallback Dispatchers.IO dispatcher: ${e.message}")
-                Dispatchers.IO
-            }
+            if (shouldBootstrap) requestBootstrap(this)
         }
 
-        val Default: CoroutineDispatcher by lazy {
-            try {
-                defaultExecutor.asCoroutineDispatcher()
-            } catch (e: Exception) {
-                Logging.error("OneSignalDispatchers: Using fallback Dispatchers.Default dispatcher: ${e.message}")
-                Dispatchers.Default
-            }
-        }
-
-        val SerialIO: CoroutineDispatcher by lazy {
-            try {
-                serialIOExecutor.asCoroutineDispatcher()
-            } catch (e: Exception) {
-                // Fall back to a limitedParallelism(1) view of Dispatchers.IO so submissions stay serialized.
-                Logging.error("OneSignalDispatchers: Using fallback serialized Dispatchers.IO: ${e.message}")
-                @Suppress("OPT_IN_USAGE")
-                Dispatchers.IO.limitedParallelism(1)
-            }
-        }
-
-        val ioScopeLazy = lazy { CoroutineScope(SupervisorJob() + IO) }
-        val IOScope: CoroutineScope get() = ioScopeLazy.value
-
-        val defaultScopeLazy = lazy { CoroutineScope(SupervisorJob() + Default) }
-        val DefaultScope: CoroutineScope get() = defaultScopeLazy.value
-
-        val serialIOScopeLazy = lazy { CoroutineScope(SupervisorJob() + SerialIO) }
-        val SerialIOScope: CoroutineScope get() = serialIOScopeLazy.value
-
-        /**
-         * Cancel scopes and forcibly stop executors for this generation. Only touches what was
-         * actually initialized so we never spin up a pool just to tear it down. [shutdownNow]
-         * interrupts parked worker threads so they can't outlive the spec that created them.
-         */
         @Suppress("TooGenericExceptionCaught")
-        fun shutdown() {
-            if (ioScopeLazy.isInitialized()) runCatching { ioScopeLazy.value.cancel() }
-            if (defaultScopeLazy.isInitialized()) runCatching { defaultScopeLazy.value.cancel() }
-            if (serialIOScopeLazy.isInitialized()) runCatching { serialIOScopeLazy.value.cancel() }
-            if (ioExecutorLazy.isInitialized()) runCatching { ioExecutorLazy.value.shutdownNow() }
-            if (defaultExecutorLazy.isInitialized()) runCatching { defaultExecutorLazy.value.shutdownNow() }
-            if (serialIOExecutorLazy.isInitialized()) runCatching { serialIOExecutorLazy.value.shutdownNow() }
+        fun initialize() {
+            createTargetOrFallback()?.let(::drainPending)
         }
+
+        @Suppress("TooGenericExceptionCaught")
+        private fun createTargetOrFallback(): LaneTarget? =
+            try {
+                createTarget(lane)
+            } catch (e: Exception) {
+                Logging.warn("OneSignalDispatchers: Using fallback for $lane lane: ${e.message}", e)
+                try {
+                    createFallbackTarget(lane)
+                } catch (t: Throwable) {
+                    Logging.warn("OneSignalDispatchers: Fallback failed for $lane lane: ${t.message}", t)
+                    failPending("OneSignal $lane dispatcher fallback failed")
+                    null
+                }
+            } catch (t: Throwable) {
+                Logging.warn("OneSignalDispatchers: Failed to initialize $lane lane: ${t.message}", t)
+                failPending("OneSignal $lane dispatcher failed to initialize")
+                null
+            }
+
+        private fun drainPending(newTarget: LaneTarget) {
+            while (true) {
+                val next =
+                    synchronized(lock) {
+                        if (state == LaneState.CLOSED) {
+                            null
+                        } else {
+                            state = LaneState.DRAINING
+                            pending.removeFirstOrNull().also {
+                                if (it == null) {
+                                    target = newTarget
+                                    state = LaneState.READY
+                                }
+                            }
+                        }
+                    }
+
+                if (next == null) {
+                    val closed = synchronized(lock) { state == LaneState.CLOSED }
+                    if (closed) newTarget.close()
+                    return
+                }
+                dispatchSafely(newTarget.dispatcher, next.first, next.second)
+            }
+        }
+
+        fun close() {
+            val queued: List<Pair<CoroutineContext, Runnable>>
+            val oldTarget: LaneTarget?
+            synchronized(lock) {
+                if (state == LaneState.CLOSED) return
+                state = LaneState.CLOSED
+                queued = pending.toList()
+                pending.clear()
+                oldTarget = target
+                target = null
+            }
+            queued.forEach {
+                cancelAndComplete(it.first, it.second, "OneSignal dispatcher generation was reset")
+            }
+            oldTarget?.close()
+        }
+
+        fun bootstrapFailed() {
+            failPending("OneSignal dispatcher bootstrap thread failed to start")
+        }
+
+        fun status(): String =
+            synchronized(lock) {
+                when (state) {
+                    LaneState.READY -> "Active"
+                    LaneState.CLOSED -> "Shutdown"
+                    else -> state.name.lowercase().replaceFirstChar { it.uppercase() }
+                }
+            }
+
+        fun executor(): ThreadPoolExecutor? = synchronized(lock) { target?.executor }
+
+        private fun failPending(reason: String) {
+            val queued =
+                synchronized(lock) {
+                    val copy = pending.toList()
+                    pending.clear()
+                    state = LaneState.COLD
+                    copy
+                }
+            queued.forEach { cancelAndComplete(it.first, it.second, reason) }
+        }
+
+        private fun dispatchSafely(
+            dispatcher: CoroutineDispatcher,
+            context: CoroutineContext,
+            block: Runnable,
+        ) {
+            try {
+                dispatcher.dispatch(context, block)
+            } catch (e: RuntimeException) {
+                Logging.error("OneSignalDispatchers: $lane dispatch rejected: ${e.message}", e)
+                cancelAndComplete(context, block, "OneSignal $lane dispatch rejected")
+            }
+        }
+
+        private fun cancelAndComplete(
+            context: CoroutineContext,
+            block: Runnable,
+            reason: String,
+        ) {
+            val job = context[Job] ?: return
+            job.cancel(CancellationException(reason))
+            block.run()
+        }
+    }
+
+    private class BootstrapCoordinator {
+        private val queue = ConcurrentLinkedQueue<GateDispatcher>()
+        private val running = AtomicBoolean(false)
+
+        fun request(gate: GateDispatcher) {
+            queue.add(gate)
+            startIfNeeded()
+        }
+
+        @Suppress("TooGenericExceptionCaught")
+        private fun startIfNeeded() {
+            if (!running.compareAndSet(false, true)) return
+            try {
+                Thread(
+                    ::runLoop,
+                    "$BASE_THREAD_NAME-bootstrap",
+                ).apply {
+                    isDaemon = true
+                    priority = Thread.NORM_PRIORITY - 2
+                    start()
+                }
+            } catch (t: Throwable) {
+                running.set(false)
+                Logging.warn("OneSignalDispatchers: Failed to start bootstrap thread: ${t.message}", t)
+                while (true) {
+                    val gate = queue.poll() ?: break
+                    gate.bootstrapFailed()
+                }
+            }
+        }
+
+        @Suppress("TooGenericExceptionCaught")
+        private fun runLoop() {
+            try {
+                while (true) {
+                    val gate = queue.poll() ?: return
+                    try {
+                        gate.initialize()
+                    } catch (t: Throwable) {
+                        Logging.warn("OneSignalDispatchers: Bootstrap failed for a lane: ${t.message}", t)
+                        gate.bootstrapFailed()
+                    }
+                }
+            } finally {
+                running.set(false)
+                if (queue.isNotEmpty()) startIfNeeded()
+            }
+        }
+    }
+
+    private class Pools {
+        private val coordinator = BootstrapCoordinator()
+        val IO = GateDispatcher(Lane.IO, coordinator::request)
+        val Default = GateDispatcher(Lane.DEFAULT, coordinator::request)
+        val SerialIO = GateDispatcher(Lane.SERIAL_IO, coordinator::request)
+        val Ingress = GateDispatcher(Lane.INGRESS, coordinator::request)
+        val IOScope = CoroutineScope(SupervisorJob() + IO)
+        val DefaultScope = CoroutineScope(SupervisorJob() + Default)
+        val SerialIOScope = CoroutineScope(SupervisorJob() + SerialIO)
+        val IngressScope = CoroutineScope(SupervisorJob() + Ingress)
+        private val gates = listOf(IO, Default, SerialIO, Ingress)
+        private val scopes = listOf(IOScope, DefaultScope, SerialIOScope, IngressScope)
+
+        fun prewarm() {
+            gates.forEach { it.requestWarmup() }
+        }
+
+        fun shutdown() {
+            scopes.forEach { it.cancel() }
+            gates.forEach { it.close() }
+        }
+    }
+
+    private fun createTarget(lane: Lane): LaneTarget {
+        beforeLaneCreateForTest?.invoke(lane.name)
+        val config = lane.config()
+        val executor =
+            ThreadPoolExecutor(
+                config.corePoolSize,
+                config.maxPoolSize,
+                KEEP_ALIVE_TIME_SECONDS,
+                TimeUnit.SECONDS,
+                LinkedBlockingQueue(QUEUE_CAPACITY),
+                OptimizedThreadFactory(config.threadName, config.priority),
+            )
+        executor.allowCoreThreadTimeOut(false)
+        executor.prestartAllCoreThreads()
+        return LaneTarget(executor.asCoroutineDispatcher(), executor)
+    }
+
+    private fun Lane.config(): LaneConfig =
+        when (this) {
+            Lane.IO ->
+                LaneConfig(
+                    IO_CORE_POOL_SIZE,
+                    IO_MAX_POOL_SIZE,
+                    IO_THREAD_NAME_PREFIX,
+                    Thread.NORM_PRIORITY - 1,
+                )
+            Lane.DEFAULT ->
+                LaneConfig(
+                    DEFAULT_CORE_POOL_SIZE,
+                    DEFAULT_MAX_POOL_SIZE,
+                    DEFAULT_THREAD_NAME_PREFIX,
+                )
+            Lane.SERIAL_IO ->
+                LaneConfig(
+                    1,
+                    1,
+                    SERIAL_IO_THREAD_NAME,
+                    Thread.NORM_PRIORITY - 1,
+                )
+            Lane.INGRESS ->
+                LaneConfig(
+                    1,
+                    1,
+                    INGRESS_THREAD_NAME,
+                    Thread.NORM_PRIORITY - 1,
+                )
+        }
+
+    private fun createFallbackTarget(lane: Lane): LaneTarget {
+        beforeFallbackCreateForTest?.invoke(lane.name)
+        val dispatcher =
+            when (lane) {
+                Lane.IO -> Dispatchers.IO
+                Lane.DEFAULT -> Dispatchers.Default
+                Lane.SERIAL_IO -> {
+                    @Suppress("OPT_IN_USAGE")
+                    Dispatchers.IO.limitedParallelism(1)
+                }
+                Lane.INGRESS -> {
+                    @Suppress("OPT_IN_USAGE")
+                    Dispatchers.IO.limitedParallelism(1)
+                }
+            }
+        dispatcher.dispatch(kotlin.coroutines.EmptyCoroutineContext, Runnable {})
+        return LaneTarget(dispatcher, null)
     }
 
     @Volatile
@@ -211,57 +441,19 @@ object OneSignalDispatchers {
         return pools.SerialIOScope.launch { block() }
     }
 
+    /** Launches short durable-ingress work on a pool isolated from general SDK I/O. */
+    fun launchOnIngress(block: suspend () -> Unit): Job {
+        return pools.IngressScope.launch { block() }
+    }
+
     @Volatile
     private var prewarmStarted = false
     private val prewarmLock = Any()
 
     /**
-     * Triggers the lazy initialization of [IO], [Default], and [SerialIO] (and their backing
-     * executors, dispatchers, and scopes) on a short-lived background thread.
-     *
-     * Background:
-     * The lazy `by lazy` properties below construct `ThreadPoolExecutor` instances and wrap them
-     * in `asCoroutineDispatcher() + SupervisorJob() + CoroutineScope(...)`. Production OTel
-     * shows that when the **first** caller of [launchOnIO] / [launchOnSerialIO] is on the main
-     * thread (Activity-lifecycle handler, `JobService.onStartJob`, etc.), the construction cost
-     * — which includes a `kotlinx.coroutines.BuildersKt.launch` that hits
-     * `ThreadPoolExecutor.execute` and `LinkedBlockingQueue.offer` synchronously — is paid on
-     * the calling thread, blocking the main thread for many seconds on cold start.
-     *
-     * Calling [prewarm] from a non-time-sensitive spot in [com.onesignal.OneSignal.initWithContext]
-     * shifts that cost to a dedicated `OneSignal-prewarm` daemon thread, so the first
-     * production caller — including main-thread lifecycle handlers — only pays the much cheaper
-     * "submit work to an already-constructed executor" cost.
-     *
-     * Idempotent and fire-and-forget: a no-op on second and subsequent calls. Safe to invoke
-     * from any thread; the heavy lifting always happens on the daemon thread we spawn here, not
-     * on the caller. Failures are logged and swallowed because the executors retain their
-     * existing fallback paths (e.g. `Dispatchers.IO.limitedParallelism(1)` for [SerialIO]) and a
-     * failed prewarm will simply mean the first production caller pays the original cost.
-     *
-     * **Best-effort, not a hard guarantee.** Because [prewarm] is fire-and-forget, a caller that
-     * dispatches immediately afterward can still win the lazy-init race and pay construction on
-     * its own thread. The fix relies on placing [prewarm] at cold-start entry points where there
-     * is meaningful lead time (e.g. a `goAsync()` handoff or `initWithContext` work) before the
-     * first `suspendify*` / `launchOn*` dispatch.
-     *
-     * [suspendifyOnIO], [suspendifyOnDefault], [launchOnIO], [launchOnDefault], and
-     * [suspendifyOnSerialIO] always route through [IO] / [Default] / [SerialIO], so [prewarm]
-     * benefits the very first real dispatch from any of them.
-     *
-     * The known main-thread cold-start entry points:
-     * | Entry point | Class |
-     * |---|---|
-     * | process-start activity lifecycle registration | `core.internal.application.impl.ActivityLifecycleInitializer` |
-     * | `initWithContext` / `initWithContextSuspend` | `OneSignalImp` |
-     * | `onStartJob` | `core.services.SyncJobService` |
-     * | `onReceive` | `FCMBroadcastReceiver`, `NotificationDismissReceiver`, `BootUpReceiver`, `UpgradeReceiver` |
-     * | `onMessage` / registration callbacks | `ADMMessageHandler`, `ADMMessageHandlerJob` |
-     * | `onNewToken` / `onMessageReceived` | `OneSignalHmsEventBridge` |
-     * | `processIntent` / `processOpen` | `NotificationOpenedActivityBase`, `NotificationOpenedActivityHMS` |
-     *
-     * When adding a new cold-start entry point (receiver, job, activity trampoline, push bridge),
-     * call [prewarm] at the top of it before the first dispatch.
+     * Requests asynchronous initialization and worker prestart for every lane. Dispatch correctness
+     * does not depend on this call: a cold first dispatch queues behind the same bootstrap gate and
+     * returns without constructing or waiting for a pool on its caller thread.
      */
     @Suppress("TooGenericExceptionCaught")
     fun prewarm() {
@@ -271,35 +463,10 @@ object OneSignalDispatchers {
             prewarmStarted = true
         }
         try {
-            val prewarmThread = Thread(
-                {
-                    try {
-                        // Each launch* call below triggers the corresponding lazy chain
-                        // (executor -> dispatcher -> scope) and submits an empty coroutine,
-                        // which forces the worker thread(s) to start as well.
-                        launchOnIO { /* warm IOScope + ioExecutor */ }
-                        launchOnDefault { /* warm DefaultScope + defaultExecutor */ }
-                        launchOnSerialIO { /* warm SerialIOScope + serialIOExecutor */ }
-                    } catch (e: Throwable) {
-                        synchronized(prewarmLock) { prewarmStarted = false }
-                        Logging.warn("OneSignalDispatchers.prewarm failed: ${e.message}", e)
-                    }
-                },
-                "$BASE_THREAD_NAME-prewarm",
-            )
-            prewarmThread.isDaemon = true
-            prewarmThread.priority = Thread.NORM_PRIORITY - 2
-            prewarmThread.start()
+            pools.prewarm()
         } catch (t: Throwable) {
-            // Constructing, configuring, or starting the daemon can itself fail before the body
-            // ever runs (e.g. OutOfMemoryError "unable to create new native thread", a
-            // SecurityManager denial, or InternalError). Swallow it so a prewarm failure never
-            // propagates onto the cold-start entry point's caller thread, and reset the guard so a
-            // later entry point can retry. The dispatchers keep their lazy fallbacks, so the only
-            // cost of a failed prewarm is that the first real dispatch pays the original
-            // construction cost.
             synchronized(prewarmLock) { prewarmStarted = false }
-            Logging.warn("OneSignalDispatchers.prewarm failed to start daemon: ${t.message}", t)
+            Logging.warn("OneSignalDispatchers.prewarm failed: ${t.message}", t)
         }
     }
 
@@ -342,41 +509,55 @@ object OneSignalDispatchers {
             Logging.error("OneSignalDispatchers.resetForTest failed: ${e.message}", e)
         }
         resetPrewarmForTest()
+        beforeLaneCreateForTest = null
+        beforeFallbackCreateForTest = null
     }
 
+    @Suppress("ComplexMethod")
     internal fun getPerformanceMetrics(): String {
-        return try {
-            val current = pools
-            val serialQueueSize =
-                (current.serialIOExecutor as? ThreadPoolExecutor)?.queue?.size?.toString() ?: "n/a"
-            val serialCompleted =
-                (current.serialIOExecutor as? ThreadPoolExecutor)?.completedTaskCount ?: 0L
-            """
+        val current = pools
+        val io = current.IO.executor()
+        val default = current.Default.executor()
+        val serial = current.SerialIO.executor()
+        val ingress = current.Ingress.executor()
+        return """
             OneSignalDispatchers Performance Metrics:
-            - IO Pool: ${current.ioExecutor.activeCount}/${current.ioExecutor.corePoolSize} active/core threads
-            - IO Queue: ${current.ioExecutor.queue.size} pending tasks
-            - Default Pool: ${current.defaultExecutor.activeCount}/${current.defaultExecutor.corePoolSize} active/core threads
-            - Default Queue: ${current.defaultExecutor.queue.size} pending tasks
-            - SerialIO Queue: $serialQueueSize pending tasks
-            - Total completed tasks: ${current.ioExecutor.completedTaskCount + current.defaultExecutor.completedTaskCount + serialCompleted}
-            - Memory usage: ~${(current.ioExecutor.activeCount + current.defaultExecutor.activeCount + 1) * 1024}KB (thread stacks, ~1MB each)
-            """.trimIndent()
-        } catch (e: Exception) {
-            "OneSignalDispatchers not initialized or using fallback dispatchers ${e.message}"
-        }
+            - IO Pool: ${io?.let { "${it.activeCount}/${it.corePoolSize}" } ?: "n/a"} active/core threads
+            - IO Queue: ${io?.queue?.size ?: "n/a"} pending tasks
+            - Default Pool: ${default?.let { "${it.activeCount}/${it.corePoolSize}" } ?: "n/a"} active/core threads
+            - Default Queue: ${default?.queue?.size ?: "n/a"} pending tasks
+            - SerialIO Queue: ${serial?.queue?.size ?: "n/a"} pending tasks
+            - Ingress Queue: ${ingress?.queue?.size ?: "n/a"} pending tasks
+            - Total completed tasks: ${(io?.completedTaskCount ?: 0L) + (default?.completedTaskCount ?: 0L) + (serial?.completedTaskCount ?: 0L) + (ingress?.completedTaskCount ?: 0L)}
+            - Memory usage: ~${((io?.activeCount ?: 0) + (default?.activeCount ?: 0) + (serial?.activeCount ?: 0) + (ingress?.activeCount ?: 0)) * 1024}KB (thread stacks, ~1MB each)
+        """.trimIndent()
     }
 
     internal fun getStatus(): String {
         val current = pools
         return """
             OneSignalDispatchers Status:
-            - IO Executor: ${executorStatus("ioExecutor") { current.ioExecutor.isShutdown }}
-            - Default Executor: ${executorStatus("defaultExecutor") { current.defaultExecutor.isShutdown }}
-            - SerialIO Executor: ${executorStatus("serialIOExecutor") { current.serialIOExecutor.isShutdown }}
+            - IO Executor: ${current.IO.status()}
+            - Default Executor: ${current.Default.status()}
+            - SerialIO Executor: ${current.SerialIO.status()}
+            - Ingress Executor: ${current.Ingress.status()}
             - IO Scope: ${scopeStatus("IOScope") { current.IOScope.isActive }}
             - Default Scope: ${scopeStatus("DefaultScope") { current.DefaultScope.isActive }}
             - SerialIO Scope: ${scopeStatus("SerialIOScope") { current.SerialIOScope.isActive }}
+            - Ingress Scope: ${scopeStatus("IngressScope") { current.IngressScope.isActive }}
         """.trimIndent()
+    }
+
+    internal fun awaitReadyForTest(timeoutMs: Long = TEST_READY_TIMEOUT_MS): Boolean {
+        val deadline = System.currentTimeMillis() + timeoutMs
+        while (System.currentTimeMillis() < deadline) {
+            val current = pools
+            if (listOf(current.IO, current.Default, current.SerialIO, current.Ingress).all { it.status() == "Active" }) {
+                return true
+            }
+            Thread.sleep(TEST_READY_POLL_MS)
+        }
+        return false
     }
 
     // internal so tests can exercise the failure branch (when `isShutdown()` itself throws,

@@ -1,3 +1,5 @@
+@file:Suppress("TooManyFunctions")
+
 package com.onesignal.common.threading
 
 import com.onesignal.debug.internal.logging.Logging
@@ -67,6 +69,28 @@ fun suspendifyOnIO(block: suspend () -> Unit) {
     suspendifyWithCompletion(useIO = true, block = block, onComplete = null)
 }
 
+/** Runs short, deadline-sensitive ingress work on its isolated serial dispatcher. */
+fun suspendifyOnIngress(
+    block: suspend () -> Unit,
+    onComplete: (() -> Unit)? = null,
+) {
+    val job =
+        OneSignalDispatchers.launchOnIngress {
+            try {
+                block()
+            } catch (e: Exception) {
+                Logging.error("Exception in suspendifyOnIngress", e)
+            }
+        }
+    job.invokeOnCompletion {
+        try {
+            onComplete?.invoke()
+        } catch (e: Exception) {
+            Logging.error("Exception in suspendifyOnIngress onComplete", e)
+        }
+    }
+}
+
 /**
  * Modern utility for executing suspending code on the default dispatcher.
  * Uses OneSignal's centralized thread management for CPU-intensive operations.
@@ -110,7 +134,7 @@ fun runOnSerialIO(block: () -> Unit) {
  *
  * @param useIO Whether to use IO scope (true) or Default scope (false)
  * @param block The suspending code to execute
- * @param onComplete Optional callback to execute after completion
+ * @param onComplete Optional callback that always executes after [block], including on failure.
  */
 fun suspendifyWithCompletion(
     useIO: Boolean = true,
@@ -122,9 +146,14 @@ fun suspendifyWithCompletion(
     launch {
         try {
             block()
-            onComplete?.invoke()
         } catch (e: Exception) {
             Logging.error("Exception in suspendifyWithCompletion", e)
+        } finally {
+            try {
+                onComplete?.invoke()
+            } catch (e: Exception) {
+                Logging.error("Exception in suspendifyWithCompletion onComplete", e)
+            }
         }
     }
 }

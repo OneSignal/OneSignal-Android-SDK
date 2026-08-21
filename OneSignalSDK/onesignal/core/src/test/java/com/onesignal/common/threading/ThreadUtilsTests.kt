@@ -8,6 +8,7 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import kotlinx.coroutines.delay
 import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
 class ThreadUtilsTests : FunSpec({
@@ -137,6 +138,45 @@ class ThreadUtilsTests : FunSpec({
         Thread.sleep(20)
         completed shouldBe true
         onCompleteCalled shouldBe true
+    }
+
+    test("suspendifyWithCompletion should execute onComplete when block throws") {
+        val latch = CountDownLatch(1)
+        var onCompleteCalled = false
+
+        suspendifyWithCompletion(
+            useIO = true,
+            block = {
+                throw RuntimeException("Test error")
+            },
+            onComplete = {
+                onCompleteCalled = true
+                latch.countDown()
+            },
+        )
+
+        latch.await()
+        onCompleteCalled shouldBe true
+    }
+
+    test("suspendifyOnIngress completes when a cold queued dispatch is cancelled") {
+        OneSignalDispatchers.resetForTest()
+        val createStarted = CountDownLatch(1)
+        val allowCreate = CountDownLatch(1)
+        val completed = CountDownLatch(1)
+        OneSignalDispatchers.beforeLaneCreateForTest = { lane ->
+            if (lane == "INGRESS") {
+                createStarted.countDown()
+                allowCreate.await()
+            }
+        }
+
+        suspendifyOnIngress(block = {}, onComplete = { completed.countDown() })
+        createStarted.await()
+        OneSignalDispatchers.resetForTest()
+
+        completed.await(1, TimeUnit.SECONDS) shouldBe true
+        allowCreate.countDown()
     }
 
     test("suspendifyWithErrorHandling should handle errors properly") {
