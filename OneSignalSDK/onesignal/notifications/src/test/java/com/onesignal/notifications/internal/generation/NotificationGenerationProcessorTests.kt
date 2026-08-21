@@ -260,6 +260,31 @@ class NotificationGenerationProcessorTests : FunSpec({
         }
     }
 
+    test("processNotificationData should mark a shade restore dismissed when the received event never calls display") {
+        // The no-argument preventDefault parks on the display waiter, so this only settles once the
+        // callback timeout fires. The outcome has to match preventDefault(true).
+        // Given
+        val mocks = Mocks()
+        every { mocks.notificationGenerationProcessor getProperty "EXTERNAL_CALLBACKS_TIMEOUT" } answers { 200L }
+        coEvery { mocks.notificationLifecycleService.externalRemoteNotificationReceived(any()) } answers {
+            firstArg<INotificationReceivedEvent>().preventDefault()
+        }
+
+        // When
+        mocks.notificationGenerationProcessor.processNotificationData(mocks.context, 1, mocks.notificationPayload, NotificationRestoreReason.SHADE_RESTORE, 1111)
+
+        // Then
+        coVerify(exactly = 0) {
+            mocks.notificationDisplayer.displayNotification(any())
+        }
+        coVerify(exactly = 1) {
+            mocks.notificationRepository.markAsDismissedWithoutCancel(1)
+        }
+        coVerify(exactly = 0) {
+            mocks.notificationRepository.markAsDismissed(any())
+        }
+    }
+
     test("processNotificationData should leave a regrouped notification alone when the received event prevents display") {
         // A group dropping to one member sends that member back through generation. It is still in
         // the shade and the user never dismissed it, so suppressing the rebuild must not take it
