@@ -5,6 +5,7 @@ import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.mocks.AndroidMockHelper
 import com.onesignal.mocks.MockHelper
+import com.onesignal.notifications.internal.common.NotificationRestoreReason
 import com.onesignal.notifications.internal.data.INotificationRepository
 import com.onesignal.notifications.internal.display.ISummaryNotificationDisplayer
 import com.onesignal.notifications.internal.restoration.INotificationRestoreProcessor
@@ -132,7 +133,7 @@ class NotificationSummaryManagerTests : FunSpec({
         coEvery { mockNotificationRepository.getAndroidIdForGroup("groupId", true) } returns 99
         val mockSummaryNotificationDisplayer = mockk<ISummaryNotificationDisplayer>()
         val mockNotificationRestoreProcessor = mockk<INotificationRestoreProcessor>()
-        coEvery { mockNotificationRestoreProcessor.processNotification(any()) } just runs
+        coEvery { mockNotificationRestoreProcessor.processNotification(any(), any(), any()) } just runs
 
         val notificationSummaryManager =
             NotificationSummaryManager(
@@ -160,6 +161,10 @@ class NotificationSummaryManagerTests : FunSpec({
                     it.title shouldBe "title2"
                     it.message shouldBe "message2"
                 },
+                // Not a shade restore. The notification is still showing, so suppressing this
+                // rebuild must not dismiss or cancel it.
+                NotificationRestoreReason.GROUP_REGROUP,
+                any(),
             )
         }
     }

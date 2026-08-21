@@ -10,6 +10,7 @@ import com.onesignal.mocks.IOMockHelper
 import com.onesignal.mocks.MockHelper
 import com.onesignal.notifications.INotificationReceivedEvent
 import com.onesignal.notifications.INotificationWillDisplayEvent
+import com.onesignal.notifications.internal.common.NotificationRestoreReason
 import com.onesignal.notifications.internal.data.INotificationRepository
 import com.onesignal.notifications.internal.display.INotificationDisplayer
 import com.onesignal.notifications.internal.generation.impl.NotificationGenerationProcessor
@@ -60,6 +61,7 @@ private class Mocks {
             val mockNotificationRepository = mockk<INotificationRepository>()
             coEvery { mockNotificationRepository.doesNotificationExist(any()) } returns false
             coEvery { mockNotificationRepository.markAsDismissed(any()) } returns true
+            coEvery { mockNotificationRepository.markAsDismissedWithoutCancel(any()) } returns true
             coEvery {
                 mockNotificationRepository.createNotification(
                     any(),
@@ -139,7 +141,7 @@ class NotificationGenerationProcessorTests : FunSpec({
         coEvery { mocks.notificationLifecycleService.externalNotificationWillShowInForeground(any()) } just runs
 
         // When
-        mocks.notificationGenerationProcessor.processNotificationData(mocks.context, 1, mocks.notificationPayload, false, 1111)
+        mocks.notificationGenerationProcessor.processNotificationData(mocks.context, 1, mocks.notificationPayload, null, 1111)
 
         // Then
         coVerify(exactly = 1) {
@@ -167,7 +169,7 @@ class NotificationGenerationProcessorTests : FunSpec({
         coEvery { mocks.notificationLifecycleService.externalNotificationWillShowInForeground(any()) } just runs
 
         // When
-        mocks.notificationGenerationProcessor.processNotificationData(mocks.context, 1, mocks.notificationPayload, true, 1111)
+        mocks.notificationGenerationProcessor.processNotificationData(mocks.context, 1, mocks.notificationPayload, NotificationRestoreReason.SHADE_RESTORE, 1111)
 
         // Then
         coVerify(exactly = 1) {
@@ -195,11 +197,13 @@ class NotificationGenerationProcessorTests : FunSpec({
         coEvery { mocks.notificationLifecycleService.externalNotificationWillShowInForeground(any()) } just runs
 
         // When
-        mocks.notificationGenerationProcessor.processNotificationData(mocks.context, 1, mocks.notificationPayload, false, 1111)
-        mocks.notificationGenerationProcessor.processNotificationData(mocks.context, 2, mocks.notificationPayload, true, 1111)
+        mocks.notificationGenerationProcessor.processNotificationData(mocks.context, 1, mocks.notificationPayload, null, 1111)
+        mocks.notificationGenerationProcessor.processNotificationData(mocks.context, 2, mocks.notificationPayload, NotificationRestoreReason.SHADE_RESTORE, 1111)
+        mocks.notificationGenerationProcessor.processNotificationData(mocks.context, 3, mocks.notificationPayload, NotificationRestoreReason.GROUP_REGROUP, 1111)
 
         // Then
-        restoringFlags shouldBe listOf(false, true)
+        // Both reasons mean the app has seen this notification before, which is what the flag says.
+        restoringFlags shouldBe listOf(false, true, true)
     }
 
     test("processNotificationData should not display notification when external callback indicates not to") {
@@ -211,7 +215,7 @@ class NotificationGenerationProcessorTests : FunSpec({
         }
 
         // When
-        mocks.notificationGenerationProcessor.processNotificationData(mocks.context, 1, mocks.notificationPayload, false, 1111)
+        mocks.notificationGenerationProcessor.processNotificationData(mocks.context, 1, mocks.notificationPayload, null, 1111)
 
         // Then
         // notificationReceived should be called
@@ -224,7 +228,7 @@ class NotificationGenerationProcessorTests : FunSpec({
         }
     }
 
-    test("processNotificationData should mark a restored notification dismissed when the received event prevents display") {
+    test("processNotificationData should mark a shade restore dismissed without clearing the shade when the received event prevents display") {
         // Given
         val mocks = Mocks()
         // The suite default of 10ms can expire before Dispatchers.IO runs the callback.
@@ -234,7 +238,7 @@ class NotificationGenerationProcessorTests : FunSpec({
         }
 
         // When
-        mocks.notificationGenerationProcessor.processNotificationData(mocks.context, 1, mocks.notificationPayload, true, 1111)
+        mocks.notificationGenerationProcessor.processNotificationData(mocks.context, 1, mocks.notificationPayload, NotificationRestoreReason.SHADE_RESTORE, 1111)
 
         // Then
         coVerify(exactly = 0) {
@@ -242,10 +246,46 @@ class NotificationGenerationProcessorTests : FunSpec({
         }
         // Without this the notification comes back on every later restore.
         coVerify(exactly = 1) {
-            mocks.notificationRepository.markAsDismissed(1)
+            mocks.notificationRepository.markAsDismissedWithoutCancel(1)
         }
-        coVerify(exactly = 1) {
-            mocks.notificationSummaryManager.updatePossibleDependentSummaryOnDismiss(1)
+        // markAsDismissed cancels the shade. The restore pass includes notifications that are still
+        // showing on API 21 and 22, and whenever getActiveNotifications fails.
+        coVerify(exactly = 0) {
+            mocks.notificationRepository.markAsDismissed(any())
+        }
+        // The restore pass walks every outstanding notification already. Rebuilding the summary from
+        // here enqueues generation for a sibling that is about to be restored anyway.
+        coVerify(exactly = 0) {
+            mocks.notificationSummaryManager.updatePossibleDependentSummaryOnDismiss(any())
+        }
+    }
+
+    test("processNotificationData should leave a regrouped notification alone when the received event prevents display") {
+        // A group dropping to one member sends that member back through generation. It is still in
+        // the shade and the user never dismissed it, so suppressing the rebuild must not take it
+        // down or dismiss the record.
+        // Given
+        val mocks = Mocks()
+        every { mocks.notificationGenerationProcessor getProperty "EXTERNAL_CALLBACKS_TIMEOUT" } answers { 1_000L }
+        coEvery { mocks.notificationLifecycleService.externalRemoteNotificationReceived(any()) } answers {
+            firstArg<INotificationReceivedEvent>().preventDefault(true)
+        }
+
+        // When
+        mocks.notificationGenerationProcessor.processNotificationData(mocks.context, 1, mocks.notificationPayload, NotificationRestoreReason.GROUP_REGROUP, 1111)
+
+        // Then
+        coVerify(exactly = 0) {
+            mocks.notificationDisplayer.displayNotification(any())
+        }
+        coVerify(exactly = 0) {
+            mocks.notificationRepository.markAsDismissed(any())
+        }
+        coVerify(exactly = 0) {
+            mocks.notificationRepository.markAsDismissedWithoutCancel(any())
+        }
+        coVerify(exactly = 0) {
+            mocks.notificationSummaryManager.updatePossibleDependentSummaryOnDismiss(any())
         }
     }
 
@@ -258,7 +298,7 @@ class NotificationGenerationProcessorTests : FunSpec({
         }
 
         // When
-        mocks.notificationGenerationProcessor.processNotificationData(mocks.context, 1, mocks.notificationPayload, true, 1111)
+        mocks.notificationGenerationProcessor.processNotificationData(mocks.context, 1, mocks.notificationPayload, NotificationRestoreReason.SHADE_RESTORE, 1111)
 
         // Then
         coVerify(exactly = 1) {
@@ -285,7 +325,7 @@ class NotificationGenerationProcessorTests : FunSpec({
         }
 
         // When
-        mocks.notificationGenerationProcessor.processNotificationData(mocks.context, 1, mocks.notificationPayload, false, 1111)
+        mocks.notificationGenerationProcessor.processNotificationData(mocks.context, 1, mocks.notificationPayload, null, 1111)
 
         // Then
         // notificationReceived should be called
@@ -303,7 +343,7 @@ class NotificationGenerationProcessorTests : FunSpec({
         }
 
         // When
-        mocks.notificationGenerationProcessor.processNotificationData(mocks.context, 1, mocks.notificationPayload, true, 1111)
+        mocks.notificationGenerationProcessor.processNotificationData(mocks.context, 1, mocks.notificationPayload, NotificationRestoreReason.SHADE_RESTORE, 1111)
 
         // Then
         coVerify(exactly = 1) {
@@ -336,7 +376,7 @@ class NotificationGenerationProcessorTests : FunSpec({
 
         // If discard is set to false this should timeout waiting for display()
         withTimeout(1_000) {
-            mocks.notificationGenerationProcessor.processNotificationData(mocks.context, 1, mocks.notificationPayload, false, 1111)
+            mocks.notificationGenerationProcessor.processNotificationData(mocks.context, 1, mocks.notificationPayload, null, 1111)
         }
     }
 
@@ -352,7 +392,7 @@ class NotificationGenerationProcessorTests : FunSpec({
 
         // If discard is set to false this should timeout waiting for display()
         withTimeout(1_000) {
-            mocks.notificationGenerationProcessor.processNotificationData(mocks.context, 1, mocks.notificationPayload, false, 1111)
+            mocks.notificationGenerationProcessor.processNotificationData(mocks.context, 1, mocks.notificationPayload, null, 1111)
         }
     }
 
@@ -377,7 +417,7 @@ class NotificationGenerationProcessorTests : FunSpec({
         }
 
         // When
-        mocks.notificationGenerationProcessor.processNotificationData(mocks.context, 1, mocks.notificationPayload, false, 1111)
+        mocks.notificationGenerationProcessor.processNotificationData(mocks.context, 1, mocks.notificationPayload, null, 1111)
 
         // Then
         coVerify(exactly = 0) {
@@ -399,7 +439,7 @@ class NotificationGenerationProcessorTests : FunSpec({
         }
 
         // When
-        mocks.notificationGenerationProcessor.processNotificationData(mocks.context, 1, mocks.notificationPayload, true, 1111)
+        mocks.notificationGenerationProcessor.processNotificationData(mocks.context, 1, mocks.notificationPayload, NotificationRestoreReason.SHADE_RESTORE, 1111)
 
         // Then
         coVerify(exactly = 0) {

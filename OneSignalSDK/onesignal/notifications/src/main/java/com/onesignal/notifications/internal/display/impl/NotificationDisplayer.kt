@@ -112,7 +112,10 @@ internal class NotificationDisplayer(
         // Keeps notification from playing sound + vibrating again
         if (notificationJob.isRestoring) {
             // An extender may have changed the channel, and the channel controls alerting on O+.
-            oneSignalNotificationBuilder.channelId?.let { notifBuilder?.setChannelId(it) }
+            oneSignalNotificationBuilder.channelId?.let {
+                Logging.verbose("Restoring notification $notificationId on channel $it")
+                notifBuilder?.setChannelId(it)
+            }
             _notificationDisplayBuilder.removeNotifyOptions(notifBuilder)
         }
 

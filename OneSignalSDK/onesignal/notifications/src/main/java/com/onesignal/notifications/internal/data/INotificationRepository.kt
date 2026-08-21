@@ -107,6 +107,19 @@ internal interface INotificationRepository {
      */
     suspend fun markAsDismissed(androidId: Int): Boolean
 
+    /**
+     * Mark as dismissed the notification with the Android ID provided, leaving whatever is in the
+     * notification shade for that ID in place.
+     *
+     * Use this when the notification should stop being restored but may still be on screen, such as
+     * when a restore is suppressed on a device where the SDK cannot tell what is currently showing.
+     *
+     * @param androidId The notification's Android ID
+     *
+     * @return true if a notification was marked as dismissed, false otherwise.
+     */
+    suspend fun markAsDismissedWithoutCancel(androidId: Int): Boolean
+
     suspend fun markAsDismissedForGroup(group: String)
 
     suspend fun markAsDismissedForOutstanding()
