@@ -14,6 +14,7 @@ import com.onesignal.notifications.internal.data.INotificationRepository
 import com.onesignal.notifications.internal.display.INotificationDisplayer
 import com.onesignal.notifications.internal.generation.impl.NotificationGenerationProcessor
 import com.onesignal.notifications.internal.lifecycle.INotificationLifecycleService
+import com.onesignal.notifications.internal.summary.INotificationSummaryManager
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.mockk.coEvery
@@ -58,6 +59,7 @@ private class Mocks {
         run {
             val mockNotificationRepository = mockk<INotificationRepository>()
             coEvery { mockNotificationRepository.doesNotificationExist(any()) } returns false
+            coEvery { mockNotificationRepository.markAsDismissed(any()) } returns true
             coEvery {
                 mockNotificationRepository.createNotification(
                     any(),
@@ -75,6 +77,8 @@ private class Mocks {
             mockNotificationRepository
         }
 
+    val notificationSummaryManager = mockk<INotificationSummaryManager>(relaxed = true)
+
     val notificationGenerationProcessor = run {
         val mock = spyk(
             NotificationGenerationProcessor(
@@ -82,7 +86,7 @@ private class Mocks {
                 notificationDisplayer,
                 MockHelper.configModelStore(),
                 notificationRepository,
-                mockk(),
+                notificationSummaryManager,
                 notificationLifecycleService,
                 MockHelper.time(1111),
             ), recordPrivateCalls = true
@@ -195,6 +199,35 @@ class NotificationGenerationProcessorTests : FunSpec({
         // notificationReceived should be called
         coVerify(exactly = 1) {
             mocks.notificationLifecycleService.notificationReceived(any())
+        }
+        // Nothing was posted, so it is saved as opened rather than dismissed.
+        coVerify(exactly = 0) {
+            mocks.notificationRepository.markAsDismissed(any())
+        }
+    }
+
+    test("processNotificationData should mark a restored notification dismissed when the received event prevents display") {
+        // Given
+        val mocks = Mocks()
+        // The suite default of 10ms can expire before Dispatchers.IO runs the callback.
+        every { mocks.notificationGenerationProcessor getProperty "EXTERNAL_CALLBACKS_TIMEOUT" } answers { 1_000L }
+        coEvery { mocks.notificationLifecycleService.externalRemoteNotificationReceived(any()) } answers {
+            firstArg<INotificationReceivedEvent>().preventDefault(true)
+        }
+
+        // When
+        mocks.notificationGenerationProcessor.processNotificationData(mocks.context, 1, mocks.notificationPayload, true, 1111)
+
+        // Then
+        coVerify(exactly = 0) {
+            mocks.notificationDisplayer.displayNotification(any())
+        }
+        // Without this the notification comes back on every later restore.
+        coVerify(exactly = 1) {
+            mocks.notificationRepository.markAsDismissed(1)
+        }
+        coVerify(exactly = 1) {
+            mocks.notificationSummaryManager.updatePossibleDependentSummaryOnDismiss(1)
         }
     }
 

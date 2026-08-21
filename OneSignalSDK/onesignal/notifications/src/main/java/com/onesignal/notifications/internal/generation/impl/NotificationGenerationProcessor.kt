@@ -187,7 +187,7 @@ internal class NotificationGenerationProcessor(
         if (isRestoring) {
             // If we are not displaying a restored notification make sure we mark it as dismissed
             // This will prevent it from being restored again
-            markNotificationAsDismissed(notificationJob)
+            dismissNotification(notificationJob)
         } else {
             // indicate the notification job did not display. We process it as "opened" to prevent
             // a duplicate from coming in and us having to process it again.
@@ -296,10 +296,15 @@ internal class NotificationGenerationProcessor(
     }
 
     private suspend fun markNotificationAsDismissed(notifiJob: NotificationGenerationJob) {
+        // Nothing was posted, so there is nothing to dismiss.
         if (!notifiJob.isNotificationToDisplay) {
             return
         }
 
+        dismissNotification(notifiJob)
+    }
+
+    private suspend fun dismissNotification(notifiJob: NotificationGenerationJob) {
         Logging.debug("Marking restored or disabled notifications as dismissed: $notifiJob")
 
         val didDismiss = _dataController.markAsDismissed(notifiJob.androidId)
