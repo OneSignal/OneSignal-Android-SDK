@@ -46,6 +46,16 @@ interface INotificationReceivedEvent {
     val notification: IDisplayableMutableNotification
 
     /**
+     * Whether OneSignal is showing this notification again because Android cleared it from the
+     * notification shade, such as after a reboot or an app update. Your app already received
+     * this notification once before.
+     *
+     * Use it to skip work that should only run the first time, or call [preventDefault] to stop
+     * the notification from showing again.
+     */
+    val restoring: Boolean
+
+    /**
      * Call this to prevent OneSignal from displaying the notification automatically. The notification
      * can still be manually displayed using `notification.display()`.
      */

@@ -184,6 +184,24 @@ class NotificationGenerationProcessorTests : FunSpec({
         }
     }
 
+    test("processNotificationData should tell the received event whether it is restoring") {
+        // Given
+        val mocks = Mocks()
+        val restoringFlags = mutableListOf<Boolean>()
+        coEvery { mocks.notificationDisplayer.displayNotification(any()) } returns true
+        coEvery { mocks.notificationLifecycleService.externalRemoteNotificationReceived(any()) } answers {
+            restoringFlags.add(firstArg<INotificationReceivedEvent>().restoring)
+        }
+        coEvery { mocks.notificationLifecycleService.externalNotificationWillShowInForeground(any()) } just runs
+
+        // When
+        mocks.notificationGenerationProcessor.processNotificationData(mocks.context, 1, mocks.notificationPayload, false, 1111)
+        mocks.notificationGenerationProcessor.processNotificationData(mocks.context, 2, mocks.notificationPayload, true, 1111)
+
+        // Then
+        restoringFlags shouldBe listOf(false, true)
+    }
+
     test("processNotificationData should not display notification when external callback indicates not to") {
         // Given
         val mocks = Mocks()
