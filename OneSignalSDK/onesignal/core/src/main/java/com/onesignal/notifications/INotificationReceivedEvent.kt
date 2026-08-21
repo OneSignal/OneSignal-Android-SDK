@@ -46,20 +46,13 @@ interface INotificationReceivedEvent {
     val notification: IDisplayableMutableNotification
 
     /**
-     * Whether your app already received this notification and OneSignal is handing it back. The
-     * usual cause is Android clearing the notification shade, such as after a reboot or an app
-     * update. It also happens when a group of notifications drops to a single one, which OneSignal
-     * rebuilds so it no longer renders inside a summary.
+     * True when OneSignal is showing this notification again after your app already received it.
+     * Happens after a reboot or app update, and when a group collapses to one notification.
      *
-     * Use it to skip work that should only happen once, such as counting the notification in your
-     * analytics. Keep calling `notification.setExtender(...)` even when this is true, otherwise a
-     * rebuilt notification loses your customizations.
-     *
-     * To drop the notification instead of showing it again, call `preventDefault(true)`. That marks
-     * it dismissed so OneSignal stops restoring it. The no-argument [preventDefault] is for the
-     * asynchronous `notification.display()` flow and waits up to 30 seconds before giving up.
-     *
-     * Defaulted rather than abstract so that existing implementations outside this SDK still compile.
+     * Skip one-time work like analytics. Still call `notification.setExtender(...)` so a rebuilt
+     * notification keeps your customizations.
+     * Call `preventDefault(true)` to drop it. The no-argument [preventDefault] waits up to 30
+     * seconds for `notification.display()`.
      */
     val restoring: Boolean
         get() = false

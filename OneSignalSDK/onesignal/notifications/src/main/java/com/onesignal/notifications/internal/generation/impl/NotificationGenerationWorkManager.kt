@@ -116,8 +116,7 @@ internal class NotificationGenerationWorkManager : INotificationGenerationWorkMa
                 return NotificationRestoreReason.values().firstOrNull { it.name == name }
             }
 
-            // Work enqueued before this key existed only carries the boolean, and the only restore
-            // it could describe is a shade restore.
+            // Older work only has the boolean, which always meant shade restore.
             return if (inputData.getBoolean(LEGACY_IS_RESTORING_WORKER_DATA_PARAM, false)) {
                 NotificationRestoreReason.SHADE_RESTORE
             } else {

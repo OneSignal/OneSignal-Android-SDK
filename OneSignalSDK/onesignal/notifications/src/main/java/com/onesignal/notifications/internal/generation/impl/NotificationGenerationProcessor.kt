@@ -159,7 +159,7 @@ internal class NotificationGenerationProcessor(
      *
      * @param notificationJob The notification job covering the context the handler was called under.
      * @param wantsToDisplay Whether the SDK (and callback) wants to display the notification.
-     * @param restoreReason Why the notification is going through generation again, or null if it just arrived.
+     * @param restoreReason Why the notification is being shown again, or null if it just arrived.
      *
      * @return true if the job should continue display, false if the job should continue but not display, null if processing should stop.
      */
@@ -189,15 +189,11 @@ internal class NotificationGenerationProcessor(
         // Processing should stop, save the notification as processed to prevent possible duplicate
         // calls from canonical ids.
         when (restoreReason) {
-            // Nothing is in the shade to take down, so record the dismissal without cancelling.
-            // The restore pass still includes notifications that are showing on API 21 and 22, and
-            // whenever getActiveNotifications fails, so cancelling here can take down a
-            // notification the user can see.
+            // Restore can include notifications still on screen. Don't cancel them.
             NotificationRestoreReason.SHADE_RESTORE ->
                 _dataController.markAsDismissedWithoutCancel(notificationJob.androidId)
 
-            // The notification is still in the shade and the user never dismissed it. Leave it and
-            // its summary alone.
+            // Still in the shade. The user did not dismiss it.
             NotificationRestoreReason.GROUP_REGROUP -> Unit
 
             null -> {
