@@ -23,9 +23,9 @@ class FileLogStoreTest : FunSpec({
         dir.deleteRecursively()
     }
 
-    fun write(name: String, ageMsAgo: Long = 60_000L): File =
+    fun write(name: String, ageMsAgo: Long = 60_000L, sizeBytes: Int = 1): File =
         File(dir, name).apply {
-            writeBytes("x".toByteArray())
+            writeBytes(ByteArray(sizeBytes) { 'x'.code.toByte() })
             setLastModified(System.currentTimeMillis() - ageMsAgo)
         }
 
@@ -87,5 +87,64 @@ class FileLogStoreTest : FunSpec({
         first shouldBe 1
         second shouldBe 0
         File(dir, "789-ghi.otlp").exists() shouldBe true
+    }
+
+    test("listReadable drops an owned record past the max read age and deletes it from disk") {
+        write("expired-123.otlp", ageMsAgo = CRASH_MAX_READ_AGE_MILLIS + 60_000)
+        write("fresh-456.otlp", ageMsAgo = 60_000)
+
+        val readable = runBlocking { FileLogStore(dir.path).listReadable(minAgeMillis = 0) }
+
+        readable.map { it.id } shouldBe listOf("fresh-456.otlp")
+        File(dir, "expired-123.otlp").exists() shouldBe false
+        File(dir, "fresh-456.otlp").exists() shouldBe true
+    }
+
+    test("listReadable returns and retains an owned record inside the age window") {
+        write("edge-123.otlp", ageMsAgo = CRASH_MAX_READ_AGE_MILLIS - 60_000)
+
+        val readable = runBlocking { FileLogStore(dir.path).listReadable(minAgeMillis = 0) }
+
+        readable.map { it.id } shouldBe listOf("edge-123.otlp")
+        File(dir, "edge-123.otlp").exists() shouldBe true
+    }
+
+    test("deleteUnrecognizedEntries reclaims expired owned records without counting them as foreign") {
+        write("expired-123.otlp", ageMsAgo = CRASH_MAX_READ_AGE_MILLIS + 60_000)
+        write("fresh-456.otlp", ageMsAgo = 60_000)
+        write("1784621689841")
+
+        val purged = runBlocking { FileLogStore(dir.path).deleteUnrecognizedEntries(minAgeMillis = 0) }
+
+        purged shouldBe 1
+        File(dir, "expired-123.otlp").exists() shouldBe false
+        File(dir, "fresh-456.otlp").exists() shouldBe true
+        File(dir, "1784621689841").exists() shouldBe false
+    }
+
+    test("save evicts oldest-first once the record count cap is exceeded") {
+        // Distinct mtimes so "oldest" is unambiguous; the newest seeded record is 1s old.
+        repeat(CRASH_MAX_RECORD_COUNT) { i ->
+            write("seed-$i.otlp", ageMsAgo = 1_000L * (i + 1))
+        }
+        val oldest = "seed-${CRASH_MAX_RECORD_COUNT - 1}.otlp"
+
+        FileLogStore(dir.path).save("new".toByteArray()) shouldBe true
+
+        dir.listFiles()!!.count { it.name.endsWith(CRASH_OWNED_SUFFIX) } shouldBe CRASH_MAX_RECORD_COUNT
+        File(dir, oldest).exists() shouldBe false
+        File(dir, "seed-0.otlp").exists() shouldBe true
+    }
+
+    test("save evicts oldest-first once the total byte cap is exceeded") {
+        val large = (CRASH_MAX_TOTAL_BYTES * 3 / 4).toInt()
+        write("big-oldest.otlp", ageMsAgo = 20_000, sizeBytes = large)
+        write("big-newer.otlp", ageMsAgo = 10_000, sizeBytes = large)
+
+        FileLogStore(dir.path).save("new".toByteArray()) shouldBe true
+
+        File(dir, "big-oldest.otlp").exists() shouldBe false
+        File(dir, "big-newer.otlp").exists() shouldBe true
+        dir.listFiles()!!.count { it.name.endsWith(CRASH_OWNED_SUFFIX) } shouldBe 2
     }
 })

@@ -19,30 +19,69 @@ import com.onesignal.debug.internal.logging.logger.android.OneSignalLogHttpSende
 import com.onesignal.debug.internal.logging.logger.android.createAndroidLoggerPlatformProvider
 import com.onesignal.logger.ILogAnrDetector
 import com.onesignal.logger.ILogCrashHandler
+import com.onesignal.logger.ILogCrashReporter
+import com.onesignal.logger.ILogFileStore
+import com.onesignal.logger.ILogHttpSender
 import com.onesignal.logger.ILogTelemetryRemote
+import com.onesignal.logger.ILogger
 import com.onesignal.logger.ILoggerPlatformProvider
 import com.onesignal.logger.LoggerFactory
+
+/** Shared by the crash-handler and ANR-detector defaults, which each report through their own reporter. */
+private fun createReporter(
+    platformProvider: ILoggerPlatformProvider,
+    fileStore: ILogFileStore,
+    logger: ILogger,
+): ILogCrashReporter =
+    LoggerFactory.createCrashReporter(
+        LoggerFactory.createCrashLocalTelemetry(platformProvider, fileStore),
+        logger,
+    )
 
 /**
  * Owns the lifecycle of the SDK's multiplatform observability pipeline (remote logging,
  * crash capture, ANR detection) and reacts to remote config changes via the shared
  * [ObservabilityConfig]/[ObservabilityConfigEvaluator].
+ *
+ * Production callers supply only [context] and [featureManagerProvider]; every other
+ * parameter defaults to the real implementation, so runtime wiring is unchanged. Tests
+ * override them to inject mocks or throwing stubs.
  */
-@Suppress("TooManyFunctions")
+@Suppress("TooManyFunctions", "LongParameterList")
 internal class LoggerLifecycleManager(
     private val context: Context,
     private val featureManagerProvider: () -> IFeatureManager,
+    private val platformProviderFactory: (Context, () -> IFeatureManager) -> ILoggerPlatformProvider =
+        { ctx, fm -> createAndroidLoggerPlatformProvider(ctx, fm) },
+    private val logger: ILogger = AndroidLogger(),
+    private val fileStoreFactory: (String) -> ILogFileStore = { path -> FileLogStore(path) },
+    private val crashHandlerFactory: (ILoggerPlatformProvider, ILogFileStore, ILogger) -> ILogCrashHandler =
+        { pp, store, log -> AndroidLogCrashHandler(createReporter(pp, store, log), log) },
+    private val anrDetectorFactory: (ILoggerPlatformProvider, ILogFileStore, ILogger) -> ILogAnrDetector =
+        { pp, store, log ->
+            AndroidLogAnrDetector(
+                createReporter(pp, store, log),
+                log,
+                AnrConstants.DEFAULT_ANR_THRESHOLD_MS,
+                AnrConstants.DEFAULT_CHECK_INTERVAL_MS,
+                AnrConstants.DEFAULT_BACKGROUND_BLOCK_THRESHOLD_MS,
+                // Only "background" downgrades a block to a non-fatal warning; "unknown" is
+                // treated as foreground so a genuine ANR is never silently dropped.
+                isAppInForeground = { pp.appState != "background" },
+            )
+        },
+    private val remoteTelemetryFactory: (ILoggerPlatformProvider, ILogHttpSender) -> ILogTelemetryRemote =
+        { pp, sender -> LoggerFactory.createRemoteTelemetry(pp, sender) },
 ) : ISingletonModelStoreChangeHandler<ConfigModel>, IObservabilityLifecycleManager {
     private val lock = Any()
 
     private val platformProvider: ILoggerPlatformProvider by lazy {
-        createAndroidLoggerPlatformProvider(context, featureManagerProvider)
+        platformProviderFactory(context, featureManagerProvider)
     }
 
-    private val logger = AndroidLogger()
     private val httpSender = OneSignalLogHttpSender(logger) { platformProvider.isExporterLoggingEnabled }
 
-    private val fileStore: FileLogStore by lazy { FileLogStore(platformProvider.crashStoragePath) }
+    private val fileStore: ILogFileStore by lazy { fileStoreFactory(platformProvider.crashStoragePath) }
 
     private var crashHandler: ILogCrashHandler? = null
     private var anrDetector: ILogAnrDetector? = null
@@ -166,9 +205,7 @@ internal class LoggerLifecycleManager(
 
     private fun startCrashHandler() {
         if (crashHandler != null) return
-        val crashTelemetry = LoggerFactory.createCrashLocalTelemetry(platformProvider, fileStore)
-        val reporter = LoggerFactory.createCrashReporter(crashTelemetry, logger)
-        val handler = AndroidLogCrashHandler(reporter, logger)
+        val handler = crashHandlerFactory(platformProvider, fileStore, logger)
         handler.initialize()
         crashHandler = handler
         Logging.info("OneSignal: logger crash handler initialized — logs at: ${platformProvider.crashStoragePath}")
@@ -176,19 +213,7 @@ internal class LoggerLifecycleManager(
 
     private fun startAnrDetector() {
         if (anrDetector != null) return
-        val crashTelemetry = LoggerFactory.createCrashLocalTelemetry(platformProvider, fileStore)
-        val reporter = LoggerFactory.createCrashReporter(crashTelemetry, logger)
-        val detector =
-            AndroidLogAnrDetector(
-                reporter,
-                logger,
-                AnrConstants.DEFAULT_ANR_THRESHOLD_MS,
-                AnrConstants.DEFAULT_CHECK_INTERVAL_MS,
-                AnrConstants.DEFAULT_BACKGROUND_BLOCK_THRESHOLD_MS,
-                // Only "background" downgrades a block to a non-fatal warning; "unknown" is
-                // treated as foreground so a genuine ANR is never silently dropped.
-                isAppInForeground = { platformProvider.appState != "background" },
-            )
+        val detector = anrDetectorFactory(platformProvider, fileStore, logger)
         detector.start()
         anrDetector = detector
         Logging.info("OneSignal: logger ANR detector started")
@@ -196,7 +221,7 @@ internal class LoggerLifecycleManager(
 
     private fun startLogging(logLevel: LogLevel) {
         remoteTelemetry?.shutdown()
-        val telemetry = LoggerFactory.createRemoteTelemetry(platformProvider, httpSender)
+        val telemetry = remoteTelemetryFactory(platformProvider, httpSender)
         remoteTelemetry = telemetry
         val shouldSend: (LogLevel) -> Boolean = { level ->
             logLevel != LogLevel.NONE && level <= logLevel

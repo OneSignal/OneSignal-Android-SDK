@@ -52,9 +52,11 @@ The above statement will bring in the entire OneSignalSDK and is the desired sta
 
 ## OpenTelemetry Dependency Removal
 
-The SDK no longer depends on OpenTelemetry. The `com.onesignal:otel` artifact has been removed, and with it the entire `io.opentelemetry` dependency tree (`opentelemetry-api`, `-sdk`, `-exporter-otlp`, `-semconv`, and `opentelemetry-disk-buffering`). SDK diagnostics are now handled by an internal implementation with no third-party telemetry dependencies.
+As of 5.10.0, the SDK no longer depends on OpenTelemetry. The `com.onesignal:otel` artifact is no longer published, and with it goes the entire `io.opentelemetry` dependency tree (`opentelemetry-api`, `-sdk`, `-exporter-otlp`, `-semconv`, and `opentelemetry-disk-buffering`). SDK diagnostics are now handled by the multiplatform `logger` module bundled inside `com.onesignal:core`, which has no third-party telemetry dependencies.
 
-There is no API change — this is a dependency-only change. For most integrations no action is required, but note the following:
+No public, supported API changed. The removal does delete internal API surface in `com.onesignal.debug.internal.logging` — most visibly `Logging.setOtelTelemetry`. That method took a parameter type (`IOtelOpenTelemetryRemote`) that only existed inside the `com.onesignal:otel` artifact, so no application could have compiled against it without depending on that artifact directly. If you did, remove the reference and rebuild.
+
+For most integrations no action is required, but note the following:
 
 - **If you declared `com.onesignal:otel` directly**, remove it. The artifact is no longer published.
 - **If you added ProGuard/R8 rules for OneSignal's OpenTelemetry usage**, you can remove them. Rules such as the following are no longer needed, because those classes are never on the classpath via OneSignal:
@@ -68,6 +70,8 @@ There is no API change — this is a dependency-only change. For most integratio
 
 - **If your app uses OpenTelemetry itself**, you no longer need to reconcile its version with OneSignal's. Whatever version you depend on is now the only one in your build, which removes a class of R8 "Missing class" failures caused by version skew between the two.
 - **If you were excluding OpenTelemetry from the OneSignal dependency**, that exclusion is now a no-op and can be deleted.
+
+One upgrade-time note: any crash report still buffered on disk from before the upgrade was written in OpenTelemetry's format, which the new implementation cannot read. Those leftover reports are deleted on the next launch rather than uploaded, so a crash captured immediately before the upgrade may never arrive. Reports captured from the upgraded version onward are unaffected.
 
 
 ## Code Modularization
