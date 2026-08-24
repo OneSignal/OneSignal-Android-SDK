@@ -9,7 +9,7 @@ import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.features.IFeatureManager
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.crash.AnrConstants
-import com.onesignal.debug.internal.crash.OtelSdkSupport
+import com.onesignal.debug.internal.crash.ObservabilitySdkSupport
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.debug.internal.logging.logger.android.AndroidLogAnrDetector
 import com.onesignal.debug.internal.logging.logger.android.AndroidLogCrashHandler
@@ -24,13 +24,9 @@ import com.onesignal.logger.ILoggerPlatformProvider
 import com.onesignal.logger.LoggerFactory
 
 /**
- * The `logger` module counterpart to [OtelLifecycleManager]. Owns the lifecycle of the
- * multiplatform, OpenTelemetry-free observability pipeline and reacts to remote config
- * changes the same way (using the shared [OtelConfig]/[OtelConfigEvaluator]).
- *
- * Only active when [com.onesignal.debug.internal.logging.logger.LoggerModuleSwitch.useLoggerModule]
- * resolves true (i.e. the SDK_CUSTOM_LOGGING feature flag is enabled in cached config);
- * otherwise [OtelLifecycleManager] is used instead.
+ * Owns the lifecycle of the SDK's multiplatform observability pipeline (remote logging,
+ * crash capture, ANR detection) and reacts to remote config changes via the shared
+ * [ObservabilityConfig]/[ObservabilityConfigEvaluator].
  */
 @Suppress("TooManyFunctions")
 internal class LoggerLifecycleManager(
@@ -51,18 +47,18 @@ internal class LoggerLifecycleManager(
     private var crashHandler: ILogCrashHandler? = null
     private var anrDetector: ILogAnrDetector? = null
     private var remoteTelemetry: ILogTelemetryRemote? = null
-    private var currentConfig: OtelConfig? = null
+    private var currentConfig: ObservabilityConfig? = null
 
     @Suppress("TooGenericExceptionCaught")
     override fun initializeFromCachedConfig() {
-        if (!OtelSdkSupport.isSupported) {
-            Logging.info("OneSignal: Device SDK < ${OtelSdkSupport.MIN_SDK_VERSION}, logger module not supported — skipping")
+        if (!ObservabilitySdkSupport.isSupported) {
+            Logging.info("OneSignal: Device SDK < ${ObservabilitySdkSupport.MIN_SDK_VERSION}, logger module not supported — skipping")
             return
         }
         try {
             val cachedConfig = readCurrentCachedConfig()
             synchronized(lock) {
-                val action = OtelConfigEvaluator.evaluate(old = currentConfig, new = cachedConfig)
+                val action = ObservabilityConfigEvaluator.evaluate(old = currentConfig, new = cachedConfig)
                 applyAction(action, cachedConfig)
             }
         } catch (t: Throwable) {
@@ -77,15 +73,15 @@ internal class LoggerLifecycleManager(
     @Suppress("TooGenericExceptionCaught")
     override fun onModelReplaced(model: ConfigModel, tag: String) {
         if (tag != ModelChangeTags.HYDRATE) return
-        if (!OtelSdkSupport.isSupported) return
+        if (!ObservabilitySdkSupport.isSupported) return
         try {
             val newConfig =
-                OtelConfig(
+                ObservabilityConfig(
                     isEnabled = model.remoteLoggingParams.isEnabled,
                     logLevel = model.remoteLoggingParams.logLevel,
                 )
             synchronized(lock) {
-                val action = OtelConfigEvaluator.evaluate(old = currentConfig, new = newConfig)
+                val action = ObservabilityConfigEvaluator.evaluate(old = currentConfig, new = newConfig)
                 applyAction(action, newConfig)
             }
         } catch (t: Throwable) {
@@ -97,19 +93,19 @@ internal class LoggerLifecycleManager(
         // Only full model replacements (HYDRATE) matter here.
     }
 
-    private fun readCurrentCachedConfig(): OtelConfig {
+    private fun readCurrentCachedConfig(): ObservabilityConfig {
         val enabled = platformProvider.isRemoteLoggingEnabled
         val level = LogLevel.fromString(platformProvider.remoteLogLevel)
-        return OtelConfig(isEnabled = enabled, logLevel = level)
+        return ObservabilityConfig(isEnabled = enabled, logLevel = level)
     }
 
     /** Must be called while holding [lock]. */
-    private fun applyAction(action: OtelConfigAction, newConfig: OtelConfig) {
+    private fun applyAction(action: ObservabilityConfigAction, newConfig: ObservabilityConfig) {
         when (action) {
-            is OtelConfigAction.Enable -> enableFeatures(newConfig.logLevel ?: LogLevel.ERROR)
-            is OtelConfigAction.Disable -> disableFeatures()
-            is OtelConfigAction.UpdateLogLevel -> updateLogLevel(action.newLevel)
-            is OtelConfigAction.NoChange -> Logging.debug("OneSignal: logger config unchanged")
+            is ObservabilityConfigAction.Enable -> enableFeatures(newConfig.logLevel ?: LogLevel.ERROR)
+            is ObservabilityConfigAction.Disable -> disableFeatures()
+            is ObservabilityConfigAction.UpdateLogLevel -> updateLogLevel(action.newLevel)
+            is ObservabilityConfigAction.NoChange -> Logging.debug("OneSignal: logger config unchanged")
         }
         currentConfig = newConfig
     }

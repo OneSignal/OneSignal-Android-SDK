@@ -6,7 +6,7 @@ import io.kotest.matchers.types.shouldBeInstanceOf
 
 /**
  * Pure-JVM tests for the ANR decision core. These run without Robolectric so the logic is exercised
- * on a real JVM (and therefore counted by coverage), unlike the Android shell in [OtelAnrDetector].
+ * on a real JVM (and therefore counted by coverage), unlike the Android shell in [AndroidLogAnrDetector].
  *
  * Defaults mirror AnrConstants: 5s foreground ANR, 2s check interval, 2s frozen slack, 10s background
  * warning, 30s dedup window.

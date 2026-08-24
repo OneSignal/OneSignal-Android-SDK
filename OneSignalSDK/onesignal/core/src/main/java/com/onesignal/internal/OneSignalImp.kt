@@ -28,7 +28,7 @@ import com.onesignal.debug.IDebugManager
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.DebugManager
 import com.onesignal.debug.internal.logging.Logging
-import com.onesignal.debug.internal.logging.otel.android.getOtelCrashStoragePath
+import com.onesignal.debug.internal.logging.logger.android.getCrashStoragePath
 import com.onesignal.inAppMessages.IInAppMessagesManager
 import com.onesignal.location.ILocationManager
 import com.onesignal.notifications.INotificationsManager
@@ -237,20 +237,15 @@ internal class OneSignalImp : IOneSignal,
     }
 
     private fun initEssentials(context: Context) {
-        // OtelLifecycleManager comes up early so crash handling and remote logging can capture
+        // LoggerLifecycleManager comes up early so crash handling and remote logging can capture
         // anything that happens during the rest of init. FeatureManager is wired in via a
         // lazy supplier — `enabledFeatureFlags` is read per-event, so resolving the manager
         // can be deferred until services have bootstrapped.
         val featureManagerProvider = { services.getService<IFeatureManager>() }
-        val useLoggerModule =
-            com.onesignal.debug.internal.logging.logger.LoggerModuleSwitch.useLoggerModule(context)
         observabilityManager =
-            if (useLoggerModule) {
-                LoggerLifecycleManager(context = context, featureManagerProvider = featureManagerProvider)
-            } else {
-                OtelLifecycleManager(context = context, featureManagerProvider = featureManagerProvider)
-            }.also { it.initializeFromCachedConfig() }
-        logStartupDiagnostics(context, useLoggerModule)
+            LoggerLifecycleManager(context = context, featureManagerProvider = featureManagerProvider)
+                .also { it.initializeFromCachedConfig() }
+        logStartupDiagnostics(context)
 
         PreferenceStoreFix.ensureNoObfuscatedPrefStore(context)
 
@@ -259,16 +254,13 @@ internal class OneSignalImp : IOneSignal,
 
     /**
      * One concise WARN line at init with the build/runtime facts most useful for
-     * release triage from a raw log capture: SDK version, which observability module
-     * is active (and the flag driving it), the shared KMP module version when the
-     * logger is active, OS/API, device, host app + version, and the crash storage dir.
+     * release triage from a raw log capture: SDK version, the shared KMP module version,
+     * OS/API, device, host app + version, and the crash storage dir.
      * Best-effort — never lets diagnostics interfere with init.
      */
     @Suppress("TooGenericExceptionCaught", "SwallowedException")
-    internal fun logStartupDiagnostics(context: Context, useLoggerModule: Boolean) {
+    internal fun logStartupDiagnostics(context: Context) {
         try {
-            val module = if (useLoggerModule) "logger" else "otel"
-            val kmpVersion = if (useLoggerModule) com.onesignal.logger.LoggerBuildInfo.KMP_VERSION else "n/a"
             val appVersion =
                 try {
                     context.packageManager.getPackageInfo(context.packageName, 0).versionName
@@ -277,12 +269,12 @@ internal class OneSignalImp : IOneSignal,
                 }
             Logging.warn(
                 "OneSignal init: sdkVersion=${OneSignalUtils.sdkVersion} " +
-                    "observabilityModule=$module (SDK_CUSTOM_LOGGING=$useLoggerModule) " +
-                    "kmpVersion=$kmpVersion " +
+                    "observabilityModule=logger " +
+                    "kmpVersion=${com.onesignal.logger.LoggerBuildInfo.KMP_VERSION} " +
                     "os=Android/${Build.VERSION.RELEASE}(API ${Build.VERSION.SDK_INT}) " +
                     "device=${Build.MANUFACTURER}/${Build.MODEL} " +
                     "app=${context.packageName}@$appVersion " +
-                    "crashDir=${getOtelCrashStoragePath(context)}",
+                    "crashDir=${getCrashStoragePath(context)}",
             )
         } catch (t: Throwable) {
             Logging.warn("OneSignal init: startup diagnostics failed: ${t.message}", t)
@@ -424,7 +416,7 @@ internal class OneSignalImp : IOneSignal,
 
             val startupService = bootstrapServices()
 
-            // Now that the IoC container is ready, subscribe the Otel lifecycle
+            // Now that the IoC container is ready, subscribe the observability lifecycle
             // manager to config store events so it reacts to fresh remote config.
             observabilityManager?.subscribeToConfigStore(services.getService<ConfigModelStore>())
 

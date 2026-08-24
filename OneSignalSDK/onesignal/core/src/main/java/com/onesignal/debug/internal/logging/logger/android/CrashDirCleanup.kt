@@ -1,10 +1,10 @@
 package com.onesignal.debug.internal.logging.logger.android
 
 /**
- * Pure, Android-free helpers for the shared logger/otel crash directory.
+ * Pure, Android-free helpers for the crash directory.
  *
  * Ownership is suffix-based: logger-owned records end in [CRASH_OWNED_SUFFIX]; everything else
- * (legacy otel bare-millis names, stray `.tmp`s) is foreign. Keeping this logic free of
+ * (bare-millis names left by a pre-upgrade otel session, stray `.tmp`s) is foreign. Keeping this logic free of
  * `File` / `Logging` / Robolectric means it is counted by Jacoco on the plain JVM.
  */
 internal const val CRASH_OWNED_SUFFIX = ".otlp"

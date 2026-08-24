@@ -5,15 +5,12 @@ import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
 import com.onesignal.debug.ILogListener
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.OneSignalLogEvent
-import com.onesignal.otel.IOtelOpenTelemetryRemote
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.runBlocking
 import org.robolectric.annotation.Config
 
 @RobolectricTest
@@ -27,14 +24,14 @@ class LoggingTest : FunSpec({
         // Reset Logging state
         Logging.logLevel = LogLevel.WARN
         Logging.visualLogLevel = LogLevel.NONE
-        Logging.setOtelTelemetry(null) { false }
+        Logging.setLoggerTelemetry(null) { false }
     }
 
     afterEach {
         // Restore original state
         Logging.logLevel = originalLogLevel
         Logging.visualLogLevel = originalVisualLogLevel
-        Logging.setOtelTelemetry(null) { false }
+        Logging.setLoggerTelemetry(null) { false }
     }
 
     // ===== Log Level Tests =====
@@ -226,59 +223,6 @@ class LoggingTest : FunSpec({
 
         // Cleanup
         Logging.removeListener(mockListener)
-    }
-
-    // ===== Otel Integration Tests =====
-
-    test("setOtelTelemetry should set telemetry instance") {
-        // Given
-        val mockTelemetry = mockk<IOtelOpenTelemetryRemote>(relaxed = true)
-
-        // When
-        Logging.setOtelTelemetry(mockTelemetry) { true }
-
-        // Then - no exception thrown
-    }
-
-    test("setOtelTelemetry with null should clear telemetry") {
-        // Given
-        val mockTelemetry = mockk<IOtelOpenTelemetryRemote>(relaxed = true)
-        Logging.setOtelTelemetry(mockTelemetry) { true }
-
-        // When
-        Logging.setOtelTelemetry(null) { false }
-
-        // Then - no exception thrown
-    }
-
-    test("log with Otel configured should not throw") {
-        // Given - Using relaxed mock that doesn't require OpenTelemetry classes
-        val mockTelemetry = mockk<IOtelOpenTelemetryRemote>(relaxed = true)
-
-        Logging.setOtelTelemetry(mockTelemetry) { level -> level >= LogLevel.ERROR }
-        Logging.logLevel = LogLevel.ERROR
-
-        // When & Then - should not throw
-        Logging.error("Test Otel error message")
-        runBlocking { delay(100) }
-    }
-
-    test("log with Otel telemetry set to null should not throw") {
-        // Given
-        Logging.setOtelTelemetry(null) { true }
-        Logging.logLevel = LogLevel.ERROR
-
-        // When & Then - should not throw
-        Logging.error("Test error - telemetry is null")
-    }
-
-    test("log with NONE level and Otel configured should not throw") {
-        // Given
-        val mockTelemetry = mockk<IOtelOpenTelemetryRemote>(relaxed = true)
-        Logging.setOtelTelemetry(mockTelemetry) { true }
-
-        // When & Then - should not throw
-        Logging.log(LogLevel.NONE, "Should not be logged")
     }
 
     // ===== Message Formatting Tests =====

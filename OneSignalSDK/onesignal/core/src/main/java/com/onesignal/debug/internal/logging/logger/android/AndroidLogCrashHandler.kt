@@ -11,8 +11,7 @@ import com.onesignal.logger.ILogger
  * `logger` module's [ILogCrashReporter].
  *
  * Crash *capture* is platform-specific (hence this lives in core), but everything
- * downstream — persisting and shipping — is shared multiplatform code. Direct
- * analogue of `OtelCrashHandler`.
+ * downstream — persisting and shipping — is shared multiplatform code.
  */
 internal class AndroidLogCrashHandler(
     private val crashReporter: ILogCrashReporter,

@@ -11,7 +11,10 @@ import com.onesignal.core.internal.features.IFeatureManager
 import com.onesignal.core.internal.preferences.PreferenceOneSignalKeys
 import com.onesignal.core.internal.preferences.PreferenceStores
 import com.onesignal.core.internal.startup.IStartableService
+import com.onesignal.debug.internal.logging.logger.android.getCrashStoragePath
+import io.kotest.assertions.nondeterministic.eventually
 import io.kotest.core.spec.style.FunSpec
+import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.mockk.every
@@ -20,6 +23,8 @@ import kotlinx.coroutines.runBlocking
 import org.json.JSONArray
 import org.json.JSONObject
 import org.robolectric.annotation.Config
+import java.io.File
+import kotlin.time.Duration.Companion.seconds
 import com.onesignal.core.internal.config.CONFIG_NAME_SPACE as configNameSpace
 
 @RobolectricTest
@@ -108,5 +113,32 @@ class OneSignalCrashUploaderWrapperTest : FunSpec({
         val wrapper = OneSignalCrashUploaderWrapper(mockApplicationService, mockFeatureManager())
 
         wrapper shouldNotBe null
+    }
+
+    // Upgrading installs inherit a crash dir holding OTel-format records that nothing can
+    // read anymore. They must not linger. This covers the first launch after upgrade, where
+    // there is no cached config yet, so the uploader reclaims them without an upload pass.
+    test("start reclaims records left in the crash dir by a pre-upgrade otel session") {
+        val crashDir = File(getCrashStoragePath(appContext)).apply { mkdirs() }
+        // OTel's disk-buffering wrote bare-millis filenames; the logger owns `.otlp` only.
+        val legacyRecord = File(crashDir, "1784621689841").apply {
+            writeBytes("legacy".toByteArray())
+            setLastModified(System.currentTimeMillis() - 60_000L)
+        }
+        val ownedRecord = File(crashDir, "1784621689841-abc.otlp").apply {
+            writeBytes("owned".toByteArray())
+            setLastModified(System.currentTimeMillis() - 60_000L)
+        }
+
+        val mockApplicationService = mockk<IApplicationService>(relaxed = true)
+        every { mockApplicationService.appContext } returns appContext
+
+        val wrapper = OneSignalCrashUploaderWrapper(mockApplicationService, mockFeatureManager())
+        runBlocking { wrapper.start() }
+
+        eventually(10.seconds) { legacyRecord.exists() shouldBe false }
+        // A pending logger-owned record is never collateral damage.
+        ownedRecord.exists() shouldBe true
+        crashDir.deleteRecursively()
     }
 })

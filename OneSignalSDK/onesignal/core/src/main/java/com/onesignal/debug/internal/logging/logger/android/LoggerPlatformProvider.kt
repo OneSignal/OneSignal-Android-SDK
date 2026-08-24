@@ -1,4 +1,4 @@
-package com.onesignal.debug.internal.logging.otel.android
+package com.onesignal.debug.internal.logging.logger.android
 
 import android.app.ActivityManager
 import android.content.Context
@@ -8,16 +8,16 @@ import com.onesignal.common.OneSignalWrapper
 import com.onesignal.core.internal.features.IFeatureManager
 import com.onesignal.core.internal.http.OneSignalService
 import com.onesignal.debug.internal.logging.Logging
-import com.onesignal.otel.IOtelPlatformProvider
+import com.onesignal.logger.ILoggerPlatformProvider
 import java.io.File
 
-// Use this to enable/disable the Otel exporter logging in debug builds.
-internal const val OTEL_EXPORTER_LOGGING_ENABLED = false
+// Use this to enable/disable local exporter diagnostics in debug builds.
+internal const val EXPORTER_LOGGING_ENABLED = false
 
 /**
- * Configuration for AndroidOtelPlatformProvider.
+ * Configuration for [LoggerPlatformProvider].
  */
-internal data class OtelPlatformProviderConfig(
+internal data class LoggerPlatformProviderConfig(
     val crashStoragePath: String,
     val appPackageId: String,
     val appVersion: String,
@@ -26,22 +26,22 @@ internal data class OtelPlatformProviderConfig(
 )
 
 /**
- * Android-specific implementation of IOtelPlatformProvider.
+ * Android implementation of [ILoggerPlatformProvider].
  * Reads all values directly from SharedPreferences and system services.
  * No SDK service dependencies required.
  *
- * All IDs (appId, onesignalId, pushSubscriptionId) are resolved from SharedPreferences via OtelIdResolver.
- * Remote log level defaults to ERROR if not found in config.
+ * All IDs (appId, onesignalId, pushSubscriptionId) are resolved from SharedPreferences via
+ * [LoggerIdResolver]. Remote log level defaults to ERROR if not found in config.
  */
-internal class OtelPlatformProvider(
-    config: OtelPlatformProviderConfig,
+internal class LoggerPlatformProvider(
+    config: LoggerPlatformProviderConfig,
     private val featureManagerProvider: () -> IFeatureManager,
-) : IOtelPlatformProvider {
+) : ILoggerPlatformProvider {
     override val appPackageId: String = config.appPackageId
     override val appVersion: String = config.appVersion
     private val context: Context? = config.context
     private val getIsInForeground: (() -> Boolean?)? = config.getIsInForeground
-    private val idResolver = OtelIdResolver(context)
+    private val idResolver = LoggerIdResolver(context)
 
     // Top-level attributes (static, calculated once)
     override suspend fun getInstallId(): String = idResolver.resolveInstallId()
@@ -76,10 +76,10 @@ internal class OtelPlatformProvider(
 
     // Read through the supplier on every access so per-event attributes always reflect the
     // current featureStates snapshot (including IMMEDIATE-mode flag changes). The supplier is
-    // an immutable constructor val that resolves IFeatureManager lazily — this lets the OTel
+    // an immutable constructor val that resolves IFeatureManager lazily — this lets the logging
     // pipeline come up early in init (before service bootstrap) without mutable late-bound
     // state. Returns an empty list when the supplier or the manager throws (e.g. very early
-    // emissions before services are ready); the attribute is then omitted by OtelFieldsPerEvent.
+    // emissions before services are ready); the attribute is then omitted downstream.
     @Suppress("TooGenericExceptionCaught", "SwallowedException")
     override val enabledFeatureFlags: List<String>
         get() = try {
@@ -147,14 +147,14 @@ internal class OtelPlatformProvider(
     override val minFileAgeForReadMillis: Long = 5_000
 
     // Cached from SharedPreferences on first access and held for the session.
-    // Mid-session config updates are handled by OtelLifecycleManager reading
+    // Mid-session config updates are handled by LoggerLifecycleManager reading
     // from ConfigModel directly, not from these cached values.
     override val isRemoteLoggingEnabled: Boolean by lazy {
         idResolver.resolveRemoteLoggingEnabled()
     }
 
     // Cached from SharedPreferences on first access and held for the session.
-    // Mid-session config updates are handled by OtelLifecycleManager reading
+    // Mid-session config updates are handled by LoggerLifecycleManager reading
     // from ConfigModel directly, not from these cached values.
     @Suppress("TooGenericExceptionCaught", "SwallowedException")
     override val remoteLogLevel: String? by lazy {
@@ -165,7 +165,7 @@ internal class OtelPlatformProvider(
         }
     }
 
-    override val isOtelExporterLoggingEnabled: Boolean = OTEL_EXPORTER_LOGGING_ENABLED
+    override val isExporterLoggingEnabled: Boolean = EXPORTER_LOGGING_ENABLED
 
     override val appIdForHeaders: String
         get() = appId ?: ""
@@ -174,18 +174,18 @@ internal class OtelPlatformProvider(
 }
 
 /**
- * Factory function to create AndroidOtelPlatformProvider. Reads value-config directly from
- * SharedPreferences / system services; receives a [featureManagerProvider] supplier that the
- * provider invokes lazily on each `enabledFeatureFlags` read so the OTel pipeline can come up
+ * Factory function to create the Android [ILoggerPlatformProvider]. Reads value-config directly
+ * from SharedPreferences / system services; receives a [featureManagerProvider] supplier that the
+ * provider invokes lazily on each `enabledFeatureFlags` read so the logging pipeline can come up
  * before service bootstrap completes.
  */
-internal fun createAndroidOtelPlatformProvider(
+internal fun createAndroidLoggerPlatformProvider(
     context: Context,
     featureManagerProvider: () -> IFeatureManager,
-): OtelPlatformProvider {
-    return OtelPlatformProvider(
-        OtelPlatformProviderConfig(
-            crashStoragePath = getOtelCrashStoragePath(context),
+): LoggerPlatformProvider {
+    return LoggerPlatformProvider(
+        LoggerPlatformProviderConfig(
+            crashStoragePath = getCrashStoragePath(context),
             appPackageId = context.packageName,
             appVersion = com.onesignal.common.AndroidUtils.getAppVersion(context) ?: "unknown",
             context = context,
@@ -194,5 +194,10 @@ internal fun createAndroidOtelPlatformProvider(
     )
 }
 
-internal fun getOtelCrashStoragePath(context: Context): String =
+/**
+ * The `otel` path segment is kept even though OpenTelemetry is gone: it is the directory
+ * upgrading installs already hold crash records in, and moving it would orphan pending
+ * uploads. Legacy OTel-format records left behind are reclaimed by [selectUnrecognizedEntries].
+ */
+internal fun getCrashStoragePath(context: Context): String =
     File(File(File(context.cacheDir, "onesignal"), "otel"), "crashes").path

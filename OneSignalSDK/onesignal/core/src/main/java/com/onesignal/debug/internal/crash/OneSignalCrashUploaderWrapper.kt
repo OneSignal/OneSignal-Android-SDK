@@ -5,59 +5,34 @@ import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.features.IFeatureManager
 import com.onesignal.core.internal.startup.IStartableService
 import com.onesignal.debug.internal.logging.Logging
-import com.onesignal.debug.internal.logging.logger.LoggerModuleSwitch
 import com.onesignal.debug.internal.logging.logger.android.AndroidLogger
 import com.onesignal.debug.internal.logging.logger.android.CrashDirEntry
 import com.onesignal.debug.internal.logging.logger.android.FileLogStore
 import com.onesignal.debug.internal.logging.logger.android.OneSignalLogHttpSender
 import com.onesignal.debug.internal.logging.logger.android.createAndroidLoggerPlatformProvider
 import com.onesignal.debug.internal.logging.logger.android.formatCrashDirInventory
-import com.onesignal.debug.internal.logging.otel.android.AndroidOtelLogger
-import com.onesignal.debug.internal.logging.otel.android.createAndroidOtelPlatformProvider
 import com.onesignal.logger.LoggerFactory
-import com.onesignal.otel.OtelFactory
-import com.onesignal.otel.crash.OtelCrashUploader
 import java.io.File
 import kotlin.coroutines.cancellation.CancellationException
 
 /**
- * Android-specific wrapper for OtelCrashUploader that implements IStartableService.
+ * Android-specific wrapper for the shared crash uploader that implements IStartableService.
  *
  * This is a thin adapter layer that:
  * 1. Takes Android-specific services as dependencies
- * 2. Creates platform-agnostic implementations (IOtelPlatformProvider, IOtelLogger)
- * 3. Wraps the platform-agnostic OtelCrashUploader for Android service architecture
+ * 2. Creates platform-agnostic implementations (ILoggerPlatformProvider, ILogger)
+ * 3. Wraps the platform-agnostic LogCrashUploader for Android service architecture
  *
- * The OtelCrashUploader itself is fully platform-agnostic and can be used directly
- * in KMP projects by providing platform-specific implementations of:
- * - IOtelPlatformProvider (inject all platform values)
- * - IOtelLogger (platform logging interface)
- *
- * Example KMP usage:
- * ```kotlin
- * val platformProvider = MyPlatformProvider(...) // iOS/Android specific
- * val logger = MyPlatformLogger() // iOS/Android specific
- * val uploader = OtelFactory.createCrashUploader(platformProvider, logger)
- * // Use uploader.start() in a coroutine
- * ```
+ * The uploader itself is fully platform-agnostic and can be used directly in KMP projects
+ * by providing platform-specific implementations of:
+ * - ILoggerPlatformProvider (inject all platform values)
+ * - ILogger (platform logging interface)
  */
 internal class OneSignalCrashUploaderWrapper(
     private val applicationService: IApplicationService,
     private val featureManager: IFeatureManager,
 ) : IStartableService {
-    private val otelUploader: OtelCrashUploader by lazy {
-        // Create Android-specific platform provider (injects Android values + a FeatureManager
-        // supplier that resolves to the constructor-injected manager on each access).
-        val platformProvider = createAndroidOtelPlatformProvider(
-            applicationService.appContext,
-        ) { featureManager }
-        // Create Android-specific logger (delegates to Android Logging)
-        val logger = AndroidOtelLogger()
-        // Create platform-agnostic uploader using factory
-        OtelFactory.createCrashUploader(platformProvider, logger)
-    }
-
-    private val loggerUploader by lazy {
+    private val uploader by lazy {
         val platformProvider = createAndroidLoggerPlatformProvider(applicationService.appContext) { featureManager }
         val logger = AndroidLogger()
         val httpSender = OneSignalLogHttpSender(logger) { platformProvider.isExporterLoggingEnabled }
@@ -68,22 +43,15 @@ internal class OneSignalCrashUploaderWrapper(
 
     @Suppress("TooGenericExceptionCaught")
     override fun start() {
-        if (!OtelSdkSupport.isSupported) return
+        if (!ObservabilitySdkSupport.isSupported) return
         OneSignalDispatchers.launchOnIO {
             try {
-                val useLogger = LoggerModuleSwitch.useLoggerModule(applicationService.appContext)
-                val module = if (useLogger) "logger" else "otel"
-                Logging.info("OneSignal: Crash uploader selecting module=$module (SDK_CUSTOM_LOGGING=$useLogger)")
                 logCrashDirInventory("before-upload")
-                if (useLogger) {
-                    // Shared LogCrashUploader.start() is suspend and finishes the owned-record
-                    // upload pass plus the finally-purge before returning, so the after-cleanup
-                    // inventory below is not racing a background purge.
-                    loggerUploader.start()
-                    logCrashDirInventory("after-cleanup")
-                } else {
-                    otelUploader.start()
-                }
+                // Shared LogCrashUploader.start() is suspend and finishes the owned-record
+                // upload pass plus the finally-purge before returning, so the after-cleanup
+                // inventory below is not racing a background purge.
+                uploader.start()
+                logCrashDirInventory("after-cleanup")
             } catch (e: CancellationException) {
                 throw e
             } catch (t: Throwable) {
@@ -95,13 +63,13 @@ internal class OneSignalCrashUploaderWrapper(
         }
     }
 
-    /** Resolves the shared crash directory both modules write to. */
+    /** Resolves the crash directory the logger module reads and writes. */
     private fun crashStoragePath(): String =
-        createAndroidOtelPlatformProvider(applicationService.appContext) { featureManager }
+        createAndroidLoggerPlatformProvider(applicationService.appContext) { featureManager }
             .crashStoragePath
 
     /**
-     * Logs a snapshot of the shared crash dir (counts of owned `.otlp` vs foreign/legacy
+     * Logs a snapshot of the crash dir (counts of owned `.otlp` vs foreign/legacy
      * entries, plus a bounded per-file sample) so leftover formats are visible and
      * cleanup is verifiable from logs alone.
      */

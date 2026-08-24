@@ -19,10 +19,10 @@ import kotlin.coroutines.cancellation.CancellationException
  * `minFileAgeForReadMillis` behavior (never read a file the crashing process may
  * still have been writing).
  *
- * The logger and the legacy otel module share this one crash directory, so ownership
- * is distinguished purely by [CRASH_OWNED_SUFFIX]: everything the logger writes ends in
- * `.otlp`; anything else (legacy otel bare-millis files, stray `.tmp`s) is foreign and
- * reclaimable via [deleteUnrecognizedEntries] once the logger is the active module.
+ * The directory is inherited from the removed otel module, so ownership is distinguished
+ * purely by [CRASH_OWNED_SUFFIX]: everything the logger writes ends in `.otlp`; anything
+ * else (bare-millis files left by an otel session before upgrade, stray `.tmp`s) is
+ * foreign and reclaimable via [deleteUnrecognizedEntries].
  */
 internal class FileLogStore(
     private val rootPath: String,

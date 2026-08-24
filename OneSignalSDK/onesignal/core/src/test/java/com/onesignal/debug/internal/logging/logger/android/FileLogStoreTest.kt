@@ -30,7 +30,7 @@ class FileLogStoreTest : FunSpec({
         }
 
     test("deleteUnrecognizedEntries removes stale legacy files and keeps owned .otlp records") {
-        write("1784621689841") // legacy otel bare-millis file
+        write("1784621689841") // bare-millis file left by a pre-upgrade otel session
         write("stale.tmp") // stray temp
         write("123-abc.otlp") // owned logger record
         write("456-def.otlp") // owned logger record

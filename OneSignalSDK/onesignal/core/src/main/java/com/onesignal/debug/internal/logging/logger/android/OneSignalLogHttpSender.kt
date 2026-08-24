@@ -18,7 +18,7 @@ import java.net.URL
  *
  * Request/response diagnostics are emitted through [logger] only when
  * [isDiagnosticsEnabled] returns true (driven by the remote-config exporter-logging
- * toggle), mirroring the old otel exporter's opt-in logging — never unconditional
+ * toggle) — never unconditional
  * logcat noise in production.
  */
 internal class OneSignalLogHttpSender(

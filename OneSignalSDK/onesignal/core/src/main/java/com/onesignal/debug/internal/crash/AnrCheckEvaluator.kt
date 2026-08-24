@@ -7,8 +7,9 @@ import java.util.concurrent.atomic.AtomicLong
  *
  * All timing/classification/deduplication state lives here so it can be exercised deterministically
  * on the JVM (with an injected clock) without a `Handler`, `Looper`, or real background thread. The
- * Android shell ([OtelAnrDetector]) owns the thread, the real sleep, and the reporting side effects,
- * and delegates every per-iteration decision to [evaluate].
+ * Android shell ([com.onesignal.debug.internal.logging.logger.android.AndroidLogAnrDetector]) owns
+ * the thread, the real sleep, and the reporting side effects, and delegates every per-iteration
+ * decision to [evaluate].
  *
  * Foreground and background blocks keep independent dedup timestamps: a stream of backgrounded
  * warnings must never suppress a genuine foreground ANR (and vice versa).
@@ -21,7 +22,7 @@ internal class AnrCheckEvaluator(
     private val dedupWindowMs: Long,
     private val now: () -> Long,
 ) {
-    // Monotonic timestamps (from `now`); see OtelAnrDetector for why the clock must be monotonic.
+    // Monotonic timestamps (from `now`); see AndroidLogAnrDetector for why the clock must be monotonic.
     private val lastResponseTime = AtomicLong(now())
     private val lastForegroundReportTime = AtomicLong(NEVER_REPORTED)
     private val lastBackgroundReportTime = AtomicLong(NEVER_REPORTED)

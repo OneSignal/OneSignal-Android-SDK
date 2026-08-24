@@ -93,9 +93,7 @@ dependencies {
         }
     }
 
-    // Otel module dependency
-    implementation(project(':OneSignal:otel'))
-    // Shared KMP module (OpenTelemetry-free logger) — the eventual replacement for :otel.
+    // Shared KMP module — backs the SDK's observability pipeline (remote logging, crash, ANR).
     implementation(project(':OneSignal:kmp'))
     testImplementation(project(':OneSignal:testhelpers'))
 

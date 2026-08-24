@@ -5,7 +5,7 @@ import com.onesignal.logger.ILogger
 
 /**
  * Android implementation of [ILogger] for the `logger` module. Delegates to the
- * existing [Logging] object. Direct analogue of `AndroidOtelLogger`.
+ * existing [Logging] object.
  */
 internal class AndroidLogger : ILogger {
     override fun error(message: String) {

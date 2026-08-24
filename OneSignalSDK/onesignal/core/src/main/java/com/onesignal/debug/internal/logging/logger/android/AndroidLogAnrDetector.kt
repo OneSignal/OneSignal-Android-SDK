@@ -16,7 +16,6 @@ import java.util.concurrent.atomic.AtomicBoolean
 /**
  * Android [ILogAnrDetector] — watchdog that monitors main-thread responsiveness and, if
  * OneSignal is at fault, persists a report via the `logger` module's [ILogCrashReporter].
- * Transport-agnostic analogue of `OtelAnrDetector`.
  *
  * Detection is app-state aware, because a blocked main thread does not mean the same thing
  * in the foreground as in the background:
@@ -29,8 +28,8 @@ import java.util.concurrent.atomic.AtomicBoolean
  *   descheduled (Doze / cached-process freeze), so the measured block is a freeze artifact
  *   and is suppressed.
  *
- * Every timing/classification/dedup decision is delegated to the shared [AnrCheckEvaluator]
- * (pure, JVM-tested), the same core the `otel` watchdog uses, so the two stay in lockstep.
+ * Every timing/classification/dedup decision is delegated to [AnrCheckEvaluator]
+ * (pure, JVM-tested), so this shell stays free of timing logic.
  */
 internal class AndroidLogAnrDetector(
     private val crashReporter: ILogCrashReporter,

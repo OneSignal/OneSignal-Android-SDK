@@ -8,31 +8,31 @@ import org.robolectric.annotation.Config
 
 @RobolectricTest
 @Config(sdk = [Build.VERSION_CODES.O])
-class OtelSdkSupportTest : FunSpec({
+class ObservabilitySdkSupportTest : FunSpec({
 
     afterEach {
-        OtelSdkSupport.reset()
+        ObservabilitySdkSupport.reset()
     }
 
     test("isSupported is true on SDK >= 26") {
-        OtelSdkSupport.reset()
-        OtelSdkSupport.isSupported shouldBe true
+        ObservabilitySdkSupport.reset()
+        ObservabilitySdkSupport.isSupported shouldBe true
     }
 
     test("isSupported can be overridden to false for testing") {
-        OtelSdkSupport.isSupported = false
-        OtelSdkSupport.isSupported shouldBe false
+        ObservabilitySdkSupport.isSupported = false
+        ObservabilitySdkSupport.isSupported shouldBe false
     }
 
     test("reset restores runtime-detected value") {
-        OtelSdkSupport.isSupported = false
-        OtelSdkSupport.isSupported shouldBe false
+        ObservabilitySdkSupport.isSupported = false
+        ObservabilitySdkSupport.isSupported shouldBe false
 
-        OtelSdkSupport.reset()
-        OtelSdkSupport.isSupported shouldBe true
+        ObservabilitySdkSupport.reset()
+        ObservabilitySdkSupport.isSupported shouldBe true
     }
 
     test("MIN_SDK_VERSION is 26") {
-        OtelSdkSupport.MIN_SDK_VERSION shouldBe 26
+        ObservabilitySdkSupport.MIN_SDK_VERSION shouldBe 26
     }
 })
