@@ -212,6 +212,24 @@ class LoggerLifecycleManagerFaultTest : FunSpec({
         manager.initializeFromCachedConfig()
     }
 
+    test("a throwing shutdown() during a level change still installs the replacement sink") {
+        // startLogging drops the reference before tearing the old sink down. If it cleared
+        // after, a throwing shutdown() would strand the dead instance in the field and every
+        // later identical config would evaluate to NoChange, leaving remote logging dead.
+        val failing = mockk<ILogTelemetryRemote>(relaxed = true)
+        every { failing.shutdown() } throws RuntimeException("shutdown boom")
+        val replacement = mockk<ILogTelemetryRemote>(relaxed = true)
+        var calls = 0
+        val manager = managerWith(remoteTelemetry = { if (calls++ == 0) failing else replacement })
+
+        manager.onModelReplaced(enabledConfig(LogLevel.ERROR), ModelChangeTags.HYDRATE)
+        manager.onModelReplaced(enabledConfig(LogLevel.WARN), ModelChangeTags.HYDRATE)
+
+        calls shouldBe 2
+        manager.onModelReplaced(disabledConfig(), ModelChangeTags.HYDRATE)
+        verify { replacement.shutdown() }
+    }
+
     test("telemetry factory throws during log level update — no exception propagates") {
         var calls = 0
         val manager = managerWith(

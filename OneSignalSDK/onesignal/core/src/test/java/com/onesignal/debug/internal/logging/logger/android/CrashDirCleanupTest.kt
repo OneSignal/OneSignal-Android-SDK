@@ -108,18 +108,18 @@ class CrashDirCleanupTest : FunSpec({
         selectOverflowOwnedEntries(entries).none { it.name == "legacy" } shouldBe true
     }
 
-    test("an oversized record is evicted alone and does not displace the rest") {
-        // The regression this guards: treating the first over-budget record as a cutoff
-        // evicted every older record too, so one bad payload lost the whole backlog.
+    test("an oversized record is retained but cannot displace the rest") {
+        // Size alone is never grounds for eviction — deleting a captured crash without ever
+        // attempting to upload it is worse than keeping it. What size limits is budget claim.
         val entries =
             listOf(
                 owned("5-newest.otlp", ageMs = 1_000, bytes = 10),
-                owned("4-huge.otlp", ageMs = 2_000, bytes = CRASH_MAX_RECORD_BYTES + 1),
+                owned("4-huge.otlp", ageMs = 2_000, bytes = CRASH_MAX_TOTAL_BYTES * 2),
                 owned("3-small.otlp", ageMs = 3_000, bytes = 10),
                 owned("2-small.otlp", ageMs = 4_000, bytes = 10),
             )
 
-        selectOverflowOwnedEntries(entries).map { it.name } shouldBe listOf("4-huge.otlp")
+        selectOverflowOwnedEntries(entries) shouldBe emptyList()
     }
 
     test("a record that does not fit the remaining budget is skipped, not treated as a cutoff") {
@@ -151,6 +151,21 @@ class CrashDirCleanupTest : FunSpec({
         val entries = listOf(owned("fresh-a.otlp", ageMs = 1_000, bytes = CRASH_MAX_RECORD_BYTES + 1))
 
         selectOverflowOwnedEntries(entries, keepName = "fresh-a.otlp") shouldBe emptyList()
+    }
+
+    test("an oversized keepName does not evict the pending backlog") {
+        // The regression this guards: charging keepName its full length started the budget
+        // over cap, so every sibling failed the remaining-budget check and the entire backlog
+        // was deleted — then the uploader dropped the oversized record too. A single-entry
+        // directory cannot observe this, which is why the case above did not catch it.
+        val backlog = (1..4).map { owned("$it-small.otlp", ageMs = it * 10_000L, bytes = 400_000) }
+        val entries = backlog + owned("fresh-a.otlp", ageMs = 1_000, bytes = CRASH_MAX_TOTAL_BYTES * 2)
+
+        val evicted = selectOverflowOwnedEntries(entries, keepName = "fresh-a.otlp")
+
+        // The oversized record claims only its capped share, leaving room for the backlog.
+        evicted.none { it.name == "fresh-a.otlp" } shouldBe true
+        evicted.map { it.name } shouldBe listOf("4-small.otlp")
     }
 
     test("equal timestamps break the tie on the millis embedded in the name") {

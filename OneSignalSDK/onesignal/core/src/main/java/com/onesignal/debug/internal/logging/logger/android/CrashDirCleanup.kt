@@ -30,8 +30,10 @@ internal const val CRASH_MAX_RECORD_COUNT = 50
 internal const val CRASH_MAX_TOTAL_BYTES = 2L * 1024 * 1024
 
 /**
- * A single record above this is dropped on its own rather than being allowed to consume the
- * whole byte budget. Without it, one huge payload would push every other pending record out.
+ * Largest payload [com.onesignal.debug.internal.logging.logger.android.FileLogStore] will
+ * write. Rejecting at the source keeps every stored record within the shared budget, so no
+ * single payload can push the rest out. It also caps how much budget an oversized record
+ * inherited from a build without this limit is allowed to claim.
  */
 internal const val CRASH_MAX_RECORD_BYTES = 512L * 1024
 
@@ -85,13 +87,17 @@ private fun leadingMillis(name: String): Long? = name.substringBefore('-').toLon
  * Returns the owned entries to evict so the directory fits within [maxCount] and
  * [maxTotalBytes], newest kept and the excess returned oldest-first.
  *
- * A record larger than [maxRecordBytes] is evicted on its own rather than being allowed to
- * exhaust the shared budget — otherwise a single deep-stacktrace payload would push out every
- * other pending crash. For the same reason a record that merely does not fit the *remaining*
- * budget is skipped, not treated as a cutoff: everything older still gets its chance to fit.
+ * Size is never on its own a reason to evict. A record too large to upload should be refused
+ * at write time; deleting one that is already on disk would destroy a captured crash without
+ * ever attempting to send it. What size does control is *budget claim*: each record is charged
+ * at most [maxRecordBytes], so one outsized payload — necessarily inherited from a build
+ * without the write-time limit — cannot displace the rest of the backlog.
  *
- * [keepName] is the record the caller just wrote. It is retained regardless of size or sort
- * position, so a backwards clock step cannot make a fresh record look oldest and delete it.
+ * A record that does not fit the remaining budget is skipped rather than treated as a cutoff,
+ * so everything older still gets its chance to fit.
+ *
+ * [keepName] is the record the caller just wrote. It is retained regardless of sort position,
+ * so a backwards clock step cannot make a fresh record look oldest and delete it.
  */
 internal fun selectOverflowOwnedEntries(
     entries: List<CrashDirEntry>,
@@ -111,21 +117,22 @@ internal fun selectOverflowOwnedEntries(
                     .thenByDescending { leadingMillis(it.name) ?: Long.MIN_VALUE },
             )
 
+    fun budgetClaim(entry: CrashDirEntry): Long = minOf(entry.lengthBytes, maxRecordBytes)
+
     val kept = HashSet<String>()
     var keptBytes = 0L
     keepName?.let { name ->
         newestFirst.firstOrNull { it.name == name }?.let {
             kept.add(it.name)
-            keptBytes += it.lengthBytes
+            keptBytes += budgetClaim(it)
         }
     }
     for (entry in newestFirst) {
         if (kept.contains(entry.name)) continue
         if (kept.size >= maxCount) break
-        if (entry.lengthBytes > maxRecordBytes) continue
-        if (keptBytes + entry.lengthBytes > maxTotalBytes) continue
+        if (keptBytes + budgetClaim(entry) > maxTotalBytes) continue
         kept.add(entry.name)
-        keptBytes += entry.lengthBytes
+        keptBytes += budgetClaim(entry)
     }
     return newestFirst.filterNot { kept.contains(it.name) }.reversed()
 }

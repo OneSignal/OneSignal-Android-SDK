@@ -148,6 +148,25 @@ class FileLogStoreTest : FunSpec({
         File(dir, "big-0.otlp").exists() shouldBe true
     }
 
+    test("save refuses a payload over the per-record limit and writes nothing") {
+        val oversized = ByteArray((CRASH_MAX_RECORD_BYTES + 1).toInt())
+
+        FileLogStore(dir.path).save(oversized) shouldBe false
+
+        dir.listFiles()!!.count { it.name.endsWith(CRASH_OWNED_SUFFIX) } shouldBe 0
+    }
+
+    test("an inherited oversized record is still offered for upload, not deleted unread") {
+        // Written by a build predating the write-time limit. Deleting it before an upload
+        // attempt would silently destroy a real crash report.
+        write("inherited.otlp", ageMsAgo = 60_000, sizeBytes = (CRASH_MAX_RECORD_BYTES + 1).toInt())
+
+        val readable = runBlocking { FileLogStore(dir.path).listReadable(minAgeMillis = 0) }
+
+        readable.map { it.id } shouldBe listOf("inherited.otlp")
+        File(dir, "inherited.otlp").exists() shouldBe true
+    }
+
     test("save never evicts the record it just wrote") {
         repeat(CRASH_MAX_RECORD_COUNT + 5) { i -> write("seed-$i.otlp", ageMsAgo = 1_000L * (i + 1)) }
 

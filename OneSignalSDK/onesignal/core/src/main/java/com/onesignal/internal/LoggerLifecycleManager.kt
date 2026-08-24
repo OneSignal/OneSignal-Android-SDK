@@ -226,8 +226,18 @@ internal class LoggerLifecycleManager(
         Logging.info("OneSignal: logger ANR detector started")
     }
 
+    @Suppress("TooGenericExceptionCaught")
     private fun startLogging(logLevel: LogLevel) {
-        remoteTelemetry?.shutdown()
+        // Same invariant as disableFeatures: drop the reference before tearing the old sink
+        // down. A throwing shutdown() must not leave the field pointing at a dead instance,
+        // because an identical later config evaluates to NoChange and would never replace it.
+        val previous = remoteTelemetry
+        remoteTelemetry = null
+        try {
+            previous?.shutdown()
+        } catch (t: Throwable) {
+            Logging.warn("OneSignal: Error shutting down previous logger telemetry: ${t.message}", t)
+        }
         val telemetry = remoteTelemetryFactory(platformProvider, httpSender)
         remoteTelemetry = telemetry
         val shouldSend: (LogLevel) -> Boolean = { level ->

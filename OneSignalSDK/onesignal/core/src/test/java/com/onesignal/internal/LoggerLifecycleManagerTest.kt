@@ -40,8 +40,20 @@ class LoggerLifecycleManagerTest : FunSpec({
     lateinit var featureManager: IFeatureManager
     var originalHandler: Thread.UncaughtExceptionHandler? = null
 
+    /**
+     * Real platform provider and crash handler, so the assertions below observe genuine
+     * [Thread.UncaughtExceptionHandler] registration. The ANR detector, file store and remote
+     * sink are stubbed: the real detector spawns a daemon watchdog thread that would outlive
+     * the spec and write into the Robolectric cache dir other specs assert on.
+     */
     fun newManager(): LoggerLifecycleManager =
-        LoggerLifecycleManager(context = context, featureManagerProvider = { featureManager })
+        LoggerLifecycleManager(
+            context = context,
+            featureManagerProvider = { featureManager },
+            fileStoreFactory = { mockk<ILogFileStore>(relaxed = true) },
+            anrDetectorFactory = { _, _, _ -> mockk(relaxed = true) },
+            remoteTelemetryFactory = { _, _ -> mockk(relaxed = true) },
+        )
 
     beforeEach {
         context = ApplicationProvider.getApplicationContext()

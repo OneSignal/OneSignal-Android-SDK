@@ -7,11 +7,14 @@ import com.onesignal.logger.ILogTelemetryRemote
 import com.onesignal.logger.LogRecord
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
 import io.mockk.slot
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import org.robolectric.annotation.Config
 
 /**
@@ -36,10 +39,11 @@ class LoggingRemoteTest : FunSpec({
     test("emits a record to the logger sink when the level is sendable") {
         val telemetry = mockk<ILogTelemetryRemote>(relaxed = true)
         val record = slot<LogRecord>()
+        val emitted = signalOn(telemetry)
         Logging.setLoggerTelemetry(telemetry) { true }
 
         Logging.error("boom")
-        runBlocking { delay(200) }
+        awaitEmit(emitted)
 
         coVerify { telemetry.emit(capture(record)) }
         record.captured.body shouldBe "[${Thread.currentThread().name}] boom"
@@ -49,10 +53,11 @@ class LoggingRemoteTest : FunSpec({
     test("includes exception details when a throwable is supplied") {
         val telemetry = mockk<ILogTelemetryRemote>(relaxed = true)
         val record = slot<LogRecord>()
+        val emitted = signalOn(telemetry)
         Logging.setLoggerTelemetry(telemetry) { true }
 
         Logging.error("with cause", IllegalStateException("bad state"))
-        runBlocking { delay(200) }
+        awaitEmit(emitted)
 
         coVerify { telemetry.emit(capture(record)) }
         record.captured.attributes["exception.type"] shouldBe "java.lang.IllegalStateException"
@@ -64,7 +69,7 @@ class LoggingRemoteTest : FunSpec({
         Logging.setLoggerTelemetry(telemetry) { level -> level <= LogLevel.ERROR }
 
         Logging.info("filtered out")
-        runBlocking { delay(200) }
+        runBlocking { delay(QUIET_WINDOW_MS) }
 
         coVerify(exactly = 0) { telemetry.emit(any()) }
     }
@@ -74,7 +79,7 @@ class LoggingRemoteTest : FunSpec({
         Logging.setLoggerTelemetry(telemetry) { true }
 
         Logging.log(LogLevel.NONE, "should be dropped")
-        runBlocking { delay(200) }
+        runBlocking { delay(QUIET_WINDOW_MS) }
 
         coVerify(exactly = 0) { telemetry.emit(any()) }
     }
@@ -85,24 +90,28 @@ class LoggingRemoteTest : FunSpec({
         Logging.setLoggerTelemetry(null) { false }
 
         Logging.error("after clear")
-        runBlocking { delay(200) }
+        runBlocking { delay(QUIET_WINDOW_MS) }
 
         coVerify(exactly = 0) { telemetry.emit(any()) }
     }
 
     test("a throwing sink does not propagate to the caller") {
         val telemetry = mockk<ILogTelemetryRemote>()
-        io.mockk.coEvery { telemetry.emit(any()) } throws RuntimeException("sink down")
+        val emitted = CompletableDeferred<Unit>()
+        coEvery { telemetry.emit(any()) } answers { emitted.complete(Unit); throw RuntimeException("sink down") }
         Logging.setLoggerTelemetry(telemetry) { true }
 
         Logging.error("survives a broken sink")
-        runBlocking { delay(200) }
+        awaitEmit(emitted)
 
         coVerify { telemetry.emit(any()) }
     }
 
     test("every severity is forwarded") {
         val telemetry = mockk<ILogTelemetryRemote>(relaxed = true)
+        val sixth = CompletableDeferred<Unit>()
+        var seen = 0
+        coEvery { telemetry.emit(any()) } answers { if (++seen == 6) sixth.complete(Unit); Unit }
         Logging.setLoggerTelemetry(telemetry) { true }
 
         Logging.verbose("v")
@@ -111,8 +120,25 @@ class LoggingRemoteTest : FunSpec({
         Logging.warn("w")
         Logging.error("e")
         Logging.fatal("f")
-        runBlocking { delay(300) }
+        awaitEmit(sixth)
 
         coVerify(exactly = 6) { telemetry.emit(any()) }
     }
 })
+
+/** Completes when the sink has been reached, so positive cases never race a fixed sleep. */
+private fun signalOn(telemetry: ILogTelemetryRemote): CompletableDeferred<Unit> {
+    val emitted = CompletableDeferred<Unit>()
+    coEvery { telemetry.emit(any()) } answers { emitted.complete(Unit); Unit }
+    return emitted
+}
+
+private fun awaitEmit(signal: CompletableDeferred<Unit>) {
+    runBlocking { withTimeout(EMIT_TIMEOUT_MS) { signal.await() } }
+}
+
+/** Generous upper bound on a signal we expect; only a hang burns the full budget. */
+private const val EMIT_TIMEOUT_MS = 5_000L
+
+/** Settle window for the negative cases, where there is no event to wait on. */
+private const val QUIET_WINDOW_MS = 200L
