@@ -137,14 +137,47 @@ class FileLogStoreTest : FunSpec({
     }
 
     test("save evicts oldest-first once the total byte cap is exceeded") {
-        val large = (CRASH_MAX_TOTAL_BYTES * 3 / 4).toInt()
-        write("big-oldest.otlp", ageMsAgo = 20_000, sizeBytes = large)
-        write("big-newer.otlp", ageMsAgo = 10_000, sizeBytes = large)
+        // Each is just under the per-record cap, so only their combined size can breach the
+        // total budget — five of them do, and the oldest is the one that loses.
+        val nearCap = (CRASH_MAX_RECORD_BYTES - 12_288).toInt()
+        repeat(5) { i -> write("big-$i.otlp", ageMsAgo = 10_000L * (i + 1), sizeBytes = nearCap) }
 
         FileLogStore(dir.path).save("new".toByteArray()) shouldBe true
 
-        File(dir, "big-oldest.otlp").exists() shouldBe false
-        File(dir, "big-newer.otlp").exists() shouldBe true
-        dir.listFiles()!!.count { it.name.endsWith(CRASH_OWNED_SUFFIX) } shouldBe 2
+        File(dir, "big-4.otlp").exists() shouldBe false
+        File(dir, "big-0.otlp").exists() shouldBe true
+    }
+
+    test("save never evicts the record it just wrote") {
+        repeat(CRASH_MAX_RECORD_COUNT + 5) { i -> write("seed-$i.otlp", ageMsAgo = 1_000L * (i + 1)) }
+
+        FileLogStore(dir.path).save("new".toByteArray()) shouldBe true
+
+        val remaining = dir.listFiles()!!.filter { it.name.endsWith(CRASH_OWNED_SUFFIX) }
+        remaining.none { it.name.startsWith("seed-") && it.readText() == "new" } shouldBe true
+        remaining.count { it.readText() == "new" } shouldBe 1
+    }
+
+    // The uploader paths must reclaim a backlog inherited from a build without caps —
+    // otherwise it is only trimmed the next time a crash happens to be written.
+
+    test("listReadable evicts an inherited over-cap backlog instead of returning it") {
+        repeat(CRASH_MAX_RECORD_COUNT + 10) { i -> write("seed-$i.otlp", ageMsAgo = 1_000L * (i + 1)) }
+
+        val readable = runBlocking { FileLogStore(dir.path).listReadable(minAgeMillis = 0) }
+
+        readable.size shouldBe CRASH_MAX_RECORD_COUNT
+        dir.listFiles()!!.count { it.name.endsWith(CRASH_OWNED_SUFFIX) } shouldBe CRASH_MAX_RECORD_COUNT
+    }
+
+    test("deleteUnrecognizedEntries evicts an inherited over-cap backlog") {
+        repeat(CRASH_MAX_RECORD_COUNT + 10) { i -> write("seed-$i.otlp", ageMsAgo = 1_000L * (i + 1)) }
+        write("1784621689841")
+
+        val purged = runBlocking { FileLogStore(dir.path).deleteUnrecognizedEntries(minAgeMillis = 0) }
+
+        // Owned evictions are not counted as foreign purges.
+        purged shouldBe 1
+        dir.listFiles()!!.count { it.name.endsWith(CRASH_OWNED_SUFFIX) } shouldBe CRASH_MAX_RECORD_COUNT
     }
 })

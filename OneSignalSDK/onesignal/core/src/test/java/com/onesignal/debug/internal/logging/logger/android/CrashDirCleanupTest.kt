@@ -49,6 +49,128 @@ class CrashDirCleanupTest : FunSpec({
         selected shouldBe emptyList()
     }
 
+    // ===== selectExpiredOwnedEntries =====
+
+    fun owned(name: String, ageMs: Long, bytes: Long = 1L) =
+        CrashDirEntry(name, lastModifiedMs = now - ageMs, lengthBytes = bytes)
+
+    test("selectExpiredOwnedEntries takes only owned records strictly past the ceiling") {
+        val entries =
+            listOf(
+                owned("1-a.otlp", ageMs = CRASH_MAX_READ_AGE_MILLIS + 1),
+                owned("2-b.otlp", ageMs = CRASH_MAX_READ_AGE_MILLIS - 1),
+                CrashDirEntry("legacy", lastModifiedMs = now - CRASH_MAX_READ_AGE_MILLIS * 2),
+            )
+
+        selectExpiredOwnedEntries(entries, nowMs = now).map { it.name } shouldBe listOf("1-a.otlp")
+    }
+
+    test("selectExpiredOwnedEntries treats a record at exactly the ceiling as still readable") {
+        val entries = listOf(owned("1-a.otlp", ageMs = CRASH_MAX_READ_AGE_MILLIS))
+
+        selectExpiredOwnedEntries(entries, nowMs = now) shouldBe emptyList()
+    }
+
+    test("selectExpiredOwnedEntries ignores records whose mtime is in the future") {
+        // A backwards clock step must not look like extreme age in either direction.
+        val entries = listOf(owned("1-a.otlp", ageMs = -CRASH_MAX_READ_AGE_MILLIS * 2))
+
+        selectExpiredOwnedEntries(entries, nowMs = now) shouldBe emptyList()
+    }
+
+    test("selectExpiredOwnedEntries is empty for an empty directory") {
+        selectExpiredOwnedEntries(emptyList(), nowMs = now) shouldBe emptyList()
+    }
+
+    // ===== selectOverflowOwnedEntries =====
+
+    test("selectOverflowOwnedEntries returns nothing while within both caps") {
+        val entries = (1..3).map { owned("$it-a.otlp", ageMs = it * 1_000L) }
+
+        selectOverflowOwnedEntries(entries) shouldBe emptyList()
+    }
+
+    test("selectOverflowOwnedEntries evicts oldest-first past the count cap") {
+        val entries = (1..CRASH_MAX_RECORD_COUNT + 2).map { owned("$it-a.otlp", ageMs = it * 1_000L) }
+
+        val evicted = selectOverflowOwnedEntries(entries)
+
+        // Oldest has the largest age, so the two highest indices go, returned oldest-first.
+        evicted.map { it.name } shouldBe
+            listOf("${CRASH_MAX_RECORD_COUNT + 2}-a.otlp", "${CRASH_MAX_RECORD_COUNT + 1}-a.otlp")
+    }
+
+    test("selectOverflowOwnedEntries never touches foreign entries") {
+        val entries =
+            (1..CRASH_MAX_RECORD_COUNT + 1).map { owned("$it-a.otlp", ageMs = it * 1_000L) } +
+                CrashDirEntry("legacy", lastModifiedMs = now - 999_000L)
+
+        selectOverflowOwnedEntries(entries).none { it.name == "legacy" } shouldBe true
+    }
+
+    test("an oversized record is evicted alone and does not displace the rest") {
+        // The regression this guards: treating the first over-budget record as a cutoff
+        // evicted every older record too, so one bad payload lost the whole backlog.
+        val entries =
+            listOf(
+                owned("5-newest.otlp", ageMs = 1_000, bytes = 10),
+                owned("4-huge.otlp", ageMs = 2_000, bytes = CRASH_MAX_RECORD_BYTES + 1),
+                owned("3-small.otlp", ageMs = 3_000, bytes = 10),
+                owned("2-small.otlp", ageMs = 4_000, bytes = 10),
+            )
+
+        selectOverflowOwnedEntries(entries).map { it.name } shouldBe listOf("4-huge.otlp")
+    }
+
+    test("a record that does not fit the remaining budget is skipped, not treated as a cutoff") {
+        // Four records just under the per-record cap fill most of the budget. The next one
+        // cannot fit, but a smaller, *older* one still can — proving the loop skips rather
+        // than stopping at the first record that overflows.
+        val nearCap = CRASH_MAX_RECORD_BYTES - 12_288
+        val entries =
+            (1..4).map { owned("${10 - it}-fills.otlp", ageMs = it * 1_000L, bytes = nearCap) } +
+                owned("5-does-not-fit.otlp", ageMs = 5_000, bytes = 200_000) +
+                owned("4-still-fits.otlp", ageMs = 6_000, bytes = 40_000)
+
+        selectOverflowOwnedEntries(entries).map { it.name } shouldBe listOf("5-does-not-fit.otlp")
+    }
+
+    test("keepName retains the just-written record even when it sorts oldest") {
+        // A backwards clock step can make a fresh write look older than its siblings.
+        val entries =
+            (1..CRASH_MAX_RECORD_COUNT).map { owned("$it-a.otlp", ageMs = it * 1_000L) } +
+                owned("fresh-a.otlp", ageMs = 999_000)
+
+        val evicted = selectOverflowOwnedEntries(entries, keepName = "fresh-a.otlp")
+
+        evicted.none { it.name == "fresh-a.otlp" } shouldBe true
+        evicted.map { it.name } shouldBe listOf("${CRASH_MAX_RECORD_COUNT}-a.otlp")
+    }
+
+    test("keepName retains an oversized just-written record") {
+        val entries = listOf(owned("fresh-a.otlp", ageMs = 1_000, bytes = CRASH_MAX_RECORD_BYTES + 1))
+
+        selectOverflowOwnedEntries(entries, keepName = "fresh-a.otlp") shouldBe emptyList()
+    }
+
+    test("equal timestamps break the tie on the millis embedded in the name") {
+        // Coarse filesystem timestamps collapse mtimes; the name preserves write order.
+        val entries =
+            listOf(
+                CrashDirEntry("100-a.otlp", lastModifiedMs = now, lengthBytes = 10),
+                CrashDirEntry("300-c.otlp", lastModifiedMs = now, lengthBytes = 10),
+                CrashDirEntry("200-b.otlp", lastModifiedMs = now, lengthBytes = 10),
+            )
+
+        val evicted = selectOverflowOwnedEntries(entries, maxCount = 2)
+
+        evicted.map { it.name } shouldBe listOf("100-a.otlp")
+    }
+
+    test("selectOverflowOwnedEntries is empty for an empty directory") {
+        selectOverflowOwnedEntries(emptyList()) shouldBe emptyList()
+    }
+
     test("formatCrashDirInventory reports empty directories") {
         formatCrashDirInventory(
             label = "before-upload",

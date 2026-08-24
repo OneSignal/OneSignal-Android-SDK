@@ -172,22 +172,29 @@ internal class LoggerLifecycleManager(
     @Suppress("TooGenericExceptionCaught")
     private fun disableFeatures() {
         Logging.info("OneSignal: Disabling logger module features")
+        // Each reference is cleared before the teardown call, not after. A collaborator that
+        // throws on the way down would otherwise leave its field set, and the start guards
+        // below would then treat the dead component as already running — permanently
+        // disabling it for the rest of the process.
         try {
-            anrDetector?.stop()
+            val detector = anrDetector
             anrDetector = null
+            detector?.stop()
         } catch (t: Throwable) {
             Logging.warn("OneSignal: Error stopping logger ANR detector: ${t.message}", t)
         }
         try {
-            crashHandler?.unregister()
+            val handler = crashHandler
             crashHandler = null
+            handler?.unregister()
         } catch (t: Throwable) {
             Logging.warn("OneSignal: Error unregistering logger crash handler: ${t.message}", t)
         }
         try {
-            Logging.setLoggerTelemetry(null) { false }
-            remoteTelemetry?.shutdown()
+            val telemetry = remoteTelemetry
             remoteTelemetry = null
+            Logging.setLoggerTelemetry(null) { false }
+            telemetry?.shutdown()
         } catch (t: Throwable) {
             Logging.warn("OneSignal: Error disabling logger logging: ${t.message}", t)
         }

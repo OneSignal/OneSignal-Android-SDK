@@ -18,12 +18,15 @@ import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.mockk.clearMocks
+import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import org.robolectric.annotation.Config
 
 /**
@@ -156,7 +159,13 @@ class LoggerLifecycleManagerTest : FunSpec({
     }
 
     test("enabling wires the remote sink and disabling shuts it down and clears it") {
+        // Emission hops to a background scope, so the positive case waits on a signal from the
+        // sink rather than a fixed sleep. The negative case still needs a bounded wait — there
+        // is no event for "nothing happened" — but only after a real emit has been observed,
+        // which establishes the pipeline is warm.
+        val emitted = CompletableDeferred<Unit>()
         val telemetry = mockk<ILogTelemetryRemote>(relaxed = true)
+        coEvery { telemetry.emit(any()) } answers { emitted.complete(Unit); Unit }
         val manager =
             LoggerLifecycleManager(
                 context = context,
@@ -170,24 +179,25 @@ class LoggerLifecycleManagerTest : FunSpec({
             )
 
         manager.onModelReplaced(configWith(isEnabled = true, logLevel = LogLevel.ERROR), ModelChangeTags.HYDRATE)
-        // Sink is live: an ERROR at the configured level reaches the telemetry.
         Logging.error("routed while enabled")
-        runBlocking { delay(SINK_SETTLE_MS) }
+        runBlocking { withTimeout(SINK_TIMEOUT_MS) { emitted.await() } }
         coVerify { telemetry.emit(any()) }
 
         manager.onModelReplaced(configWith(isEnabled = false, logLevel = null), ModelChangeTags.HYDRATE)
         verify { telemetry.shutdown() }
 
-        // Sink is detached: nothing further reaches it.
         clearMocks(telemetry, answers = false)
         Logging.error("dropped after disable")
-        runBlocking { delay(SINK_SETTLE_MS) }
+        runBlocking { delay(SINK_QUIET_MS) }
         coVerify(exactly = 0) { telemetry.emit(any()) }
     }
 })
 
-/** Remote emission hops to a background scope; long enough to settle without being flaky. */
-private const val SINK_SETTLE_MS = 300L
+/** Generous upper bound on a signal we expect; only a hang burns the full budget. */
+private const val SINK_TIMEOUT_MS = 5_000L
+
+/** Settle window for asserting the detached sink stays silent. */
+private const val SINK_QUIET_MS = 200L
 
 private fun configWith(isEnabled: Boolean, logLevel: LogLevel?): ConfigModel {
     val config = ConfigModel()

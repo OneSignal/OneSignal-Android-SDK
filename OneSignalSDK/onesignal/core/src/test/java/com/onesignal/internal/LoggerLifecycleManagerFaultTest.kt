@@ -9,6 +9,7 @@ import com.onesignal.core.internal.config.ConfigModel
 import com.onesignal.core.internal.features.IFeatureManager
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.crash.ObservabilitySdkSupport
+import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.logger.ILogAnrDetector
 import com.onesignal.logger.ILogCrashHandler
 import com.onesignal.logger.ILogFileStore
@@ -50,6 +51,9 @@ class LoggerLifecycleManagerFaultTest : FunSpec({
     afterEach {
         ObservabilitySdkSupport.reset()
         Thread.setDefaultUncaughtExceptionHandler(originalHandler)
+        // Enabling installs a mock sink into the process-global Logging; leaving one
+        // attached would leak into every later spec in this JVM.
+        Logging.setLoggerTelemetry(null) { false }
     }
 
     fun enabledConfig(logLevel: LogLevel = LogLevel.ERROR): ConfigModel =
@@ -223,7 +227,7 @@ class LoggerLifecycleManagerFaultTest : FunSpec({
 
     // ===== Idempotency and full lifecycle =====
 
-    test("enable called twice does not create duplicate crash handler or ANR detector") {
+    test("a repeated identical config is a no-op and does not rebuild collaborators") {
         var handlerCount = 0
         var detectorCount = 0
         val manager = managerWith(
@@ -232,12 +236,59 @@ class LoggerLifecycleManagerFaultTest : FunSpec({
         )
 
         manager.onModelReplaced(enabledConfig(), ModelChangeTags.HYDRATE)
-        // A second Enable can only arrive via disable/re-enable; a repeated identical config
-        // evaluates to NoChange, so drive the guard directly with a level change instead.
         manager.onModelReplaced(enabledConfig(), ModelChangeTags.HYDRATE)
 
+        // The second HYDRATE evaluates to NoChange, so enableFeatures is never re-entered.
         handlerCount shouldBe 1
         detectorCount shouldBe 1
+    }
+
+    test("disable then re-enable builds fresh collaborators") {
+        var handlerCount = 0
+        var detectorCount = 0
+        val manager = managerWith(
+            crashHandler = { handlerCount++; mockk(relaxed = true) },
+            anrDetector = { detectorCount++; mockk(relaxed = true) },
+        )
+
+        manager.onModelReplaced(enabledConfig(), ModelChangeTags.HYDRATE)
+        manager.onModelReplaced(disabledConfig(), ModelChangeTags.HYDRATE)
+        manager.onModelReplaced(enabledConfig(), ModelChangeTags.HYDRATE)
+
+        handlerCount shouldBe 2
+        detectorCount shouldBe 2
+    }
+
+    // Teardown clears each reference before calling the collaborator. If it cleared after,
+    // a throwing stop()/unregister() would leave the field set and the start guards would
+    // treat the dead component as running, disabling it for the rest of the process.
+
+    test("a throwing ANR stop() still allows the detector to restart on re-enable") {
+        val failing = mockk<ILogAnrDetector>(relaxed = true)
+        every { failing.stop() } throws RuntimeException("stop boom")
+        val replacement = mockk<ILogAnrDetector>(relaxed = true)
+        var calls = 0
+        val manager = managerWith(anrDetector = { if (calls++ == 0) failing else replacement })
+
+        manager.onModelReplaced(enabledConfig(), ModelChangeTags.HYDRATE)
+        manager.onModelReplaced(disabledConfig(), ModelChangeTags.HYDRATE)
+        manager.onModelReplaced(enabledConfig(), ModelChangeTags.HYDRATE)
+
+        verify { replacement.start() }
+    }
+
+    test("a throwing crash-handler unregister() still allows the handler to restart on re-enable") {
+        val failing = mockk<ILogCrashHandler>(relaxed = true)
+        every { failing.unregister() } throws RuntimeException("unregister boom")
+        val replacement = mockk<ILogCrashHandler>(relaxed = true)
+        var calls = 0
+        val manager = managerWith(crashHandler = { if (calls++ == 0) failing else replacement })
+
+        manager.onModelReplaced(enabledConfig(), ModelChangeTags.HYDRATE)
+        manager.onModelReplaced(disabledConfig(), ModelChangeTags.HYDRATE)
+        manager.onModelReplaced(enabledConfig(), ModelChangeTags.HYDRATE)
+
+        verify { replacement.initialize() }
     }
 
     test("enable creates all three features and disable tears all down") {

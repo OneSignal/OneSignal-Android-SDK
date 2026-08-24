@@ -23,11 +23,17 @@ internal const val CRASH_MAX_READ_AGE_MILLIS = 72L * 60 * 60 * 1000
  * records are single-event OTLP payloads of a few KB, so 50 covers far more unsent crashes
  * than a healthy install will ever hold. The byte bound is the backstop for pathological
  * payloads (deep stacktraces, huge exception messages) where count alone would not keep the
- * directory small. The newest record is always retained even if it alone exceeds the byte cap.
+ * directory small.
  */
 internal const val CRASH_MAX_RECORD_COUNT = 50
 
 internal const val CRASH_MAX_TOTAL_BYTES = 2L * 1024 * 1024
+
+/**
+ * A single record above this is dropped on its own rather than being allowed to consume the
+ * whole byte budget. Without it, one huge payload would push every other pending record out.
+ */
+internal const val CRASH_MAX_RECORD_BYTES = 512L * 1024
 
 internal data class CrashDirEntry(
     val name: String,
@@ -57,6 +63,9 @@ internal fun selectUnrecognizedEntries(
 /**
  * Returns owned entries past [maxAgeMillis] — no longer uploadable, so they are reclaimed
  * rather than skipped. Foreign entries are left to [selectUnrecognizedEntries].
+ *
+ * A negative age (mtime in the future, i.e. the clock moved backwards since the write) is
+ * never treated as expired; the record simply waits until the clock agrees it is old.
  */
 internal fun selectExpiredOwnedEntries(
     entries: List<CrashDirEntry>,
@@ -65,33 +74,56 @@ internal fun selectExpiredOwnedEntries(
     ownedSuffix: String = CRASH_OWNED_SUFFIX,
 ): List<CrashDirEntry> =
     entries.filter { entry ->
-        isOwnedCrashFile(entry.name, ownedSuffix) &&
-            nowMs - entry.lastModifiedMs > maxAgeMillis
+        val age = nowMs - entry.lastModifiedMs
+        isOwnedCrashFile(entry.name, ownedSuffix) && age > maxAgeMillis
     }
+
+/** Leading millis of a `{millis}-{uuid}.otlp` name, or null for anything else. */
+private fun leadingMillis(name: String): Long? = name.substringBefore('-').toLongOrNull()
 
 /**
  * Returns the owned entries to evict so the directory fits within [maxCount] and
- * [maxTotalBytes]. Newest records are kept; the excess is returned oldest-first. The single
- * newest record is never evicted, so an oversized payload cannot starve the cache.
+ * [maxTotalBytes], newest kept and the excess returned oldest-first.
+ *
+ * A record larger than [maxRecordBytes] is evicted on its own rather than being allowed to
+ * exhaust the shared budget — otherwise a single deep-stacktrace payload would push out every
+ * other pending crash. For the same reason a record that merely does not fit the *remaining*
+ * budget is skipped, not treated as a cutoff: everything older still gets its chance to fit.
+ *
+ * [keepName] is the record the caller just wrote. It is retained regardless of size or sort
+ * position, so a backwards clock step cannot make a fresh record look oldest and delete it.
  */
 internal fun selectOverflowOwnedEntries(
     entries: List<CrashDirEntry>,
     maxCount: Int = CRASH_MAX_RECORD_COUNT,
     maxTotalBytes: Long = CRASH_MAX_TOTAL_BYTES,
+    maxRecordBytes: Long = CRASH_MAX_RECORD_BYTES,
+    keepName: String? = null,
     ownedSuffix: String = CRASH_OWNED_SUFFIX,
 ): List<CrashDirEntry> {
-    // Name breaks ties: owned names are millis-prefixed, so it orders consistently with mtime
-    // when a filesystem reports coarse timestamps.
+    // Ties break on the millis embedded in the name, which is the write time the filesystem
+    // may have rounded away. Names that do not parse sort last among their timestamp group.
     val newestFirst =
         entries
             .filter { isOwnedCrashFile(it.name, ownedSuffix) }
-            .sortedWith(compareByDescending<CrashDirEntry> { it.lastModifiedMs }.thenByDescending { it.name })
+            .sortedWith(
+                compareByDescending<CrashDirEntry> { it.lastModifiedMs }
+                    .thenByDescending { leadingMillis(it.name) ?: Long.MIN_VALUE },
+            )
 
     val kept = HashSet<String>()
     var keptBytes = 0L
+    keepName?.let { name ->
+        newestFirst.firstOrNull { it.name == name }?.let {
+            kept.add(it.name)
+            keptBytes += it.lengthBytes
+        }
+    }
     for (entry in newestFirst) {
+        if (kept.contains(entry.name)) continue
         if (kept.size >= maxCount) break
-        if (kept.isNotEmpty() && keptBytes + entry.lengthBytes > maxTotalBytes) break
+        if (entry.lengthBytes > maxRecordBytes) continue
+        if (keptBytes + entry.lengthBytes > maxTotalBytes) continue
         kept.add(entry.name)
         keptBytes += entry.lengthBytes
     }
