@@ -26,7 +26,9 @@ import kotlin.coroutines.cancellation.CancellationException
  *
  * Owned records are bounded on both axes, replacing the caps disk-buffering used to apply:
  * [CRASH_MAX_READ_AGE_MILLIS] ages records out, and [CRASH_MAX_RECORD_COUNT] /
- * [CRASH_MAX_TOTAL_BYTES] cap accumulation. Both bounds are enforced on every path that
+ * [CRASH_MAX_TOTAL_BYTES] cap accumulation — the latter by budget claim rather than raw disk
+ * bytes, which differ only for oversized records inherited from a build that predates the
+ * write-time limit in [save]. Both bounds are enforced on every path that
  * touches the directory — [save], [listReadable] and [deleteUnrecognizedEntries] — so a
  * backlog inherited from a build without caps is reclaimed on the next uploader pass rather
  * than waiting for a crash. Over-limit records are deleted, not merely hidden from
@@ -155,37 +157,31 @@ internal class FileLogStore(
         }.orEmpty()
 
     /**
-     * Outcome of an expiry pass. The two sets differ when a delete fails: the record is still
-     * unreadable, but it also still occupies the directory, so it must stay visible to the
-     * accumulation caps instead of being quietly exempted from them.
-     */
-    private data class ExpiryOutcome(val expired: Set<String>, val removed: Set<String>) {
-        companion object {
-            val NONE = ExpiryOutcome(emptySet(), emptySet())
-        }
-    }
-
-    /**
      * Deletes owned records past [CRASH_MAX_READ_AGE_MILLIS]. Called from both read paths so
      * over-age records are reclaimed even when remote logging is off and the uploader never
      * gets as far as [listReadable].
+     *
+     * @return every expired name, whether or not its delete succeeded. One that could not be
+     *   removed must still not be read, and it cannot distort the accumulation caps either:
+     *   expired records are by definition the oldest, so the selector always picks them for
+     *   eviction rather than retention, and only retained records claim budget.
      */
-    private fun reclaimExpiredOwnedRecords(entries: List<CrashDirEntry>, nowMs: Long): ExpiryOutcome {
+    private fun reclaimExpiredOwnedRecords(entries: List<CrashDirEntry>, nowMs: Long): Set<String> {
         val expired = selectExpiredOwnedEntries(entries, nowMs)
-        if (expired.isEmpty()) return ExpiryOutcome.NONE
-        val removed = HashSet<String>()
+        if (expired.isEmpty()) return emptySet()
+        var deleted = 0
         for (entry in expired) {
             if (File(rootDir, entry.name).delete()) {
-                removed.add(entry.name)
+                deleted++
             } else {
                 Logging.warn("FileLogStore: failed to reclaim expired record ${entry.name}")
             }
         }
         Logging.info(
-            "FileLogStore: reclaimed ${removed.size}/${expired.size} expired record(s) in ${rootDir.path}: " +
+            "FileLogStore: reclaimed $deleted/${expired.size} expired record(s) in ${rootDir.path}: " +
                 expired.take(MAX_NAMES_LOGGED).joinToString(", ") { it.name },
         )
-        return ExpiryOutcome(expired = expired.mapTo(HashSet()) { it.name }, removed = removed)
+        return expired.mapTo(HashSet()) { it.name }
     }
 
     @Suppress("TooGenericExceptionCaught", "SwallowedException")
@@ -196,9 +192,9 @@ internal class FileLogStore(
                 val entries = listEntries(rootDir)
                 // Reclaim before reading: payloads are only materialized for records that
                 // survive both bounds, so an over-cap backlog is never fully loaded.
-                val expiry = reclaimExpiredOwnedRecords(entries, now)
-                val evicted = reclaimOverLimitRecords(entries.filterNot { expiry.removed.contains(it.name) })
-                val dropped = expiry.expired + evicted
+                val expired = reclaimExpiredOwnedRecords(entries, now)
+                val evicted = reclaimOverLimitRecords(entries.filterNot { expired.contains(it.name) })
+                val dropped = expired + evicted
                 val suffixMatches =
                     entries.filter { isOwnedCrashFile(it.name) && !dropped.contains(it.name) }
                 val readable =
@@ -208,7 +204,7 @@ internal class FileLogStore(
                 Logging.debug(
                     "FileLogStore: listReadable minAgeMs=$minAgeMillis total=${entries.size} " +
                         "suffix=${suffixMatches.size} readable=${readable.size} " +
-                        "expired=${expiry.expired.size} overCap=${evicted.size} " +
+                        "expired=${expired.size} overCap=${evicted.size} " +
                         "legacy=${entries.count { !isOwnedCrashFile(it.name) }}",
                 )
                 readable
@@ -264,8 +260,8 @@ internal class FileLogStore(
             try {
                 val now = System.currentTimeMillis()
                 val listed = listEntries(rootDir)
-                val expiry = reclaimExpiredOwnedRecords(listed, now)
-                reclaimOverLimitRecords(listed.filterNot { expiry.removed.contains(it.name) })
+                val expired = reclaimExpiredOwnedRecords(listed, now)
+                reclaimOverLimitRecords(listed.filterNot { expired.contains(it.name) })
                 val foreign = selectUnrecognizedEntries(listed, now, minAgeMillis)
                 if (foreign.isEmpty()) {
                     Logging.debug("FileLogStore: no unrecognized files to purge in ${rootDir.path}")

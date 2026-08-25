@@ -261,6 +261,67 @@ class LoggerLifecycleManagerFaultTest : FunSpec({
         detectorCount shouldBe 1
     }
 
+    // A component that failed to start must be retried on the next config refresh. Committing
+    // currentConfig after a partial failure collapsed the next identical HYDRATE to NoChange,
+    // which left the dead component down for the rest of the process.
+
+    test("a crash handler that failed to start is retried on the next identical config") {
+        val failing = mockk<ILogCrashHandler>(relaxed = true)
+        every { failing.initialize() } throws RuntimeException("initialize boom")
+        val replacement = mockk<ILogCrashHandler>(relaxed = true)
+        var calls = 0
+        val manager = managerWith(crashHandler = { if (calls++ == 0) failing else replacement })
+
+        manager.onModelReplaced(enabledConfig(), ModelChangeTags.HYDRATE)
+        manager.onModelReplaced(enabledConfig(), ModelChangeTags.HYDRATE)
+
+        verify { replacement.initialize() }
+    }
+
+    test("an ANR detector that failed to start is retried on the next identical config") {
+        val failing = mockk<ILogAnrDetector>(relaxed = true)
+        every { failing.start() } throws RuntimeException("start boom")
+        val replacement = mockk<ILogAnrDetector>(relaxed = true)
+        var calls = 0
+        val manager = managerWith(anrDetector = { if (calls++ == 0) failing else replacement })
+
+        manager.onModelReplaced(enabledConfig(), ModelChangeTags.HYDRATE)
+        manager.onModelReplaced(enabledConfig(), ModelChangeTags.HYDRATE)
+
+        verify { replacement.start() }
+    }
+
+    test("a retry does not tear down the components that did start") {
+        val handler = mockk<ILogCrashHandler>(relaxed = true)
+        val failingDetector = mockk<ILogAnrDetector>(relaxed = true)
+        every { failingDetector.start() } throws RuntimeException("start boom")
+        var detectorCalls = 0
+        var handlerCalls = 0
+        val manager =
+            managerWith(
+                crashHandler = { handlerCalls++; handler },
+                anrDetector = { detectorCalls++; if (detectorCalls == 1) failingDetector else mockk(relaxed = true) },
+            )
+
+        manager.onModelReplaced(enabledConfig(), ModelChangeTags.HYDRATE)
+        manager.onModelReplaced(enabledConfig(), ModelChangeTags.HYDRATE)
+
+        // Only the ANR detector is rebuilt; the healthy crash handler is left alone.
+        handlerCalls shouldBe 1
+        detectorCalls shouldBe 2
+    }
+
+    test("once every component is up an identical config stops retrying") {
+        var handlerCalls = 0
+        val manager = managerWith(crashHandler = { handlerCalls++; mockk(relaxed = true) })
+
+        manager.onModelReplaced(enabledConfig(), ModelChangeTags.HYDRATE)
+        manager.onModelReplaced(enabledConfig(), ModelChangeTags.HYDRATE)
+        manager.onModelReplaced(enabledConfig(), ModelChangeTags.HYDRATE)
+
+        handlerCalls shouldBe 1
+    }
+
     test("disable then re-enable builds fresh collaborators") {
         var handlerCount = 0
         var detectorCount = 0

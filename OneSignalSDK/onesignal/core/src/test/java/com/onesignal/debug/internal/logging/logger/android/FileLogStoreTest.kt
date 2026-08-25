@@ -189,6 +189,21 @@ class FileLogStoreTest : FunSpec({
         dir.listFiles()!!.count { it.name.endsWith(CRASH_OWNED_SUFFIX) } shouldBe CRASH_MAX_RECORD_COUNT
     }
 
+    // A delete can fail (read-only dir, filesystem error). The record must stay unreadable
+    // regardless, and must not resurface on a later pass just because it survived.
+    test("an expired record that cannot be deleted is still withheld from readers") {
+        write("expired-stuck.otlp", ageMsAgo = CRASH_MAX_READ_AGE_MILLIS + 60_000)
+        write("fresh.otlp", ageMsAgo = 60_000)
+        // Read-only dir makes unlink fail on POSIX without making the entries unreadable.
+        dir.setWritable(false)
+
+        val readable = runBlocking { FileLogStore(dir.path).listReadable(minAgeMillis = 0) }
+
+        dir.setWritable(true)
+        readable.map { it.id } shouldBe listOf("fresh.otlp")
+        File(dir, "expired-stuck.otlp").exists() shouldBe true
+    }
+
     test("deleteUnrecognizedEntries evicts an inherited over-cap backlog") {
         repeat(CRASH_MAX_RECORD_COUNT + 10) { i -> write("seed-$i.otlp", ageMsAgo = 1_000L * (i + 1)) }
         write("1784621689841")

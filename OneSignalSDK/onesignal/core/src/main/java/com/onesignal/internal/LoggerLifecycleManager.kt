@@ -138,35 +138,64 @@ internal class LoggerLifecycleManager(
         return ObservabilityConfig(isEnabled = enabled, logLevel = level)
     }
 
-    /** Must be called while holding [lock]. */
+    /**
+     * Must be called while holding [lock].
+     *
+     * [currentConfig] is only advanced once the requested state is actually in place. If a
+     * component failed to start, the config is left behind so the next HYDRATE — which for a
+     * stable remote payload is an identical one — still evaluates to `Enable` and retries the
+     * missing piece, instead of collapsing to `NoChange` and leaving it dead for the session.
+     */
     private fun applyAction(action: ObservabilityConfigAction, newConfig: ObservabilityConfig) {
-        when (action) {
-            is ObservabilityConfigAction.Enable -> enableFeatures(newConfig.logLevel ?: LogLevel.ERROR)
-            is ObservabilityConfigAction.Disable -> disableFeatures()
-            is ObservabilityConfigAction.UpdateLogLevel -> updateLogLevel(action.newLevel)
-            is ObservabilityConfigAction.NoChange -> Logging.debug("OneSignal: logger config unchanged")
-        }
-        currentConfig = newConfig
+        val applied =
+            when (action) {
+                is ObservabilityConfigAction.Enable -> enableFeatures(newConfig.logLevel ?: LogLevel.ERROR)
+                is ObservabilityConfigAction.UpdateLogLevel -> updateLogLevel(action.newLevel)
+                is ObservabilityConfigAction.Disable -> {
+                    disableFeatures()
+                    true
+                }
+                is ObservabilityConfigAction.NoChange -> {
+                    Logging.debug("OneSignal: logger config unchanged")
+                    true
+                }
+            }
+        if (applied) currentConfig = newConfig
     }
 
+    /**
+     * Starts whatever is not already running. Each component is independent: one failing must
+     * not stop the others.
+     *
+     * @return true when every feature is up, so the caller knows whether to commit the config
+     */
     @Suppress("TooGenericExceptionCaught")
-    private fun enableFeatures(logLevel: LogLevel) {
+    private fun enableFeatures(logLevel: LogLevel): Boolean {
         Logging.info("OneSignal: Enabling logger module features at level $logLevel")
+        var allStarted = true
         try {
             startCrashHandler()
         } catch (t: Throwable) {
+            allStarted = false
             Logging.warn("OneSignal: Failed to start logger crash handler: ${t.message}", t)
         }
         try {
             startAnrDetector()
         } catch (t: Throwable) {
+            allStarted = false
             Logging.warn("OneSignal: Failed to start logger ANR detector: ${t.message}", t)
         }
         try {
-            startLogging(logLevel)
+            // Guarded like the other two so a retry does not tear down a healthy sink.
+            if (remoteTelemetry == null) startLogging(logLevel)
         } catch (t: Throwable) {
+            allStarted = false
             Logging.warn("OneSignal: Failed to start logger logging: ${t.message}", t)
         }
+        if (!allStarted) {
+            Logging.warn("OneSignal: Some logger features did not start; will retry on the next config refresh")
+        }
+        return allStarted
     }
 
     @Suppress("TooGenericExceptionCaught")
@@ -200,13 +229,16 @@ internal class LoggerLifecycleManager(
         }
     }
 
+    /** @return true when the new level is live, so the caller knows whether to commit the config */
     @Suppress("TooGenericExceptionCaught")
-    private fun updateLogLevel(newLevel: LogLevel) {
+    private fun updateLogLevel(newLevel: LogLevel): Boolean {
         Logging.info("OneSignal: Updating logger module log level to $newLevel")
-        try {
+        return try {
             startLogging(newLevel)
+            true
         } catch (t: Throwable) {
             Logging.warn("OneSignal: Failed to update logger log level: ${t.message}", t)
+            false
         }
     }
 
@@ -228,11 +260,14 @@ internal class LoggerLifecycleManager(
 
     @Suppress("TooGenericExceptionCaught")
     private fun startLogging(logLevel: LogLevel) {
-        // Same invariant as disableFeatures: drop the reference before tearing the old sink
-        // down. A throwing shutdown() must not leave the field pointing at a dead instance,
-        // because an identical later config evaluates to NoChange and would never replace it.
+        // Same invariant as disableFeatures: detach both the field and Logging's global before
+        // tearing the old sink down. Shutting down first would leave every log emitted until
+        // the replacement is installed — including the warn below — going to a telemetry whose
+        // consumer is already cancelled, where it is queued and never drained. If the factory
+        // then throws, the global would keep pointing at that dead instance for the session.
         val previous = remoteTelemetry
         remoteTelemetry = null
+        Logging.setLoggerTelemetry(null) { false }
         try {
             previous?.shutdown()
         } catch (t: Throwable) {

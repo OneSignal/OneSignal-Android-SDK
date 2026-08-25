@@ -147,12 +147,6 @@ class CrashDirCleanupTest : FunSpec({
         evicted.map { it.name } shouldBe listOf("${CRASH_MAX_RECORD_COUNT}-a.otlp")
     }
 
-    test("keepName retains an oversized just-written record") {
-        val entries = listOf(owned("fresh-a.otlp", ageMs = 1_000, bytes = CRASH_MAX_RECORD_BYTES + 1))
-
-        selectOverflowOwnedEntries(entries, keepName = "fresh-a.otlp") shouldBe emptyList()
-    }
-
     test("an oversized keepName does not evict the pending backlog") {
         // The regression this guards: charging keepName its full length started the budget
         // over cap, so every sibling failed the remaining-budget check and the entire backlog

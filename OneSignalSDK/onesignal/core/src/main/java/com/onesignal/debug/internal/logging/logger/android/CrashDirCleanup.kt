@@ -24,6 +24,13 @@ internal const val CRASH_MAX_READ_AGE_MILLIS = 72L * 60 * 60 * 1000
  * than a healthy install will ever hold. The byte bound is the backstop for pathological
  * payloads (deep stacktraces, huge exception messages) where count alone would not keep the
  * directory small.
+ *
+ * [CRASH_MAX_TOTAL_BYTES] bounds *claim*, not bytes on disk. Since writes are size-limited,
+ * the two coincide for anything this build wrote. They diverge only for records inherited
+ * from a build without that limit: each claims at most [CRASH_MAX_RECORD_BYTES], so a handful
+ * of oversized leftovers can occupy more than this while still counting as within cap. That
+ * is deliberate — they are real crashes and deserve an upload attempt — and it is bounded by
+ * the count cap and by [CRASH_MAX_READ_AGE_MILLIS] aging them out.
  */
 internal const val CRASH_MAX_RECORD_COUNT = 50
 

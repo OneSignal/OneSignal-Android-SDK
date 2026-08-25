@@ -16,6 +16,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import org.robolectric.annotation.Config
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Covers the single remaining remote-logging sink. Emission is asynchronous, so each
@@ -110,8 +111,9 @@ class LoggingRemoteTest : FunSpec({
     test("every severity is forwarded") {
         val telemetry = mockk<ILogTelemetryRemote>(relaxed = true)
         val sixth = CompletableDeferred<Unit>()
-        var seen = 0
-        coEvery { telemetry.emit(any()) } answers { if (++seen == 6) sixth.complete(Unit); Unit }
+        // Emission fans out across Dispatchers.Default, so the counter is touched concurrently.
+        val seen = AtomicInteger(0)
+        coEvery { telemetry.emit(any()) } answers { if (seen.incrementAndGet() == 6) sixth.complete(Unit); Unit }
         Logging.setLoggerTelemetry(telemetry) { true }
 
         Logging.verbose("v")

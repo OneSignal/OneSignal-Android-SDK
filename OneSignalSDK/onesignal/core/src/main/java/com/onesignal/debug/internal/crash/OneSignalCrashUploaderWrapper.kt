@@ -11,6 +11,7 @@ import com.onesignal.debug.internal.logging.logger.android.FileLogStore
 import com.onesignal.debug.internal.logging.logger.android.OneSignalLogHttpSender
 import com.onesignal.debug.internal.logging.logger.android.createAndroidLoggerPlatformProvider
 import com.onesignal.debug.internal.logging.logger.android.formatCrashDirInventory
+import com.onesignal.debug.internal.logging.logger.android.getCrashStoragePath
 import com.onesignal.logger.LoggerFactory
 import java.io.File
 import kotlin.coroutines.cancellation.CancellationException
@@ -63,10 +64,13 @@ internal class OneSignalCrashUploaderWrapper(
         }
     }
 
-    /** Resolves the crash directory the logger module reads and writes. */
-    private fun crashStoragePath(): String =
-        createAndroidLoggerPlatformProvider(applicationService.appContext) { featureManager }
-            .crashStoragePath
+    /**
+     * Resolves the crash directory the logger module reads and writes. Uses the pure path
+     * helper rather than a provider: building one costs a `PackageManager` round-trip and an
+     * ID resolver, and re-emits the provider's "Crash logs stored at" line, all to read a
+     * value derived from the context alone.
+     */
+    private fun crashStoragePath(): String = getCrashStoragePath(applicationService.appContext)
 
     /**
      * Logs a snapshot of the crash dir (counts of owned `.otlp` vs foreign/legacy
