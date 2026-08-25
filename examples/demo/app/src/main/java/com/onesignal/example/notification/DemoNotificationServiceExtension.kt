@@ -4,9 +4,9 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
 import android.os.Build
-import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.onesignal.example.data.model.NotificationExtensionOptions
+import com.onesignal.example.util.DemoLog
 import com.onesignal.example.util.SharedPreferenceUtil
 import com.onesignal.notifications.IDisplayableMutableNotification
 import com.onesignal.notifications.INotificationReceivedEvent
@@ -36,7 +36,7 @@ class DemoNotificationServiceExtension : INotificationServiceExtension {
         if (options.logDetails) {
             // TODO: [SDK-5011] log `event.restoring` here once it ships. Reading it next to the
             // channel below is the whole diagnosis for a notification that re-alerts on reboot.
-            Log.d(
+            DemoLog.d(
                 TAG,
                 "received androidNotificationId=${notification.androidNotificationId}" +
                     " notificationId=${notification.notificationId}" +
@@ -47,7 +47,7 @@ class DemoNotificationServiceExtension : INotificationServiceExtension {
 
         if (options.discard) {
             if (options.logDetails) {
-                Log.d(TAG, "discarding androidNotificationId=${notification.androidNotificationId}")
+                DemoLog.d(TAG, "discarding androidNotificationId=${notification.androidNotificationId}")
             }
             event.preventDefault(true)
             return
@@ -79,7 +79,7 @@ class DemoNotificationServiceExtension : INotificationServiceExtension {
             // extension can see what the SDK picked. A restored notification lands on
             // `restored_OS_notifications` no matter what the payload asked for, and the payload
             // by itself never shows that.
-            Log.d(
+            DemoLog.d(
                 TAG,
                 "building androidNotificationId=${notification.androidNotificationId}" +
                     " channel=${NotificationCompat.getChannelId(builder.build())}",
@@ -122,7 +122,7 @@ class DemoNotificationServiceExtension : INotificationServiceExtension {
     }
 
     private companion object {
-        const val TAG = "DemoNSE"
+        const val TAG = "NSE"
         const val HIGH_IMPORTANCE_CHANNEL_ID = "demo_nse_high_importance"
 
         // Well under the SDK's 30 second wait for the extension, and long enough to watch the

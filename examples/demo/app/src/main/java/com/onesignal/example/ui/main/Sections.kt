@@ -352,7 +352,7 @@ fun NotificationExtensionSection(
                 HorizontalDivider(color = OsDivider, modifier = Modifier.padding(bottom = DemoLayout.gap))
                 ToggleRow(
                     label = "Log Details",
-                    description = "Log id, sent time, and the channel the SDK resolved, under the DemoNSE tag",
+                    description = "Log id, sent time, and the channel the SDK resolved, under the [Demo]NSE tag",
                     checked = options.logDetails,
                     onCheckedChange = { onOptionsChange(options.copy(logDetails = it)) },
                     enabled = options.enabled,

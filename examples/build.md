@@ -178,9 +178,20 @@ Patterns used by this demo beyond the shared guide's table:
 - `MainActivity` sets `semantics(mergeDescendants = false) { testTagsAsResourceId = true }` on the root `Surface` so Appium `id=` selectors map onto Compose `testTag` values (`MainActivity.kt` lines ~41–43).
 - `Dialogs.kt` re-applies the same via an `exposeTestTagsAsResourceId()` helper inside each dialog because Compose dialogs render in a separate window -- required for dialog-scoped test tags to be visible to UiAutomator.
 
+### Log tags
+
+The demo logs through `util/DemoLog.kt` rather than `android.util.Log`. It marks both the tag and the message with `[Demo]`, so the tag stays filterable with `logcat -s` and a line is still recognizable when only the message column is in view.
+
+```kotlin
+DemoLog.d(TAG, "Sending notification: Simple")
+// D/[Demo]MainViewModel: [Demo] Sending notification: Simple
+```
+
+Pass the plain class name as the tag; `DemoLog` adds the prefix, so `[Demo]` is defined in exactly one place. `v`, `d`, `i`, `w`, `e`, and `e(tag, message, throwable)` are all there. Current tags are `[Demo]OneSignalExample`, `[Demo]MainViewModel`, `[Demo]OneSignalService`, `[Demo]OneSignalRepository`, `[Demo]TooltipHelper`, `[Demo]NSE`, and `[Demo]OneSignalHMS` on the Huawei flavor.
+
 ### SDK log forwarding
 
-`MainApplication` registers `OneSignal.Debug.addLogListener` and forwards each entry to `android.util.Log` under the `OneSignalSDK` tag, so SDK output shows up alongside app output in Android Studio's Logcat (filter `package:mine` to see both). There is no in-app log viewer — match the shared guide and other wrapper SDK demos by relying on Logcat.
+`MainApplication` registers `OneSignal.Debug.addLogListener` and forwards each entry to `android.util.Log` under the `OneSignalSDK` tag, so SDK output shows up alongside app output in Android Studio's Logcat (filter `package:mine` to see both). Those five calls are the one place in the demo that still uses `android.util.Log` directly, on purpose. The lines are the SDK's, mirrored, and routing them through `DemoLog` would bury the demo's own output whenever you grep `[Demo]`. There is no in-app log viewer — match the shared guide and other wrapper SDK demos by relying on Logcat.
 
 ---
 
@@ -213,7 +224,7 @@ The five behavior switches sit behind a Show options / Hide options row so the s
 | --- | --- | --- |
 | Enable Extension | `nse_enabled_toggle` | Master switch. Off means `onNotificationReceived` returns before touching anything. |
 | Show / Hide options | `nse_options_toggle` | Folds the five switches below. Not a setting, nothing is persisted. |
-| Log Details | `nse_log_toggle` | Logs id, sent time, and the channel the SDK resolved, under the `DemoNSE` tag. |
+| Log Details | `nse_log_toggle` | Logs id, sent time, and the channel the SDK resolved, under the `[Demo]NSE` tag. |
 | Apply Extender | `nse_extender_toggle` | Prefixes the title with `[NSE]` through a `NotificationCompat.Extender`. |
 | Force High Importance Channel | `nse_high_importance_toggle` | Moves the notification onto an app-owned `IMPORTANCE_HIGH` channel. |
 | Delay Display | `nse_delay_toggle` | `preventDefault()`, then `display()` five seconds later. |
@@ -306,7 +317,7 @@ examples/
             │   │   │   ├── main/              # MainActivity, MainScreen, Sections, MainViewModel
             │   │   │   ├── secondary/SecondaryActivity.kt
             │   │   │   └── theme/             # Theme.kt, DemoLayout.kt
-            │   │   └── util/                  # SharedPreferenceUtil, TooltipHelper
+            │   │   └── util/                  # SharedPreferenceUtil, TooltipHelper, DemoLog
             │   └── res/
             │       ├── values/{strings,colors,styles}.xml
             │       ├── raw/                   # vine_boom.wav
