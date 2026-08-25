@@ -10,6 +10,7 @@ import com.onesignal.IUserJwtInvalidatedListener
 import com.onesignal.OneSignal
 import com.onesignal.UserJwtInvalidatedEvent
 import com.onesignal.notifications.IPermissionObserver
+import com.onesignal.example.data.model.NotificationExtensionOptions
 import com.onesignal.example.data.model.NotificationType
 import com.onesignal.example.data.repository.OneSignalRepository
 import com.onesignal.example.util.SharedPreferenceUtil
@@ -85,6 +86,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
     private val _locationShared = MutableLiveData<Boolean>()
     val locationShared: LiveData<Boolean> = _locationShared
 
+    // Notification service extension switches (demo app only, read by DemoNotificationServiceExtension)
+    private val _notificationExtensionOptions = MutableLiveData<NotificationExtensionOptions>()
+    val notificationExtensionOptions: LiveData<NotificationExtensionOptions> = _notificationExtensionOptions
+
     // Identity Verification toggle (demo app only, controls alias used for API calls)
     private val _useIdentityVerification = MutableLiveData<Boolean>()
     val useIdentityVerification: LiveData<Boolean> = _useIdentityVerification
@@ -146,7 +151,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
         _inAppMessagesPaused.value = repository.isInAppMessagesPaused()
         _locationShared.value = repository.isLocationShared()
         _useIdentityVerification.value = SharedPreferenceUtil.getCachedIdentityVerification(context)
-        
+        _notificationExtensionOptions.value = SharedPreferenceUtil.getNotificationExtensionOptions(context)
+
         val externalId = OneSignal.User.externalId
         _externalUserId.value = if (externalId.isEmpty()) null else externalId
         
@@ -664,6 +670,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
     fun clearAllNotifications() {
         OneSignal.Notifications.clearAllNotifications()
         Log.i(TAG, "All notifications cleared")
+    }
+
+    // Notification service extension
+    fun setNotificationExtensionOptions(options: NotificationExtensionOptions) {
+        SharedPreferenceUtil.cacheNotificationExtensionOptions(getApplication(), options)
+        _notificationExtensionOptions.value = options
+        Log.i(TAG, "Notification service extension options: $options")
     }
 
     fun sendInAppMessage(title: String, triggerKey: String, triggerValue: String) {

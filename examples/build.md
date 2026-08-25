@@ -121,7 +121,7 @@ The Android demo **overrides the shared guide's "no repository wrapper" rule**. 
 - `MainViewModel : AndroidViewModel` — central state with `LiveData<T>` for every UI value. Implements `IPushSubscriptionObserver`, `IPermissionObserver`, `IUserStateObserver`, and `IUserJwtInvalidatedListener`. Holds a monotonic `private var fetchRequestSequence = 0L` that maps to the shared guide's `requestSequence` for stale-result protection in `fetchUserDataFromApi`.
 - `OneSignalRepository.kt` — only some methods are `suspend` + `withContext(Dispatchers.IO)`; many are synchronous wrappers and the ViewModel wraps calls in `viewModelScope.launch(Dispatchers.IO)` itself.
 - `OneSignalService.kt` (`object`) — REST API client described in the shared guide's Prompt 1.4.
-- `SharedPreferenceUtil.kt` — backs the shared guide's PreferencesService (consent required, privacy consent, external user id, location shared, IAM paused, cached JWT token, cached identity-verification toggle).
+- `SharedPreferenceUtil.kt` — backs the shared guide's PreferencesService (consent required, privacy consent, external user id, location shared, IAM paused, cached JWT token, cached identity-verification toggle, notification service extension switches).
 
 `fetchUserDataFromApi` loading sequence: the sequence is incremented first, then early returns may set `_isLoading = false` before `_isLoading = true` is set (see `MainViewModel.kt` lines ~167–192). Stale-fetch guards themselves are correct -- results are dropped when `requestId != fetchRequestSequence`, and the same guard wraps the catch branch and the final `_isLoading.value = false`.
 
@@ -193,6 +193,36 @@ The Android demo exercises a few SDK features that are not described in the shar
 - **UPDATE USER JWT button** (`UserSection`, `testTag = "update_user_jwt_button"`) — opens a `PairInputDialog` (External User Id + JWT Token) and calls `viewModel.updateUserJwt(...)` → `OneSignal.updateUserJwt(...)`.
 - **`IUserJwtInvalidatedListener`** — registered by `MainViewModel`; surfaces a log entry via `Log.w(TAG, ...)` when the SDK reports an invalidated JWT. Per Prompt 7.6 the snackbar is no longer fired from this listener.
 
+### Notification service extension
+
+`DemoNotificationServiceExtension` implements `INotificationServiceExtension` and is registered from `app/src/main/AndroidManifest.xml`:
+
+```xml
+<meta-data
+    android:name="com.onesignal.NotificationServiceExtension"
+    android:value="com.onesignal.example.notification.DemoNotificationServiceExtension" />
+```
+
+The SDK resolves that string with `Class.forName` (`NotificationLifecycleService.setupNotificationServiceExtension`), so a wrong class name here fails silently at runtime. Compiling the class inside `OneSignalSDK/`'s `:app` project is what turns a breaking change to `INotificationServiceExtension` or `INotificationReceivedEvent` into a CI failure, and the release build is the only place the `-keep class ** implements com.onesignal.notifications.INotificationServiceExtension` rule in `onesignal/notifications/consumer-rules.pro` gets exercised end to end.
+
+Every behavior is off until switched on in the **Notification Service Extension** section, so the notifications the demo sends stay usable as a manual QA baseline. Switches live in `NotificationExtensionOptions` and persist through `SharedPreferenceUtil`; the extension reads them from SharedPreferences rather than `MainViewModel`, because it runs whether or not the app is open.
+
+The five behavior switches sit behind a Show options / Hide options row so the section stays two rows tall while the extension is off. Enable Extension is always visible, and turning it on opens the options. The row reuses the collapse idiom from `CollapsibleSingleList` in `ListComponents.kt` (centered, `OsPrimary` label, `ExpandMore` / `ExpandLess` chevron).
+
+| Toggle | testTag | What it does |
+| --- | --- | --- |
+| Enable Extension | `nse_enabled_toggle` | Master switch. Off means `onNotificationReceived` returns before touching anything. |
+| Show / Hide options | `nse_options_toggle` | Folds the five switches below. Not a setting, nothing is persisted. |
+| Log Details | `nse_log_toggle` | Logs id, sent time, and the channel the SDK resolved, under the `DemoNSE` tag. |
+| Apply Extender | `nse_extender_toggle` | Prefixes the title with `[NSE]` through a `NotificationCompat.Extender`. |
+| Force High Importance Channel | `nse_high_importance_toggle` | Moves the notification onto an app-owned `IMPORTANCE_HIGH` channel. |
+| Delay Display | `nse_delay_toggle` | `preventDefault()`, then `display()` five seconds later. |
+| Discard | `nse_discard_toggle` | `preventDefault(true)`. Takes precedence over the other switches. |
+
+The channel readout comes from `NotificationCompat.getChannelId(builder.build())` inside the extender, the only place an extension can see the SDK's choice. A restored notification lands on `restored_OS_notifications` no matter what the payload asked for, which the payload alone never shows. `event.restoring` is not on `INotificationReceivedEvent` yet; see the TODO in the class and SDK-5011.
+
+An extender also makes the SDK display a data-only push that carries no `alert` (`NotificationGenerationProcessor.shouldDisplayNotification`), so the class sets one only when a switch needs it.
+
 ---
 
 ## Platform Config
@@ -236,7 +266,7 @@ If the package changes you must regenerate this file from the Huawei AppGallery 
 
 `src/huawei/` overlays the main source set:
 
-- `src/huawei/AndroidManifest.xml` — declares `HmsMessageServiceAppLevel` with `android:name="com.onesignal.example.notification.HmsMessageServiceAppLevel"`.
+- `src/huawei/AndroidManifest.xml` — declares `HmsMessageServiceAppLevel` with `android:name="com.onesignal.example.notification.HmsMessageServiceAppLevel"`. The notification service extension meta-data comes from the main manifest through manifest merge, so both flavors get it.
 - `src/huawei/java/com/onesignal/example/notification/HmsMessageServiceAppLevel.kt` — minimal `HmsMessageService` subclass that forwards messages to OneSignal.
 
 ---
@@ -263,9 +293,11 @@ examples/
             │   ├── java/com/onesignal/example/
             │   │   ├── application/MainApplication.kt
             │   │   ├── data/
-            │   │   │   ├── model/{NotificationType,InAppMessageType}.kt
+            │   │   │   ├── model/{NotificationType,InAppMessageType,
+            │   │   │   │          NotificationExtensionOptions}.kt
             │   │   │   ├── network/OneSignalService.kt
             │   │   │   └── repository/OneSignalRepository.kt
+            │   │   ├── notification/DemoNotificationServiceExtension.kt
             │   │   ├── ui/
             │   │   │   ├── components/        # SectionCard (with DemoSection),
             │   │   │   │                      # ToggleRow, ActionButton, ListComponents,
