@@ -201,4 +201,70 @@ class AnrCheckEvaluatorTest : FunSpec({
     test("buildBlockFingerprint handles an empty stack") {
         buildBlockFingerprint(emptyArray()) shouldBe "top=unknown|onesignal=none"
     }
+
+    // ===== record formatting =====
+    //
+    // ANR records must be serialized in the same canonical JVM layout ordinary crashes get from
+    // Throwable.stackTraceToString(), or consumers that parse `exception.stacktrace` as a Java
+    // stacktrace (frame extraction, grouping, symbolication) silently stop matching ANRs only.
+
+    val blockedStack = arrayOf(
+        StackTraceElement("android.os.MessageQueue", "nativePollOnce", "MessageQueue.java", 1),
+        StackTraceElement("com.onesignal.core.Foo", "bar", "Foo.kt", 42),
+    )
+    val nl = System.lineSeparator()
+
+    test("formatJvmStacktrace matches what the JVM itself produces for a real throwable") {
+        // Pins the hand-formatting against the crash path's stackTraceToString(), so the two record
+        // types cannot drift into different formats again.
+        val throwable = IllegalStateException("boom")
+
+        formatJvmStacktrace(
+            throwable::class.java.name,
+            throwable.message.orEmpty(),
+            throwable.stackTrace,
+        ) shouldBe throwable.stackTraceToString()
+    }
+
+    test("formatJvmStacktrace omits the colon when there is no message") {
+        formatJvmStacktrace("SomeException", "", emptyArray()) shouldBe "SomeException$nl"
+    }
+
+    test("buildAnrCrashData emits a canonical header and tab-at prefixed frames") {
+        val crash = buildAnrCrashData("main", blockedStack, 6_000L)
+
+        crash.threadName shouldBe "main"
+        crash.exceptionType shouldBe "ApplicationNotRespondingException"
+        crash.stacktrace shouldBe
+            "ApplicationNotRespondingException: Application Not Responding: Main thread blocked for 6000ms$nl" +
+            "\tat android.os.MessageQueue.nativePollOnce(MessageQueue.java:1)$nl" +
+            "\tat com.onesignal.core.Foo.bar(Foo.kt:42)$nl"
+    }
+
+    test("buildBackgroundBlockCrashData emits a canonical header and tab-at prefixed frames") {
+        val crash = buildBackgroundBlockCrashData("main", blockedStack, 11_000L)
+
+        crash.threadName shouldBe "main"
+        crash.exceptionType shouldBe "BackgroundMainThreadBlockException"
+        crash.exceptionMessage shouldBe
+            "Background main-thread block for 11000ms | " +
+            "top=android.os.MessageQueue.nativePollOnce(MessageQueue.java:1)|" +
+            "onesignal=com.onesignal.core.Foo.bar(Foo.kt:42)"
+        crash.stacktrace shouldBe
+            "BackgroundMainThreadBlockException: ${crash.exceptionMessage}$nl" +
+            "\tat android.os.MessageQueue.nativePollOnce(MessageQueue.java:1)$nl" +
+            "\tat com.onesignal.core.Foo.bar(Foo.kt:42)$nl"
+    }
+
+    test("every ANR record frame line is parseable by a `^\\s*at ` consumer") {
+        val fatal = buildAnrCrashData("main", blockedStack, 6_000L)
+        val nonFatal = buildBackgroundBlockCrashData("main", blockedStack, 11_000L)
+        val frameRegex = Regex("^\\s*at .+")
+
+        listOf(fatal, nonFatal).forEach { crash ->
+            val lines = crash.stacktrace.trimEnd().lines()
+            lines.first() shouldBe "${crash.exceptionType}: ${crash.exceptionMessage}"
+            lines.drop(1).all { frameRegex.matches(it) } shouldBe true
+        }
+    }
 })

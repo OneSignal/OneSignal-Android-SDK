@@ -1,5 +1,6 @@
 package com.onesignal.debug.internal.crash
 
+import com.onesignal.logger.CrashData
 import java.util.concurrent.atomic.AtomicLong
 
 /**
@@ -180,4 +181,74 @@ internal fun buildBlockFingerprint(stackTrace: Array<StackTraceElement>): String
     val topFrame = stackTrace.firstOrNull()?.toString() ?: "unknown"
     val oneSignalFrame = stackTrace.firstOrNull { it.className.startsWith("com.onesignal") }?.toString() ?: "none"
     return "top=$topFrame|onesignal=$oneSignalFrame"
+}
+
+/** Exception type for a foreground, user-visible ANR. Dashboards key off this exact value. */
+internal const val ANR_EXCEPTION_TYPE = "ApplicationNotRespondingException"
+
+/** Exception type for a backgrounded main-thread block, which is never an ANR. */
+internal const val BACKGROUND_BLOCK_EXCEPTION_TYPE = "BackgroundMainThreadBlockException"
+
+/**
+ * Renders a live thread's stack in the canonical JVM layout that [Throwable.stackTraceToString]
+ * emits: a `type: message` header followed by `\tat `-prefixed frames.
+ *
+ * ANR records are captured from a running thread, not from a thrown exception, so there is no
+ * throwable to serialize. Formatting by hand rather than synthesizing one keeps the watchdog cheap
+ * and non-throwing while it reports a possibly-wedged app, and lets the header carry the same bare
+ * exception type the record itself reports. `AnrCheckEvaluatorTest` pins this against a real
+ * [Throwable.stackTraceToString] so ANR and crash records cannot drift into two formats again.
+ */
+internal fun formatJvmStacktrace(
+    exceptionType: String,
+    exceptionMessage: String,
+    stackTrace: Array<StackTraceElement>,
+): String {
+    // Matches printStackTrace, which terminates every line with the platform separator.
+    val lineSeparator = System.lineSeparator()
+    return buildString {
+        append(exceptionType)
+        if (exceptionMessage.isNotEmpty()) {
+            append(": ").append(exceptionMessage)
+        }
+        append(lineSeparator)
+        for (frame in stackTrace) {
+            append("\tat ").append(frame).append(lineSeparator)
+        }
+    }
+}
+
+/** Builds the fatal ANR record for a foreground block of [unresponsiveDurationMs]. */
+internal fun buildAnrCrashData(
+    threadName: String,
+    stackTrace: Array<StackTraceElement>,
+    unresponsiveDurationMs: Long,
+): CrashData {
+    val message = "Application Not Responding: Main thread blocked for ${unresponsiveDurationMs}ms"
+    return CrashData(
+        threadName = threadName,
+        exceptionType = ANR_EXCEPTION_TYPE,
+        exceptionMessage = message,
+        stacktrace = formatJvmStacktrace(ANR_EXCEPTION_TYPE, message, stackTrace),
+    )
+}
+
+/**
+ * Builds the non-fatal record for a backgrounded main-thread block. The message carries a compact
+ * stack fingerprint (top frame + first OneSignal frame) so these can be triaged without parsing the
+ * full stack.
+ */
+internal fun buildBackgroundBlockCrashData(
+    threadName: String,
+    stackTrace: Array<StackTraceElement>,
+    unresponsiveDurationMs: Long,
+): CrashData {
+    val message =
+        "Background main-thread block for ${unresponsiveDurationMs}ms | ${buildBlockFingerprint(stackTrace)}"
+    return CrashData(
+        threadName = threadName,
+        exceptionType = BACKGROUND_BLOCK_EXCEPTION_TYPE,
+        exceptionMessage = message,
+        stacktrace = formatJvmStacktrace(BACKGROUND_BLOCK_EXCEPTION_TYPE, message, stackTrace),
+    )
 }

@@ -6,8 +6,8 @@ import android.os.SystemClock
 import com.onesignal.debug.internal.crash.AnrCheckEvaluator
 import com.onesignal.debug.internal.crash.AnrCheckResult
 import com.onesignal.debug.internal.crash.AnrConstants
-import com.onesignal.debug.internal.crash.buildBlockFingerprint
-import com.onesignal.logger.CrashData
+import com.onesignal.debug.internal.crash.buildAnrCrashData
+import com.onesignal.debug.internal.crash.buildBackgroundBlockCrashData
 import com.onesignal.logger.ILogAnrDetector
 import com.onesignal.logger.ILogCrashReporter
 import com.onesignal.logger.ILogger
@@ -163,14 +163,7 @@ internal class AndroidLogAnrDetector(
                 logger.debug("$TAG: ANR not OneSignal-related, skipping report")
                 return
             }
-            val crash =
-                CrashData(
-                    threadName = mainThread.name,
-                    exceptionType = "ApplicationNotRespondingException",
-                    exceptionMessage = "Application Not Responding: Main thread blocked for ${unresponsiveDurationMs}ms",
-                    stacktrace = stackTrace.joinToString("\n") { it.toString() },
-                )
-            crashReporter.saveCrash(crash)
+            crashReporter.saveCrash(buildAnrCrashData(mainThread.name, stackTrace, unresponsiveDurationMs))
             logger.info("$TAG: ANR report saved")
         } catch (t: Throwable) {
             logger.error("$TAG: failed to report ANR: ${t.message}")
@@ -191,15 +184,7 @@ internal class AndroidLogAnrDetector(
                 logger.debug("$TAG: background block not OneSignal-related, skipping")
                 return
             }
-            val crash =
-                CrashData(
-                    threadName = mainThread.name,
-                    exceptionType = "BackgroundMainThreadBlockException",
-                    exceptionMessage =
-                    "Background main-thread block for ${unresponsiveDurationMs}ms | ${buildBlockFingerprint(stackTrace)}",
-                    stacktrace = stackTrace.joinToString("\n") { it.toString() },
-                )
-            crashReporter.saveNonFatal(crash)
+            crashReporter.saveNonFatal(buildBackgroundBlockCrashData(mainThread.name, stackTrace, unresponsiveDurationMs))
             logger.info("$TAG: background block warning recorded")
         } catch (t: Throwable) {
             logger.error("$TAG: failed to record background block: ${t.message}")
