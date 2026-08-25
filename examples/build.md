@@ -42,7 +42,7 @@ Two flavors are declared on the `default` dimension:
 
 | Flavor | Use case |
 |--------|----------|
-| `gms`  | Google Play Services / FCM — pulls `play-services-location`. OneSignal initializes its own Firebase app, so no Google Services plugin or `google-services.json` is needed. |
+| `gms`  | Google Play Services / FCM — pulls `play-services-location`. If the app ships `google-services.json` and applies the Google Services plugin, FCM registration uses that Firebase project. Otherwise the SDK falls back to OneSignal's shared Firebase app (legacy; does not work with Firebase Installation ID registration). |
 | `huawei` | Huawei HMS — applies `com.huawei.agconnect`, excludes the GMS transitive deps from the OneSignal artifact, and pulls `com.huawei.hms:push` + `com.huawei.hms:location`. |
 
 The Huawei plugin is selected at configuration time by inspecting `gradle.startParameter.taskRequests` so a clean `./gradlew tasks` doesn't require Huawei configuration.
