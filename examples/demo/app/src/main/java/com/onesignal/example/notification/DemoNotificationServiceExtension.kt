@@ -53,9 +53,11 @@ class DemoNotificationServiceExtension : INotificationServiceExtension {
             return
         }
 
-        // Set an extender only when a switch needs one. An extender makes the SDK display a
-        // data-only push that carries no `alert` (NotificationGenerationProcessor
-        // .shouldDisplayNotification), so an always-installed no-op extender is not free.
+        // Set an extender only when a switch needs one, rather than installing a no-op
+        // whenever the extension is on. This is about not doing work nothing asked for.
+        // An extender cannot change what displays: NotificationGenerationProcessor
+        // .shouldDisplayNotification does read hasExtender(), but processHandlerResponse
+        // has already dropped a push with an empty body on canDisplay by the time it runs.
         if (options.logDetails || options.applyExtender || options.forceHighImportanceChannel) {
             notification.setExtender(buildExtender(event.context, notification, options))
         }

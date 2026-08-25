@@ -232,7 +232,7 @@ The five behavior switches sit behind a Show options / Hide options row so the s
 
 The channel readout comes from `NotificationCompat.getChannelId(builder.build())` inside the extender, the only place an extension can see the SDK's choice. A restored notification lands on `restored_OS_notifications` no matter what the payload asked for, which the payload alone never shows. `event.restoring` is not on `INotificationReceivedEvent` yet; see the TODO in the class and SDK-5011.
 
-An extender also makes the SDK display a data-only push that carries no `alert` (`NotificationGenerationProcessor.shouldDisplayNotification`), so the class sets one only when a switch needs it.
+The class sets an extender only when a switch needs one rather than installing a no-op whenever the extension is on, which is about not doing work nothing asked for. An extender cannot change what displays. `NotificationGenerationProcessor.shouldDisplayNotification` does read `hasExtender()`, but `processHandlerResponse` has already dropped a push with an empty body on `canDisplay` by the time it runs.
 
 ---
 
