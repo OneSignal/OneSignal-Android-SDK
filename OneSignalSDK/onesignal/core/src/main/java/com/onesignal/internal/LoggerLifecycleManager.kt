@@ -43,9 +43,8 @@ private fun createReporter(
  * crash capture, ANR detection) and reacts to remote config changes via the shared
  * [ObservabilityConfig]/[ObservabilityConfigEvaluator].
  *
- * Production callers supply only [context] and [featureManagerProvider]; every other
- * parameter defaults to the real implementation, so runtime wiring is unchanged. Tests
- * override them to inject mocks or throwing stubs.
+ * Production callers supply only [context] and [featureManagerProvider]; the remaining
+ * parameters default to the real implementations and exist for test injection.
  */
 @Suppress("TooManyFunctions", "LongParameterList")
 internal class LoggerLifecycleManager(
@@ -261,10 +260,9 @@ internal class LoggerLifecycleManager(
     @Suppress("TooGenericExceptionCaught")
     private fun startLogging(logLevel: LogLevel) {
         // Same invariant as disableFeatures: detach both the field and Logging's global before
-        // tearing the old sink down. Shutting down first would leave every log emitted until
-        // the replacement is installed — including the warn below — going to a telemetry whose
-        // consumer is already cancelled, where it is queued and never drained. If the factory
-        // then throws, the global would keep pointing at that dead instance for the session.
+        // tearing the old sink down. Shutting down first would route every log emitted until the
+        // replacement is installed — including the warn below — into a cancelled consumer, and a
+        // throwing factory would leave the global pointing at the dead instance for the session.
         val previous = remoteTelemetry
         remoteTelemetry = null
         Logging.setLoggerTelemetry(null) { false }

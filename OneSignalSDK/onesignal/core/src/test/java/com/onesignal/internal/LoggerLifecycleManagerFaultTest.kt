@@ -24,13 +24,9 @@ import io.mockk.verify
 import org.robolectric.annotation.Config
 
 /**
- * Fault-isolation coverage for the SDK's only observability pipeline, ported from the
- * deleted otel equivalent.
- *
- * Every collaborator is constructed behind an injectable factory, so these drive the
- * `try/catch` isolation in [LoggerLifecycleManager] directly: one failing component must
- * never stop the others from starting, and nothing may propagate to the caller — the
- * lifecycle manager runs inside SDK init, where a throw would take down the host app.
+ * Fault-isolation coverage for [LoggerLifecycleManager]: one failing component must never stop
+ * the others from starting, and nothing may propagate to the caller — the lifecycle manager runs
+ * inside SDK init, where a throw would take down the host app.
  */
 @RobolectricTest
 @Config(sdk = [Build.VERSION_CODES.O])
@@ -65,10 +61,7 @@ class LoggerLifecycleManagerFaultTest : FunSpec({
     fun disabledConfig(): ConfigModel =
         ConfigModel().apply { remoteLoggingParams.isEnabled = false }
 
-    /**
-     * Builds a manager whose collaborators are all mocks unless a factory is overridden to
-     * throw. The platform provider is relaxed so property reads during startup are inert.
-     */
+    /** Collaborators are all relaxed mocks unless a factory is overridden to throw. */
     fun managerWith(
         crashHandler: () -> ILogCrashHandler = { mockk(relaxed = true) },
         anrDetector: () -> ILogAnrDetector = { mockk(relaxed = true) },
@@ -213,9 +206,8 @@ class LoggerLifecycleManagerFaultTest : FunSpec({
     }
 
     test("a throwing shutdown() during a level change still installs the replacement sink") {
-        // startLogging drops the reference before tearing the old sink down. If it cleared
-        // after, a throwing shutdown() would strand the dead instance in the field and every
-        // later identical config would evaluate to NoChange, leaving remote logging dead.
+        // Clearing the field after the teardown call would strand the dead instance there and
+        // leave remote logging down for the session.
         val failing = mockk<ILogTelemetryRemote>(relaxed = true)
         every { failing.shutdown() } throws RuntimeException("shutdown boom")
         val replacement = mockk<ILogTelemetryRemote>(relaxed = true)
@@ -261,9 +253,8 @@ class LoggerLifecycleManagerFaultTest : FunSpec({
         detectorCount shouldBe 1
     }
 
-    // A component that failed to start must be retried on the next config refresh. Committing
-    // currentConfig after a partial failure collapsed the next identical HYDRATE to NoChange,
-    // which left the dead component down for the rest of the process.
+    // A component that failed to start must be retried on the next config refresh: committing
+    // currentConfig after a partial failure would collapse the next identical HYDRATE to NoChange.
 
     test("a crash handler that failed to start is retried on the next identical config") {
         val failing = mockk<ILogCrashHandler>(relaxed = true)
@@ -338,9 +329,8 @@ class LoggerLifecycleManagerFaultTest : FunSpec({
         detectorCount shouldBe 2
     }
 
-    // Teardown clears each reference before calling the collaborator. If it cleared after,
-    // a throwing stop()/unregister() would leave the field set and the start guards would
-    // treat the dead component as running, disabling it for the rest of the process.
+    // Teardown clears each reference before calling the collaborator, so a throwing
+    // stop()/unregister() cannot leave the start guards treating a dead component as running.
 
     test("a throwing ANR stop() still allows the detector to restart on re-enable") {
         val failing = mockk<ILogAnrDetector>(relaxed = true)

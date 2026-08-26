@@ -37,8 +37,6 @@ internal class AndroidLogAnrDetector(
     private val anrThresholdMs: Long = AnrConstants.DEFAULT_ANR_THRESHOLD_MS,
     private val checkIntervalMs: Long = AnrConstants.DEFAULT_CHECK_INTERVAL_MS,
     backgroundThresholdMs: Long = AnrConstants.DEFAULT_BACKGROUND_BLOCK_THRESHOLD_MS,
-    // Only "background" downgrades to a warning; "unknown" is treated as foreground so a
-    // genuine ANR is never silently dropped.
     private val isAppInForeground: () -> Boolean = { true },
 ) : ILogAnrDetector {
     private val mainHandler = Handler(Looper.getMainLooper())
@@ -171,9 +169,8 @@ internal class AndroidLogAnrDetector(
     }
 
     /**
-     * Records a backgrounded main-thread block as a retained non-fatal warning rather than an
-     * ANR. Uses a distinct exception type so it can be segmented into its own stream, and the
-     * message carries a compact stack fingerprint (top frame + first OneSignal frame) for triage.
+     * Records a backgrounded main-thread block as a non-fatal warning rather than an ANR, under a
+     * distinct exception type so it can be segmented into its own stream.
      */
     @Suppress("TooGenericExceptionCaught")
     private fun reportBackgroundBlock(unresponsiveDurationMs: Long) {

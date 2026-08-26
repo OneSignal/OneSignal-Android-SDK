@@ -17,17 +17,8 @@ import java.io.File
 import kotlin.coroutines.cancellation.CancellationException
 
 /**
- * Android-specific wrapper for the shared crash uploader that implements IStartableService.
- *
- * This is a thin adapter layer that:
- * 1. Takes Android-specific services as dependencies
- * 2. Creates platform-agnostic implementations (ILoggerPlatformProvider, ILogger)
- * 3. Wraps the platform-agnostic LogCrashUploader for Android service architecture
- *
- * The uploader itself is fully platform-agnostic and can be used directly in KMP projects
- * by providing platform-specific implementations of:
- * - ILoggerPlatformProvider (inject all platform values)
- * - ILogger (platform logging interface)
+ * Adapts the shared, platform-agnostic `LogCrashUploader` to [IStartableService], supplying it
+ * with Android implementations of `ILoggerPlatformProvider` and `ILogger`.
  */
 internal class OneSignalCrashUploaderWrapper(
     private val applicationService: IApplicationService,
@@ -48,9 +39,8 @@ internal class OneSignalCrashUploaderWrapper(
         OneSignalDispatchers.launchOnIO {
             try {
                 logCrashDirInventory("before-upload")
-                // Shared LogCrashUploader.start() is suspend and finishes the owned-record
-                // upload pass plus the finally-purge before returning, so the after-cleanup
-                // inventory below is not racing a background purge.
+                // start() completes the upload pass and the finally-purge before returning, so
+                // the after-cleanup inventory below is not racing a background purge.
                 uploader.start()
                 logCrashDirInventory("after-cleanup")
             } catch (e: CancellationException) {
@@ -65,10 +55,9 @@ internal class OneSignalCrashUploaderWrapper(
     }
 
     /**
-     * Resolves the crash directory the logger module reads and writes. Uses the pure path
-     * helper rather than a provider: building one costs a `PackageManager` round-trip and an
-     * ID resolver, and re-emits the provider's "Crash logs stored at" line, all to read a
-     * value derived from the context alone.
+     * Resolves the crash directory via the pure path helper rather than a provider: the value is
+     * derived from the context alone, and building a provider costs a `PackageManager` round-trip
+     * and re-emits its "Crash logs stored at" line.
      */
     private fun crashStoragePath(): String = getCrashStoragePath(applicationService.appContext)
 

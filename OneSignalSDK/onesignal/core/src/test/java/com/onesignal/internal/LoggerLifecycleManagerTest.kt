@@ -29,10 +29,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import org.robolectric.annotation.Config
 
-/**
- * The logger pipeline is the SDK's only observability path, so these cover the config
- * state machine that brings it up and tears it down.
- */
+/** Covers the config state machine that brings the logger pipeline up and tears it down. */
 @RobolectricTest
 @Config(sdk = [Build.VERSION_CODES.O])
 class LoggerLifecycleManagerTest : FunSpec({
@@ -171,10 +168,9 @@ class LoggerLifecycleManagerTest : FunSpec({
     }
 
     test("enabling wires the remote sink and disabling shuts it down and clears it") {
-        // Emission hops to a background scope, so the positive case waits on a signal from the
-        // sink rather than a fixed sleep. The negative case still needs a bounded wait — there
-        // is no event for "nothing happened" — but only after a real emit has been observed,
-        // which establishes the pipeline is warm.
+        // Emission hops to a background scope, so wait on a signal from the sink rather than a
+        // fixed sleep. The negative case has no such event, so it settles for a bounded wait —
+        // but only after a real emit has established that the pipeline is warm.
         val emitted = CompletableDeferred<Unit>()
         val telemetry = mockk<ILogTelemetryRemote>(relaxed = true)
         coEvery { telemetry.emit(any()) } answers { emitted.complete(Unit); Unit }

@@ -60,7 +60,6 @@ class OneSignalCrashUploaderWrapperTest : FunSpec({
     }
 
     test("start should complete without error when remote logging is disabled") {
-        // Configure remote logging as disabled (NONE)
         val remoteLoggingParams = JSONObject().put("logLevel", "NONE")
         val configModel = JSONObject().put(ConfigModel::remoteLoggingParams.name, remoteLoggingParams)
         sharedPreferences.edit()
@@ -72,12 +71,10 @@ class OneSignalCrashUploaderWrapperTest : FunSpec({
 
         val wrapper = OneSignalCrashUploaderWrapper(mockApplicationService, mockFeatureManager())
 
-        // Should return early without error when remote logging is disabled
         runBlocking { wrapper.start() }
     }
 
     test("start should complete without error when no crash reports exist") {
-        // Configure remote logging as enabled
         val remoteLoggingParams = JSONObject().put("logLevel", "ERROR")
         val configModel = JSONObject().put(ConfigModel::remoteLoggingParams.name, remoteLoggingParams)
         sharedPreferences.edit()
@@ -89,7 +86,6 @@ class OneSignalCrashUploaderWrapperTest : FunSpec({
 
         val wrapper = OneSignalCrashUploaderWrapper(mockApplicationService, mockFeatureManager())
 
-        // Should complete without error even when no crash reports exist
         runBlocking { wrapper.start() }
     }
 
@@ -99,7 +95,6 @@ class OneSignalCrashUploaderWrapperTest : FunSpec({
 
         val wrapper = OneSignalCrashUploaderWrapper(mockApplicationService, mockFeatureManager())
 
-        // Multiple calls should not throw
         runBlocking {
             wrapper.start()
             wrapper.start()
@@ -115,12 +110,11 @@ class OneSignalCrashUploaderWrapperTest : FunSpec({
         wrapper shouldNotBe null
     }
 
-    // Upgrading installs inherit a crash dir holding OTel-format records that nothing can
-    // read anymore. They must not linger. This covers the first launch after upgrade, where
-    // there is no cached config yet, so the uploader reclaims them without an upload pass.
+    // Covers the first launch after upgrade: there is no cached config yet, so unreadable
+    // inherited records must be reclaimed without an upload pass rather than lingering.
     test("start reclaims records left in the crash dir by a pre-upgrade otel session") {
         val crashDir = File(getCrashStoragePath(appContext)).apply { mkdirs() }
-        // OTel's disk-buffering wrote bare-millis filenames; the logger owns `.otlp` only.
+        // Pre-upgrade sessions wrote bare-millis filenames; the logger owns `.otlp` only.
         val legacyRecord = File(crashDir, "1784621689841").apply {
             writeBytes("legacy".toByteArray())
             setLastModified(System.currentTimeMillis() - 60_000L)

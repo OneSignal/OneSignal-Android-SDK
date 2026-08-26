@@ -35,8 +35,6 @@ internal sealed class ObservabilityConfigAction {
 /**
  * Pure, side-effect-free evaluator that compares old and new [ObservabilityConfig]
  * and returns the [ObservabilityConfigAction] the lifecycle manager should execute.
- *
- * Designed to be fully unit-testable without mocks.
  */
 internal object ObservabilityConfigEvaluator {
     /**

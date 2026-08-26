@@ -13,30 +13,21 @@ import java.util.UUID
 import kotlin.coroutines.cancellation.CancellationException
 
 /**
- * Android [ILogFileStore] backed by the local filesystem. Replaces OpenTelemetry's
- * `disk-buffering` contrib library with a trivial one-file-per-record format we own.
+ * Android [ILogFileStore] backed by the local filesystem: one file per crash record under
+ * [rootPath], with the file's last-modified time as the record age for [listReadable] so a file
+ * the crashing process may still have been writing is never read.
  *
- * Each crash record is written to its own file under [rootPath]. The file's last
- * modified time is used as the record age for [listReadable], mirroring the old
- * `minFileAgeForReadMillis` behavior (never read a file the crashing process may
- * still have been writing).
+ * The directory is shared with pre-upgrade sessions, so ownership is decided purely by the
+ * policy's owned suffix: everything this store writes ends in `.otlp`; anything else
+ * (bare-millis names, stray `.tmp`s) is foreign and reclaimable via [deleteUnrecognizedEntries].
  *
- * The directory is inherited from the removed otel module, so ownership is distinguished
- * purely by the policy's owned suffix: everything the logger writes ends in `.otlp`; anything
- * else (bare-millis files left by an otel session before upgrade, stray `.tmp`s) is
- * foreign and reclaimable via [deleteUnrecognizedEntries].
- *
- * All retention decisions come from the shared [CrashRetention], so Android and iOS bound the
+ * All retention decisions come from the shared [CrashRetention] so Android and iOS bound the
  * directory identically; this class only turns a listing into [CrashDirEntry]s and applies the
- * results with `File` I/O. Owned records are bounded on both axes, replacing the caps
- * disk-buffering used to apply: `maxReadAgeMillis` ages records out, and `maxRecordCount` /
- * `maxTotalBytes` cap accumulation — the latter by budget claim rather than raw disk
- * bytes, which differ only for oversized records inherited from a build that predates the
- * write-time limit in [save]. Both bounds are enforced on every path that
- * touches the directory — [save], [listReadable] and [deleteUnrecognizedEntries] — so a
- * backlog inherited from a build without caps is reclaimed on the next uploader pass rather
- * than waiting for a crash. Over-limit records are deleted, not merely hidden from
- * [listReadable], so a record that never uploads cannot grow the cache forever.
+ * result with `File` I/O. `maxTotalBytes` bounds the *budget claim* rather than raw disk bytes —
+ * the two differ only for oversized records inherited from a build predating the write-time limit
+ * in [save]. Both bounds are enforced on every path that touches the directory ([save],
+ * [listReadable], [deleteUnrecognizedEntries]), and over-limit records are deleted rather than
+ * merely hidden from [listReadable], so a record that never uploads cannot grow the cache forever.
  */
 internal class FileLogStore(
     private val rootPath: String,
@@ -57,9 +48,8 @@ internal class FileLogStore(
     override fun save(bytes: ByteArray): Boolean {
         return try {
             if (bytes.size > policy.maxRecordBytes) {
-                // Refuse rather than store-then-reclaim: a record this large would either
-                // claim the whole shared budget or be deleted before it was ever uploaded.
-                // Losing it loudly here beats losing it silently on a later launch.
+                // Refuse rather than store-then-reclaim: a record this large would either claim
+                // the whole shared budget or be deleted before it was ever uploaded.
                 Log.w(
                     TAG,
                     "FileLogStore: refusing record of ${bytes.size} bytes, " +
@@ -94,18 +84,14 @@ internal class FileLogStore(
      * Evicts oldest-first on the crash path until the owned records fit the accumulation caps,
      * always retaining [keepName] (the record [save] just wrote).
      *
-     * Runs inline on the crashing thread. In the steady state this is one directory listing and
-     * nothing else, because writes are size-capped and the previous launch left the directory
-     * within bounds. An inherited over-cap backlog does get fully sorted and trimmed here — that
-     * is a one-time cost on the first crash after upgrade, and [reclaimOverLimitRecords] on the
-     * uploader's IO paths usually gets there first. Uses raw Logcat for the same reason [save] does.
+     * Runs inline on the crashing thread, and uses raw Logcat for the same reason [save] does.
      */
     @Suppress("TooGenericExceptionCaught", "SwallowedException")
     private fun enforceAccumulationCaps(dir: File, keepName: String) {
         try {
             val entries = listEntries(dir)
-            // Cheap exit for the common case, using the selector's own capped accounting so
-            // the two cannot disagree about whether a trim is needed.
+            // Uses the selector's own capped accounting, so the check and the trim cannot
+            // disagree about whether a trim is needed.
             if (CrashRetention.isWithinCaps(entries, policy)) return
             val overflow =
                 CrashRetention.selectOverflowOwned(
@@ -132,9 +118,7 @@ internal class FileLogStore(
 
     /**
      * Deletes owned records beyond the accumulation caps. Unlike [enforceAccumulationCaps] this
-     * runs on the uploader's IO paths, where walking a large inherited backlog is safe — an
-     * install upgrading from a build without caps, or one whose crash-path trim failed, is
-     * reclaimed here rather than waiting for the next crash.
+     * runs on the uploader's IO paths, where walking a large inherited backlog is safe.
      *
      * @return names of the evicted records, so callers can exclude them from the same pass
      */
@@ -170,10 +154,8 @@ internal class FileLogStore(
      * over-age records are reclaimed even when remote logging is off and the uploader never
      * gets as far as [listReadable].
      *
-     * @return every expired name, whether or not its delete succeeded. One that could not be
-     *   removed must still not be read, and it cannot distort the accumulation caps either:
-     *   expired records are by definition the oldest, so the selector always picks them for
-     *   eviction rather than retention, and only retained records claim budget.
+     * @return every expired name, whether or not its delete succeeded — one that could not be
+     *   removed must still not be read.
      */
     private fun reclaimExpiredOwnedRecords(entries: List<CrashDirEntry>, nowMs: Long): Set<String> {
         val expired = CrashRetention.selectExpiredOwned(entries, nowMs, policy)
@@ -249,17 +231,14 @@ internal class FileLogStore(
     }
 
     /**
-     * Removes on-disk entries this store does not own — legacy OTEL disk-buffering
-     * files (bare-millis names) and stray `.tmp`s that share this directory — whose
-     * age is at least [minAgeMillis]. Owned `*.otlp` records are left untouched so failed
-     * / too-young uploads can still retry on the next launch, except for ones past the
-     * policy's read-age ceiling or beyond the accumulation caps, which are no longer
-     * uploadable or no longer affordable to keep.
+     * Removes on-disk entries this store does not own — bare-millis files and stray `.tmp`s
+     * that share this directory — whose age is at least [minAgeMillis]. Owned `*.otlp` records
+     * are left untouched so failed / too-young uploads can still retry on the next launch,
+     * except for ones past the read-age ceiling or beyond the accumulation caps.
      *
-     * Implements the shared [ILogFileStore] contract: the KMP `LogCrashUploader`
-     * invokes this after its owned-record upload pass, and — unlike [listReadable] —
-     * also when remote logging is disabled. That makes it the only chance to bound records
-     * written by a session that never uploads. Idempotent and safe to call repeatedly.
+     * Unlike [listReadable] the uploader also calls this when remote logging is disabled, which
+     * makes it the only chance to bound records written by a session that never uploads.
+     * Idempotent and safe to call repeatedly.
      *
      * @return number of unrecognized entries deleted, excluding reclaimed owned records
      */

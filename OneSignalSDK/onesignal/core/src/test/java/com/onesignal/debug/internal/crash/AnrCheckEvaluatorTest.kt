@@ -5,11 +5,10 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 
 /**
- * Pure-JVM tests for the ANR decision core. These run without Robolectric so the logic is exercised
- * on a real JVM (and therefore counted by coverage), unlike the Android shell in [AndroidLogAnrDetector].
+ * Pure-JVM tests for the ANR decision core; no Robolectric needed.
  *
- * Defaults mirror AnrConstants: 5s foreground ANR, 2s check interval, 2s frozen slack, 10s background
- * warning, 30s dedup window.
+ * Fixtures mirror AnrConstants: 5s foreground ANR, 2s check interval, 2s frozen slack, 10s
+ * background warning, 30s dedup window.
  */
 class AnrCheckEvaluatorTest : FunSpec({
 
@@ -204,9 +203,9 @@ class AnrCheckEvaluatorTest : FunSpec({
 
     // ===== record formatting =====
     //
-    // ANR records must be serialized in the same canonical JVM layout ordinary crashes get from
-    // Throwable.stackTraceToString(), or consumers that parse `exception.stacktrace` as a Java
-    // stacktrace (frame extraction, grouping, symbolication) silently stop matching ANRs only.
+    // ANR records must serialize to the same canonical layout Throwable.stackTraceToString()
+    // produces, or consumers that parse `exception.stacktrace` (frame extraction, grouping,
+    // symbolication) silently stop matching ANRs only.
 
     val blockedStack = arrayOf(
         StackTraceElement("android.os.MessageQueue", "nativePollOnce", "MessageQueue.java", 1),
@@ -215,8 +214,6 @@ class AnrCheckEvaluatorTest : FunSpec({
     val nl = System.lineSeparator()
 
     test("formatJvmStacktrace matches what the JVM itself produces for a real throwable") {
-        // Pins the hand-formatting against the crash path's stackTraceToString(), so the two record
-        // types cannot drift into different formats again.
         val throwable = IllegalStateException("boom")
 
         formatJvmStacktrace(

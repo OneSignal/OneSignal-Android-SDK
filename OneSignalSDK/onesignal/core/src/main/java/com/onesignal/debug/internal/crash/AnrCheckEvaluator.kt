@@ -4,13 +4,10 @@ import com.onesignal.logger.CrashData
 import java.util.concurrent.atomic.AtomicLong
 
 /**
- * Pure, Android-free decision core for the ANR watchdog.
- *
- * All timing/classification/deduplication state lives here so it can be exercised deterministically
- * on the JVM (with an injected clock) without a `Handler`, `Looper`, or real background thread. The
- * Android shell ([com.onesignal.debug.internal.logging.logger.android.AndroidLogAnrDetector]) owns
- * the thread, the real sleep, and the reporting side effects, and delegates every per-iteration
- * decision to [evaluate].
+ * Pure, Android-free decision core for the ANR watchdog. All timing, classification and dedup
+ * state lives here; the Android shell
+ * ([com.onesignal.debug.internal.logging.logger.android.AndroidLogAnrDetector]) owns the thread,
+ * the real sleep and the reporting side effects, and delegates each iteration to [evaluate].
  *
  * Foreground and background blocks keep independent dedup timestamps: a stream of backgrounded
  * warnings must never suppress a genuine foreground ANR (and vice versa).
@@ -83,9 +80,8 @@ internal class AnrCheckEvaluator(
         val nowMs = now()
         val lastReport = lastReportHolder.get()
 
-        // Skip only if we actually reported this class of block recently. NEVER_REPORTED means we have
-        // not reported yet (or the main thread recovered), so we must not dedup — important shortly
-        // after boot when the monotonic clock is still small and `now - 0` would look "recent".
+        // NEVER_REPORTED must not dedup: shortly after boot the monotonic clock is still small and
+        // `now - 0` would look "recent", suppressing the very first block.
         if (lastReport != NEVER_REPORTED && nowMs - lastReport <= dedupWindowMs) {
             return AnrCheckResult.Deduped(durationMs = durationMs, sinceLastReportMs = nowMs - lastReport, inForeground = inForeground)
         }
@@ -127,21 +123,11 @@ internal sealed interface AnrCheckResult {
     data class BackgroundWarning(val durationMs: Long) : AnrCheckResult
 }
 
-/**
- * How a watchdog check is interpreted. Kept separate from side effects so the decision is a pure,
- * deterministically testable function of the measured timings and app state.
- */
+/** How a watchdog check is interpreted; see [AnrCheckResult] for what each case means. */
 internal enum class BlockClassification {
-    /** Main thread responded within the applicable threshold. */
     RESPONSIVE,
-
-    /** The watchdog thread's own sleep overran — the process was frozen, not the main thread. */
     FROZEN_PROCESS,
-
-    /** Foreground block beyond the ANR threshold: a real, user-visible ANR. */
     FOREGROUND_ANR,
-
-    /** Background block beyond the background threshold: not an ANR, recorded as a warning. */
     BACKGROUND_WARNING,
 }
 
@@ -174,8 +160,8 @@ internal fun classifyBlock(
 
 /**
  * Compact fingerprint for a captured main-thread stack: the top frame plus the first OneSignal frame.
- * Kept as a queryable summary so background blocks can be grouped/triaged without parsing the full
- * stack. Pure (operates only on the array) so it is covered by plain JVM tests.
+ * Kept as a queryable summary so background blocks can be grouped and triaged without parsing the
+ * full stack.
  */
 internal fun buildBlockFingerprint(stackTrace: Array<StackTraceElement>): String {
     val topFrame = stackTrace.firstOrNull()?.toString() ?: "unknown"
@@ -191,13 +177,10 @@ internal const val BACKGROUND_BLOCK_EXCEPTION_TYPE = "BackgroundMainThreadBlockE
 
 /**
  * Renders a live thread's stack in the canonical JVM layout that [Throwable.stackTraceToString]
- * emits: a `type: message` header followed by `\tat `-prefixed frames.
- *
- * ANR records are captured from a running thread, not from a thrown exception, so there is no
- * throwable to serialize. Formatting by hand rather than synthesizing one keeps the watchdog cheap
- * and non-throwing while it reports a possibly-wedged app, and lets the header carry the same bare
- * exception type the record itself reports. `AnrCheckEvaluatorTest` pins this against a real
- * [Throwable.stackTraceToString] so ANR and crash records cannot drift into two formats again.
+ * emits: a `type: message` header followed by `\tat `-prefixed frames. ANR records are captured
+ * from a running thread rather than a thrown exception, so there is no throwable to serialize, but
+ * the output must stay byte-identical to the crash path's or consumers that parse
+ * `exception.stacktrace` stop matching ANRs only.
  */
 internal fun formatJvmStacktrace(
     exceptionType: String,
@@ -234,9 +217,8 @@ internal fun buildAnrCrashData(
 }
 
 /**
- * Builds the non-fatal record for a backgrounded main-thread block. The message carries a compact
- * stack fingerprint (top frame + first OneSignal frame) so these can be triaged without parsing the
- * full stack.
+ * Builds the non-fatal record for a backgrounded main-thread block, with a
+ * [buildBlockFingerprint] summary embedded in the message.
  */
 internal fun buildBackgroundBlockCrashData(
     threadName: String,
