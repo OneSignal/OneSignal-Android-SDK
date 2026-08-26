@@ -2,6 +2,7 @@ package com.onesignal.debug.internal.logging.logger.android
 
 import android.os.Build
 import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
+import com.onesignal.logger.crash.CrashRetention
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.runBlocking
@@ -14,6 +15,10 @@ import java.nio.file.Files
 class FileLogStoreTest : FunSpec({
 
     lateinit var dir: File
+
+    // The bounds FileLogStore enforces; asserting against the shared policy rather than
+    // copies of its numbers keeps these expectations tied to what the store actually uses.
+    val policy = CrashRetention.defaultPolicy
 
     beforeEach {
         dir = Files.createTempDirectory("crashes").toFile()
@@ -90,7 +95,7 @@ class FileLogStoreTest : FunSpec({
     }
 
     test("listReadable drops an owned record past the max read age and deletes it from disk") {
-        write("expired-123.otlp", ageMsAgo = CRASH_MAX_READ_AGE_MILLIS + 60_000)
+        write("expired-123.otlp", ageMsAgo = policy.maxReadAgeMillis + 60_000)
         write("fresh-456.otlp", ageMsAgo = 60_000)
 
         val readable = runBlocking { FileLogStore(dir.path).listReadable(minAgeMillis = 0) }
@@ -101,7 +106,7 @@ class FileLogStoreTest : FunSpec({
     }
 
     test("listReadable returns and retains an owned record inside the age window") {
-        write("edge-123.otlp", ageMsAgo = CRASH_MAX_READ_AGE_MILLIS - 60_000)
+        write("edge-123.otlp", ageMsAgo = policy.maxReadAgeMillis - 60_000)
 
         val readable = runBlocking { FileLogStore(dir.path).listReadable(minAgeMillis = 0) }
 
@@ -110,7 +115,7 @@ class FileLogStoreTest : FunSpec({
     }
 
     test("deleteUnrecognizedEntries reclaims expired owned records without counting them as foreign") {
-        write("expired-123.otlp", ageMsAgo = CRASH_MAX_READ_AGE_MILLIS + 60_000)
+        write("expired-123.otlp", ageMsAgo = policy.maxReadAgeMillis + 60_000)
         write("fresh-456.otlp", ageMsAgo = 60_000)
         write("1784621689841")
 
@@ -124,14 +129,14 @@ class FileLogStoreTest : FunSpec({
 
     test("save evicts oldest-first once the record count cap is exceeded") {
         // Distinct mtimes so "oldest" is unambiguous; the newest seeded record is 1s old.
-        repeat(CRASH_MAX_RECORD_COUNT) { i ->
+        repeat(policy.maxRecordCount) { i ->
             write("seed-$i.otlp", ageMsAgo = 1_000L * (i + 1))
         }
-        val oldest = "seed-${CRASH_MAX_RECORD_COUNT - 1}.otlp"
+        val oldest = "seed-${policy.maxRecordCount - 1}.otlp"
 
         FileLogStore(dir.path).save("new".toByteArray()) shouldBe true
 
-        dir.listFiles()!!.count { it.name.endsWith(CRASH_OWNED_SUFFIX) } shouldBe CRASH_MAX_RECORD_COUNT
+        dir.listFiles()!!.count { it.name.endsWith(policy.ownedSuffix) } shouldBe policy.maxRecordCount
         File(dir, oldest).exists() shouldBe false
         File(dir, "seed-0.otlp").exists() shouldBe true
     }
@@ -139,7 +144,7 @@ class FileLogStoreTest : FunSpec({
     test("save evicts oldest-first once the total byte cap is exceeded") {
         // Each is just under the per-record cap, so only their combined size can breach the
         // total budget — five of them do, and the oldest is the one that loses.
-        val nearCap = (CRASH_MAX_RECORD_BYTES - 12_288).toInt()
+        val nearCap = (policy.maxRecordBytes - 12_288).toInt()
         repeat(5) { i -> write("big-$i.otlp", ageMsAgo = 10_000L * (i + 1), sizeBytes = nearCap) }
 
         FileLogStore(dir.path).save("new".toByteArray()) shouldBe true
@@ -149,17 +154,17 @@ class FileLogStoreTest : FunSpec({
     }
 
     test("save refuses a payload over the per-record limit and writes nothing") {
-        val oversized = ByteArray((CRASH_MAX_RECORD_BYTES + 1).toInt())
+        val oversized = ByteArray((policy.maxRecordBytes + 1).toInt())
 
         FileLogStore(dir.path).save(oversized) shouldBe false
 
-        dir.listFiles()!!.count { it.name.endsWith(CRASH_OWNED_SUFFIX) } shouldBe 0
+        dir.listFiles()!!.count { it.name.endsWith(policy.ownedSuffix) } shouldBe 0
     }
 
     test("an inherited oversized record is still offered for upload, not deleted unread") {
         // Written by a build predating the write-time limit. Deleting it before an upload
         // attempt would silently destroy a real crash report.
-        write("inherited.otlp", ageMsAgo = 60_000, sizeBytes = (CRASH_MAX_RECORD_BYTES + 1).toInt())
+        write("inherited.otlp", ageMsAgo = 60_000, sizeBytes = (policy.maxRecordBytes + 1).toInt())
 
         val readable = runBlocking { FileLogStore(dir.path).listReadable(minAgeMillis = 0) }
 
@@ -168,11 +173,11 @@ class FileLogStoreTest : FunSpec({
     }
 
     test("save never evicts the record it just wrote") {
-        repeat(CRASH_MAX_RECORD_COUNT + 5) { i -> write("seed-$i.otlp", ageMsAgo = 1_000L * (i + 1)) }
+        repeat(policy.maxRecordCount + 5) { i -> write("seed-$i.otlp", ageMsAgo = 1_000L * (i + 1)) }
 
         FileLogStore(dir.path).save("new".toByteArray()) shouldBe true
 
-        val remaining = dir.listFiles()!!.filter { it.name.endsWith(CRASH_OWNED_SUFFIX) }
+        val remaining = dir.listFiles()!!.filter { it.name.endsWith(policy.ownedSuffix) }
         remaining.none { it.name.startsWith("seed-") && it.readText() == "new" } shouldBe true
         remaining.count { it.readText() == "new" } shouldBe 1
     }
@@ -181,18 +186,18 @@ class FileLogStoreTest : FunSpec({
     // otherwise it is only trimmed the next time a crash happens to be written.
 
     test("listReadable evicts an inherited over-cap backlog instead of returning it") {
-        repeat(CRASH_MAX_RECORD_COUNT + 10) { i -> write("seed-$i.otlp", ageMsAgo = 1_000L * (i + 1)) }
+        repeat(policy.maxRecordCount + 10) { i -> write("seed-$i.otlp", ageMsAgo = 1_000L * (i + 1)) }
 
         val readable = runBlocking { FileLogStore(dir.path).listReadable(minAgeMillis = 0) }
 
-        readable.size shouldBe CRASH_MAX_RECORD_COUNT
-        dir.listFiles()!!.count { it.name.endsWith(CRASH_OWNED_SUFFIX) } shouldBe CRASH_MAX_RECORD_COUNT
+        readable.size shouldBe policy.maxRecordCount
+        dir.listFiles()!!.count { it.name.endsWith(policy.ownedSuffix) } shouldBe policy.maxRecordCount
     }
 
     // A delete can fail (read-only dir, filesystem error). The record must stay unreadable
     // regardless, and must not resurface on a later pass just because it survived.
     test("an expired record that cannot be deleted is still withheld from readers") {
-        write("expired-stuck.otlp", ageMsAgo = CRASH_MAX_READ_AGE_MILLIS + 60_000)
+        write("expired-stuck.otlp", ageMsAgo = policy.maxReadAgeMillis + 60_000)
         write("fresh.otlp", ageMsAgo = 60_000)
         // Read-only dir makes unlink fail on POSIX without making the entries unreadable.
         dir.setWritable(false)
@@ -205,13 +210,13 @@ class FileLogStoreTest : FunSpec({
     }
 
     test("deleteUnrecognizedEntries evicts an inherited over-cap backlog") {
-        repeat(CRASH_MAX_RECORD_COUNT + 10) { i -> write("seed-$i.otlp", ageMsAgo = 1_000L * (i + 1)) }
+        repeat(policy.maxRecordCount + 10) { i -> write("seed-$i.otlp", ageMsAgo = 1_000L * (i + 1)) }
         write("1784621689841")
 
         val purged = runBlocking { FileLogStore(dir.path).deleteUnrecognizedEntries(minAgeMillis = 0) }
 
         // Owned evictions are not counted as foreign purges.
         purged shouldBe 1
-        dir.listFiles()!!.count { it.name.endsWith(CRASH_OWNED_SUFFIX) } shouldBe CRASH_MAX_RECORD_COUNT
+        dir.listFiles()!!.count { it.name.endsWith(policy.ownedSuffix) } shouldBe policy.maxRecordCount
     }
 })

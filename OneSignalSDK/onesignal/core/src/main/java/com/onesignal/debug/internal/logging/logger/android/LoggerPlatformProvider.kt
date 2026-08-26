@@ -197,7 +197,8 @@ internal fun createAndroidLoggerPlatformProvider(
 /**
  * The `otel` path segment is kept even though OpenTelemetry is gone: it is the directory
  * upgrading installs already hold crash records in, and moving it would orphan pending
- * uploads. Legacy OTel-format records left behind are reclaimed by [selectUnrecognizedEntries].
+ * uploads. Legacy OTel-format records left behind are reclaimed by
+ * [com.onesignal.logger.crash.CrashRetention.selectUnrecognized].
  */
 internal fun getCrashStoragePath(context: Context): String =
     File(File(File(context.cacheDir, "onesignal"), "otel"), "crashes").path

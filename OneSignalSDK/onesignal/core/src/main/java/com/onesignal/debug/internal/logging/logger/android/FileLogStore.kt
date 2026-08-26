@@ -4,6 +4,8 @@ import android.util.Log
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.logger.ILogFileStore
 import com.onesignal.logger.StoredLogFile
+import com.onesignal.logger.crash.CrashDirEntry
+import com.onesignal.logger.crash.CrashRetention
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -20,13 +22,15 @@ import kotlin.coroutines.cancellation.CancellationException
  * still have been writing).
  *
  * The directory is inherited from the removed otel module, so ownership is distinguished
- * purely by [CRASH_OWNED_SUFFIX]: everything the logger writes ends in `.otlp`; anything
+ * purely by the policy's owned suffix: everything the logger writes ends in `.otlp`; anything
  * else (bare-millis files left by an otel session before upgrade, stray `.tmp`s) is
  * foreign and reclaimable via [deleteUnrecognizedEntries].
  *
- * Owned records are bounded on both axes, replacing the caps disk-buffering used to apply:
- * [CRASH_MAX_READ_AGE_MILLIS] ages records out, and [CRASH_MAX_RECORD_COUNT] /
- * [CRASH_MAX_TOTAL_BYTES] cap accumulation — the latter by budget claim rather than raw disk
+ * All retention decisions come from the shared [CrashRetention], so Android and iOS bound the
+ * directory identically; this class only turns a listing into [CrashDirEntry]s and applies the
+ * results with `File` I/O. Owned records are bounded on both axes, replacing the caps
+ * disk-buffering used to apply: `maxReadAgeMillis` ages records out, and `maxRecordCount` /
+ * `maxTotalBytes` cap accumulation — the latter by budget claim rather than raw disk
  * bytes, which differ only for oversized records inherited from a build that predates the
  * write-time limit in [save]. Both bounds are enforced on every path that
  * touches the directory — [save], [listReadable] and [deleteUnrecognizedEntries] — so a
@@ -39,6 +43,9 @@ internal class FileLogStore(
 ) : ILogFileStore {
     private val rootDir: File get() = File(rootPath)
 
+    // One instance passed to every selector, so no path can disagree about the bounds.
+    private val policy = CrashRetention.defaultPolicy
+
     private companion object {
         const val TAG = "OneSignal"
 
@@ -49,21 +56,21 @@ internal class FileLogStore(
     @Suppress("TooGenericExceptionCaught", "SwallowedException")
     override fun save(bytes: ByteArray): Boolean {
         return try {
-            if (bytes.size > CRASH_MAX_RECORD_BYTES) {
+            if (bytes.size > policy.maxRecordBytes) {
                 // Refuse rather than store-then-reclaim: a record this large would either
                 // claim the whole shared budget or be deleted before it was ever uploaded.
                 // Losing it loudly here beats losing it silently on a later launch.
                 Log.w(
                     TAG,
                     "FileLogStore: refusing record of ${bytes.size} bytes, " +
-                        "over the $CRASH_MAX_RECORD_BYTES-byte limit",
+                        "over the ${policy.maxRecordBytes}-byte limit",
                 )
                 return false
             }
             val dir = rootDir
             if (!dir.exists()) dir.mkdirs()
             // Write to a temp file then rename so a half-written file is never readable.
-            val target = File(dir, "${System.currentTimeMillis()}-${UUID.randomUUID()}$CRASH_OWNED_SUFFIX")
+            val target = File(dir, "${System.currentTimeMillis()}-${UUID.randomUUID()}${policy.ownedSuffix}")
             val temp = File(dir, target.name + ".tmp")
             temp.writeBytes(bytes)
             if (!temp.renameTo(target)) {
@@ -97,15 +104,16 @@ internal class FileLogStore(
     private fun enforceAccumulationCaps(dir: File, keepName: String) {
         try {
             val entries = listEntries(dir)
-            val owned = entries.filter { isOwnedCrashFile(it.name) }
-            // Cheap exit for the common case. Charges are capped per record to match the
-            // selector's accounting, so this agrees with it rather than second-guessing it.
-            val claimed = owned.sumOf { minOf(it.lengthBytes, CRASH_MAX_RECORD_BYTES) }
-            if (owned.size <= CRASH_MAX_RECORD_COUNT && claimed <= CRASH_MAX_TOTAL_BYTES) {
-                return
-            }
+            // Cheap exit for the common case, using the selector's own capped accounting so
+            // the two cannot disagree about whether a trim is needed.
+            if (CrashRetention.isWithinCaps(entries, policy)) return
             val overflow =
-                selectOverflowOwnedEntries(entries, nowMs = System.currentTimeMillis(), keepName = keepName)
+                CrashRetention.selectOverflowOwned(
+                    entries,
+                    nowMs = System.currentTimeMillis(),
+                    keepName = keepName,
+                    policy = policy,
+                )
             if (overflow.isEmpty()) return
             var evicted = 0
             for (entry in overflow) {
@@ -131,7 +139,7 @@ internal class FileLogStore(
      * @return names of the evicted records, so callers can exclude them from the same pass
      */
     private fun reclaimOverLimitRecords(entries: List<CrashDirEntry>, nowMs: Long): Set<String> {
-        val overflow = selectOverflowOwnedEntries(entries, nowMs)
+        val overflow = CrashRetention.selectOverflowOwned(entries, nowMs, policy = policy)
         if (overflow.isEmpty()) return emptySet()
         var deleted = 0
         for (entry in overflow) {
@@ -158,7 +166,7 @@ internal class FileLogStore(
         }.orEmpty()
 
     /**
-     * Deletes owned records past [CRASH_MAX_READ_AGE_MILLIS]. Called from both read paths so
+     * Deletes owned records past the policy's read-age ceiling. Called from both read paths so
      * over-age records are reclaimed even when remote logging is off and the uploader never
      * gets as far as [listReadable].
      *
@@ -168,7 +176,7 @@ internal class FileLogStore(
      *   eviction rather than retention, and only retained records claim budget.
      */
     private fun reclaimExpiredOwnedRecords(entries: List<CrashDirEntry>, nowMs: Long): Set<String> {
-        val expired = selectExpiredOwnedEntries(entries, nowMs)
+        val expired = CrashRetention.selectExpiredOwned(entries, nowMs, policy)
         if (expired.isEmpty()) return emptySet()
         var deleted = 0
         for (entry in expired) {
@@ -197,7 +205,7 @@ internal class FileLogStore(
                 val evicted = reclaimOverLimitRecords(entries.filterNot { expired.contains(it.name) }, now)
                 val dropped = expired + evicted
                 val suffixMatches =
-                    entries.filter { isOwnedCrashFile(it.name) && !dropped.contains(it.name) }
+                    entries.filter { CrashRetention.isOwned(it.name, policy) && !dropped.contains(it.name) }
                 val readable =
                     suffixMatches
                         .filter { now - it.lastModifiedMs >= minAgeMillis }
@@ -206,7 +214,7 @@ internal class FileLogStore(
                     "FileLogStore: listReadable minAgeMs=$minAgeMillis total=${entries.size} " +
                         "suffix=${suffixMatches.size} readable=${readable.size} " +
                         "expired=${expired.size} overCap=${evicted.size} " +
-                        "legacy=${entries.count { !isOwnedCrashFile(it.name) }}",
+                        "legacy=${entries.count { !CrashRetention.isOwned(it.name, policy) }}",
                 )
                 readable
             } catch (e: CancellationException) {
@@ -244,8 +252,8 @@ internal class FileLogStore(
      * Removes on-disk entries this store does not own — legacy OTEL disk-buffering
      * files (bare-millis names) and stray `.tmp`s that share this directory — whose
      * age is at least [minAgeMillis]. Owned `*.otlp` records are left untouched so failed
-     * / too-young uploads can still retry on the next launch, except for ones past
-     * [CRASH_MAX_READ_AGE_MILLIS] or beyond the accumulation caps, which are no longer
+     * / too-young uploads can still retry on the next launch, except for ones past the
+     * policy's read-age ceiling or beyond the accumulation caps, which are no longer
      * uploadable or no longer affordable to keep.
      *
      * Implements the shared [ILogFileStore] contract: the KMP `LogCrashUploader`
@@ -263,7 +271,7 @@ internal class FileLogStore(
                 val listed = listEntries(rootDir)
                 val expired = reclaimExpiredOwnedRecords(listed, now)
                 reclaimOverLimitRecords(listed.filterNot { expired.contains(it.name) }, now)
-                val foreign = selectUnrecognizedEntries(listed, now, minAgeMillis)
+                val foreign = CrashRetention.selectUnrecognized(listed, now, minAgeMillis, policy)
                 if (foreign.isEmpty()) {
                     Logging.debug("FileLogStore: no unrecognized files to purge in ${rootDir.path}")
                     return@withContext 0

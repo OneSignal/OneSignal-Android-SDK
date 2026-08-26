@@ -6,13 +6,13 @@ import com.onesignal.core.internal.features.IFeatureManager
 import com.onesignal.core.internal.startup.IStartableService
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.debug.internal.logging.logger.android.AndroidLogger
-import com.onesignal.debug.internal.logging.logger.android.CrashDirEntry
 import com.onesignal.debug.internal.logging.logger.android.FileLogStore
 import com.onesignal.debug.internal.logging.logger.android.OneSignalLogHttpSender
 import com.onesignal.debug.internal.logging.logger.android.createAndroidLoggerPlatformProvider
-import com.onesignal.debug.internal.logging.logger.android.formatCrashDirInventory
 import com.onesignal.debug.internal.logging.logger.android.getCrashStoragePath
 import com.onesignal.logger.LoggerFactory
+import com.onesignal.logger.crash.CrashDirEntry
+import com.onesignal.logger.crash.CrashRetention
 import java.io.File
 import kotlin.coroutines.cancellation.CancellationException
 
@@ -91,7 +91,7 @@ internal class OneSignalCrashUploaderWrapper(
                     )
                 }.orEmpty()
             Logging.info(
-                formatCrashDirInventory(
+                CrashRetention.formatInventory(
                     label = label,
                     path = path,
                     entries = entries,
