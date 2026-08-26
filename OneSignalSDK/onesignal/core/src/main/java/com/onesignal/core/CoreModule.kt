@@ -24,6 +24,7 @@ import com.onesignal.core.internal.device.impl.FidEnvService
 import com.onesignal.core.internal.device.impl.InstallIdService
 import com.onesignal.core.internal.features.FeatureManager
 import com.onesignal.core.internal.features.IFeatureManager
+import com.onesignal.core.internal.gesture.DeviceGestureDetector
 import com.onesignal.core.internal.http.IHttpClient
 import com.onesignal.core.internal.http.impl.HttpClient
 import com.onesignal.core.internal.http.impl.HttpConnectionFactory
@@ -104,6 +105,9 @@ internal class CoreModule : IModule {
             .provides<IBackgroundManager>()
             .provides<IStartableService>()
 
+        // Device gesture
+        builder.register<DeviceGestureDetector>().provides<IStartableService>()
+
         // Purchase Tracking
         builder.register<TrackGooglePurchase>().provides<IStartableService>()
 
@@ -119,8 +123,12 @@ internal class CoreModule : IModule {
             )
         }.provides<IObservabilityEventRecorder>()
 
-        // Register dummy services in the event they are not configured. These dummy services
-        // will throw an error message if the associated functionality is attempted to be used.
+        registerMisconfiguredFallbacks(builder)
+    }
+
+    // Register dummy services in the event they are not configured. These dummy services
+    // will throw an error message if the associated functionality is attempted to be used.
+    private fun registerMisconfiguredFallbacks(builder: ServiceBuilder) {
         builder.register<MisconfiguredNotificationsManager>().provides<INotificationsManager>()
         builder.register<MisconfiguredIAMManager>().provides<IInAppMessagesManager>()
         builder.register<MisconfiguredLocationManager>().provides<ILocationManager>()
