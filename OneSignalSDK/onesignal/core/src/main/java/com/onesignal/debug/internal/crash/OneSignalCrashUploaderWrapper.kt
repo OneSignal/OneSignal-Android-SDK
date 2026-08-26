@@ -86,6 +86,7 @@ internal class OneSignalCrashUploaderWrapper(
                     entries = entries,
                     nowMs = now,
                     maxSample = MAX_INVENTORY_SAMPLE,
+                    policy = CrashRetention.defaultPolicy,
                 ),
             )
         } catch (t: Throwable) {

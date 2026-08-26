@@ -85,6 +85,8 @@ internal class FileLogStore(
      * always retaining [keepName] (the record [save] just wrote).
      *
      * Runs inline on the crashing thread, and uses raw Logcat for the same reason [save] does.
+     * The [CrashRetention.isWithinCaps] check below is what keeps that affordable: the selector
+     * sorts the whole directory, so it must only run on the rare pass that is actually over cap.
      */
     @Suppress("TooGenericExceptionCaught", "SwallowedException")
     private fun enforceAccumulationCaps(dir: File, keepName: String) {

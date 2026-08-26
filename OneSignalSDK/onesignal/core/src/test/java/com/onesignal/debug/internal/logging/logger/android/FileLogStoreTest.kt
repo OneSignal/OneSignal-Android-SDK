@@ -172,14 +172,32 @@ class FileLogStoreTest : FunSpec({
         File(dir, "inherited.otlp").exists() shouldBe true
     }
 
-    test("save never evicts the record it just wrote") {
-        repeat(policy.maxRecordCount + 5) { i -> write("seed-$i.otlp", ageMsAgo = 1_000L * (i + 1)) }
+    // Both sort keys clamp to now, so a record written while the backlog is dated ahead of the
+    // clock lands in a tie group with it, and the order inside that group is whatever the
+    // filesystem lists. Only the explicit keepName reservation guarantees the new record
+    // survives; without it eviction is a coin flip, so one attempt would pass most of the time.
+    // Repeating drives the odds of a false pass to nil.
+    test("save never evicts the record it just wrote, whatever order the backlog lists in") {
+        repeat(25) {
+            val trialDir = Files.createTempDirectory("crashes-keepname").toFile()
+            try {
+                repeat(policy.maxRecordCount + 3) { i ->
+                    val ahead = System.currentTimeMillis() + 3_600_000L + i
+                    File(trialDir, "$ahead-seed$i.otlp").apply {
+                        writeBytes(ByteArray(1) { 'x'.code.toByte() })
+                        setLastModified(System.currentTimeMillis() + 60_000L)
+                    }
+                }
 
-        FileLogStore(dir.path).save("new".toByteArray()) shouldBe true
+                FileLogStore(trialDir.path).save("new".toByteArray()) shouldBe true
 
-        val remaining = dir.listFiles()!!.filter { it.name.endsWith(policy.ownedSuffix) }
-        remaining.none { it.name.startsWith("seed-") && it.readText() == "new" } shouldBe true
-        remaining.count { it.readText() == "new" } shouldBe 1
+                val remaining = trialDir.listFiles()!!.filter { it.name.endsWith(policy.ownedSuffix) }
+                remaining.count { it.readText() == "new" } shouldBe 1
+                remaining.size shouldBe policy.maxRecordCount
+            } finally {
+                trialDir.deleteRecursively()
+            }
+        }
     }
 
     // The uploader paths must reclaim a backlog inherited from a build without caps —
