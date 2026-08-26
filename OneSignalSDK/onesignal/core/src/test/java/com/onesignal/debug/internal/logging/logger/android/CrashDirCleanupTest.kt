@@ -22,10 +22,10 @@ class CrashDirCleanupTest : FunSpec({
     test("selectUnrecognizedEntries keeps owned and too-young foreign files") {
         val entries =
             listOf(
-                CrashDirEntry("123-abc.otlp", lastModifiedMs = now - 60_000),
-                CrashDirEntry("too-young-legacy", lastModifiedMs = now - 100),
-                CrashDirEntry("stale-legacy", lastModifiedMs = now - 10_000),
-                CrashDirEntry("stale.tmp", lastModifiedMs = now - 60_000),
+                CrashDirEntry("123-abc.otlp", lastModifiedMs = now - 60_000, lengthBytes = 1L),
+                CrashDirEntry("too-young-legacy", lastModifiedMs = now - 100, lengthBytes = 1L),
+                CrashDirEntry("stale-legacy", lastModifiedMs = now - 10_000, lengthBytes = 1L),
+                CrashDirEntry("stale.tmp", lastModifiedMs = now - 60_000, lengthBytes = 1L),
             )
 
         val selected =
@@ -41,7 +41,7 @@ class CrashDirCleanupTest : FunSpec({
     test("selectUnrecognizedEntries is empty when only owned records exist") {
         val selected =
             selectUnrecognizedEntries(
-                entries = listOf(CrashDirEntry("123-abc.otlp", lastModifiedMs = now - 60_000)),
+                entries = listOf(CrashDirEntry("123-abc.otlp", lastModifiedMs = now - 60_000, lengthBytes = 1L)),
                 nowMs = now,
                 minAgeMillis = 0,
             )
@@ -59,7 +59,7 @@ class CrashDirCleanupTest : FunSpec({
             listOf(
                 owned("1-a.otlp", ageMs = CRASH_MAX_READ_AGE_MILLIS + 1),
                 owned("2-b.otlp", ageMs = CRASH_MAX_READ_AGE_MILLIS - 1),
-                CrashDirEntry("legacy", lastModifiedMs = now - CRASH_MAX_READ_AGE_MILLIS * 2),
+                CrashDirEntry("legacy", lastModifiedMs = now - CRASH_MAX_READ_AGE_MILLIS * 2, lengthBytes = 1L),
             )
 
         selectExpiredOwnedEntries(entries, nowMs = now).map { it.name } shouldBe listOf("1-a.otlp")
@@ -71,9 +71,26 @@ class CrashDirCleanupTest : FunSpec({
         selectExpiredOwnedEntries(entries, nowMs = now) shouldBe emptyList()
     }
 
-    test("selectExpiredOwnedEntries ignores records whose mtime is in the future") {
-        // A backwards clock step must not look like extreme age in either direction.
-        val entries = listOf(owned("1-a.otlp", ageMs = -CRASH_MAX_READ_AGE_MILLIS * 2))
+    test("selectExpiredOwnedEntries ignores a plausible backwards clock step") {
+        // The clock moved back an hour since the record was written. It is a real, recent,
+        // uploadable crash — it just has to wait for the clock to agree it is old.
+        val entries = listOf(owned("1-a.otlp", ageMs = -60L * 60 * 1000))
+
+        selectExpiredOwnedEntries(entries, nowMs = now) shouldBe emptyList()
+    }
+
+    test("selectExpiredOwnedEntries reclaims a record dated past the window into the future") {
+        // Beyond a full retention window ahead of now, no clock correction brings it back: the
+        // read gate (now - mtime >= minAge) can never pass, so the record is unreadable for life
+        // while still holding a count slot and budget. Expiry is the only thing that removes it.
+        val entries = listOf(owned("1-a.otlp", ageMs = -(CRASH_MAX_READ_AGE_MILLIS + 1)))
+
+        selectExpiredOwnedEntries(entries, nowMs = now).map { it.name } shouldBe listOf("1-a.otlp")
+    }
+
+    test("selectExpiredOwnedEntries leaves a record exactly one window into the future") {
+        // The boundary belongs to the backwards-clock case, matching the past-side ceiling.
+        val entries = listOf(owned("1-a.otlp", ageMs = -CRASH_MAX_READ_AGE_MILLIS))
 
         selectExpiredOwnedEntries(entries, nowMs = now) shouldBe emptyList()
     }
@@ -87,13 +104,13 @@ class CrashDirCleanupTest : FunSpec({
     test("selectOverflowOwnedEntries returns nothing while within both caps") {
         val entries = (1..3).map { owned("$it-a.otlp", ageMs = it * 1_000L) }
 
-        selectOverflowOwnedEntries(entries) shouldBe emptyList()
+        selectOverflowOwnedEntries(entries, nowMs = now) shouldBe emptyList()
     }
 
     test("selectOverflowOwnedEntries evicts oldest-first past the count cap") {
         val entries = (1..CRASH_MAX_RECORD_COUNT + 2).map { owned("$it-a.otlp", ageMs = it * 1_000L) }
 
-        val evicted = selectOverflowOwnedEntries(entries)
+        val evicted = selectOverflowOwnedEntries(entries, nowMs = now)
 
         // Oldest has the largest age, so the two highest indices go, returned oldest-first.
         evicted.map { it.name } shouldBe
@@ -103,9 +120,9 @@ class CrashDirCleanupTest : FunSpec({
     test("selectOverflowOwnedEntries never touches foreign entries") {
         val entries =
             (1..CRASH_MAX_RECORD_COUNT + 1).map { owned("$it-a.otlp", ageMs = it * 1_000L) } +
-                CrashDirEntry("legacy", lastModifiedMs = now - 999_000L)
+                CrashDirEntry("legacy", lastModifiedMs = now - 999_000L, lengthBytes = 1L)
 
-        selectOverflowOwnedEntries(entries).none { it.name == "legacy" } shouldBe true
+        selectOverflowOwnedEntries(entries, nowMs = now).none { it.name == "legacy" } shouldBe true
     }
 
     test("an oversized record is retained but cannot displace the rest") {
@@ -119,7 +136,7 @@ class CrashDirCleanupTest : FunSpec({
                 owned("2-small.otlp", ageMs = 4_000, bytes = 10),
             )
 
-        selectOverflowOwnedEntries(entries) shouldBe emptyList()
+        selectOverflowOwnedEntries(entries, nowMs = now) shouldBe emptyList()
     }
 
     test("a record that does not fit the remaining budget is skipped, not treated as a cutoff") {
@@ -132,7 +149,7 @@ class CrashDirCleanupTest : FunSpec({
                 owned("5-does-not-fit.otlp", ageMs = 5_000, bytes = 200_000) +
                 owned("4-still-fits.otlp", ageMs = 6_000, bytes = 40_000)
 
-        selectOverflowOwnedEntries(entries).map { it.name } shouldBe listOf("5-does-not-fit.otlp")
+        selectOverflowOwnedEntries(entries, nowMs = now).map { it.name } shouldBe listOf("5-does-not-fit.otlp")
     }
 
     test("keepName retains the just-written record even when it sorts oldest") {
@@ -141,7 +158,7 @@ class CrashDirCleanupTest : FunSpec({
             (1..CRASH_MAX_RECORD_COUNT).map { owned("$it-a.otlp", ageMs = it * 1_000L) } +
                 owned("fresh-a.otlp", ageMs = 999_000)
 
-        val evicted = selectOverflowOwnedEntries(entries, keepName = "fresh-a.otlp")
+        val evicted = selectOverflowOwnedEntries(entries, nowMs = now, keepName = "fresh-a.otlp")
 
         evicted.none { it.name == "fresh-a.otlp" } shouldBe true
         evicted.map { it.name } shouldBe listOf("${CRASH_MAX_RECORD_COUNT}-a.otlp")
@@ -155,7 +172,7 @@ class CrashDirCleanupTest : FunSpec({
         val backlog = (1..4).map { owned("$it-small.otlp", ageMs = it * 10_000L, bytes = 400_000) }
         val entries = backlog + owned("fresh-a.otlp", ageMs = 1_000, bytes = CRASH_MAX_TOTAL_BYTES * 2)
 
-        val evicted = selectOverflowOwnedEntries(entries, keepName = "fresh-a.otlp")
+        val evicted = selectOverflowOwnedEntries(entries, nowMs = now, keepName = "fresh-a.otlp")
 
         // The oversized record claims only its capped share, leaving room for the backlog.
         evicted.none { it.name == "fresh-a.otlp" } shouldBe true
@@ -171,13 +188,45 @@ class CrashDirCleanupTest : FunSpec({
                 CrashDirEntry("200-b.otlp", lastModifiedMs = now, lengthBytes = 10),
             )
 
-        val evicted = selectOverflowOwnedEntries(entries, maxCount = 2)
+        val evicted = selectOverflowOwnedEntries(entries, nowMs = now, maxCount = 2)
 
         evicted.map { it.name } shouldBe listOf("100-a.otlp")
     }
 
+    test("a future-dated record is evicted before any record that could still upload") {
+        // The write path enforces caps without running expiry first, so ordering has to make this
+        // call on its own. Left unranked, the future record sorts newest, keeps its slot forever,
+        // and pushes out genuine records that are still uploadable.
+        val entries =
+            listOf(
+                owned("9-zombie.otlp", ageMs = -(CRASH_MAX_READ_AGE_MILLIS + 1)),
+                owned("300-a.otlp", ageMs = 1_000),
+                owned("200-b.otlp", ageMs = 2_000),
+                owned("100-c.otlp", ageMs = 3_000),
+            )
+
+        val evicted = selectOverflowOwnedEntries(entries, nowMs = now, maxCount = 2)
+
+        evicted.map { it.name } shouldBe listOf("9-zombie.otlp", "100-c.otlp")
+    }
+
+    test("a modestly future-dated record still ranks among the newest") {
+        // Only an unrecoverable date is written off. An ordinary backwards clock step leaves a
+        // real, recent record that must keep its place ahead of older ones.
+        val entries =
+            listOf(
+                owned("9-clock-skew.otlp", ageMs = -60_000),
+                owned("300-a.otlp", ageMs = 1_000),
+                owned("100-c.otlp", ageMs = 3_000),
+            )
+
+        val evicted = selectOverflowOwnedEntries(entries, nowMs = now, maxCount = 2)
+
+        evicted.map { it.name } shouldBe listOf("100-c.otlp")
+    }
+
     test("selectOverflowOwnedEntries is empty for an empty directory") {
-        selectOverflowOwnedEntries(emptyList()) shouldBe emptyList()
+        selectOverflowOwnedEntries(emptyList(), nowMs = now) shouldBe emptyList()
     }
 
     test("formatCrashDirInventory reports empty directories") {
@@ -210,5 +259,20 @@ class CrashDirCleanupTest : FunSpec({
         line shouldContain "name=1.otlp"
         line shouldContain "…(+20 more)"
         line shouldNotContain "name=legacy-25"
+    }
+
+    test("formatCrashDirInventory treats a negative sample size as zero") {
+        // A logging helper on a crash-adjacent path must not be the thing that throws.
+        val line =
+            formatCrashDirInventory(
+                label = "after-cleanup",
+                path = "/cache/crashes",
+                entries = listOf(owned("1-a.otlp", ageMs = 1_000)),
+                nowMs = now,
+                maxSample = -1,
+            )
+
+        line shouldContain "total=1 otlp=1 legacy=0"
+        line shouldContain "…(+1 more)"
     }
 })

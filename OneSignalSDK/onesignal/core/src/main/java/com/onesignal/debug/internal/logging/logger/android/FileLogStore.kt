@@ -104,7 +104,8 @@ internal class FileLogStore(
             if (owned.size <= CRASH_MAX_RECORD_COUNT && claimed <= CRASH_MAX_TOTAL_BYTES) {
                 return
             }
-            val overflow = selectOverflowOwnedEntries(entries, keepName = keepName)
+            val overflow =
+                selectOverflowOwnedEntries(entries, nowMs = System.currentTimeMillis(), keepName = keepName)
             if (overflow.isEmpty()) return
             var evicted = 0
             for (entry in overflow) {
@@ -129,8 +130,8 @@ internal class FileLogStore(
      *
      * @return names of the evicted records, so callers can exclude them from the same pass
      */
-    private fun reclaimOverLimitRecords(entries: List<CrashDirEntry>): Set<String> {
-        val overflow = selectOverflowOwnedEntries(entries)
+    private fun reclaimOverLimitRecords(entries: List<CrashDirEntry>, nowMs: Long): Set<String> {
+        val overflow = selectOverflowOwnedEntries(entries, nowMs)
         if (overflow.isEmpty()) return emptySet()
         var deleted = 0
         for (entry in overflow) {
@@ -193,7 +194,7 @@ internal class FileLogStore(
                 // Reclaim before reading: payloads are only materialized for records that
                 // survive both bounds, so an over-cap backlog is never fully loaded.
                 val expired = reclaimExpiredOwnedRecords(entries, now)
-                val evicted = reclaimOverLimitRecords(entries.filterNot { expired.contains(it.name) })
+                val evicted = reclaimOverLimitRecords(entries.filterNot { expired.contains(it.name) }, now)
                 val dropped = expired + evicted
                 val suffixMatches =
                     entries.filter { isOwnedCrashFile(it.name) && !dropped.contains(it.name) }
@@ -261,7 +262,7 @@ internal class FileLogStore(
                 val now = System.currentTimeMillis()
                 val listed = listEntries(rootDir)
                 val expired = reclaimExpiredOwnedRecords(listed, now)
-                reclaimOverLimitRecords(listed.filterNot { expired.contains(it.name) })
+                reclaimOverLimitRecords(listed.filterNot { expired.contains(it.name) }, now)
                 val foreign = selectUnrecognizedEntries(listed, now, minAgeMillis)
                 if (foreign.isEmpty()) {
                     Logging.debug("FileLogStore: no unrecognized files to purge in ${rootDir.path}")
