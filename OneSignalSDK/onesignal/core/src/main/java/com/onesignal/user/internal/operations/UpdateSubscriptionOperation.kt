@@ -76,7 +76,8 @@ class UpdateSubscriptionOperation() : Operation(SubscriptionOperationExecutor.UP
      * The status of this subscription.
      */
     var status: SubscriptionStatus
-        get() = getEnumProperty(::status.name)
+        // A persisted name this build's enum lacks reads as SUBSCRIBED instead of dropping the op batch.
+        get() = getOptEnumProperty<SubscriptionStatus>(::status.name) ?: SubscriptionStatus.SUBSCRIBED
         private set(value) {
             setEnumProperty(::status.name, value)
         }

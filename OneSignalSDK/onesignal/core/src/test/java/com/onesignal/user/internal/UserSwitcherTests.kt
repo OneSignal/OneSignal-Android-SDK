@@ -20,6 +20,7 @@ import com.onesignal.user.internal.identity.IdentityModel
 import com.onesignal.user.internal.identity.IdentityModelStore
 import com.onesignal.user.internal.operations.LoginUserFromSubscriptionOperation
 import com.onesignal.user.internal.operations.LoginUserOperation
+import com.onesignal.user.internal.operations.impl.listeners.SubscriptionModelStoreListener
 import com.onesignal.user.internal.properties.PropertiesModelStore
 import com.onesignal.user.internal.subscriptions.SubscriptionModel
 import com.onesignal.user.internal.subscriptions.SubscriptionModelStore
@@ -255,6 +256,31 @@ class UserSwitcherTests : FunSpec({
         result shouldBe true
         verify(exactly = 1) { mockConfigModel.pushSubscriptionId = mocks.legacyPlayerId }
         verify(exactly = 1) { mockSubscriptionModelStore.add(any(), ModelChangeTags.NO_PROPOGATE) }
+    }
+
+    test("createAndSwitchToNewUser carries a REST API disable onto the new push model") {
+        // Given
+        val mocks = Mocks()
+        val userSwitcher = mocks.createUserSwitcher()
+        val disabledPushModel =
+            SubscriptionModel().apply {
+                id = mocks.testSubscriptionId
+                type = SubscriptionType.PUSH
+                address = "test-token"
+                optedIn = true
+                restApiDisabledReason = SubscriptionStatus.DISABLED_FROM_REST_API.value
+            }
+        mocks.subscriptionModelStore!!.add(disabledPushModel, ModelChangeTags.NO_PROPOGATE)
+
+        // When
+        userSwitcher.createAndSwitchToNewUser()
+
+        // Then the login create for the new user still reports the subscription disabled
+        val newPushModel = mocks.subscriptionModelStore!!.list().first { it.type == SubscriptionType.PUSH }
+        newPushModel.restApiDisabledReason shouldBe SubscriptionStatus.DISABLED_FROM_REST_API.value
+        val (enabled, status) = SubscriptionModelStoreListener.getSubscriptionEnabledAndStatus(newPushModel)
+        enabled shouldBe false
+        status shouldBe SubscriptionStatus.DISABLED_FROM_REST_API
     }
 
     test("initUser with forceCreateUser creates new user") {

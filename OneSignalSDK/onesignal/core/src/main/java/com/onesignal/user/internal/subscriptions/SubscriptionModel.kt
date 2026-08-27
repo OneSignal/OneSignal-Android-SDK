@@ -67,8 +67,8 @@ enum class SubscriptionStatus(val value: Int) {
     /** The subscription is not enabled due to an FCM authentication failed IOException, this can be retried */
     FIREBASE_FCM_ERROR_IOEXCEPTION_AUTHENTICATION_FAILED(-29),
 
-    /** The subscription is not enabled because the app has disabled the subscription via API */
-    DISABLED_FROM_REST_API_DEFAULT_REASON(-30),
+    /** The subscription is not enabled because it was disabled through the REST API */
+    DISABLED_FROM_REST_API(-31),
 
     /** The subscription is not enabled due to some other (unknown locally) error */
     ERROR(9999),
@@ -100,6 +100,15 @@ enum class SubscriptionStatus(val value: Int) {
                 HMS_API_EXCEPTION_OTHER, // -27
                 FIREBASE_FCM_ERROR_IOEXCEPTION_AUTHENTICATION_FAILED, // -29
             )
+
+        /**
+         * True when [value] is the code the server uses for a subscription disabled through the
+         * REST API, which is only -31. The SDK never derives it from device state, and
+         * server-reported error codes stay device-recoverable.
+         */
+        fun isRestApiDisable(value: Int?): Boolean {
+            return value == DISABLED_FROM_REST_API.value
+        }
 
         fun fromInt(value: Int): SubscriptionStatus? {
             return SubscriptionStatus.values().firstOrNull { it.value == value }
@@ -135,6 +144,19 @@ class SubscriptionModel : Model() {
             setBooleanProperty(::isDisabledInternally.name, value)
         }
 
+    /**
+     * The server's REST API disable code (-31), or 0 when the server has not disabled this
+     * subscription. Hydrated by RefreshUser and never derived from device state; while set,
+     * [SubscriptionModelStoreListener] reports `enabled = false` with this status so subscription
+     * payloads don't re-enable a suppressed subscription. Cleared when the server reports any
+     * other state, or by [IPushSubscription.optIn].
+     */
+    var restApiDisabledReason: Int
+        get() = getIntProperty(::restApiDisabledReason.name) { 0 }
+        set(value) {
+            setIntProperty(::restApiDisabledReason.name, value)
+        }
+
     var type: SubscriptionType
         get() = getEnumProperty(::type.name)
         set(value) {
@@ -160,7 +182,8 @@ class SubscriptionModel : Model() {
                 setEnumProperty(::status.name, SubscriptionStatus.SUBSCRIBED)
             }
 
-            return getEnumProperty(::status.name)
+            // A persisted name this build's enum lacks reads as SUBSCRIBED instead of throwing.
+            return getOptEnumProperty<SubscriptionStatus>(::status.name) ?: SubscriptionStatus.SUBSCRIBED
         }
         set(value) {
             setEnumProperty(::status.name, value)

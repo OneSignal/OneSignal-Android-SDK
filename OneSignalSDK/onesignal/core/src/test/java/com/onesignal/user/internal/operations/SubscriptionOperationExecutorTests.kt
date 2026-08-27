@@ -715,6 +715,64 @@ class SubscriptionOperationExecutorTests :
             configModelStore.model.pushSubscriptionId shouldBe recovery.subscriptionId
         }
 
+        test("update subscription 404 recovery recreates from device truth, not the dead record's REST API disable") {
+            // Given: the cached model carries a recorded REST API disable for the record that 404s
+            val mockSubscriptionBackendService = mockk<ISubscriptionBackendService>()
+            coEvery { mockSubscriptionBackendService.updateSubscription(any(), any(), any()) } throws BackendException(404)
+
+            val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
+            val cachedSubscriptionModel =
+                SubscriptionModel().apply {
+                    id = remoteSubscriptionId
+                    type = SubscriptionType.PUSH
+                    address = "pushToken2"
+                    optedIn = true
+                    restApiDisabledReason = SubscriptionStatus.DISABLED_FROM_REST_API.value
+                }
+            every { mockSubscriptionsModelStore.get(remoteSubscriptionId) } returns cachedSubscriptionModel
+
+            val configModelStore = MockHelper.configModelStore().also { it.model.pushSubscriptionId = remoteSubscriptionId }
+            val mockBuildUserService = mockk<IRebuildUserService>()
+
+            val subscriptionOperationExecutor =
+                SubscriptionOperationExecutor(
+                    mockSubscriptionBackendService,
+                    MockHelper.deviceService(),
+                    AndroidMockHelper.applicationService(),
+                    mockSubscriptionsModelStore,
+                    configModelStore,
+                    mockBuildUserService,
+                    getNewRecordState(),
+                    mockConsistencyManager,
+                    getJwtTokenStore(), getIdentityVerificationService(),
+                )
+
+            // The queued op is the -31 echo for the now-deleted record
+            val operations =
+                listOf<Operation>(
+                    UpdateSubscriptionOperation(
+                        appId,
+                        remoteOneSignalId,
+                        "ext-1",
+                        remoteSubscriptionId,
+                        SubscriptionType.PUSH,
+                        false,
+                        "pushToken2",
+                        SubscriptionStatus.DISABLED_FROM_REST_API,
+                    ),
+                )
+
+            // When
+            val response = subscriptionOperationExecutor.execute(operations)
+
+            // Then the recovery create is born from device truth and the dead record's disable is gone
+            response.result shouldBe ExecutionResult.FAIL_NORETRY
+            val recovery = response.operations!!.first() as CreateSubscriptionOperation
+            recovery.enabled shouldBe true
+            recovery.status shouldBe SubscriptionStatus.SUBSCRIBED
+            cachedSubscriptionModel.restApiDisabledReason shouldBe 0
+        }
+
         test("update subscription fails with retry when the backend returns MISSING, when isInMissingRetryWindow") {
             // Given
             val mockSubscriptionBackendService = mockk<ISubscriptionBackendService>()

@@ -22,6 +22,11 @@ internal open class PushSubscription(
         get() = model.optedIn && model.status != SubscriptionStatus.NO_PERMISSION
 
     override fun optIn() {
+        // A deliberate opt-in overrides a REST API disable; clearing it with a NORMAL-tagged
+        // change drives a subscription update that re-enables it on the server.
+        if (model.restApiDisabledReason != 0) {
+            model.restApiDisabledReason = 0
+        }
         // we set `optedIn` using the lower level method so we can set `forceChange=true`, which
         // will result in *always* driving change notification.
         model.setBooleanProperty(SubscriptionModel::optedIn.name, true, forceChange = true)

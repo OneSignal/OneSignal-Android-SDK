@@ -9,7 +9,10 @@ import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.session.internal.session.ISessionService
+import com.onesignal.user.internal.PushSubscription
 import com.onesignal.user.internal.Subscription
+import com.onesignal.user.internal.operations.UpdateSubscriptionOperation
+import com.onesignal.user.internal.operations.impl.listeners.SubscriptionModelStoreListener
 import com.onesignal.user.internal.subscriptions.impl.SubscriptionManager
 import com.onesignal.user.subscriptions.ISmsSubscription
 import io.kotest.core.spec.style.FunSpec
@@ -24,6 +27,7 @@ import io.mockk.mockk
 import io.mockk.runs
 import io.mockk.spyk
 import io.mockk.verify
+import org.json.JSONObject
 
 class SubscriptionManagerTests : FunSpec({
 
@@ -681,7 +685,6 @@ class SubscriptionManagerTests : FunSpec({
             listOf(
                 SubscriptionStatus.NO_PERMISSION,
                 SubscriptionStatus.UNSUBSCRIBE,
-                SubscriptionStatus.DISABLED_FROM_REST_API_DEFAULT_REASON,
             )
 
         for (status in nonRetryableStatuses) {
@@ -799,8 +802,67 @@ class SubscriptionManagerTests : FunSpec({
             SubscriptionStatus.INVALID_FCM_SENDER_ID,
             SubscriptionStatus.OUTDATED_GOOGLE_PLAY_SERVICES_APP,
             SubscriptionStatus.HMS_ARGUMENTS_INVALID,
-            SubscriptionStatus.DISABLED_FROM_REST_API_DEFAULT_REASON,
+            SubscriptionStatus.DISABLED_FROM_REST_API,
             SubscriptionStatus.ERROR,
         ).forEach { it.isRetryableTokenError shouldBe false }
+    }
+
+    test("status persisted under an unknown enum name reads as SUBSCRIBED instead of throwing") {
+        // Models persist enum properties by name; a cached model written under an enum case this
+        // version does not have must still load.
+        val model = SubscriptionModel()
+        model.initializeFromJson(
+            JSONObject()
+                .put("id", "subscription1")
+                .put("status", "STATUS_UNKNOWN_TO_THIS_VERSION"),
+        )
+
+        model.status shouldBe SubscriptionStatus.SUBSCRIBED
+    }
+
+    test("operation status persisted under an unknown enum name reads as SUBSCRIBED instead of throwing") {
+        // Operation batches persist by enum name like models; an unknown name must not drop the batch.
+        val operation = UpdateSubscriptionOperation()
+        operation.initializeFromJson(JSONObject().put("status", "STATUS_UNKNOWN_TO_THIS_VERSION"))
+
+        operation.status shouldBe SubscriptionStatus.SUBSCRIBED
+    }
+
+    test("getSubscriptionEnabledAndStatus reports a REST API disable back to the server") {
+        // Given a push subscription the server disabled through the REST API
+        val pushSubscription = SubscriptionModel()
+        pushSubscription.id = "subscription1"
+        pushSubscription.type = SubscriptionType.PUSH
+        pushSubscription.address = "pushToken"
+        pushSubscription.status = SubscriptionStatus.SUBSCRIBED
+        pushSubscription.optedIn = true
+        pushSubscription.restApiDisabledReason = SubscriptionStatus.DISABLED_FROM_REST_API.value
+
+        // When
+        val (enabled, status) = SubscriptionModelStoreListener.getSubscriptionEnabledAndStatus(pushSubscription)
+
+        // Then
+        enabled shouldBe false
+        status shouldBe SubscriptionStatus.DISABLED_FROM_REST_API
+    }
+
+    test("optIn clears a REST API disable so the update re-enables the subscription") {
+        // Given a push subscription the server disabled through the REST API
+        val pushSubscriptionModel = SubscriptionModel()
+        pushSubscriptionModel.id = "subscription1"
+        pushSubscriptionModel.type = SubscriptionType.PUSH
+        pushSubscriptionModel.address = "pushToken"
+        pushSubscriptionModel.status = SubscriptionStatus.SUBSCRIBED
+        pushSubscriptionModel.optedIn = true
+        pushSubscriptionModel.restApiDisabledReason = SubscriptionStatus.DISABLED_FROM_REST_API.value
+
+        // When
+        PushSubscription(pushSubscriptionModel).optIn()
+
+        // Then
+        pushSubscriptionModel.restApiDisabledReason shouldBe 0
+        val (enabled, status) = SubscriptionModelStoreListener.getSubscriptionEnabledAndStatus(pushSubscriptionModel)
+        enabled shouldBe true
+        status shouldBe SubscriptionStatus.SUBSCRIBED
     }
 })
