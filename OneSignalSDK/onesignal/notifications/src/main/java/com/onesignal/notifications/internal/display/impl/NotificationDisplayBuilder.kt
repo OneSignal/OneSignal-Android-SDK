@@ -10,6 +10,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Build
+import android.os.Bundle
 import androidx.core.app.NotificationCompat
 import com.onesignal.common.AndroidUtils
 import com.onesignal.core.internal.application.IApplicationService
@@ -91,6 +92,19 @@ internal class NotificationDisplayBuilder(
             .setStyle(NotificationCompat.BigTextStyle().bigText(message))
             .setContentText(message)
             .setTicker(message)
+
+        if (AndroidUtils.androidSDKInt >= 37 &&
+            AndroidUtils.getManifestMetaBoolean(
+                currentContext,
+                NotificationConstants.PREFER_SMALL_ICON_META_DATA_TAG_NAME,
+            )
+        ) {
+            notificationBuilder.addExtras(
+                Bundle().apply {
+                    putBoolean(NotificationConstants.ANDROID_NOTIFICATION_EXTRA_PREFER_SMALL_ICON, true)
+                },
+            )
+        }
 
         // If title is blank; Set to app name if less than Android 7.
         //    Android 7.0 always displays the app title now in it's own section

@@ -7,6 +7,10 @@ object NotificationConstants {
      */
     const val EXTENSION_SERVICE_META_DATA_TAG_NAME = "com.onesignal.NotificationServiceExtension"
 
+    const val PREFER_SMALL_ICON_META_DATA_TAG_NAME = "com.onesignal.NotificationPreferSmallIcon.DEFAULT"
+
+    const val ANDROID_NOTIFICATION_EXTRA_PREFER_SMALL_ICON = "android.app.preferSmallIcon"
+
     const val DEFAULT_TTL_IF_NOT_IN_PAYLOAD = 259_200
 
     const val PUSH_ADDITIONAL_DATA_KEY = "a"
