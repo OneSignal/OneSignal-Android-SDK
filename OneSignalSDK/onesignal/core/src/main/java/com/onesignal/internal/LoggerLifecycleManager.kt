@@ -87,6 +87,9 @@ internal class LoggerLifecycleManager(
     private var remoteTelemetry: ILogTelemetryRemote? = null
     private var currentConfig: ObservabilityConfig? = null
 
+    /** Level the live sink is actually filtering at, which is not always [currentConfig]'s level. */
+    private var activeLogLevel: LogLevel? = null
+
     @Suppress("TooGenericExceptionCaught")
     override fun initializeFromCachedConfig() {
         if (!ObservabilitySdkSupport.isSupported) {
@@ -146,6 +149,14 @@ internal class LoggerLifecycleManager(
      * missing piece, instead of collapsing to `NoChange` and leaving it dead for the session.
      */
     private fun applyAction(action: ObservabilityConfigAction, newConfig: ObservabilityConfig) {
+        // The evaluator only sees desired config, and a partial-failure Enable leaves components
+        // live under a config that was never committed. Honoring "off" off actual liveness keeps
+        // the remote kill switch effective there; gating on liveness is what stops it thrashing.
+        if (!newConfig.isEnabled && isAnyFeatureLive()) {
+            disableFeatures()
+            currentConfig = newConfig
+            return
+        }
         val applied =
             when (action) {
                 is ObservabilityConfigAction.Enable -> enableFeatures(newConfig.logLevel ?: LogLevel.ERROR)
@@ -161,6 +172,8 @@ internal class LoggerLifecycleManager(
             }
         if (applied) currentConfig = newConfig
     }
+
+    private fun isAnyFeatureLive(): Boolean = crashHandler != null || anrDetector != null || remoteTelemetry != null
 
     /**
      * Starts whatever is not already running. Each component is independent: one failing must
@@ -185,8 +198,10 @@ internal class LoggerLifecycleManager(
             Logging.warn("OneSignal: Failed to start logger ANR detector: ${t.message}", t)
         }
         try {
-            // Guarded like the other two so a retry does not tear down a healthy sink.
-            if (remoteTelemetry == null) startLogging(logLevel)
+            // Guarded like the other two so a retry does not tear down a healthy sink — but a
+            // retry can carry a newer level than the live sink was started at, and only
+            // startLogging can move it, so compare against the level actually in force.
+            if (remoteTelemetry == null || activeLogLevel != logLevel) startLogging(logLevel)
         } catch (t: Throwable) {
             allStarted = false
             Logging.warn("OneSignal: Failed to start logger logging: ${t.message}", t)
@@ -221,6 +236,7 @@ internal class LoggerLifecycleManager(
         try {
             val telemetry = remoteTelemetry
             remoteTelemetry = null
+            activeLogLevel = null
             Logging.setLoggerTelemetry(null) { false }
             telemetry?.shutdown()
         } catch (t: Throwable) {
@@ -241,18 +257,46 @@ internal class LoggerLifecycleManager(
         }
     }
 
+    /**
+     * A partially-started component still has to be undone. [ILogCrashHandler.initialize] chains
+     * itself onto the process-global uncaught-exception handler before it can throw, so dropping
+     * the reference on failure would let the next retry chain a second one and double-report.
+     * Unregistering before clearing the field keeps [disableFeatures]' invariant intact: the field
+     * is never left pointing at something dead, so the start guards above cannot be fooled.
+     */
+    @Suppress("TooGenericExceptionCaught")
     private fun startCrashHandler() {
         if (crashHandler != null) return
         val handler = crashHandlerFactory(platformProvider, fileStore, logger)
-        handler.initialize()
+        try {
+            handler.initialize()
+        } catch (t: Throwable) {
+            try {
+                handler.unregister()
+            } catch (inner: Throwable) {
+                Logging.warn("OneSignal: Error unwinding a partially initialized logger crash handler: ${inner.message}", inner)
+            }
+            throw t
+        }
         crashHandler = handler
         Logging.info("OneSignal: logger crash handler initialized — logs at: ${platformProvider.crashStoragePath}")
     }
 
+    /** Same partial-start unwind as [startCrashHandler]: a throwing start() may already have spawned its watchdog. */
+    @Suppress("TooGenericExceptionCaught")
     private fun startAnrDetector() {
         if (anrDetector != null) return
         val detector = anrDetectorFactory(platformProvider, fileStore, logger)
-        detector.start()
+        try {
+            detector.start()
+        } catch (t: Throwable) {
+            try {
+                detector.stop()
+            } catch (inner: Throwable) {
+                Logging.warn("OneSignal: Error unwinding a partially started logger ANR detector: ${inner.message}", inner)
+            }
+            throw t
+        }
         anrDetector = detector
         Logging.info("OneSignal: logger ANR detector started")
     }
@@ -265,6 +309,7 @@ internal class LoggerLifecycleManager(
         // throwing factory would leave the global pointing at the dead instance for the session.
         val previous = remoteTelemetry
         remoteTelemetry = null
+        activeLogLevel = null
         Logging.setLoggerTelemetry(null) { false }
         try {
             previous?.shutdown()
@@ -277,6 +322,7 @@ internal class LoggerLifecycleManager(
             logLevel != LogLevel.NONE && level <= logLevel
         }
         Logging.setLoggerTelemetry(telemetry, shouldSend)
+        activeLogLevel = logLevel
         Logging.info("OneSignal: logger module logging active at level $logLevel")
     }
 }

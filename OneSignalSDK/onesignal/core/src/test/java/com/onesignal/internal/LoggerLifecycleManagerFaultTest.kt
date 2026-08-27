@@ -360,6 +360,87 @@ class LoggerLifecycleManagerFaultTest : FunSpec({
         verify { replacement.initialize() }
     }
 
+    // ===== Desired config vs. actual liveness =====
+    // A partial-failure Enable leaves components running under a config that was never
+    // committed, so the evaluator alone cannot be trusted to decide these two.
+
+    test("disable tears down live components after a partial-failure enable") {
+        val detector = mockk<ILogAnrDetector>(relaxed = true)
+        val telemetry = mockk<ILogTelemetryRemote>(relaxed = true)
+        val manager = managerWith(
+            crashHandler = { throw RuntimeException("crash handler factory boom") },
+            anrDetector = { detector },
+            remoteTelemetry = { telemetry },
+        )
+        manager.onModelReplaced(enabledConfig(), ModelChangeTags.HYDRATE)
+
+        manager.onModelReplaced(disabledConfig(), ModelChangeTags.HYDRATE)
+
+        // currentConfig is still null here, so a config-only diff would read null -> disabled
+        // as NoChange and leave the remote kill switch unhonored for the session.
+        verify { detector.stop() }
+        verify { telemetry.shutdown() }
+    }
+
+    test("an enable retry moves a live sink to the newly requested level") {
+        val failingDetector = mockk<ILogAnrDetector>(relaxed = true)
+        every { failingDetector.start() } throws RuntimeException("start boom")
+        var telemetryCalls = 0
+        val manager = managerWith(
+            anrDetector = { failingDetector },
+            remoteTelemetry = { telemetryCalls++; mockk(relaxed = true) },
+        )
+
+        manager.onModelReplaced(enabledConfig(LogLevel.ERROR), ModelChangeTags.HYDRATE)
+        manager.onModelReplaced(enabledConfig(LogLevel.DEBUG), ModelChangeTags.HYDRATE)
+
+        // The retry re-enters enableFeatures with a healthy ERROR sink; skipping startLogging
+        // there would commit DEBUG while the sink kept filtering at ERROR.
+        telemetryCalls shouldBe 2
+    }
+
+    // ===== Partial starts must be unwound, not abandoned =====
+
+    test("a crash handler that throws after installing itself is unregistered") {
+        val failing = mockk<ILogCrashHandler>(relaxed = true)
+        every { failing.initialize() } throws RuntimeException("initialize boom")
+        val manager = managerWith(crashHandler = { failing })
+
+        manager.onModelReplaced(enabledConfig(), ModelChangeTags.HYDRATE)
+
+        // initialize() can chain onto the process-global handler before throwing; leaving it
+        // installed and unreferenced means the retry chains a second one and double-reports.
+        verify { failing.unregister() }
+    }
+
+    test("an ANR detector that throws after starting is stopped") {
+        val failing = mockk<ILogAnrDetector>(relaxed = true)
+        every { failing.start() } throws RuntimeException("start boom")
+        val manager = managerWith(anrDetector = { failing })
+
+        manager.onModelReplaced(enabledConfig(), ModelChangeTags.HYDRATE)
+
+        verify { failing.stop() }
+    }
+
+    test("a failed log level update is retried on the next identical config") {
+        var calls = 0
+        val manager = managerWith(
+            remoteTelemetry = {
+                calls++
+                if (calls == 2) throw RuntimeException("update boom") else mockk(relaxed = true)
+            },
+        )
+
+        manager.onModelReplaced(enabledConfig(LogLevel.ERROR), ModelChangeTags.HYDRATE)
+        manager.onModelReplaced(enabledConfig(LogLevel.WARN), ModelChangeTags.HYDRATE)
+        manager.onModelReplaced(enabledConfig(LogLevel.WARN), ModelChangeTags.HYDRATE)
+
+        // The failed update never commits, so currentConfig still reads ERROR and the repeat
+        // WARN payload is another UpdateLogLevel rather than a NoChange.
+        calls shouldBe 3
+    }
+
     test("enable creates all three features and disable tears all down") {
         val handler = mockk<ILogCrashHandler>(relaxed = true)
         val detector = mockk<ILogAnrDetector>(relaxed = true)
