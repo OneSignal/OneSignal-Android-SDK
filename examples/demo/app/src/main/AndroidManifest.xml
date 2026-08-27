@@ -26,6 +26,10 @@
         android:theme="@style/AppTheme"
         tools:ignore="GoogleAppIndexingWarning">
 
+        <meta-data
+            android:name="com.onesignal.NotificationPreferSmallIcon.DEFAULT"
+            android:value="true" />
+
         <amazon:enable-feature
             android:name="com.amazon.device.messaging"
             android:required="false"/>
