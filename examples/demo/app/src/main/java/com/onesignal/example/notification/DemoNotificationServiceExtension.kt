@@ -19,9 +19,11 @@ import com.onesignal.notifications.INotificationServiceExtension
  * runtime instead of at build time. That reflection is also why the class needs the -keep rule
  * in `onesignal/notifications/consumer-rules.pro` to survive R8.
  *
- * Nothing here runs until you turn it on in the demo's Notification Service Extension section.
- * An always-on extension would change the baseline for every notification the demo sends, and
- * anyone chasing a grouping or channel bug would end up debugging this file without knowing it.
+ * Nothing here runs until Enable Extension is turned on in the demo's Notification Service
+ * Extension section. An always-on extension would change the baseline for every notification the
+ * demo sends, and anyone chasing a grouping or channel bug would end up debugging this file
+ * without knowing it. That master toggle is the only UI; the behavior switches are flipped in
+ * code through [NotificationExtensionOptions] and SharedPreferenceUtil.
  *
  * The switches come from SharedPreferences, not MainViewModel. This is called whether or not the
  * app is open, so there may be no ViewModel yet.

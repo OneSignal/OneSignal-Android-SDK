@@ -216,19 +216,17 @@ The Android demo exercises a few SDK features that are not described in the shar
 
 The SDK resolves that string with `Class.forName` (`NotificationLifecycleService.setupNotificationServiceExtension`), so a wrong class name here fails silently at runtime. Compiling the class inside `OneSignalSDK/`'s `:app` project is what turns a breaking change to `INotificationServiceExtension` or `INotificationReceivedEvent` into a CI failure, and the release build is the only place the `-keep class ** implements com.onesignal.notifications.INotificationServiceExtension` rule in `onesignal/notifications/consumer-rules.pro` gets exercised end to end.
 
-Every behavior is off until switched on in the **Notification Service Extension** section, so the notifications the demo sends stay usable as a manual QA baseline. Switches live in `NotificationExtensionOptions` and persist through `SharedPreferenceUtil`; the extension reads them from SharedPreferences rather than `MainViewModel`, because it runs whether or not the app is open.
+The UI is a single Enable Extension toggle (`nse_enabled_toggle`). Off means `onNotificationReceived` returns before touching anything, so the notifications the demo sends stay usable as a manual QA baseline and the section stays close to the other wrapper demos.
 
-The five behavior switches sit behind a Show options / Hide options row so the section stays two rows tall while the extension is off. Enable Extension is always visible, and turning it on opens the options. The row reuses the collapse idiom from `CollapsibleSingleList` in `ListComponents.kt` (centered, `OsPrimary` label, `ExpandMore` / `ExpandLess` chevron).
+The behavior switches have no UI. They live in `NotificationExtensionOptions`, persist through `SharedPreferenceUtil`, and are flipped in code: change the `false` defaults in `SharedPreferenceUtil.getNotificationExtensionOptions` (or call `cacheNotificationExtensionOptions`) and rebuild. The extension reads them from SharedPreferences rather than `MainViewModel`, because it runs whether or not the app is open.
 
-| Toggle | testTag | What it does |
-| --- | --- | --- |
-| Enable Extension | `nse_enabled_toggle` | Master switch. Off means `onNotificationReceived` returns before touching anything. |
-| Show / Hide options | `nse_options_toggle` | Folds the five switches below. Not a setting, nothing is persisted. |
-| Log Details | `nse_log_toggle` | Logs id, sent time, and the channel the SDK resolved, under the `[Demo]NSE` tag. |
-| Apply Extender | `nse_extender_toggle` | Prefixes the title with `[NSE]` through a `NotificationCompat.Extender`. |
-| Force High Importance Channel | `nse_high_importance_toggle` | Moves the notification onto an app-owned `IMPORTANCE_HIGH` channel. |
-| Delay Display | `nse_delay_toggle` | `preventDefault()`, then `display()` five seconds later. |
-| Discard | `nse_discard_toggle` | `preventDefault(true)`. Takes precedence over the other switches. |
+| Option | What it does |
+| --- | --- |
+| `logDetails` | Logs id, sent time, and the channel the SDK resolved, under the `[Demo]NSE` tag. |
+| `applyExtender` | Prefixes the title with `[NSE]` through a `NotificationCompat.Extender`. |
+| `forceHighImportanceChannel` | Moves the notification onto an app-owned `IMPORTANCE_HIGH` channel. |
+| `delayDisplay` | `preventDefault()`, then `display()` five seconds later. |
+| `discard` | `preventDefault(true)`. Takes precedence over the other switches. |
 
 The channel readout comes from `NotificationCompat.getChannelId(builder.build())` inside the extender, the only place an extension can see the SDK's choice. A restored notification lands on `restored_OS_notifications` no matter what the payload asked for, which the payload alone never shows. `event.restoring` is not on `INotificationReceivedEvent` yet; see the TODO in the class and SDK-5011.
 
