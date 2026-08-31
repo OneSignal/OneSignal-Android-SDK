@@ -107,8 +107,8 @@ internal class FileLogStore(
      * @return names of the evicted records, so callers can exclude them from the same pass
      */
     private fun reclaimOverLimitRecords(entries: List<CrashDirEntry>, nowMs: Long): Set<String> {
-        // Android has no in-flight write registry yet (SDK-5129), so nothing here can be protected. The
-        // only exposure is save()'s renameTo fallback; the normal path renames, so .otlp is never partial.
+        // Nothing to protect: this path has no in-flight write registry. The only exposure is save()'s
+        // renameTo fallback, which writes .otlp directly; the normal path renames, so it is never partial.
         val overflow = CrashRetention.selectOverflowOwned(entries, nowMs, keepNames = emptySet(), policy = policy)
         if (overflow.isEmpty()) return emptySet()
         var deleted = 0
