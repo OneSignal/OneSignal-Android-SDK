@@ -33,6 +33,7 @@ Each key resolves in this order at build time: `-PKEY=value` from the CLI → `l
 |-----|---------|-----------------------|
 | `ONESIGNAL_APP_ID` | `MainApplication.onCreate` + `MainViewModel.loadInitialState` | `VITE_ONESIGNAL_APP_ID` |
 | `ONESIGNAL_ANDROID_CHANNEL_ID` | `OneSignalService.sendNotification` (WITH SOUND payload) | `VITE_ONESIGNAL_ANDROID_CHANNEL_ID` |
+| `SHOW_NSE_SECTION` | `MainScreen` (renders the Notification Service Extension section) | none |
 
 > Changing `ONESIGNAL_APP_ID` no longer needs an uninstall — the value is read straight from `BuildConfig` on every launch, no SharedPreferences cache.
 
@@ -84,7 +85,7 @@ android {
 - `release` -- `isMinifyEnabled = true`, `isShrinkResources = true`, consumes the SDK's published ProGuard rules.
 - `profileable` -- declared via `create("profileable") { initWith(release); ... }` so it inherits R8/shrinker settings while staying profileable on-device (used for Macrobenchmark / Android Studio profiling).
 - `flavorDimensions += "default"` with `gms` and `huawei` flavors (see table above).
-- BuildConfig fields: `ONESIGNAL_APP_ID` and `ONESIGNAL_ANDROID_CHANNEL_ID`, both populated through the `demoOverride(...)` helper (`-P` -> `local.properties` -> default).
+- BuildConfig fields: `ONESIGNAL_APP_ID`, `ONESIGNAL_ANDROID_CHANNEL_ID`, and the boolean `SHOW_NSE_SECTION`, all populated through the `demoOverride(...)` helper (`-P` -> `local.properties` -> default).
 
 #### Root Gradle toolchain
 
@@ -216,17 +217,29 @@ The Android demo exercises a few SDK features that are not described in the shar
 
 The SDK resolves that string with `Class.forName` (`NotificationLifecycleService.setupNotificationServiceExtension`), so a wrong class name here fails silently at runtime. Compiling the class inside `OneSignalSDK/`'s `:app` project is what turns a breaking change to `INotificationServiceExtension` or `INotificationReceivedEvent` into a CI failure, and the release build is the only place the `-keep class ** implements com.onesignal.notifications.INotificationServiceExtension` rule in `onesignal/notifications/consumer-rules.pro` gets exercised end to end.
 
-The UI is a single Enable Extension toggle (`nse_enabled_toggle`). Off means `onNotificationReceived` returns before touching anything, so the notifications the demo sends stay usable as a manual QA baseline and the section stays close to the other wrapper demos.
+The section is off by default. `MainScreen` wraps it in `if (BuildConfig.SHOW_NSE_SECTION)`:
 
-The behavior switches have no UI. They live in `NotificationExtensionOptions`, persist through `SharedPreferenceUtil`, and are flipped in code: change the `false` defaults in `SharedPreferenceUtil.getNotificationExtensionOptions` (or call `cacheNotificationExtensionOptions`) and rebuild. The extension reads them from SharedPreferences rather than `MainViewModel`, because it runs whether or not the app is open.
+```bash
+./gradlew :app:installGmsDebug -PSHOW_NSE_SECTION=true
+```
 
-| Option | What it does |
-| --- | --- |
-| `logDetails` | Logs id, sent time, and the channel the SDK resolved, under the `[Demo]NSE` tag. |
-| `applyExtender` | Prefixes the title with `[NSE]` through a `NotificationCompat.Extender`. |
-| `forceHighImportanceChannel` | Moves the notification onto an app-owned `IMPORTANCE_HIGH` channel. |
-| `delayDisplay` | `preventDefault()`, then `display()` five seconds later. |
-| `discard` | `preventDefault(true)`. Takes precedence over the other switches. |
+The extension is registered either way. Gating only the UI keeps the class compiling in CI and surviving R8, which is the part that guards the interface. `SHOW_NSE_SECTION` is a compile-time constant, so a default release build strips the section instead of shipping unreachable Compose.
+
+Don't run the shared Appium suite against a `-PSHOW_NSE_SECTION=true` build. The extra card pushes `iam_info_icon` below the `height * 0.82` line that triggers `nudgeAboveBottomOverlay` in `sdk-shared`'s `appium/tests/helpers/app.ts`, and that path throws `Malformed type for "elementId" parameter of command getElementRect` past its own `.catch`. The demo is fine (tapping the icon opens the right tooltip); the helper is not. A default build passes the suite, which is the configuration CI and `e2e.yml` build.
+
+Every behavior is off until switched on in that section, so the notifications the demo sends stay usable as a manual QA baseline. Switches live in `NotificationExtensionOptions` and persist through `SharedPreferenceUtil`; the extension reads them from SharedPreferences rather than `MainViewModel`, because it runs whether or not the app is open.
+
+The five behavior switches sit behind a Show options / Hide options row so the section stays two rows tall while the extension is off. Enable Extension is always visible, and turning it on opens the options. The row reuses the collapse idiom from `CollapsibleSingleList` in `ListComponents.kt` (centered, `OsPrimary` label, `ExpandMore` / `ExpandLess` chevron).
+
+| Toggle | testTag | What it does |
+| --- | --- | --- |
+| Enable Extension | `nse_enabled_toggle` | Master switch. Off means `onNotificationReceived` returns before touching anything. |
+| Show / Hide options | `nse_options_toggle` | Folds the five switches below. Not a setting, nothing is persisted. |
+| Log Details | `nse_log_toggle` | Logs id, sent time, and the channel the SDK resolved, under the `[Demo]NSE` tag. |
+| Apply Extender | `nse_extender_toggle` | Prefixes the title with `[NSE]` through a `NotificationCompat.Extender`. |
+| Force High Importance Channel | `nse_high_importance_toggle` | Moves the notification onto an app-owned `IMPORTANCE_HIGH` channel. |
+| Delay Display | `nse_delay_toggle` | `preventDefault()`, then `display()` five seconds later. |
+| Discard | `nse_discard_toggle` | `preventDefault(true)`. Takes precedence over the other switches. |
 
 The channel readout comes from `NotificationCompat.getChannelId(builder.build())` inside the extender, the only place an extension can see the SDK's choice. A restored notification lands on `restored_OS_notifications` no matter what the payload asked for, which the payload alone never shows. `event.restoring` is not on `INotificationReceivedEvent` yet; see the TODO in the class and SDK-5011.
 

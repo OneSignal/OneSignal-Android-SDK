@@ -62,6 +62,11 @@ android {
         val androidChannelId = demoOverride("ONESIGNAL_ANDROID_CHANNEL_ID")
             ?: "b3b015d9-c050-4042-8548-dcc34aa44aa4"
         buildConfigField("String", "ONESIGNAL_ANDROID_CHANNEL_ID", "\"$androidChannelId\"")
+
+        // Renders the Notification Service Extension section. Off by default.
+        // Build with `-PSHOW_NSE_SECTION=true` to show it.
+        val showNseSection = demoOverride("SHOW_NSE_SECTION")?.toBoolean() ?: false
+        buildConfigField("boolean", "SHOW_NSE_SECTION", "$showNseSection")
     }
 
     buildFeatures {

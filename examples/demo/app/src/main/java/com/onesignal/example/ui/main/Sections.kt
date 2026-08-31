@@ -2,15 +2,22 @@ package com.onesignal.example.ui.main
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -18,8 +25,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.onesignal.example.data.model.InAppMessageType
@@ -296,19 +305,101 @@ fun NotificationExtensionSection(
     options: NotificationExtensionOptions,
     onOptionsChange: (NotificationExtensionOptions) -> Unit,
 ) {
+    // Five switches is a lot of vertical space for a section that is off most of the time, so
+    // they stay folded until asked for. Enabling the extension opens them, since that is the
+    // moment you want them.
+    var expanded by remember { mutableStateOf(false) }
+
     DemoSection {
         SectionCard(title = "Notification Service Extension", sectionKey = "nse") {
-            // Only the master switch gets UI, keeping the section close to the other wrapper
-            // demos. The behavior switches stay code-level; flip the defaults in
-            // SharedPreferenceUtil.getNotificationExtensionOptions and rebuild.
             ToggleRow(
                 label = "Enable Extension",
-                description = "Run the demo's extension on received pushes",
+                description = "Off by default, so the demo's notifications stay untouched",
                 checked = options.enabled,
-                onCheckedChange = { onOptionsChange(options.copy(enabled = it)) },
+                onCheckedChange = {
+                    if (it) expanded = true
+                    onOptionsChange(options.copy(enabled = it))
+                },
                 testTag = "nse_enabled_toggle",
                 contentDescription = "Enable notification service extension",
             )
+
+            HorizontalDivider(color = OsDivider, modifier = Modifier.padding(vertical = DemoLayout.gap))
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { expanded = !expanded }
+                    .padding(vertical = DemoLayout.gap / 2)
+                    .testTag("nse_options_toggle"),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = if (expanded) "Hide options" else "Show options",
+                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
+                    color = OsPrimary,
+                )
+                Icon(
+                    imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                    contentDescription = null,
+                    tint = OsPrimary,
+                    modifier = Modifier.size(18.dp),
+                )
+            }
+
+            if (expanded) {
+                HorizontalDivider(color = OsDivider, modifier = Modifier.padding(bottom = DemoLayout.gap))
+                ToggleRow(
+                    label = "Log Details",
+                    description = "Log id, sent time, and the channel the SDK resolved, under the [Demo]NSE tag",
+                    checked = options.logDetails,
+                    onCheckedChange = { onOptionsChange(options.copy(logDetails = it)) },
+                    enabled = options.enabled,
+                    testTag = "nse_log_toggle",
+                    contentDescription = "Log notification details",
+                )
+                HorizontalDivider(color = OsDivider, modifier = Modifier.padding(vertical = DemoLayout.gap))
+                ToggleRow(
+                    label = "Apply Extender",
+                    description = "Prefix the title with [NSE] through a NotificationCompat.Extender",
+                    checked = options.applyExtender,
+                    onCheckedChange = { onOptionsChange(options.copy(applyExtender = it)) },
+                    enabled = options.enabled,
+                    testTag = "nse_extender_toggle",
+                    contentDescription = "Apply notification extender",
+                )
+                HorizontalDivider(color = OsDivider, modifier = Modifier.padding(vertical = DemoLayout.gap))
+                ToggleRow(
+                    label = "Force High Importance Channel",
+                    description = "Move every notification onto an app-owned IMPORTANCE_HIGH channel",
+                    checked = options.forceHighImportanceChannel,
+                    onCheckedChange = { onOptionsChange(options.copy(forceHighImportanceChannel = it)) },
+                    enabled = options.enabled,
+                    testTag = "nse_high_importance_toggle",
+                    contentDescription = "Force high importance channel",
+                )
+                HorizontalDivider(color = OsDivider, modifier = Modifier.padding(vertical = DemoLayout.gap))
+                ToggleRow(
+                    label = "Delay Display",
+                    description = "preventDefault(), then display() five seconds later",
+                    checked = options.delayDisplay,
+                    onCheckedChange = { onOptionsChange(options.copy(delayDisplay = it)) },
+                    enabled = options.enabled,
+                    testTag = "nse_delay_toggle",
+                    contentDescription = "Delay notification display",
+                )
+                HorizontalDivider(color = OsDivider, modifier = Modifier.padding(vertical = DemoLayout.gap))
+                ToggleRow(
+                    label = "Discard",
+                    description = "preventDefault(true). Takes precedence over the switches above",
+                    checked = options.discard,
+                    onCheckedChange = { onOptionsChange(options.copy(discard = it)) },
+                    enabled = options.enabled,
+                    testTag = "nse_discard_toggle",
+                    contentDescription = "Discard notification",
+                )
+            }
         }
     }
 }

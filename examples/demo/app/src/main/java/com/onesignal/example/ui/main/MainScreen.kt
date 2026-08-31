@@ -37,6 +37,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import com.onesignal.example.BuildConfig
 import com.onesignal.example.R
 import com.onesignal.example.data.model.NotificationExtensionOptions
 import com.onesignal.example.data.model.NotificationType
@@ -163,10 +164,13 @@ fun MainScreen(viewModel: MainViewModel) {
                     onInfoClick = { showTooltipDialog = "sendPushNotification" }
                 )
 
-                NotificationExtensionSection(
-                    options = notificationExtensionOptions,
-                    onOptionsChange = { viewModel.setNotificationExtensionOptions(it) }
-                )
+                // Off by default. Build with -PSHOW_NSE_SECTION=true to show it.
+                if (BuildConfig.SHOW_NSE_SECTION) {
+                    NotificationExtensionSection(
+                        options = notificationExtensionOptions,
+                        onOptionsChange = { viewModel.setNotificationExtensionOptions(it) }
+                    )
+                }
 
                 InAppMessagingSection(
                     isPaused = inAppMessagesPaused,
