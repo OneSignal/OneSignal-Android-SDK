@@ -225,12 +225,6 @@ class LoggerPlatformProviderTest : FunSpec({
         provider.kotlinVersion shouldBe KotlinVersion.CURRENT.toString()
     }
 
-    test("swiftVersion defaults to null on Android") {
-        val provider = createAndroidLoggerPlatformProvider(appContext!!) { emptyFeatureManager() }
-
-        provider.swiftVersion shouldBe null
-    }
-
     test("additionalVersionAttributes includes android_api_level only") {
         val provider = createAndroidLoggerPlatformProvider(appContext!!) { emptyFeatureManager() }
         val attrs = provider.additionalVersionAttributes

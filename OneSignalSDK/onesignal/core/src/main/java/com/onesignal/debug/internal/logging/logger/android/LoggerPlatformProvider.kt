@@ -67,8 +67,6 @@ internal class LoggerPlatformProvider(
     // Compile-time Kotlin stdlib, not the host app's Kotlin.
     override val kotlinVersion: String? = KotlinVersion.CURRENT.toString()
 
-    override val swiftVersion: String? = null
-
     // Device API level; complementary to os.version (RELEASE).
     // Do not emit java_version — ART hardcodes java.specification.version to "0.9".
     override val additionalVersionAttributes: Map<String, String> =
