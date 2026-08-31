@@ -14,9 +14,7 @@ import java.io.File
 // Use this to enable/disable local exporter diagnostics in debug builds.
 internal const val EXPORTER_LOGGING_ENABLED = false
 
-/**
- * Configuration for [LoggerPlatformProvider].
- */
+/** Configuration for [LoggerPlatformProvider]. */
 internal data class LoggerPlatformProviderConfig(
     val crashStoragePath: String,
     val appPackageId: String,
@@ -26,12 +24,8 @@ internal data class LoggerPlatformProviderConfig(
 )
 
 /**
- * Android implementation of [ILoggerPlatformProvider].
- * Reads all values directly from SharedPreferences and system services.
- * No SDK service dependencies required.
- *
- * All IDs (appId, onesignalId, pushSubscriptionId) are resolved from SharedPreferences via
- * [LoggerIdResolver]. Remote log level defaults to ERROR if not found in config.
+ * Android [ILoggerPlatformProvider], reading straight from SharedPreferences and system services
+ * so the logging pipeline can come up before SDK service bootstrap.
  */
 internal class LoggerPlatformProvider(
     config: LoggerPlatformProviderConfig,
@@ -43,7 +37,6 @@ internal class LoggerPlatformProvider(
     private val getIsInForeground: (() -> Boolean?)? = config.getIsInForeground
     private val idResolver = LoggerIdResolver(context)
 
-    // Top-level attributes (static, calculated once)
     override suspend fun getInstallId(): String = idResolver.resolveInstallId()
 
     override val sdkBase: String = "android"
@@ -67,17 +60,12 @@ internal class LoggerPlatformProvider(
     // Compile-time Kotlin stdlib, not the host app's Kotlin.
     override val kotlinVersion: String? = KotlinVersion.CURRENT.toString()
 
-    // Device API level; complementary to os.version (RELEASE).
-    // Do not emit java_version — ART hardcodes java.specification.version to "0.9".
+    // Do not add java_version here — ART hardcodes java.specification.version to "0.9".
     override val additionalVersionAttributes: Map<String, String> =
         mapOf("android_api_level" to Build.VERSION.SDK_INT.toString())
 
-    // Read through the supplier on every access so per-event attributes always reflect the
-    // current featureStates snapshot (including IMMEDIATE-mode flag changes). The supplier is
-    // an immutable constructor val that resolves IFeatureManager lazily — this lets the logging
-    // pipeline come up early in init (before service bootstrap) without mutable late-bound
-    // state. Returns an empty list when the supplier or the manager throws (e.g. very early
-    // emissions before services are ready); the attribute is then omitted downstream.
+    // Resolve through the supplier on every access, so per-event attributes track the current
+    // featureStates snapshot. Empty when it throws, which it does before services are ready.
     @Suppress("TooGenericExceptionCaught", "SwallowedException")
     override val enabledFeatureFlags: List<String>
         get() = try {
@@ -86,7 +74,6 @@ internal class LoggerPlatformProvider(
             emptyList()
         }
 
-    // Per-event attributes - IDs are cached (calculated once), appState is dynamic (calculated per access)
     override val appId: String? by lazy {
         idResolver.resolveAppId()
     }
@@ -103,11 +90,9 @@ internal class LoggerPlatformProvider(
     override val appState: String
         @Suppress("TooGenericExceptionCaught", "SwallowedException")
         get() = try {
-            // Try to get from ApplicationService if available
             getIsInForeground?.invoke()?.let { isForeground ->
                 if (isForeground) "foreground" else "background"
             } ?: run {
-                // Fall back to ActivityManager if Context is available
                 context?.let { ctx ->
                     @Suppress("TooGenericExceptionCaught", "SwallowedException")
                     try {
@@ -144,16 +129,12 @@ internal class LoggerPlatformProvider(
 
     override val minFileAgeForReadMillis: Long = 5_000
 
-    // Cached from SharedPreferences on first access and held for the session.
-    // Mid-session config updates are handled by LoggerLifecycleManager reading
-    // from ConfigModel directly, not from these cached values.
+    // Session-scoped: mid-session updates reach LoggerLifecycleManager via ConfigModel, not here.
     override val isRemoteLoggingEnabled: Boolean by lazy {
         idResolver.resolveRemoteLoggingEnabled()
     }
 
-    // Cached from SharedPreferences on first access and held for the session.
-    // Mid-session config updates are handled by LoggerLifecycleManager reading
-    // from ConfigModel directly, not from these cached values.
+    // Session-scoped, as above.
     @Suppress("TooGenericExceptionCaught", "SwallowedException")
     override val remoteLogLevel: String? by lazy {
         try {
@@ -172,10 +153,8 @@ internal class LoggerPlatformProvider(
 }
 
 /**
- * Factory function to create the Android [ILoggerPlatformProvider]. Reads value-config directly
- * from SharedPreferences / system services; receives a [featureManagerProvider] supplier that the
- * provider invokes lazily on each `enabledFeatureFlags` read so the logging pipeline can come up
- * before service bootstrap completes.
+ * Builds the Android [ILoggerPlatformProvider]. [featureManagerProvider] is resolved lazily per
+ * read, so the logging pipeline can come up before service bootstrap completes.
  */
 internal fun createAndroidLoggerPlatformProvider(
     context: Context,
@@ -193,10 +172,8 @@ internal fun createAndroidLoggerPlatformProvider(
 }
 
 /**
- * The `otel` path segment is kept even though OpenTelemetry is gone: it is the directory
- * upgrading installs already hold crash records in, and moving it would orphan pending
- * uploads. Legacy OTel-format records left behind are reclaimed by
- * [com.onesignal.logger.crash.CrashRetention.selectUnrecognized].
+ * The `otel` segment stays although OpenTelemetry is gone: upgrading installs already hold crash
+ * records there, and moving it would orphan pending uploads.
  */
 internal fun getCrashStoragePath(context: Context): String =
     File(File(File(context.cacheDir, "onesignal"), "otel"), "crashes").path

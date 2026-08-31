@@ -5,10 +5,8 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 
 /**
- * Pure-JVM tests for the ANR decision core; no Robolectric needed.
- *
- * Fixtures mirror AnrConstants: 5s foreground ANR, 2s check interval, 2s frozen slack, 10s
- * background warning, 30s dedup window.
+ * Pure-JVM tests for the ANR decision core. Fixtures mirror AnrConstants: 5s foreground ANR,
+ * 2s check interval, 2s frozen slack, 10s background warning, 30s dedup window.
  */
 class AnrCheckEvaluatorTest : FunSpec({
 
@@ -164,8 +162,7 @@ class AnrCheckEvaluatorTest : FunSpec({
     }
 
     test("the very first block shortly after boot is not suppressed by the sentinel timestamp") {
-        // Clock starts small (near boot); `now - NEVER_REPORTED` would look "recent" if dedup didn't
-        // special-case the sentinel. It must still report.
+        // Near boot, `now - NEVER_REPORTED` looks recent unless dedup special-cases the sentinel.
         val clock = FakeClock(500L)
         val e = evaluator(clock)
 
@@ -202,10 +199,8 @@ class AnrCheckEvaluatorTest : FunSpec({
     }
 
     // ===== record formatting =====
-    //
-    // ANR records must serialize to the same canonical layout Throwable.stackTraceToString()
-    // produces, or consumers that parse `exception.stacktrace` (frame extraction, grouping,
-    // symbolication) silently stop matching ANRs only.
+    // Must match Throwable.stackTraceToString() exactly, or consumers parsing
+    // `exception.stacktrace` silently stop matching ANRs only.
 
     val blockedStack = arrayOf(
         StackTraceElement("android.os.MessageQueue", "nativePollOnce", "MessageQueue.java", 1),

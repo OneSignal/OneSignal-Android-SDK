@@ -39,12 +39,8 @@ private fun createReporter(
     )
 
 /**
- * Owns the lifecycle of the SDK's multiplatform observability pipeline (remote logging,
- * crash capture, ANR detection) and reacts to remote config changes via the shared
- * [ObservabilityConfig]/[ObservabilityConfigEvaluator].
- *
- * Production callers supply only [context] and [featureManagerProvider]; the remaining
- * parameters default to the real implementations and exist for test injection.
+ * Owns the observability pipeline (remote logging, crash capture, ANR detection) and reacts to
+ * config changes. Beyond [context] and [featureManagerProvider], the parameters are test seams.
  */
 @Suppress("TooManyFunctions", "LongParameterList")
 internal class LoggerLifecycleManager(
@@ -141,17 +137,12 @@ internal class LoggerLifecycleManager(
     }
 
     /**
-     * Must be called while holding [lock].
-     *
-     * [currentConfig] is only advanced once the requested state is actually in place, so a
-     * component that failed to start is still missing from the config the next HYDRATE diffs
-     * against and gets retried. That leaves the config trailing actual state, which is why
-     * every branch below settles ties by looking at the component fields rather than the diff.
+     * Call while holding [lock]. [currentConfig] advances only once the requested state is actually
+     * in place, so a component that failed to start is retried by the next HYDRATE.
      */
     private fun applyAction(action: ObservabilityConfigAction, newConfig: ObservabilityConfig) {
-        // The evaluator only sees desired config, and a partial-failure Enable leaves components
-        // live under a config that was never committed. Honoring "off" off actual liveness keeps
-        // the remote kill switch effective there; gating on liveness is what stops it thrashing.
+        // Honor "off" from actual liveness rather than the diff: a partial-failure Enable leaves
+        // components live under a config never committed, so the kill switch would be ignored.
         if (!newConfig.isEnabled && isAnyFeatureLive()) {
             disableFeatures()
             currentConfig = newConfig
@@ -171,10 +162,8 @@ internal class LoggerLifecycleManager(
     }
 
     /**
-     * `NoChange` only says the desired config is unchanged. Nothing else revisits a component
-     * that is missing, because a stable remote payload keeps evaluating to `NoChange` — and the
-     * common case is a single params fetch per session, so there may be no later evaluation at
-     * all. Decide off actual liveness here, the same way the disable path above does.
+     * `NoChange` only means the desired config is unchanged, and a stable payload keeps evaluating
+     * to it, so decide off actual liveness — there may be no later evaluation at all.
      */
     private fun reconcileUnchangedConfig(newConfig: ObservabilityConfig): Boolean {
         val logLevel = newConfig.logLevel ?: LogLevel.ERROR
@@ -191,9 +180,7 @@ internal class LoggerLifecycleManager(
         crashHandler != null && anrDetector != null && remoteTelemetry != null && activeLogLevel == logLevel
 
     /**
-     * Starts whatever is not already running. Each component is independent: one failing must
-     * not stop the others.
-     *
+     * Starts whatever is not already running; one component failing must not stop the others.
      * @return true when every feature is up, so the caller knows whether to commit the config
      */
     @Suppress("TooGenericExceptionCaught")
@@ -213,9 +200,8 @@ internal class LoggerLifecycleManager(
             Logging.warn("OneSignal: Failed to start logger ANR detector: ${t.message}", t)
         }
         try {
-            // Guarded like the other two so a retry does not tear down a healthy sink — but a
-            // retry can carry a newer level than the live sink was started at, and only
-            // startLogging can move it, so compare against the level actually in force.
+            // Guarded like the other two so a retry does not tear down a healthy sink, but a retry
+            // can carry a newer level, so compare against the level actually in force.
             if (remoteTelemetry == null || activeLogLevel != logLevel) startLogging(logLevel)
         } catch (t: Throwable) {
             allStarted = false
@@ -230,10 +216,8 @@ internal class LoggerLifecycleManager(
     @Suppress("TooGenericExceptionCaught")
     private fun disableFeatures() {
         Logging.info("OneSignal: Disabling logger module features")
-        // Each reference is cleared before the teardown call, not after. A collaborator that
-        // throws on the way down would otherwise leave its field set, and the start guards
-        // below would then treat the dead component as already running — permanently
-        // disabling it for the rest of the process.
+        // Clear each reference before the teardown call: a collaborator that throws on the way
+        // down would otherwise leave its field set, and the start guards would treat it as live.
         try {
             val detector = anrDetector
             anrDetector = null
@@ -273,11 +257,8 @@ internal class LoggerLifecycleManager(
     }
 
     /**
-     * A partially-started component still has to be undone. [ILogCrashHandler.initialize] chains
-     * itself onto the process-global uncaught-exception handler before it can throw, so dropping
-     * the reference on failure would let the next retry chain a second one and double-report.
-     * Unregistering before clearing the field keeps [disableFeatures]' invariant intact: the field
-     * is never left pointing at something dead, so the start guards above cannot be fooled.
+     * [ILogCrashHandler.initialize] can chain onto the process-global handler before it throws, so
+     * a failed start must unregister — abandoning it lets the retry chain a second one.
      */
     @Suppress("TooGenericExceptionCaught")
     private fun startCrashHandler() {
@@ -318,11 +299,9 @@ internal class LoggerLifecycleManager(
 
     @Suppress("TooGenericExceptionCaught")
     private fun startLogging(logLevel: LogLevel) {
-        // Build the replacement before parting with the old sink: a throwing factory must cost
-        // nothing, so a failed level change leaves the working sink serving at its old level.
-        // Same invariant as disableFeatures once the swap does happen — the field and Logging's
-        // global move together to the new instance, before the old one is shut down, so neither
-        // is ever left pointing at something dead and no log falls into a cancelled consumer.
+        // Build the replacement before parting with the incumbent: a throwing factory must cost
+        // nothing, so a failed level change leaves the working sink serving at its old level. The
+        // field and Logging's global then move together, before the old sink is shut down.
         val telemetry = remoteTelemetryFactory(platformProvider, httpSender)
         val shouldSend: (LogLevel) -> Boolean = { level ->
             logLevel != LogLevel.NONE && level <= logLevel

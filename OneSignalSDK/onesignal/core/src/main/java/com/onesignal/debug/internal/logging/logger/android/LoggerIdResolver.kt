@@ -11,21 +11,15 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 /**
- * Resolves OneSignal IDs from SharedPreferences with fallback strategies.
- * This class encapsulates all the logic for reading IDs from ConfigModelStore and legacy SharedPreferences,
- * making it easier to maintain and test.
- *
- * Note: Data is read fresh from SharedPreferences each time (not cached) to ensure test reliability
- * and correctness. The performance impact is minimal since these methods are not called frequently.
+ * Resolves OneSignal IDs from ConfigModelStore and legacy SharedPreferences. Reads are never
+ * cached: they are infrequent, and a cache would leak state between tests.
  */
-@Suppress("TooManyFunctions") // This class intentionally groups related ID resolution functions
+@Suppress("TooManyFunctions")
 internal class LoggerIdResolver(
     private val context: Context?,
 ) {
     companion object {
-        /**
-         * Hardcoded error appId prefix when appId cannot be resolved.
-         */
+        /** Returned when appId resolution throws, as opposed to merely finding nothing. */
         private const val ERROR_APP_ID_RESOLVE = "00000000-0000-4000-a000-000000000000"
         private const val ERROR_APP_ID_PREFIX_UNKNOWN = "e1100000-0000-4000-a000-000000000000"
         private const val ERROR_APP_ID_PREFIX_NO_APPID_IN_CONFIG = "e1100000-0000-4000-a000-000000000001"
@@ -34,14 +28,10 @@ internal class LoggerIdResolver(
         private const val ERROR_APP_ID_PREFIX_NO_CONTEXT = "e1100000-0000-4000-a000-000000000004"
     }
 
-    // Get SharedPreferences instance (fresh each time to avoid caching issues in tests)
     private fun getSharedPreferences(): android.content.SharedPreferences? {
         return context?.getSharedPreferences(PreferenceStores.ONESIGNAL, Context.MODE_PRIVATE)
     }
 
-    // Read ConfigModelStore JSON (fresh read each time for testability)
-    // In production, this is called multiple times per resolver instance, but the performance impact is minimal
-    // and this ensures test reliability
     @Suppress("TooGenericExceptionCaught", "SwallowedException")
     private fun readConfigModel(): JSONObject? {
         return try {
@@ -65,7 +55,6 @@ internal class LoggerIdResolver(
         }
     }
 
-    // Check if ConfigModelStore exists but is empty (to distinguish from "not found")
     @Suppress("TooGenericExceptionCaught", "SwallowedException")
     private fun hasEmptyConfigStore(): Boolean {
         return try {
@@ -85,10 +74,8 @@ internal class LoggerIdResolver(
     }
 
     /**
-     * Resolves appId with the following fallback chain:
-     * 1. Try ConfigModelStore in SharedPreferences (MODEL_STORE_config)
-     * 2. Try legacy OneSignal SharedPreferences
-     * 3. Return error appId with affix if all fail
+     * Falls back ConfigModelStore, then legacy SharedPreferences, then an error appId whose
+     * suffix encodes which lookup failed.
      */
     @Suppress("TooGenericExceptionCaught")
     fun resolveAppId(): String {
@@ -115,7 +102,6 @@ internal class LoggerIdResolver(
 
     @Suppress("TooGenericExceptionCaught", "SwallowedException", "NestedBlockDepth")
     private fun resolveAppIdFromLegacy(configModel: JSONObject?): String {
-        // Second: fall back to legacy OneSignal SharedPreferences
         val legacyAppId = try {
             getSharedPreferences()?.getString(PreferenceOneSignalKeys.PREFS_LEGACY_APP_ID, null)
                 ?.takeIf { it.isNotEmpty() }
@@ -124,22 +110,17 @@ internal class LoggerIdResolver(
         }
 
         return legacyAppId ?: run {
-            // Third: return error appId with affix
             return when {
                 context == null -> ERROR_APP_ID_PREFIX_NO_CONTEXT
-                hasEmptyConfigStore() -> ERROR_APP_ID_PREFIX_NO_APPID_IN_CONFIG_STORE // Store exists but is empty array
-                configModel == null -> ERROR_APP_ID_PREFIX_NO_CONFIG_STORE // Store doesn't exist
-                !configModel.has("appId") -> ERROR_APP_ID_PREFIX_NO_APPID_IN_CONFIG // Store exists but no appId field
+                hasEmptyConfigStore() -> ERROR_APP_ID_PREFIX_NO_APPID_IN_CONFIG_STORE
+                configModel == null -> ERROR_APP_ID_PREFIX_NO_CONFIG_STORE
+                !configModel.has("appId") -> ERROR_APP_ID_PREFIX_NO_APPID_IN_CONFIG
                 else -> ERROR_APP_ID_PREFIX_UNKNOWN
             }
         }
     }
 
-    /**
-     * Resolves onesignalId with the following fallback chain:
-     * 1. Try IdentityModelStore in SharedPreferences (MODEL_STORE_identity)
-     * 2. Return null if all fail
-     */
+    /** Resolves onesignalId from the cached IdentityModelStore; null when absent or still a local ID. */
     @Suppress("TooGenericExceptionCaught", "SwallowedException", "NestedBlockDepth")
     fun resolveOnesignalId(): String? {
         return try {
@@ -170,10 +151,7 @@ internal class LoggerIdResolver(
         return null
     }
 
-    /**
-     * Resolves pushSubscriptionId from cached ConfigModelStore.
-     * Returns null if not found or if it's a local ID.
-     */
+    /** Resolves pushSubscriptionId from the cached ConfigModelStore; null when absent or a local ID. */
     @Suppress("TooGenericExceptionCaught", "SwallowedException")
     fun resolvePushSubscriptionId(): String? {
         return try {
@@ -191,14 +169,8 @@ internal class LoggerIdResolver(
     }
 
     /**
-     * Resolves whether remote logging is enabled from cached ConfigModelStore.
-     * Requires both a usable logLevel and a persisted isEnabled that does not veto it:
-     * - "logging_config": {} → no logLevel → disabled (not on allowlist)
-     * - {"logLevel":"ERROR","isEnabled":true} → enabled
-     * - {"logLevel":"ERROR","isEnabled":false} → disabled; the server revoked logging and only
-     *   isEnabled was updated, so trusting the level alone would ignore the remote kill switch
-     *   for the whole of the next cold start.
-     * Returns false if not found, empty, or on error (disabled by default on first launch).
+     * Requires both a usable logLevel and an isEnabled that does not veto it: a server disable
+     * rewrites only isEnabled, so trusting the level alone would ignore the kill switch.
      */
     @Suppress("TooGenericExceptionCaught", "SwallowedException")
     fun resolveRemoteLoggingEnabled(): Boolean {
@@ -213,10 +185,7 @@ internal class LoggerIdResolver(
         }
     }
 
-    /**
-     * Resolves remote log level from cached ConfigModelStore.
-     * Returns null if not found or if there's an error.
-     */
+    /** Resolves the remote log level from the cached ConfigModelStore; null when absent. */
     @Suppress("TooGenericExceptionCaught", "SwallowedException")
     fun resolveRemoteLogLevel(): com.onesignal.debug.LogLevel? {
         return try {
@@ -237,9 +206,8 @@ internal class LoggerIdResolver(
     }
 
     /**
-     * A cache written before isEnabled existed carries only a level, so an absent field has to
-     * mean "fall back to the level" — reading it as off would silence observability on every
-     * upgrade until a params fetch lands. A genuine disable always writes the field.
+     * An absent field means a cache written before isEnabled existed, so it must read as true.
+     * A genuine disable always writes the field; reading absent as off would silence upgrades.
      */
     private fun isEnabledInParams(remoteLoggingParams: JSONObject): Boolean =
         !remoteLoggingParams.has("isEnabled") || remoteLoggingParams.optBoolean("isEnabled", true)
@@ -249,10 +217,7 @@ internal class LoggerIdResolver(
             if (remoteLoggingParams.has("logLevel")) remoteLoggingParams.getString("logLevel") else null
         )
 
-    /**
-     * Resolves install ID from SharedPreferences.
-     * Returns "InstallId-Null" if not found, "InstallId-NotFound" if there's an error.
-     */
+    /** Resolves the install ID; "InstallId-Null" when absent, "InstallId-NotFound" on error. */
     @Suppress("TooGenericExceptionCaught", "SwallowedException")
     fun resolveInstallId(): String {
         return try {

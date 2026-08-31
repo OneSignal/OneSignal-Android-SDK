@@ -28,9 +28,8 @@ import kotlinx.coroutines.withTimeout
 import org.robolectric.annotation.Config
 
 /**
- * Fault-isolation coverage for [LoggerLifecycleManager]: one failing component must never stop
- * the others from starting, and nothing may propagate to the caller — the lifecycle manager runs
- * inside SDK init, where a throw would take down the host app.
+ * Fault isolation for [LoggerLifecycleManager]: one failing component must not stop the others,
+ * and nothing may reach the caller — this runs inside SDK init, where a throw kills the host app.
  */
 @RobolectricTest
 @Config(sdk = [Build.VERSION_CODES.O])
@@ -51,8 +50,7 @@ class LoggerLifecycleManagerFaultTest : FunSpec({
     afterEach {
         ObservabilitySdkSupport.reset()
         Thread.setDefaultUncaughtExceptionHandler(originalHandler)
-        // Enabling installs a mock sink into the process-global Logging; leaving one
-        // attached would leak into every later spec in this JVM.
+        // The sink lives in a process-global; leaving one attached leaks into later specs.
         Logging.setLoggerTelemetry(null) { false }
     }
 
@@ -210,8 +208,7 @@ class LoggerLifecycleManagerFaultTest : FunSpec({
     }
 
     test("a throwing shutdown() during a level change still installs the replacement sink") {
-        // Clearing the field after the teardown call would strand the dead instance there and
-        // leave remote logging down for the session.
+        // Clearing after teardown would strand the dead instance and keep logging down.
         val failing = mockk<ILogTelemetryRemote>(relaxed = true)
         every { failing.shutdown() } throws RuntimeException("shutdown boom")
         val replacement = mockk<ILogTelemetryRemote>(relaxed = true)
@@ -257,8 +254,7 @@ class LoggerLifecycleManagerFaultTest : FunSpec({
         detectorCount shouldBe 1
     }
 
-    // A component that failed to start must be retried on the next config refresh: committing
-    // currentConfig after a partial failure would collapse the next identical HYDRATE to NoChange.
+    // Committing currentConfig after a partial failure collapses the next HYDRATE to NoChange.
 
     test("a crash handler that failed to start is retried on the next identical config") {
         val failing = mockk<ILogCrashHandler>(relaxed = true)
@@ -333,8 +329,7 @@ class LoggerLifecycleManagerFaultTest : FunSpec({
         detectorCount shouldBe 2
     }
 
-    // Teardown clears each reference before calling the collaborator, so a throwing
-    // stop()/unregister() cannot leave the start guards treating a dead component as running.
+    // Clear-before-teardown, so a throwing stop() cannot leave a dead component looking live.
 
     test("a throwing ANR stop() still allows the detector to restart on re-enable") {
         val failing = mockk<ILogAnrDetector>(relaxed = true)
@@ -365,8 +360,8 @@ class LoggerLifecycleManagerFaultTest : FunSpec({
     }
 
     // ===== Desired config vs. actual liveness =====
-    // A partial-failure Enable leaves components running under a config that was never
-    // committed, so the evaluator alone cannot be trusted to decide these two.
+    // A partial-failure Enable leaves components live under an uncommitted config, so the
+    // evaluator alone cannot decide these two.
 
     test("disable tears down live components after a partial-failure enable") {
         val detector = mockk<ILogAnrDetector>(relaxed = true)
@@ -380,8 +375,7 @@ class LoggerLifecycleManagerFaultTest : FunSpec({
 
         manager.onModelReplaced(disabledConfig(), ModelChangeTags.HYDRATE)
 
-        // currentConfig is still null here, so a config-only diff would read null -> disabled
-        // as NoChange and leave the remote kill switch unhonored for the session.
+        // currentConfig is still null, so a config-only diff reads null -> disabled as NoChange.
         verify { detector.stop() }
         verify { telemetry.shutdown() }
     }
@@ -398,8 +392,7 @@ class LoggerLifecycleManagerFaultTest : FunSpec({
         manager.onModelReplaced(enabledConfig(LogLevel.ERROR), ModelChangeTags.HYDRATE)
         manager.onModelReplaced(enabledConfig(LogLevel.DEBUG), ModelChangeTags.HYDRATE)
 
-        // The retry re-enters enableFeatures with a healthy ERROR sink; skipping startLogging
-        // there would commit DEBUG while the sink kept filtering at ERROR.
+        // Skipping startLogging on retry would commit DEBUG while the sink filters at ERROR.
         telemetryCalls shouldBe 2
     }
 
@@ -412,8 +405,8 @@ class LoggerLifecycleManagerFaultTest : FunSpec({
 
         manager.onModelReplaced(enabledConfig(), ModelChangeTags.HYDRATE)
 
-        // initialize() can chain onto the process-global handler before throwing; leaving it
-        // installed and unreferenced means the retry chains a second one and double-reports.
+        // initialize() can chain onto the global handler before throwing; the retry would chain
+        // a second one and double-report.
         verify { failing.unregister() }
     }
 
@@ -440,15 +433,13 @@ class LoggerLifecycleManagerFaultTest : FunSpec({
         manager.onModelReplaced(enabledConfig(LogLevel.WARN), ModelChangeTags.HYDRATE)
         manager.onModelReplaced(enabledConfig(LogLevel.WARN), ModelChangeTags.HYDRATE)
 
-        // The failed update never commits, so currentConfig still reads ERROR and the repeat
-        // WARN payload is another UpdateLogLevel rather than a NoChange.
+        // The failed update never commits, so the repeat WARN is another UpdateLogLevel.
         calls shouldBe 3
     }
 
     // ===== A failed level change must not cost a sink that was already working =====
-    // The retry above is the lucky path. One params fetch per session is the norm, so the
-    // replacement has to be built before the incumbent is given up: there is usually no second
-    // HYDRATE, and a HYDRATE back to the old level evaluates to NoChange.
+    // The retry above is the lucky path: one params fetch per session is the norm, so build the
+    // replacement before giving up the incumbent.
 
     test("a failed level change leaves the previously working sink serving at the old level") {
         val emitted = CompletableDeferred<Unit>()
@@ -484,8 +475,7 @@ class LoggerLifecycleManagerFaultTest : FunSpec({
         manager.onModelReplaced(enabledConfig(LogLevel.WARN), ModelChangeTags.HYDRATE)
         manager.onModelReplaced(enabledConfig(LogLevel.ERROR), ModelChangeTags.HYDRATE)
 
-        // The revert is a NoChange against the uncommitted ERROR config. Nothing to repair,
-        // because the failed WARN attempt never took the ERROR sink away.
+        // NoChange against the uncommitted ERROR config, and nothing to repair.
         calls shouldBe 2
         verify(exactly = 0) { working.shutdown() }
         Logging.error("routed after the revert")
@@ -526,8 +516,7 @@ class LoggerLifecycleManagerFaultTest : FunSpec({
     }
 
     // ===== Errors, not just Exceptions =====
-    // The catch clauses are on Throwable; these pin that intent so a later narrowing to
-    // Exception cannot silently make SDK init crash the host app.
+    // Pins the catch clauses to Throwable: narrowing to Exception would crash the host app.
 
     test("OutOfMemoryError from factory does not propagate") {
         val manager = managerWith(crashHandler = { throw OutOfMemoryError("oom") })

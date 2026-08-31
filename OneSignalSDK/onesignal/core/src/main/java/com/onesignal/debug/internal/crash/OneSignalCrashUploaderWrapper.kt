@@ -54,21 +54,12 @@ internal class OneSignalCrashUploaderWrapper(
         }
     }
 
-    /**
-     * Resolves the crash directory via the pure path helper rather than a provider: the value is
-     * derived from the context alone, and building a provider costs a `PackageManager` round-trip
-     * and re-emits its "Crash logs stored at" line.
-     */
+    /** Uses the pure path helper, not a provider: that costs a `PackageManager` round-trip. */
     private fun crashStoragePath(): String = getCrashStoragePath(applicationService.appContext)
 
     /**
-     * Logs a snapshot of the crash dir (counts of owned `.otlp` vs foreign/legacy
-     * entries, plus a bounded per-file sample) so leftover formats are visible and
-     * cleanup is verifiable from logs alone.
-     *
-     * Reports an unreadable `lastModified()` as unknown for the same reason [FileLogStore] does,
-     * so the sampled age is either the one retention actually used or `unknown` — an inventory
-     * printing a fabricated age would misdirect exactly the investigation it exists to support.
+     * Snapshot of the crash dir, so cleanup is verifiable from logs alone. Report an unreadable
+     * `lastModified()` as unknown, as [FileLogStore] does; a fabricated age misdirects.
      */
     @Suppress("TooGenericExceptionCaught")
     private fun logCrashDirInventory(label: String) {

@@ -2,10 +2,7 @@ package com.onesignal.internal
 
 import com.onesignal.debug.LogLevel
 
-/**
- * Snapshot of the observability-relevant fields from remote config.
- * Used by [ObservabilityConfigEvaluator] to diff old vs new config.
- */
+/** Snapshot of the observability-relevant fields from remote config. */
 internal data class ObservabilityConfig(
     val isEnabled: Boolean,
     val logLevel: LogLevel?,
@@ -15,9 +12,7 @@ internal data class ObservabilityConfig(
     }
 }
 
-/**
- * Describes what the [LoggerLifecycleManager] should do after a config change.
- */
+/** What [LoggerLifecycleManager] should do after a config change. */
 internal sealed class ObservabilityConfigAction {
     /** Nothing changed that affects observability features. */
     object NoChange : ObservabilityConfigAction()
@@ -32,34 +27,24 @@ internal sealed class ObservabilityConfigAction {
     object Disable : ObservabilityConfigAction()
 }
 
-/**
- * Pure, side-effect-free evaluator that compares old and new [ObservabilityConfig]
- * and returns the [ObservabilityConfigAction] the lifecycle manager should execute.
- */
+/** Pure diff of two [ObservabilityConfig]s; sees desired config only, never actual liveness. */
 internal object ObservabilityConfigEvaluator {
-    /**
-     * @param old the previous config snapshot, or null on first evaluation (cold start).
-     * @param new the freshly-arrived config snapshot.
-     */
+    /** [old] is null on the first evaluation of a cold start. */
     fun evaluate(old: ObservabilityConfig?, new: ObservabilityConfig): ObservabilityConfigAction {
         val wasEnabled = old?.isEnabled == true
         val isNowEnabled = new.isEnabled
 
         return when {
-            // Transition: off -> on
             !wasEnabled && isNowEnabled -> {
                 val level = new.logLevel ?: LogLevel.ERROR
                 ObservabilityConfigAction.Enable(level)
             }
-            // Transition: on -> off
             wasEnabled && !isNowEnabled -> ObservabilityConfigAction.Disable
-            // Stays enabled but log level changed
             wasEnabled && isNowEnabled && old?.logLevel != new.logLevel -> {
                 val oldLevel = old?.logLevel ?: LogLevel.ERROR
                 val newLevel = new.logLevel ?: LogLevel.ERROR
                 ObservabilityConfigAction.UpdateLogLevel(oldLevel, newLevel)
             }
-            // Everything else: no meaningful change
             else -> ObservabilityConfigAction.NoChange
         }
     }

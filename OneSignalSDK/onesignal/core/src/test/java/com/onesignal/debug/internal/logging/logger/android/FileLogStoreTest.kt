@@ -16,8 +16,7 @@ class FileLogStoreTest : FunSpec({
 
     lateinit var dir: File
 
-    // The bounds FileLogStore enforces; asserting against the shared policy rather than
-    // copies of its numbers keeps these expectations tied to what the store actually uses.
+    // Assert against the shared policy, never against copies of its numbers.
     val policy = CrashRetention.defaultPolicy
 
     beforeEach {
@@ -35,11 +34,8 @@ class FileLogStoreTest : FunSpec({
         }
 
     /**
-     * Stands in for a timestamp the platform cannot read: `File.lastModified()` returns 0 for an
-     * I/O failure, indistinguishable from a genuine epoch mtime, which is why the store treats
-     * non-positive as unknown. The assertion is load-bearing — not every filesystem honours
-     * `setLastModified(0)`, and one that quietly ignored it would leave these cases exercising
-     * the ordinary readable-timestamp path while still passing.
+     * Stands in for a timestamp the platform cannot read. The assertion is load-bearing: not every
+     * filesystem honours `setLastModified(0)`, and one that ignored it would still pass.
      */
     fun writeUnreadableMtime(name: String, sizeBytes: Int = 1): File =
         File(dir, name).apply {
@@ -156,8 +152,7 @@ class FileLogStoreTest : FunSpec({
     }
 
     test("save evicts oldest-first once the total byte cap is exceeded") {
-        // Each is just under the per-record cap, so only their combined size can breach the
-        // total budget — five of them do, and the oldest is the one that loses.
+        // Each is just under the per-record cap, so only their combined size breaches the budget.
         val nearCap = (policy.maxRecordBytes - 12_288).toInt()
         repeat(5) { i -> write("big-$i.otlp", ageMsAgo = 10_000L * (i + 1), sizeBytes = nearCap) }
 
@@ -176,8 +171,7 @@ class FileLogStoreTest : FunSpec({
     }
 
     test("an inherited oversized record is still offered for upload, not deleted unread") {
-        // Written by a build predating the write-time limit. Deleting it before an upload
-        // attempt would silently destroy a real crash report.
+        // Written by a build predating the write-time limit, so it is a real crash report.
         write("inherited.otlp", ageMsAgo = 60_000, sizeBytes = (policy.maxRecordBytes + 1).toInt())
 
         val readable = runBlocking { FileLogStore(dir.path).listReadable(minAgeMillis = 0) }
@@ -186,11 +180,8 @@ class FileLogStoreTest : FunSpec({
         File(dir, "inherited.otlp").exists() shouldBe true
     }
 
-    // Both sort keys clamp to now, so a record written while the backlog is dated ahead of the
-    // clock lands in a tie group with it, and the order inside that group is whatever the
-    // filesystem lists. Only the explicit keepName reservation guarantees the new record
-    // survives; without it eviction is a coin flip, so one attempt would pass most of the time.
-    // Repeating drives the odds of a false pass to nil.
+    // Both sort keys clamp to now, so a record written against a future-dated backlog ties with
+    // it and filesystem order decides. Repeat: one attempt would pass most of the time anyway.
     test("save never evicts the record it just wrote, whatever order the backlog lists in") {
         repeat(25) {
             val trialDir = Files.createTempDirectory("crashes-keepname").toFile()
@@ -214,9 +205,6 @@ class FileLogStoreTest : FunSpec({
         }
     }
 
-    // The uploader paths must reclaim a backlog inherited from a build without caps —
-    // otherwise it is only trimmed the next time a crash happens to be written.
-
     test("listReadable evicts an inherited over-cap backlog instead of returning it") {
         repeat(policy.maxRecordCount + 10) { i -> write("seed-$i.otlp", ageMsAgo = 1_000L * (i + 1)) }
 
@@ -226,8 +214,6 @@ class FileLogStoreTest : FunSpec({
         dir.listFiles()!!.count { it.name.endsWith(policy.ownedSuffix) } shouldBe policy.maxRecordCount
     }
 
-    // A delete can fail (read-only dir, filesystem error). The record must stay unreadable
-    // regardless, and must not resurface on a later pass just because it survived.
     test("an expired record that cannot be deleted is still withheld from readers") {
         write("expired-stuck.otlp", ageMsAgo = policy.maxReadAgeMillis + 60_000)
         write("fresh.otlp", ageMsAgo = 60_000)
@@ -241,11 +227,6 @@ class FileLogStoreTest : FunSpec({
         File(dir, "expired-stuck.otlp").exists() shouldBe true
     }
 
-    // An unreadable modification time used to be read back as an age of "since the epoch", which
-    // is past every ceiling — so the record the crash handler had just written was reclaimed as
-    // ancient. The store now reports it as unknown and the shared policy re-derives the write
-    // time from the `{millis}-{uuid}.otlp` name.
-
     test("an owned record with an unreadable timestamp is dated from its name and stays readable") {
         val writtenMs = System.currentTimeMillis() - 60_000
         writeUnreadableMtime("$writtenMs-abc.otlp")
@@ -256,8 +237,7 @@ class FileLogStoreTest : FunSpec({
         File(dir, "$writtenMs-abc.otlp").exists() shouldBe true
     }
 
-    // The converse of the above: recovering the write time from the name must not become a way
-    // for a stale record to outlive the ceiling by having an unreadable timestamp.
+    // Dating from the name must not become a way to outlive the ceiling.
     test("an owned record with an unreadable timestamp still expires on the millis in its name") {
         val writtenMs = System.currentTimeMillis() - (policy.maxReadAgeMillis + 60_000)
         writeUnreadableMtime("$writtenMs-abc.otlp")
@@ -268,10 +248,8 @@ class FileLogStoreTest : FunSpec({
         File(dir, "$writtenMs-abc.otlp").exists() shouldBe false
     }
 
-    // Neither clock is available: the timestamp will not read and the name carries no millis.
-    // A failed read is not evidence of age, so nothing may expire it — but it must not become
-    // readable either, since it cannot be shown to have cleared minAgeMillis and may still be
-    // mid-write.
+    // Neither clock is available: no mtime, no millis in the name. A failed read is not evidence
+    // of age, so nothing may expire it — nor may it be read, since it may still be mid-write.
     test("an undatable owned record is never age-expired, only withheld from readers") {
         writeUnreadableMtime("undatable-abc.otlp")
         write("fresh-456.otlp", ageMsAgo = 60_000)
@@ -283,9 +261,7 @@ class FileLogStoreTest : FunSpec({
         File(dir, "fresh-456.otlp").exists() shouldBe true
     }
 
-    // Exempt from expiry is not exempt from the caps. An entry left out of the accounting would
-    // sit outside every bound at once and leak for the life of the install, so it still occupies
-    // a slot — and yields it before any record that can be dated.
+    // Exempt from expiry is not exempt from the caps, or it would leak for the install's life.
     test("an undatable owned record still counts toward the caps and is evicted before datable ones") {
         repeat(policy.maxRecordCount) { i -> write("seed-$i.otlp", ageMsAgo = 1_000L * (i + 1)) }
         writeUnreadableMtime("undatable-abc.otlp")
@@ -293,13 +269,11 @@ class FileLogStoreTest : FunSpec({
         runBlocking { FileLogStore(dir.path).listReadable(minAgeMillis = 0) }
 
         File(dir, "undatable-abc.otlp").exists() shouldBe false
-        // The oldest datable record keeps its slot: the undatable one is what paid for the cap.
         File(dir, "seed-${policy.maxRecordCount - 1}.otlp").exists() shouldBe true
         dir.listFiles()!!.count { it.name.endsWith(policy.ownedSuffix) } shouldBe policy.maxRecordCount
     }
 
-    // The foreign-file purge is also an age gate, and an undatable entry cannot clear it. Left
-    // in place rather than reaped on a guess: it may be another writer's file, mid-write.
+    // It may be another writer's file, mid-write, so it is left rather than reaped on a guess.
     test("a foreign file with an unreadable timestamp is not purged as stale") {
         writeUnreadableMtime("stale.tmp")
 
@@ -311,14 +285,12 @@ class FileLogStoreTest : FunSpec({
         File(dir, "stale.tmp").exists() shouldBe true
     }
 
-    // What `save` leaves behind when the process dies between write and rename. This purge is
-    // the only pass that ever reclaims one, and it needs an age, so a temp the policy cannot
-    // date is stranded for the life of the install.
+    // What `save` leaves when the process dies between write and rename. This purge is the only
+    // pass that reclaims one, and it needs an age, so an undatable temp is stranded forever.
     test("an interrupted write is reclaimed even when its timestamp is unreadable") {
         val writtenMs = System.currentTimeMillis() - 600_000
         writeUnreadableMtime("$writtenMs-abc${policy.ownedTempSuffix}")
-        // Another writer's scheme, not an epoch reading: dating it from its `3` would make a
-        // file written seconds ago look 56 years stale and reap it mid-write.
+        // Another writer's scheme: dating it from its `3` would reap a seconds-old file mid-write.
         writeUnreadableMtime("3-tmp.dat")
 
         val purged = runBlocking {
@@ -330,7 +302,6 @@ class FileLogStoreTest : FunSpec({
         File(dir, "3-tmp.dat").exists() shouldBe true
     }
 
-    // The gate that keeps the purge above off a write still in flight.
     test("an interrupted write younger than the age gate is left alone") {
         val writtenMs = System.currentTimeMillis() - 100
         writeUnreadableMtime("$writtenMs-abc${policy.ownedTempSuffix}")

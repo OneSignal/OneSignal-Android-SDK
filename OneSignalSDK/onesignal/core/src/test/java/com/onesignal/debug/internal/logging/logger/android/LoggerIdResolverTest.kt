@@ -570,9 +570,7 @@ class LoggerIdResolverTest : FunSpec({
     }
 
     // ===== resolveRemoteLoggingEnabled Tests =====
-    // Enabled is derived from presence of a valid logLevel:
-    //   "logging_config": {} → disabled (not on allowlist)
-    //   "logging_config": {"log_level": "ERROR"} → enabled (on allowlist)
+    // Enabled is derived from the presence of a valid logLevel.
 
     test("resolveRemoteLoggingEnabled returns true when logLevel is ERROR") {
         val remoteLoggingParams = JSONObject().apply {
@@ -955,9 +953,8 @@ class LoggerIdResolverTest : FunSpec({
         resolver.resolveRemoteLoggingEnabled() shouldBe false
     }
 
-    // A server disable only rewrites isEnabled, so a level left over from an earlier session can
-    // sit beside it. The level still resolves — it is what the sink would use — but the kill
-    // switch wins, otherwise the next cold start reads the stale level as consent.
+    // A server disable rewrites only isEnabled, so a stale level survives beside it and the kill
+    // switch has to win, or the next cold start reads that level as consent.
 
     test("extractLogLevelFromParams: {logLevel:ERROR, isEnabled:false} resolves the level but reports disabled") {
         val remoteLoggingParams = JSONObject("""{"logLevel":"ERROR","isEnabled":false}""")
@@ -972,8 +969,7 @@ class LoggerIdResolverTest : FunSpec({
         resolver.resolveRemoteLoggingEnabled() shouldBe false
     }
 
-    // Caches written before isEnabled existed carry a level and nothing else. Reading the absent
-    // field as off would silence observability on every upgrade until a params fetch lands.
+    // Reading the field's absence as off would silence observability on every upgrade.
 
     test("extractLogLevelFromParams: a pre-isEnabled cache with only a level stays enabled") {
         val remoteLoggingParams = JSONObject("""{"logLevel":"ERROR"}""")

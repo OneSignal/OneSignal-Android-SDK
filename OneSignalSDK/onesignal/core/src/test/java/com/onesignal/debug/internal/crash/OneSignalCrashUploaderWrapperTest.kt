@@ -110,8 +110,7 @@ class OneSignalCrashUploaderWrapperTest : FunSpec({
         wrapper shouldNotBe null
     }
 
-    // Covers the first launch after upgrade: there is no cached config yet, so unreadable
-    // inherited records must be reclaimed without an upload pass rather than lingering.
+    // First launch after upgrade has no cached config, so reclaim must run without an upload.
     test("start reclaims records left in the crash dir by a pre-upgrade otel session") {
         val crashDir = File(getCrashStoragePath(appContext)).apply { mkdirs() }
         // Pre-upgrade sessions wrote bare-millis filenames; the logger owns `.otlp` only.

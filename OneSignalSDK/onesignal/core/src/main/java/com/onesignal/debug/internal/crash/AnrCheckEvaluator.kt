@@ -4,13 +4,8 @@ import com.onesignal.logger.CrashData
 import java.util.concurrent.atomic.AtomicLong
 
 /**
- * Pure, Android-free decision core for the ANR watchdog. All timing, classification and dedup
- * state lives here; the Android shell
- * ([com.onesignal.debug.internal.logging.logger.android.AndroidLogAnrDetector]) owns the thread,
- * the real sleep and the reporting side effects, and delegates each iteration to [evaluate].
- *
- * Foreground and background blocks keep independent dedup timestamps: a stream of backgrounded
- * warnings must never suppress a genuine foreground ANR (and vice versa).
+ * Pure decision core for the ANR watchdog: all timing, classification and dedup state. Foreground
+ * and background blocks keep independent dedup timestamps, so neither can suppress the other.
  */
 internal class AnrCheckEvaluator(
     private val anrThresholdMs: Long,
@@ -36,9 +31,8 @@ internal class AnrCheckEvaluator(
     }
 
     /**
-     * Evaluates a single watchdog iteration given how long the watchdog's own sleep actually took and
-     * the current app state. Returns the action the shell should take; all dedup bookkeeping is done
-     * here so the shell only performs side effects.
+     * Evaluates one watchdog iteration. All dedup bookkeeping happens here, so the shell only
+     * performs side effects.
      */
     fun evaluate(actualSleepMs: Long, inForeground: Boolean): AnrCheckResult {
         val timeSinceLastResponse = now() - lastResponseTime.get()
@@ -55,9 +49,8 @@ internal class AnrCheckEvaluator(
             )
         ) {
             BlockClassification.FROZEN_PROCESS -> {
-                // The watchdog thread itself was descheduled (Doze / cached-process freeze). Anything
-                // measured for the main thread is a freeze artifact, so re-baseline and treat as
-                // responsive to avoid firing on the next iteration.
+                // The watchdog thread itself was descheduled, so anything measured for the main
+                // thread is a freeze artifact: re-baseline rather than fire on the next iteration.
                 lastResponseTime.set(now())
                 AnrCheckResult.FrozenProcess(actualSleepMs = actualSleepMs, expectedSleepMs = checkIntervalMs)
             }
@@ -132,12 +125,8 @@ internal enum class BlockClassification {
 }
 
 /**
- * Pure decision for a single watchdog check.
- *
- * Frozen-process detection wins first: if the watchdog's own sleep overran [checkIntervalMs] by more
- * than [frozenSlackMs], the whole process was descheduled and any measured block is an artifact.
- * Otherwise the applicable threshold depends on app state — [anrThresholdMs] in the foreground (where
- * Android raises real ANRs) and the higher [backgroundThresholdMs] in the background.
+ * Frozen-process detection wins first: a watchdog sleep overrunning [checkIntervalMs] by more than
+ * [frozenSlackMs] means the process was descheduled, so any measured block is an artifact.
  */
 @Suppress("LongParameterList")
 internal fun classifyBlock(
@@ -158,11 +147,7 @@ internal fun classifyBlock(
     }
 }
 
-/**
- * Compact fingerprint for a captured main-thread stack: the top frame plus the first OneSignal frame.
- * Kept as a queryable summary so background blocks can be grouped and triaged without parsing the
- * full stack.
- */
+/** Compact fingerprint for a main-thread stack: top frame plus the first OneSignal frame. */
 internal fun buildBlockFingerprint(stackTrace: Array<StackTraceElement>): String {
     val topFrame = stackTrace.firstOrNull()?.toString() ?: "unknown"
     val oneSignalFrame = stackTrace.firstOrNull { it.className.startsWith("com.onesignal") }?.toString() ?: "none"
@@ -176,11 +161,8 @@ internal const val ANR_EXCEPTION_TYPE = "ApplicationNotRespondingException"
 internal const val BACKGROUND_BLOCK_EXCEPTION_TYPE = "BackgroundMainThreadBlockException"
 
 /**
- * Renders a live thread's stack in the canonical JVM layout that [Throwable.stackTraceToString]
- * emits: a `type: message` header followed by `\tat `-prefixed frames. ANR records are captured
- * from a running thread rather than a thrown exception, so there is no throwable to serialize, but
- * the output must stay byte-identical to the crash path's or consumers that parse
- * `exception.stacktrace` stop matching ANRs only.
+ * Must stay byte-identical to [Throwable.stackTraceToString]. ANR records come from a live thread
+ * rather than a throwable, and consumers parsing `exception.stacktrace` would stop matching ANRs.
  */
 internal fun formatJvmStacktrace(
     exceptionType: String,

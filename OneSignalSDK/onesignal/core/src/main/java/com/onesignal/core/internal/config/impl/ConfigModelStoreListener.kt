@@ -104,9 +104,8 @@ internal class ConfigModelStoreListener(
                     params.influenceParams.isIndirectEnabled?.let { config.influenceParams.isIndirectEnabled = it }
                     params.influenceParams.isUnattributedEnabled?.let { config.influenceParams.isUnattributedEnabled = it }
 
-                    // Unlike the fields above, an absent log_level is the backend revoking remote
-                    // logging rather than declining to change it. Keeping the previous level here
-                    // leaves the cache advertising a level the kill switch already withdrew.
+                    // Unlike the fields above, an absent log_level is a revocation rather than a
+                    // decline to change: keeping the old level would outlive the kill switch.
                     config.remoteLoggingParams.logLevel = params.remoteLoggingParams.logLevel
                     config.remoteLoggingParams.isEnabled = params.remoteLoggingParams.isEnabled
 

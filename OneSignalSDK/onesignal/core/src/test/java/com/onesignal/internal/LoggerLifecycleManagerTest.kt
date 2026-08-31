@@ -43,10 +43,8 @@ class LoggerLifecycleManagerTest : FunSpec({
     var originalHandler: Thread.UncaughtExceptionHandler? = null
 
     /**
-     * Real platform provider and crash handler, so the assertions below observe genuine
-     * [Thread.UncaughtExceptionHandler] registration. The ANR detector, file store and remote
-     * sink are stubbed: the real detector spawns a daemon watchdog thread that would outlive
-     * the spec and write into the Robolectric cache dir other specs assert on.
+     * Real provider and crash handler, so assertions see genuine handler registration. The real
+     * ANR detector must stay stubbed: its daemon thread outlives the spec and writes to the cache.
      */
     fun newManager(
         anrDetector: ILogAnrDetector = mockk(relaxed = true),
@@ -106,9 +104,8 @@ class LoggerLifecycleManagerTest : FunSpec({
     }
 
     // ===== Cold start reads the cache, and the cache can disagree with itself =====
-    // A server disable rewrites only isEnabled, so the level from the session before it survives
-    // alongside. Cold start runs before any params fetch, and a fetch that never succeeds means
-    // it is the only thing standing between a revoked app and a full observability pipeline.
+    // A server disable rewrites only isEnabled, so a stale level survives beside it. Cold start
+    // runs before any params fetch, and that fetch may never succeed.
 
     test("initializeFromCachedConfig honors a cached kill switch beside a stale level") {
         writeCachedLoggingParams("""{"logLevel":"ERROR","isEnabled":false}""")
@@ -134,8 +131,7 @@ class LoggerLifecycleManagerTest : FunSpec({
         verify { detector.start() }
     }
 
-    // An upgrade from a build that predates isEnabled finds a level and no flag. Reading the
-    // absent flag as off would take observability away from every existing install.
+    // Reading the absent flag as off would take observability away from every upgrading install.
 
     test("initializeFromCachedConfig starts the pipeline for a cache written before isEnabled existed") {
         writeCachedLoggingParams("""{"logLevel":"ERROR"}""")
@@ -208,8 +204,7 @@ class LoggerLifecycleManagerTest : FunSpec({
         Thread.getDefaultUncaughtExceptionHandler() shouldBe afterFirst
     }
 
-    // The ANR watchdog and the remote sink are not observable through the process-global
-    // uncaught-exception handler, so these drive them through the injected factories.
+    // The watchdog and sink are invisible to the global handler, so drive them via the factories.
 
     test("enabling starts the ANR detector and disabling stops it") {
         val detector = mockk<ILogAnrDetector>(relaxed = true)
@@ -233,9 +228,8 @@ class LoggerLifecycleManagerTest : FunSpec({
     }
 
     test("enabling wires the remote sink and disabling shuts it down and clears it") {
-        // Emission hops to a background scope, so wait on a signal from the sink rather than a
-        // fixed sleep. The negative case has no such event, so it settles for a bounded wait —
-        // but only after a real emit has established that the pipeline is warm.
+        // Emission hops to a background scope, so wait on a signal rather than a fixed sleep. The
+        // negative case has no event, so it settles for a bounded wait once the pipeline is warm.
         val emitted = CompletableDeferred<Unit>()
         val telemetry = mockk<ILogTelemetryRemote>(relaxed = true)
         coEvery { telemetry.emit(any()) } answers { emitted.complete(Unit); Unit }

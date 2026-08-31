@@ -37,13 +37,7 @@ object Logging {
     @Volatile
     private var shouldSendLoggerLogLevel: (LogLevel) -> Boolean = { false }
 
-    /**
-     * Sets the `logger` module remote telemetry instance and log level check function.
-     * This should be called when remote logging is enabled.
-     *
-     * @param telemetry The remote telemetry instance
-     * @param shouldSend Function that returns true if a log level should be sent remotely
-     */
+    /** Installs the remote sink; pass a null [telemetry] to stop shipping logs remotely. */
     fun setLoggerTelemetry(
         telemetry: ILogTelemetryRemote?,
         shouldSend: (LogLevel) -> Boolean = { false },

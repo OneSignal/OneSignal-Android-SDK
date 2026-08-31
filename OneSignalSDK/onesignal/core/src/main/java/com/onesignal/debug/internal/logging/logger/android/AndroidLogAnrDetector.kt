@@ -14,22 +14,8 @@ import com.onesignal.logger.ILogger
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
- * Android [ILogAnrDetector] — watchdog that monitors main-thread responsiveness and, if
- * OneSignal is at fault, persists a report via the `logger` module's [ILogCrashReporter].
- *
- * Detection is app-state aware, because a blocked main thread does not mean the same thing
- * in the foreground as in the background:
- * - Foreground block > [anrThresholdMs]: a real, user-visible ANR — reported via
- *   [ILogCrashReporter.saveCrash] (fatal).
- * - Background block > [backgroundThresholdMs]: not an ANR (Android raises none for a
- *   backgrounded app) — recorded via [ILogCrashReporter.saveNonFatal] under a distinct
- *   exception type so it stays out of the ANR metric while remaining queryable.
- * - If the watchdog's own sleep overran far beyond [checkIntervalMs], the whole process was
- *   descheduled (Doze / cached-process freeze), so the measured block is a freeze artifact
- *   and is suppressed.
- *
- * Every timing/classification/dedup decision is delegated to [AnrCheckEvaluator]
- * (pure, JVM-tested), so this shell stays free of timing logic.
+ * Android [ILogAnrDetector]: owns the watchdog thread and the reporting side effects. Every
+ * timing, classification and dedup decision belongs in [AnrCheckEvaluator], not here.
  */
 internal class AndroidLogAnrDetector(
     private val crashReporter: ILogCrashReporter,
@@ -168,10 +154,7 @@ internal class AndroidLogAnrDetector(
         }
     }
 
-    /**
-     * Records a backgrounded main-thread block as a non-fatal warning rather than an ANR, under a
-     * distinct exception type so it can be segmented into its own stream.
-     */
+    /** Non-fatal, under a distinct exception type, so backgrounded blocks stay out of the ANR metric. */
     @Suppress("TooGenericExceptionCaught")
     private fun reportBackgroundBlock(unresponsiveDurationMs: Long) {
         try {
