@@ -69,6 +69,19 @@ class ConfigModelStoreListenerTests : FunSpec({
         store.model.remoteLoggingParams.isEnabled shouldBe true
     }
 
+    // The cold-start resolver reads a cached NONE as off, so hydration has to cache it as off too.
+    test("a fetch that sends NONE caches remote logging as disabled") {
+        val store = ConfigModelStore(MockPreferencesService())
+        store.model.appId = "test-app-id"
+        store.model.remoteLoggingParams.logLevel = LogLevel.ERROR
+        store.model.remoteLoggingParams.isEnabled = true
+
+        runFetchWith(store, RemoteLoggingParamsObject(logLevel = LogLevel.NONE))
+
+        store.model.remoteLoggingParams.logLevel shouldBe LogLevel.NONE
+        store.model.remoteLoggingParams.isEnabled shouldBe false
+    }
+
     test("fetchParams does not clobber sdkRemoteFeatureFlags written between snapshot and replace") {
         // Real store so replace() goes through Model.initializeFromModel (data.clear()+putAll()).
         val store = ConfigModelStore(MockPreferencesService())
