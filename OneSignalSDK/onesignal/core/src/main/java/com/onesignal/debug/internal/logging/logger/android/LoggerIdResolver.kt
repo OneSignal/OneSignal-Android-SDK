@@ -192,16 +192,22 @@ internal class LoggerIdResolver(
 
     /**
      * Resolves whether remote logging is enabled from cached ConfigModelStore.
-     * Enabled is derived from the presence of a valid logLevel:
+     * Requires both a usable logLevel and a persisted isEnabled that does not veto it:
      * - "logging_config": {} → no logLevel → disabled (not on allowlist)
-     * - "logging_config": {"log_level": "ERROR"} → has logLevel → enabled (on allowlist)
+     * - {"logLevel":"ERROR","isEnabled":true} → enabled
+     * - {"logLevel":"ERROR","isEnabled":false} → disabled; the server revoked logging and only
+     *   isEnabled was updated, so trusting the level alone would ignore the remote kill switch
+     *   for the whole of the next cold start.
      * Returns false if not found, empty, or on error (disabled by default on first launch).
      */
     @Suppress("TooGenericExceptionCaught", "SwallowedException")
     fun resolveRemoteLoggingEnabled(): Boolean {
         return try {
-            val logLevel = resolveRemoteLogLevel()
-            logLevel != null && logLevel != com.onesignal.debug.LogLevel.NONE
+            val remoteLoggingParams = readRemoteLoggingParams() ?: return false
+            val logLevel = extractLogLevelFromParams(remoteLoggingParams)
+            isEnabledInParams(remoteLoggingParams) &&
+                logLevel != null &&
+                logLevel != com.onesignal.debug.LogLevel.NONE
         } catch (e: Exception) {
             false
         }
@@ -211,20 +217,32 @@ internal class LoggerIdResolver(
      * Resolves remote log level from cached ConfigModelStore.
      * Returns null if not found or if there's an error.
      */
-    @Suppress("TooGenericExceptionCaught", "SwallowedException", "NestedBlockDepth")
+    @Suppress("TooGenericExceptionCaught", "SwallowedException")
     fun resolveRemoteLogLevel(): com.onesignal.debug.LogLevel? {
         return try {
-            val configModel = readConfigModel()
-            val remoteLoggingParamsProperty = ConfigModel::remoteLoggingParams
-            if (configModel != null && configModel.has(remoteLoggingParamsProperty.name)) {
-                extractLogLevelFromParams(configModel.getJSONObject(remoteLoggingParamsProperty.name))
-            } else {
-                null
-            }
+            readRemoteLoggingParams()?.let { extractLogLevelFromParams(it) }
         } catch (e: Exception) {
             null
         }
     }
+
+    private fun readRemoteLoggingParams(): JSONObject? {
+        val configModel = readConfigModel() ?: return null
+        val remoteLoggingParamsProperty = ConfigModel::remoteLoggingParams
+        return if (configModel.has(remoteLoggingParamsProperty.name)) {
+            configModel.getJSONObject(remoteLoggingParamsProperty.name)
+        } else {
+            null
+        }
+    }
+
+    /**
+     * A cache written before isEnabled existed carries only a level, so an absent field has to
+     * mean "fall back to the level" — reading it as off would silence observability on every
+     * upgrade until a params fetch lands. A genuine disable always writes the field.
+     */
+    private fun isEnabledInParams(remoteLoggingParams: JSONObject): Boolean =
+        !remoteLoggingParams.has("isEnabled") || remoteLoggingParams.optBoolean("isEnabled", true)
 
     private fun extractLogLevelFromParams(remoteLoggingParams: JSONObject): com.onesignal.debug.LogLevel? =
         com.onesignal.debug.LogLevel.fromString(

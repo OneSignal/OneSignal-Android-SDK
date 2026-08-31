@@ -7,6 +7,8 @@ import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
 import com.onesignal.common.modeling.ModelChangeTags
 import com.onesignal.core.internal.config.ConfigModel
 import com.onesignal.core.internal.features.IFeatureManager
+import com.onesignal.core.internal.preferences.PreferenceOneSignalKeys
+import com.onesignal.core.internal.preferences.PreferenceStores
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.crash.ObservabilitySdkSupport
 import com.onesignal.debug.internal.logging.Logging
@@ -27,7 +29,10 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import org.json.JSONArray
+import org.json.JSONObject
 import org.robolectric.annotation.Config
+import com.onesignal.core.internal.config.CONFIG_NAME_SPACE as configNameSpace
 
 /** Covers the config state machine that brings the logger pipeline up and tears it down. */
 @RobolectricTest
@@ -43,17 +48,34 @@ class LoggerLifecycleManagerTest : FunSpec({
      * sink are stubbed: the real detector spawns a daemon watchdog thread that would outlive
      * the spec and write into the Robolectric cache dir other specs assert on.
      */
-    fun newManager(): LoggerLifecycleManager =
+    fun newManager(
+        anrDetector: ILogAnrDetector = mockk(relaxed = true),
+        remoteTelemetry: ILogTelemetryRemote = mockk(relaxed = true),
+    ): LoggerLifecycleManager =
         LoggerLifecycleManager(
             context = context,
             featureManagerProvider = { featureManager },
             fileStoreFactory = { mockk<ILogFileStore>(relaxed = true) },
-            anrDetectorFactory = { _, _, _ -> mockk(relaxed = true) },
-            remoteTelemetryFactory = { _, _ -> mockk(relaxed = true) },
+            anrDetectorFactory = { _, _, _ -> anrDetector },
+            remoteTelemetryFactory = { _, _ -> remoteTelemetry },
         )
+
+    /** Seeds the cache the real platform provider reads on cold start, before any HYDRATE. */
+    fun writeCachedLoggingParams(remoteLoggingParams: String) {
+        val configModel =
+            JSONObject().put(ConfigModel::remoteLoggingParams.name, JSONObject(remoteLoggingParams))
+        context.getSharedPreferences(PreferenceStores.ONESIGNAL, Context.MODE_PRIVATE)
+            .edit()
+            .putString(
+                PreferenceOneSignalKeys.MODEL_STORE_PREFIX + configNameSpace,
+                JSONArray().put(configModel).toString(),
+            )
+            .commit()
+    }
 
     beforeEach {
         context = ApplicationProvider.getApplicationContext()
+        context.getSharedPreferences(PreferenceStores.ONESIGNAL, Context.MODE_PRIVATE).edit().clear().commit()
         featureManager = mockk<IFeatureManager>().also {
             every { it.enabledFeatureKeys() } returns emptyList()
         }
@@ -64,6 +86,7 @@ class LoggerLifecycleManagerTest : FunSpec({
     afterEach {
         ObservabilitySdkSupport.reset()
         Thread.setDefaultUncaughtExceptionHandler(originalHandler)
+        context.getSharedPreferences(PreferenceStores.ONESIGNAL, Context.MODE_PRIVATE).edit().clear().commit()
         // Logging holds the sink in a global; leaving one attached would leak into other specs.
         Logging.setLoggerTelemetry(null) { false }
     }
@@ -80,6 +103,48 @@ class LoggerLifecycleManagerTest : FunSpec({
         newManager().initializeFromCachedConfig()
 
         Thread.getDefaultUncaughtExceptionHandler() shouldBe originalHandler
+    }
+
+    // ===== Cold start reads the cache, and the cache can disagree with itself =====
+    // A server disable rewrites only isEnabled, so the level from the session before it survives
+    // alongside. Cold start runs before any params fetch, and a fetch that never succeeds means
+    // it is the only thing standing between a revoked app and a full observability pipeline.
+
+    test("initializeFromCachedConfig honors a cached kill switch beside a stale level") {
+        writeCachedLoggingParams("""{"logLevel":"ERROR","isEnabled":false}""")
+        val detector = mockk<ILogAnrDetector>(relaxed = true)
+        val telemetry = mockk<ILogTelemetryRemote>(relaxed = true)
+
+        newManager(anrDetector = detector, remoteTelemetry = telemetry).initializeFromCachedConfig()
+
+        Thread.getDefaultUncaughtExceptionHandler() shouldBe originalHandler
+        verify(exactly = 0) { detector.start() }
+        Logging.error("dropped while the kill switch is on")
+        runBlocking { delay(SINK_QUIET_MS) }
+        coVerify(exactly = 0) { telemetry.emit(any()) }
+    }
+
+    test("initializeFromCachedConfig starts the pipeline when the cache says enabled") {
+        writeCachedLoggingParams("""{"logLevel":"ERROR","isEnabled":true}""")
+        val detector = mockk<ILogAnrDetector>(relaxed = true)
+
+        newManager(anrDetector = detector).initializeFromCachedConfig()
+
+        Thread.getDefaultUncaughtExceptionHandler().shouldBeInstanceOf<AndroidLogCrashHandler>()
+        verify { detector.start() }
+    }
+
+    // An upgrade from a build that predates isEnabled finds a level and no flag. Reading the
+    // absent flag as off would take observability away from every existing install.
+
+    test("initializeFromCachedConfig starts the pipeline for a cache written before isEnabled existed") {
+        writeCachedLoggingParams("""{"logLevel":"ERROR"}""")
+        val detector = mockk<ILogAnrDetector>(relaxed = true)
+
+        newManager(anrDetector = detector).initializeFromCachedConfig()
+
+        Thread.getDefaultUncaughtExceptionHandler().shouldBeInstanceOf<AndroidLogCrashHandler>()
+        verify { detector.start() }
     }
 
     test("a HYDRATE with remote logging enabled installs the crash handler") {
