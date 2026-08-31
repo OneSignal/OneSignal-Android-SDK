@@ -143,10 +143,10 @@ internal class LoggerLifecycleManager(
     /**
      * Must be called while holding [lock].
      *
-     * [currentConfig] is only advanced once the requested state is actually in place. If a
-     * component failed to start, the config is left behind so the next HYDRATE — which for a
-     * stable remote payload is an identical one — still evaluates to `Enable` and retries the
-     * missing piece, instead of collapsing to `NoChange` and leaving it dead for the session.
+     * [currentConfig] is only advanced once the requested state is actually in place, so a
+     * component that failed to start is still missing from the config the next HYDRATE diffs
+     * against and gets retried. That leaves the config trailing actual state, which is why
+     * every branch below settles ties by looking at the component fields rather than the diff.
      */
     private fun applyAction(action: ObservabilityConfigAction, newConfig: ObservabilityConfig) {
         // The evaluator only sees desired config, and a partial-failure Enable leaves components
@@ -165,15 +165,30 @@ internal class LoggerLifecycleManager(
                     disableFeatures()
                     true
                 }
-                is ObservabilityConfigAction.NoChange -> {
-                    Logging.debug("OneSignal: logger config unchanged")
-                    true
-                }
+                is ObservabilityConfigAction.NoChange -> reconcileUnchangedConfig(newConfig)
             }
         if (applied) currentConfig = newConfig
     }
 
+    /**
+     * `NoChange` only says the desired config is unchanged. Nothing else revisits a component
+     * that is missing, because a stable remote payload keeps evaluating to `NoChange` — and the
+     * common case is a single params fetch per session, so there may be no later evaluation at
+     * all. Decide off actual liveness here, the same way the disable path above does.
+     */
+    private fun reconcileUnchangedConfig(newConfig: ObservabilityConfig): Boolean {
+        val logLevel = newConfig.logLevel ?: LogLevel.ERROR
+        if (!newConfig.isEnabled || isEveryFeatureLive(logLevel)) {
+            Logging.debug("OneSignal: logger config unchanged")
+            return true
+        }
+        return enableFeatures(logLevel)
+    }
+
     private fun isAnyFeatureLive(): Boolean = crashHandler != null || anrDetector != null || remoteTelemetry != null
+
+    private fun isEveryFeatureLive(logLevel: LogLevel): Boolean =
+        crashHandler != null && anrDetector != null && remoteTelemetry != null && activeLogLevel == logLevel
 
     /**
      * Starts whatever is not already running. Each component is independent: one failing must
@@ -303,26 +318,24 @@ internal class LoggerLifecycleManager(
 
     @Suppress("TooGenericExceptionCaught")
     private fun startLogging(logLevel: LogLevel) {
-        // Same invariant as disableFeatures: detach both the field and Logging's global before
-        // tearing the old sink down. Shutting down first would route every log emitted until the
-        // replacement is installed — including the warn below — into a cancelled consumer, and a
-        // throwing factory would leave the global pointing at the dead instance for the session.
+        // Build the replacement before parting with the old sink: a throwing factory must cost
+        // nothing, so a failed level change leaves the working sink serving at its old level.
+        // Same invariant as disableFeatures once the swap does happen — the field and Logging's
+        // global move together to the new instance, before the old one is shut down, so neither
+        // is ever left pointing at something dead and no log falls into a cancelled consumer.
+        val telemetry = remoteTelemetryFactory(platformProvider, httpSender)
+        val shouldSend: (LogLevel) -> Boolean = { level ->
+            logLevel != LogLevel.NONE && level <= logLevel
+        }
         val previous = remoteTelemetry
-        remoteTelemetry = null
-        activeLogLevel = null
-        Logging.setLoggerTelemetry(null) { false }
+        remoteTelemetry = telemetry
+        activeLogLevel = logLevel
+        Logging.setLoggerTelemetry(telemetry, shouldSend)
         try {
             previous?.shutdown()
         } catch (t: Throwable) {
             Logging.warn("OneSignal: Error shutting down previous logger telemetry: ${t.message}", t)
         }
-        val telemetry = remoteTelemetryFactory(platformProvider, httpSender)
-        remoteTelemetry = telemetry
-        val shouldSend: (LogLevel) -> Boolean = { level ->
-            logLevel != LogLevel.NONE && level <= logLevel
-        }
-        Logging.setLoggerTelemetry(telemetry, shouldSend)
-        activeLogLevel = logLevel
         Logging.info("OneSignal: logger module logging active at level $logLevel")
     }
 }

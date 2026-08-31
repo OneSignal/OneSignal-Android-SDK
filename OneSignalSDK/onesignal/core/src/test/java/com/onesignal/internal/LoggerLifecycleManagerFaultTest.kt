@@ -18,9 +18,13 @@ import com.onesignal.logger.ILogger
 import com.onesignal.logger.ILoggerPlatformProvider
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import org.robolectric.annotation.Config
 
 /**
@@ -423,7 +427,7 @@ class LoggerLifecycleManagerFaultTest : FunSpec({
         verify { failing.stop() }
     }
 
-    test("a failed log level update is retried on the next identical config") {
+    test("a failed log level update is retried when the same new level arrives again") {
         var calls = 0
         val manager = managerWith(
             remoteTelemetry = {
@@ -439,6 +443,53 @@ class LoggerLifecycleManagerFaultTest : FunSpec({
         // The failed update never commits, so currentConfig still reads ERROR and the repeat
         // WARN payload is another UpdateLogLevel rather than a NoChange.
         calls shouldBe 3
+    }
+
+    // ===== A failed level change must not cost a sink that was already working =====
+    // The retry above is the lucky path. One params fetch per session is the norm, so the
+    // replacement has to be built before the incumbent is given up: there is usually no second
+    // HYDRATE, and a HYDRATE back to the old level evaluates to NoChange.
+
+    test("a failed level change leaves the previously working sink serving at the old level") {
+        val emitted = CompletableDeferred<Unit>()
+        val working = mockk<ILogTelemetryRemote>(relaxed = true)
+        coEvery { working.emit(any()) } answers { emitted.complete(Unit); Unit }
+        var calls = 0
+        val manager = managerWith(
+            remoteTelemetry = { if (calls++ == 0) working else throw RuntimeException("update boom") },
+        )
+
+        manager.onModelReplaced(enabledConfig(LogLevel.ERROR), ModelChangeTags.HYDRATE)
+        manager.onModelReplaced(enabledConfig(LogLevel.WARN), ModelChangeTags.HYDRATE)
+
+        calls shouldBe 2
+        verify(exactly = 0) { working.shutdown() }
+        Logging.error("routed after the failed level change")
+        runBlocking { withTimeout(SINK_TIMEOUT_MS) { emitted.await() } }
+    }
+
+    test("a HYDRATE back to the old level after a failed change neither loses nor rebuilds the sink") {
+        val emitted = CompletableDeferred<Unit>()
+        val working = mockk<ILogTelemetryRemote>(relaxed = true)
+        coEvery { working.emit(any()) } answers { emitted.complete(Unit); Unit }
+        var calls = 0
+        val manager = managerWith(
+            remoteTelemetry = {
+                calls++
+                if (calls == 1) working else if (calls == 2) throw RuntimeException("update boom") else mockk(relaxed = true)
+            },
+        )
+
+        manager.onModelReplaced(enabledConfig(LogLevel.ERROR), ModelChangeTags.HYDRATE)
+        manager.onModelReplaced(enabledConfig(LogLevel.WARN), ModelChangeTags.HYDRATE)
+        manager.onModelReplaced(enabledConfig(LogLevel.ERROR), ModelChangeTags.HYDRATE)
+
+        // The revert is a NoChange against the uncommitted ERROR config. Nothing to repair,
+        // because the failed WARN attempt never took the ERROR sink away.
+        calls shouldBe 2
+        verify(exactly = 0) { working.shutdown() }
+        Logging.error("routed after the revert")
+        runBlocking { withTimeout(SINK_TIMEOUT_MS) { emitted.await() } }
     }
 
     test("enable creates all three features and disable tears all down") {
@@ -502,3 +553,6 @@ class LoggerLifecycleManagerFaultTest : FunSpec({
         manager.initializeFromCachedConfig()
     }
 })
+
+/** Generous upper bound on a signal we expect; only a hang burns the full budget. */
+private const val SINK_TIMEOUT_MS = 5_000L
