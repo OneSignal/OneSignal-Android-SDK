@@ -311,6 +311,38 @@ class FileLogStoreTest : FunSpec({
         File(dir, "stale.tmp").exists() shouldBe true
     }
 
+    // What `save` leaves behind when the process dies between write and rename. This purge is
+    // the only pass that ever reclaims one, and it needs an age, so a temp the policy cannot
+    // date is stranded for the life of the install.
+    test("an interrupted write is reclaimed even when its timestamp is unreadable") {
+        val writtenMs = System.currentTimeMillis() - 600_000
+        writeUnreadableMtime("$writtenMs-abc${policy.ownedTempSuffix}")
+        // Another writer's scheme, not an epoch reading: dating it from its `3` would make a
+        // file written seconds ago look 56 years stale and reap it mid-write.
+        writeUnreadableMtime("3-tmp.dat")
+
+        val purged = runBlocking {
+            FileLogStore(dir.path).deleteUnrecognizedEntries(minAgeMillis = 5_000)
+        }
+
+        purged shouldBe 1
+        File(dir, "$writtenMs-abc${policy.ownedTempSuffix}").exists() shouldBe false
+        File(dir, "3-tmp.dat").exists() shouldBe true
+    }
+
+    // The gate that keeps the purge above off a write still in flight.
+    test("an interrupted write younger than the age gate is left alone") {
+        val writtenMs = System.currentTimeMillis() - 100
+        writeUnreadableMtime("$writtenMs-abc${policy.ownedTempSuffix}")
+
+        val purged = runBlocking {
+            FileLogStore(dir.path).deleteUnrecognizedEntries(minAgeMillis = 5_000)
+        }
+
+        purged shouldBe 0
+        File(dir, "$writtenMs-abc${policy.ownedTempSuffix}").exists() shouldBe true
+    }
+
     test("deleteUnrecognizedEntries evicts an inherited over-cap backlog") {
         repeat(policy.maxRecordCount + 10) { i -> write("seed-$i.otlp", ageMsAgo = 1_000L * (i + 1)) }
         write("1784621689841")

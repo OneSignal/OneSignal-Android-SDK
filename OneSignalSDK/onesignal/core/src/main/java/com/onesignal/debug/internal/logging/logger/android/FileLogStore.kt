@@ -59,9 +59,12 @@ internal class FileLogStore(
             }
             val dir = rootDir
             if (!dir.exists()) dir.mkdirs()
-            // Write to a temp file then rename so a half-written file is never readable.
-            val target = File(dir, "${System.currentTimeMillis()}-${UUID.randomUUID()}${policy.ownedSuffix}")
-            val temp = File(dir, target.name + ".tmp")
+            // Write to a temp file then rename so a half-written file is never readable. Both
+            // names come from the policy so an interrupted write is one it can still date, and
+            // therefore one [deleteUnrecognizedEntries] can still reclaim.
+            val base = "${System.currentTimeMillis()}-${UUID.randomUUID()}"
+            val target = File(dir, base + policy.ownedSuffix)
+            val temp = File(dir, base + policy.ownedTempSuffix)
             temp.writeBytes(bytes)
             if (!temp.renameTo(target)) {
                 // Fallback: write directly if rename is unsupported on this fs.
@@ -92,9 +95,10 @@ internal class FileLogStore(
     private fun enforceAccumulationCaps(dir: File, keepNames: Set<String>) {
         try {
             val entries = listEntries(dir)
-            // Uses the selector's own capped accounting, so the check and the trim cannot
-            // disagree about whether a trim is needed.
-            if (CrashRetention.isWithinCaps(entries, policy)) return
+            // Same keepNames the selector gets: it excuses protected records their byte claim,
+            // so a check that charges them would report over cap on every write near the
+            // ceiling and then trim nothing.
+            if (CrashRetention.isWithinCaps(entries, keepNames, policy)) return
             val overflow =
                 CrashRetention.selectOverflowOwned(
                     entries,
@@ -202,7 +206,7 @@ internal class FileLogStore(
                 // cleared minAgeMillis, so it may still be mid-write, and the point of that
                 // gate is to not read a file the crashing process had not finished. It stays
                 // on disk for a later pass, and the caps still bound it.
-                val writeTimes = suffixMatches.map { it to CrashRetention.effectiveWriteTimeMs(it) }
+                val writeTimes = suffixMatches.map { it to CrashRetention.effectiveWriteTimeMs(it, policy) }
                 val undatable = writeTimes.count { (_, writtenMs) -> writtenMs == null }
                 val readable =
                     writeTimes
