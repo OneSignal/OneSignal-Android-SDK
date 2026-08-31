@@ -65,6 +65,10 @@ internal class OneSignalCrashUploaderWrapper(
      * Logs a snapshot of the crash dir (counts of owned `.otlp` vs foreign/legacy
      * entries, plus a bounded per-file sample) so leftover formats are visible and
      * cleanup is verifiable from logs alone.
+     *
+     * Reports an unreadable `lastModified()` as unknown for the same reason [FileLogStore] does,
+     * so the sampled age is either the one retention actually used or `unknown` — an inventory
+     * printing a fabricated age would misdirect exactly the investigation it exists to support.
      */
     @Suppress("TooGenericExceptionCaught")
     private fun logCrashDirInventory(label: String) {
@@ -75,7 +79,7 @@ internal class OneSignalCrashUploaderWrapper(
                 File(path).listFiles()?.filter { it.isFile }?.map { file ->
                     CrashDirEntry(
                         name = file.name,
-                        lastModifiedMs = file.lastModified(),
+                        lastModifiedMs = file.lastModified().takeIf { it > 0 },
                         lengthBytes = file.length(),
                     )
                 }.orEmpty()

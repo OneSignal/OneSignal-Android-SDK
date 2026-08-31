@@ -34,6 +34,20 @@ class FileLogStoreTest : FunSpec({
             setLastModified(System.currentTimeMillis() - ageMsAgo)
         }
 
+    /**
+     * Stands in for a timestamp the platform cannot read: `File.lastModified()` returns 0 for an
+     * I/O failure, indistinguishable from a genuine epoch mtime, which is why the store treats
+     * non-positive as unknown. The assertion is load-bearing — not every filesystem honours
+     * `setLastModified(0)`, and one that quietly ignored it would leave these cases exercising
+     * the ordinary readable-timestamp path while still passing.
+     */
+    fun writeUnreadableMtime(name: String, sizeBytes: Int = 1): File =
+        File(dir, name).apply {
+            writeBytes(ByteArray(sizeBytes) { 'x'.code.toByte() })
+            setLastModified(0)
+            lastModified() shouldBe 0L
+        }
+
     test("deleteUnrecognizedEntries removes stale legacy files and keeps owned .otlp records") {
         write("1784621689841") // bare-millis file left by a pre-upgrade otel session
         write("stale.tmp") // stray temp
@@ -225,6 +239,76 @@ class FileLogStoreTest : FunSpec({
         dir.setWritable(true)
         readable.map { it.id } shouldBe listOf("fresh.otlp")
         File(dir, "expired-stuck.otlp").exists() shouldBe true
+    }
+
+    // An unreadable modification time used to be read back as an age of "since the epoch", which
+    // is past every ceiling — so the record the crash handler had just written was reclaimed as
+    // ancient. The store now reports it as unknown and the shared policy re-derives the write
+    // time from the `{millis}-{uuid}.otlp` name.
+
+    test("an owned record with an unreadable timestamp is dated from its name and stays readable") {
+        val writtenMs = System.currentTimeMillis() - 60_000
+        writeUnreadableMtime("$writtenMs-abc.otlp")
+
+        val readable = runBlocking { FileLogStore(dir.path).listReadable(minAgeMillis = 0) }
+
+        readable.map { it.id } shouldBe listOf("$writtenMs-abc.otlp")
+        File(dir, "$writtenMs-abc.otlp").exists() shouldBe true
+    }
+
+    // The converse of the above: recovering the write time from the name must not become a way
+    // for a stale record to outlive the ceiling by having an unreadable timestamp.
+    test("an owned record with an unreadable timestamp still expires on the millis in its name") {
+        val writtenMs = System.currentTimeMillis() - (policy.maxReadAgeMillis + 60_000)
+        writeUnreadableMtime("$writtenMs-abc.otlp")
+
+        val readable = runBlocking { FileLogStore(dir.path).listReadable(minAgeMillis = 0) }
+
+        readable.map { it.id } shouldBe emptyList()
+        File(dir, "$writtenMs-abc.otlp").exists() shouldBe false
+    }
+
+    // Neither clock is available: the timestamp will not read and the name carries no millis.
+    // A failed read is not evidence of age, so nothing may expire it — but it must not become
+    // readable either, since it cannot be shown to have cleared minAgeMillis and may still be
+    // mid-write.
+    test("an undatable owned record is never age-expired, only withheld from readers") {
+        writeUnreadableMtime("undatable-abc.otlp")
+        write("fresh-456.otlp", ageMsAgo = 60_000)
+
+        val readable = runBlocking { FileLogStore(dir.path).listReadable(minAgeMillis = 0) }
+
+        readable.map { it.id } shouldBe listOf("fresh-456.otlp")
+        File(dir, "undatable-abc.otlp").exists() shouldBe true
+        File(dir, "fresh-456.otlp").exists() shouldBe true
+    }
+
+    // Exempt from expiry is not exempt from the caps. An entry left out of the accounting would
+    // sit outside every bound at once and leak for the life of the install, so it still occupies
+    // a slot — and yields it before any record that can be dated.
+    test("an undatable owned record still counts toward the caps and is evicted before datable ones") {
+        repeat(policy.maxRecordCount) { i -> write("seed-$i.otlp", ageMsAgo = 1_000L * (i + 1)) }
+        writeUnreadableMtime("undatable-abc.otlp")
+
+        runBlocking { FileLogStore(dir.path).listReadable(minAgeMillis = 0) }
+
+        File(dir, "undatable-abc.otlp").exists() shouldBe false
+        // The oldest datable record keeps its slot: the undatable one is what paid for the cap.
+        File(dir, "seed-${policy.maxRecordCount - 1}.otlp").exists() shouldBe true
+        dir.listFiles()!!.count { it.name.endsWith(policy.ownedSuffix) } shouldBe policy.maxRecordCount
+    }
+
+    // The foreign-file purge is also an age gate, and an undatable entry cannot clear it. Left
+    // in place rather than reaped on a guess: it may be another writer's file, mid-write.
+    test("a foreign file with an unreadable timestamp is not purged as stale") {
+        writeUnreadableMtime("stale.tmp")
+
+        val purged = runBlocking {
+            FileLogStore(dir.path).deleteUnrecognizedEntries(minAgeMillis = 5_000)
+        }
+
+        purged shouldBe 0
+        File(dir, "stale.tmp").exists() shouldBe true
     }
 
     test("deleteUnrecognizedEntries evicts an inherited over-cap backlog") {

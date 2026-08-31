@@ -14,8 +14,8 @@ import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * Android [ILogFileStore] backed by the local filesystem: one file per crash record under
- * [rootPath], with the file's last-modified time as the record age for [listReadable] so a file
- * the crashing process may still have been writing is never read.
+ * [rootPath], aged via [CrashRetention.effectiveWriteTimeMs] for [listReadable] so a file the
+ * crashing process may still have been writing is never read.
  *
  * The directory is shared with pre-upgrade sessions, so ownership is decided purely by the
  * policy's owned suffix: everything this store writes ends in `.otlp`; anything else
@@ -71,7 +71,7 @@ internal class FileLogStore(
             // Crash path: raw Logcat only — Logging.info can invoke app listeners
             // synchronously, and a listener exception would flip a successful write to false.
             Log.i(TAG, "FileLogStore: saved name=${target.name} bytes=${bytes.size} dir=${dir.path}")
-            enforceAccumulationCaps(dir, keepName = target.name)
+            enforceAccumulationCaps(dir, keepNames = setOf(target.name))
             true
         } catch (t: Throwable) {
             // Crash-path safety: never throw from persistence; signal failure to caller.
@@ -82,14 +82,14 @@ internal class FileLogStore(
 
     /**
      * Evicts oldest-first on the crash path until the owned records fit the accumulation caps,
-     * always retaining [keepName] (the record [save] just wrote).
+     * always retaining [keepNames] (the record [save] just wrote).
      *
      * Runs inline on the crashing thread, and uses raw Logcat for the same reason [save] does.
      * The [CrashRetention.isWithinCaps] check below is what keeps that affordable: the selector
      * sorts the whole directory, so it must only run on the rare pass that is actually over cap.
      */
     @Suppress("TooGenericExceptionCaught", "SwallowedException")
-    private fun enforceAccumulationCaps(dir: File, keepName: String) {
+    private fun enforceAccumulationCaps(dir: File, keepNames: Set<String>) {
         try {
             val entries = listEntries(dir)
             // Uses the selector's own capped accounting, so the check and the trim cannot
@@ -99,7 +99,7 @@ internal class FileLogStore(
                 CrashRetention.selectOverflowOwned(
                     entries,
                     nowMs = System.currentTimeMillis(),
-                    keepName = keepName,
+                    keepNames = keepNames,
                     policy = policy,
                 )
             if (overflow.isEmpty()) return
@@ -142,11 +142,17 @@ internal class FileLogStore(
         return overflow.mapTo(HashSet()) { it.name }
     }
 
+    /**
+     * `File.lastModified()` reports both "epoch" and "I/O error" as `0`, and the policy reads any
+     * timestamp it is handed as an age — `0` as the maximum one, which expires a live record. So
+     * a non-positive value is reported as unknown and the policy dates the record from its name
+     * instead; nothing here is ever legitimately written at the epoch.
+     */
     private fun listEntries(dir: File): List<CrashDirEntry> =
         dir.listFiles()?.filter { it.isFile }?.map { file ->
             CrashDirEntry(
                 name = file.name,
-                lastModifiedMs = file.lastModified(),
+                lastModifiedMs = file.lastModified().takeIf { it > 0 },
                 lengthBytes = file.length(),
             )
         }.orEmpty()
@@ -190,14 +196,23 @@ internal class FileLogStore(
                 val dropped = expired + evicted
                 val suffixMatches =
                     entries.filter { CrashRetention.isOwned(it.name, policy) && !dropped.contains(it.name) }
+                // Age must come from the same helper the reclaim passes above use, or a record
+                // could be withheld here by one clock while being deleted by another. An
+                // undatable record is withheld, never deleted: it cannot be shown to have
+                // cleared minAgeMillis, so it may still be mid-write, and the point of that
+                // gate is to not read a file the crashing process had not finished. It stays
+                // on disk for a later pass, and the caps still bound it.
+                val writeTimes = suffixMatches.map { it to CrashRetention.effectiveWriteTimeMs(it) }
+                val undatable = writeTimes.count { (_, writtenMs) -> writtenMs == null }
                 val readable =
-                    suffixMatches
-                        .filter { now - it.lastModifiedMs >= minAgeMillis }
-                        .mapNotNull { entry -> readRecord(File(rootDir, entry.name)) }
+                    writeTimes
+                        .filter { (_, writtenMs) -> writtenMs != null && now - writtenMs >= minAgeMillis }
+                        .mapNotNull { (entry, _) -> readRecord(File(rootDir, entry.name)) }
                 Logging.debug(
                     "FileLogStore: listReadable minAgeMs=$minAgeMillis total=${entries.size} " +
                         "suffix=${suffixMatches.size} readable=${readable.size} " +
                         "expired=${expired.size} overCap=${evicted.size} " +
+                        "undatable=$undatable " +
                         "legacy=${entries.count { !CrashRetention.isOwned(it.name, policy) }}",
                 )
                 readable
