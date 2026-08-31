@@ -13,21 +13,10 @@ import java.util.UUID
 import kotlin.coroutines.cancellation.CancellationException
 
 /**
- * Android [ILogFileStore] backed by the local filesystem: one file per crash record under
- * [rootPath], aged via [CrashRetention.effectiveWriteTimeMs] for [listReadable] so a file the
- * crashing process may still have been writing is never read.
- *
- * The directory is shared with pre-upgrade sessions, so ownership is decided purely by the
- * policy's owned suffix: everything this store writes ends in `.otlp`; anything else
- * (bare-millis names, stray `.tmp`s) is foreign and reclaimable via [deleteUnrecognizedEntries].
- *
- * All retention decisions come from the shared [CrashRetention] so Android and iOS bound the
- * directory identically; this class only turns a listing into [CrashDirEntry]s and applies the
- * result with `File` I/O. `maxTotalBytes` bounds the *budget claim* rather than raw disk bytes —
- * the two differ only for oversized records inherited from a build predating the write-time limit
- * in [save]. Both bounds are enforced on every path that touches the directory ([save],
- * [listReadable], [deleteUnrecognizedEntries]), and over-limit records are deleted rather than
- * merely hidden from [listReadable], so a record that never uploads cannot grow the cache forever.
+ * Android [ILogFileStore]: one file per crash record under [rootPath]. Every retention decision
+ * comes from the shared [CrashRetention] policy so Android and iOS bound the directory
+ * identically. Ownership is by suffix — this store writes `.otlp`; anything else in the shared
+ * directory is foreign and reclaimable via [deleteUnrecognizedEntries].
  */
 internal class FileLogStore(
     private val rootPath: String,
@@ -96,8 +85,8 @@ internal class FileLogStore(
         try {
             val entries = listEntries(dir)
             // Same keepNames the selector gets: it excuses protected records their byte claim,
-            // so a check that charges them would report over cap on every write near the
-            // ceiling and then trim nothing.
+            // so a check that charges them reports over cap on writes the trim then does
+            // nothing about, sorting the whole directory on the crashing thread for free.
             if (CrashRetention.isWithinCaps(entries, keepNames, policy)) return
             val overflow =
                 CrashRetention.selectOverflowOwned(
