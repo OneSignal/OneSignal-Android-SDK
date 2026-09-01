@@ -113,7 +113,13 @@ internal class NotificationGenerationWorkManager : INotificationGenerationWorkMa
         internal fun readRestoreReason(inputData: Data): NotificationRestoreReason? {
             val name = inputData.getString(RESTORE_REASON_WORKER_DATA_PARAM)
             if (name != null) {
-                return NotificationRestoreReason.values().firstOrNull { it.name == name }
+                val reason = NotificationRestoreReason.values().firstOrNull { it.name == name }
+                if (reason == null) {
+                    // Only restores write a reason. An unknown name (work drained after a downgrade)
+                    // must stay quiet, so fail closed as a shade restore instead of a fresh push.
+                    Logging.warn("Unknown restore_reason \"$name\", treating it as SHADE_RESTORE")
+                }
+                return reason ?: NotificationRestoreReason.SHADE_RESTORE
             }
 
             // Older work only has the boolean, which always meant shade restore.

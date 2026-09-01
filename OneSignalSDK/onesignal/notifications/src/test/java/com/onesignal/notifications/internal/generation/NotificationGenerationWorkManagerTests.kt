@@ -40,12 +40,14 @@ class NotificationGenerationWorkManagerTests : FunSpec({
         NotificationGenerationWorkManager.readRestoreReason(data) shouldBe null
     }
 
-    test("readRestoreReason ignores an unknown enum name") {
+    test("readRestoreReason fails closed on an unknown enum name") {
+        // Only restores write a reason, so a name from a newer version (work drained after a
+        // downgrade) must stay quiet rather than present as a fresh push.
         val data =
             Data.Builder()
                 .putString("restore_reason", "NOT_A_REASON")
                 .build()
 
-        NotificationGenerationWorkManager.readRestoreReason(data) shouldBe null
+        NotificationGenerationWorkManager.readRestoreReason(data) shouldBe NotificationRestoreReason.SHADE_RESTORE
     }
 })
