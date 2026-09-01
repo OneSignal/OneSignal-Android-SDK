@@ -1,10 +1,10 @@
 package com.onesignal.example.notification
 
 import android.os.Bundle
-import android.util.Log
 import com.huawei.hms.push.HmsMessageService
 import com.huawei.hms.push.RemoteMessage
 import com.onesignal.notifications.bridges.OneSignalHmsEventBridge
+import com.onesignal.example.util.DemoLog
 
 /**
  * HMS Message Service for handling Huawei Push notifications.
@@ -26,7 +26,7 @@ class HmsMessageServiceAppLevel : HmsMessageService() {
      * Otherwise, you need to start a new Job for callback processing.
      */
     override fun onNewToken(token: String, bundle: Bundle) {
-        Log.d(TAG, "HmsMessageServiceAppLevel onNewToken refresh token: $token bundle: $bundle")
+        DemoLog.d(TAG, "HmsMessageServiceAppLevel onNewToken refresh token: $token bundle: $bundle")
 
         // Forward event on to OneSignal SDK
         OneSignalHmsEventBridge.onNewToken(this, token, bundle)
@@ -34,7 +34,7 @@ class HmsMessageServiceAppLevel : HmsMessageService() {
 
     @Deprecated("Deprecated in Java")
     override fun onNewToken(token: String) {
-        Log.d(TAG, "HmsMessageServiceAppLevel onNewToken refresh token: $token")
+        DemoLog.d(TAG, "HmsMessageServiceAppLevel onNewToken refresh token: $token")
 
         // Forward event on to OneSignal SDK
         OneSignalHmsEventBridge.onNewToken(this, token)
@@ -48,18 +48,18 @@ class HmsMessageServiceAppLevel : HmsMessageService() {
      * Start a new Job if more time is needed.
      */
     override fun onMessageReceived(message: RemoteMessage) {
-        Log.d(TAG, "HMS onMessageReceived: $message")
-        Log.d(TAG, "HMS onMessageReceived.ttl: ${message.ttl}")
-        Log.d(TAG, "HMS onMessageReceived.data: ${message.data}")
+        DemoLog.d(TAG, "HMS onMessageReceived: $message")
+        DemoLog.d(TAG, "HMS onMessageReceived.ttl: ${message.ttl}")
+        DemoLog.d(TAG, "HMS onMessageReceived.data: ${message.data}")
         
         message.notification?.let { notification ->
-            Log.d(TAG, "HMS onMessageReceived.title: ${notification.title}")
-            Log.d(TAG, "HMS onMessageReceived.body: ${notification.body}")
-            Log.d(TAG, "HMS onMessageReceived.icon: ${notification.icon}")
-            Log.d(TAG, "HMS onMessageReceived.color: ${notification.color}")
-            Log.d(TAG, "HMS onMessageReceived.channelId: ${notification.channelId}")
-            Log.d(TAG, "HMS onMessageReceived.imageURL: ${notification.imageUrl}")
-            Log.d(TAG, "HMS onMessageReceived.tag: ${notification.tag}")
+            DemoLog.d(TAG, "HMS onMessageReceived.title: ${notification.title}")
+            DemoLog.d(TAG, "HMS onMessageReceived.body: ${notification.body}")
+            DemoLog.d(TAG, "HMS onMessageReceived.icon: ${notification.icon}")
+            DemoLog.d(TAG, "HMS onMessageReceived.color: ${notification.color}")
+            DemoLog.d(TAG, "HMS onMessageReceived.channelId: ${notification.channelId}")
+            DemoLog.d(TAG, "HMS onMessageReceived.imageURL: ${notification.imageUrl}")
+            DemoLog.d(TAG, "HMS onMessageReceived.tag: ${notification.tag}")
         }
 
         // Forward event on to OneSignal SDK

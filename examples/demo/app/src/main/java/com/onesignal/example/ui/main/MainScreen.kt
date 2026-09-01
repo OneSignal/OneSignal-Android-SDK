@@ -37,7 +37,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import com.onesignal.example.BuildConfig
 import com.onesignal.example.R
+import com.onesignal.example.data.model.NotificationExtensionOptions
 import com.onesignal.example.data.model.NotificationType
 import com.onesignal.example.ui.components.LocalSnackbarController
 import com.onesignal.example.ui.components.PrimaryButton
@@ -65,6 +67,7 @@ fun MainScreen(viewModel: MainViewModel) {
     val smsNumbers by viewModel.smsNumbers.observeAsState(emptyList())
     val tags by viewModel.tags.observeAsState(emptyList())
     val triggers by viewModel.triggers.observeAsState(emptyList())
+    val notificationExtensionOptions by viewModel.notificationExtensionOptions.observeAsState(NotificationExtensionOptions())
     val inAppMessagesPaused by viewModel.inAppMessagesPaused.observeAsState(false)
     val locationShared by viewModel.locationShared.observeAsState(false)
     val isLoading by viewModel.isLoading.observeAsState(false)
@@ -160,6 +163,14 @@ fun MainScreen(viewModel: MainViewModel) {
                     onClearAllClick = { viewModel.clearAllNotifications() },
                     onInfoClick = { showTooltipDialog = "sendPushNotification" }
                 )
+
+                // Off by default. Build with -PSHOW_NSE_SECTION=true to show it.
+                if (BuildConfig.SHOW_NSE_SECTION) {
+                    NotificationExtensionSection(
+                        options = notificationExtensionOptions,
+                        onOptionsChange = { viewModel.setNotificationExtensionOptions(it) }
+                    )
+                }
 
                 InAppMessagingSection(
                     isPaused = inAppMessagesPaused,

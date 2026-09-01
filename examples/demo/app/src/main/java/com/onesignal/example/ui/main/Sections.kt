@@ -23,6 +23,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.onesignal.example.data.model.InAppMessageType
+import com.onesignal.example.data.model.NotificationExtensionOptions
 import com.onesignal.example.ui.components.CardKvRow
 import com.onesignal.example.ui.components.CollapsibleSingleList
 import com.onesignal.example.ui.components.CustomNotificationDialog
@@ -287,6 +288,65 @@ fun SendPushSection(
                 customOpen = false
             },
         )
+    }
+}
+
+@Composable
+fun NotificationExtensionSection(
+    options: NotificationExtensionOptions,
+    onOptionsChange: (NotificationExtensionOptions) -> Unit,
+) {
+    DemoSection {
+        SectionCard(title = "Notification Service Extension", sectionKey = "nse") {
+            ToggleRow(
+                label = "Enable Extension",
+                description = "Run the demo's extension on received pushes and log under [Demo]NSE",
+                checked = options.enabled,
+                onCheckedChange = { onOptionsChange(options.copy(enabled = it)) },
+                testTag = "nse_enabled_toggle",
+                contentDescription = "Enable notification service extension",
+            )
+            HorizontalDivider(color = OsDivider, modifier = Modifier.padding(vertical = DemoLayout.gap))
+            ToggleRow(
+                label = "Apply Extender",
+                description = "Prefix the title with [NSE] through a NotificationCompat.Extender",
+                checked = options.applyExtender,
+                onCheckedChange = { onOptionsChange(options.copy(applyExtender = it)) },
+                enabled = options.enabled,
+                testTag = "nse_extender_toggle",
+                contentDescription = "Apply notification extender",
+            )
+            HorizontalDivider(color = OsDivider, modifier = Modifier.padding(vertical = DemoLayout.gap))
+            ToggleRow(
+                label = "Force High Importance Channel",
+                description = "Move every notification onto an app-owned IMPORTANCE_HIGH channel",
+                checked = options.forceHighImportanceChannel,
+                onCheckedChange = { onOptionsChange(options.copy(forceHighImportanceChannel = it)) },
+                enabled = options.enabled,
+                testTag = "nse_high_importance_toggle",
+                contentDescription = "Force high importance channel",
+            )
+            HorizontalDivider(color = OsDivider, modifier = Modifier.padding(vertical = DemoLayout.gap))
+            ToggleRow(
+                label = "Delay Display",
+                description = "preventDefault(), then display() five seconds later",
+                checked = options.delayDisplay,
+                onCheckedChange = { onOptionsChange(options.copy(delayDisplay = it)) },
+                enabled = options.enabled,
+                testTag = "nse_delay_toggle",
+                contentDescription = "Delay notification display",
+            )
+            HorizontalDivider(color = OsDivider, modifier = Modifier.padding(vertical = DemoLayout.gap))
+            ToggleRow(
+                label = "Discard",
+                description = "preventDefault(true). Takes precedence over the switches above",
+                checked = options.discard,
+                onCheckedChange = { onOptionsChange(options.copy(discard = it)) },
+                enabled = options.enabled,
+                testTag = "nse_discard_toggle",
+                contentDescription = "Discard notification",
+            )
+        }
     }
 }
 

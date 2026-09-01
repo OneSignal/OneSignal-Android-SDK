@@ -33,6 +33,7 @@ Each key resolves in this order at build time: `-PKEY=value` from the CLI → `l
 |-----|---------|-----------------------|
 | `ONESIGNAL_APP_ID` | `MainApplication.onCreate` + `MainViewModel.loadInitialState` | `VITE_ONESIGNAL_APP_ID` |
 | `ONESIGNAL_ANDROID_CHANNEL_ID` | `OneSignalService.sendNotification` (WITH SOUND payload) | `VITE_ONESIGNAL_ANDROID_CHANNEL_ID` |
+| `SHOW_NSE_SECTION` | `MainScreen` (renders the Notification Service Extension section) | none |
 
 > Changing `ONESIGNAL_APP_ID` no longer needs an uninstall — the value is read straight from `BuildConfig` on every launch, no SharedPreferences cache.
 
@@ -84,7 +85,7 @@ android {
 - `release` -- `isMinifyEnabled = true`, `isShrinkResources = true`, consumes the SDK's published ProGuard rules.
 - `profileable` -- declared via `create("profileable") { initWith(release); ... }` so it inherits R8/shrinker settings while staying profileable on-device (used for Macrobenchmark / Android Studio profiling).
 - `flavorDimensions += "default"` with `gms` and `huawei` flavors (see table above).
-- BuildConfig fields: `ONESIGNAL_APP_ID` and `ONESIGNAL_ANDROID_CHANNEL_ID`, both populated through the `demoOverride(...)` helper (`-P` -> `local.properties` -> default).
+- BuildConfig fields: `ONESIGNAL_APP_ID`, `ONESIGNAL_ANDROID_CHANNEL_ID`, and the boolean `SHOW_NSE_SECTION`, all populated through the `demoOverride(...)` helper (`-P` -> `local.properties` -> default).
 
 #### Root Gradle toolchain
 
@@ -121,7 +122,7 @@ The Android demo **overrides the shared guide's "no repository wrapper" rule**. 
 - `MainViewModel : AndroidViewModel` — central state with `LiveData<T>` for every UI value. Implements `IPushSubscriptionObserver`, `IPermissionObserver`, `IUserStateObserver`, and `IUserJwtInvalidatedListener`. Holds a monotonic `private var fetchRequestSequence = 0L` that maps to the shared guide's `requestSequence` for stale-result protection in `fetchUserDataFromApi`.
 - `OneSignalRepository.kt` — only some methods are `suspend` + `withContext(Dispatchers.IO)`; many are synchronous wrappers and the ViewModel wraps calls in `viewModelScope.launch(Dispatchers.IO)` itself.
 - `OneSignalService.kt` (`object`) — REST API client described in the shared guide's Prompt 1.4.
-- `SharedPreferenceUtil.kt` — backs the shared guide's PreferencesService (consent required, privacy consent, external user id, location shared, IAM paused, cached JWT token, cached identity-verification toggle).
+- `SharedPreferenceUtil.kt` — backs the shared guide's PreferencesService (consent required, privacy consent, external user id, location shared, IAM paused, cached JWT token, cached identity-verification toggle, notification service extension switches).
 
 `fetchUserDataFromApi` loading sequence: the sequence is incremented first, then early returns may set `_isLoading = false` before `_isLoading = true` is set (see `MainViewModel.kt` lines ~167–192). Stale-fetch guards themselves are correct -- results are dropped when `requestId != fetchRequestSequence`, and the same guard wraps the catch branch and the final `_isLoading.value = false`.
 
@@ -178,9 +179,20 @@ Patterns used by this demo beyond the shared guide's table:
 - `MainActivity` sets `semantics(mergeDescendants = false) { testTagsAsResourceId = true }` on the root `Surface` so Appium `id=` selectors map onto Compose `testTag` values (`MainActivity.kt` lines ~41–43).
 - `Dialogs.kt` re-applies the same via an `exposeTestTagsAsResourceId()` helper inside each dialog because Compose dialogs render in a separate window -- required for dialog-scoped test tags to be visible to UiAutomator.
 
+### Log tags
+
+The demo logs through `util/DemoLog.kt` rather than `android.util.Log`. It marks both the tag and the message with `[Demo]`, so the tag stays filterable with `logcat -s` and a line is still recognizable when only the message column is in view.
+
+```kotlin
+DemoLog.d(TAG, "Sending notification: Simple")
+// D/[Demo]MainViewModel: [Demo] Sending notification: Simple
+```
+
+Pass the plain class name as the tag; `DemoLog` adds the prefix, so `[Demo]` is defined in exactly one place. `v`, `d`, `i`, `w`, `e`, and `e(tag, message, throwable)` are all there. Current tags are `[Demo]OneSignalExample`, `[Demo]MainViewModel`, `[Demo]OneSignalService`, `[Demo]OneSignalRepository`, `[Demo]TooltipHelper`, `[Demo]NSE`, and `[Demo]OneSignalHMS` on the Huawei flavor.
+
 ### SDK log forwarding
 
-`MainApplication` registers `OneSignal.Debug.addLogListener` and forwards each entry to `android.util.Log` under the `OneSignalSDK` tag, so SDK output shows up alongside app output in Android Studio's Logcat (filter `package:mine` to see both). There is no in-app log viewer — match the shared guide and other wrapper SDK demos by relying on Logcat.
+`MainApplication` registers `OneSignal.Debug.addLogListener` and forwards each entry to `android.util.Log` under the `OneSignalSDK` tag, so SDK output shows up alongside app output in Android Studio's Logcat (filter `package:mine` to see both). Those five calls are the one place in the demo that still uses `android.util.Log` directly, on purpose. The lines are the SDK's, mirrored, and routing them through `DemoLog` would bury the demo's own output whenever you grep `[Demo]`. There is no in-app log viewer — match the shared guide and other wrapper SDK demos by relying on Logcat.
 
 ---
 
@@ -192,6 +204,42 @@ The Android demo exercises a few SDK features that are not described in the shar
 - **JWT field in `LoginDialog`** — optional `"JWT Token (optional)"` input under the external-user-id field. `testTag = "login_user_jwt_input"`. `MainViewModel.loginUser(externalUserId, jwtToken)` threads the token into `OneSignal.login(externalUserId, jwtToken)` and caches it via `SharedPreferenceUtil.cacheJwtToken(...)`.
 - **UPDATE USER JWT button** (`UserSection`, `testTag = "update_user_jwt_button"`) — opens a `PairInputDialog` (External User Id + JWT Token) and calls `viewModel.updateUserJwt(...)` → `OneSignal.updateUserJwt(...)`.
 - **`IUserJwtInvalidatedListener`** — registered by `MainViewModel`; surfaces a log entry via `Log.w(TAG, ...)` when the SDK reports an invalidated JWT. Per Prompt 7.6 the snackbar is no longer fired from this listener.
+
+### Notification service extension
+
+`DemoNotificationServiceExtension` implements `INotificationServiceExtension` and is registered from `app/src/main/AndroidManifest.xml`:
+
+```xml
+<meta-data
+    android:name="com.onesignal.NotificationServiceExtension"
+    android:value="com.onesignal.example.notification.DemoNotificationServiceExtension" />
+```
+
+The SDK resolves that string with `Class.forName` (`NotificationLifecycleService.setupNotificationServiceExtension`), so a wrong class name here fails silently at runtime. Compiling the class inside `OneSignalSDK/`'s `:app` project is what turns a breaking change to `INotificationServiceExtension` or `INotificationReceivedEvent` into a CI failure, and the release build is the only place the `-keep class ** implements com.onesignal.notifications.INotificationServiceExtension` rule in `onesignal/notifications/consumer-rules.pro` gets exercised end to end.
+
+The section is off by default. `MainScreen` wraps it in `if (BuildConfig.SHOW_NSE_SECTION)`:
+
+```bash
+./gradlew :app:installGmsDebug -PSHOW_NSE_SECTION=true
+```
+
+The extension is registered either way. Gating only the UI keeps the class compiling in CI and surviving R8, which is the part that guards the interface. `SHOW_NSE_SECTION` is a compile-time constant, so a default release build strips the section instead of shipping unreachable Compose.
+
+Don't run the shared Appium suite against a `-PSHOW_NSE_SECTION=true` build. The extra card pushes `iam_info_icon` below the `height * 0.82` line that triggers `nudgeAboveBottomOverlay` in `sdk-shared`'s `appium/tests/helpers/app.ts`, and that path throws `Malformed type for "elementId" parameter of command getElementRect` past its own `.catch`. The demo is fine (tapping the icon opens the right tooltip); the helper is not. A default build passes the suite, which is the configuration CI and `e2e.yml` build.
+
+Every behavior is off until switched on in that section, so the notifications the demo sends stay usable as a manual QA baseline. Switches live in `NotificationExtensionOptions` and persist through `SharedPreferenceUtil`; the extension reads them from SharedPreferences rather than `MainViewModel`, because it runs whether or not the app is open.
+
+| Toggle | testTag | What it does |
+| --- | --- | --- |
+| Enable Extension | `nse_enabled_toggle` | Master switch. Off means `onNotificationReceived` returns before touching anything. On logs id, sent time, and the channel the SDK resolved, under the `[Demo]NSE` tag. |
+| Apply Extender | `nse_extender_toggle` | Prefixes the title with `[NSE]` through a `NotificationCompat.Extender`. |
+| Force High Importance Channel | `nse_high_importance_toggle` | Moves the notification onto an app-owned `IMPORTANCE_HIGH` channel. |
+| Delay Display | `nse_delay_toggle` | `preventDefault()`, then `display()` five seconds later. |
+| Discard | `nse_discard_toggle` | `preventDefault(true)`. Takes precedence over the other switches. |
+
+The channel readout comes from `NotificationCompat.getChannelId(builder.build())` inside the extender, the only place an extension can see the SDK's choice. A restored notification lands on `restored_OS_notifications` no matter what the payload asked for, which the payload alone never shows. `event.restoring` is not on `INotificationReceivedEvent` yet; see the TODO in the class and SDK-5011.
+
+The class sets an extender on every notification it handles, because the channel readout is only reachable from inside `extend(builder)`. That costs nothing: an extender cannot change what displays. `NotificationGenerationProcessor.shouldDisplayNotification` does read `hasExtender()`, but `processHandlerResponse` has already dropped a push with an empty body on `canDisplay` by the time it runs.
 
 ---
 
@@ -236,7 +284,7 @@ If the package changes you must regenerate this file from the Huawei AppGallery 
 
 `src/huawei/` overlays the main source set:
 
-- `src/huawei/AndroidManifest.xml` — declares `HmsMessageServiceAppLevel` with `android:name="com.onesignal.example.notification.HmsMessageServiceAppLevel"`.
+- `src/huawei/AndroidManifest.xml` — declares `HmsMessageServiceAppLevel` with `android:name="com.onesignal.example.notification.HmsMessageServiceAppLevel"`. The notification service extension meta-data comes from the main manifest through manifest merge, so both flavors get it.
 - `src/huawei/java/com/onesignal/example/notification/HmsMessageServiceAppLevel.kt` — minimal `HmsMessageService` subclass that forwards messages to OneSignal.
 
 ---
@@ -263,9 +311,11 @@ examples/
             │   ├── java/com/onesignal/example/
             │   │   ├── application/MainApplication.kt
             │   │   ├── data/
-            │   │   │   ├── model/{NotificationType,InAppMessageType}.kt
+            │   │   │   ├── model/{NotificationType,InAppMessageType,
+            │   │   │   │          NotificationExtensionOptions}.kt
             │   │   │   ├── network/OneSignalService.kt
             │   │   │   └── repository/OneSignalRepository.kt
+            │   │   ├── notification/DemoNotificationServiceExtension.kt
             │   │   ├── ui/
             │   │   │   ├── components/        # SectionCard (with DemoSection),
             │   │   │   │                      # ToggleRow, ActionButton, ListComponents,
@@ -274,7 +324,7 @@ examples/
             │   │   │   ├── main/              # MainActivity, MainScreen, Sections, MainViewModel
             │   │   │   ├── secondary/SecondaryActivity.kt
             │   │   │   └── theme/             # Theme.kt, DemoLayout.kt
-            │   │   └── util/                  # SharedPreferenceUtil, TooltipHelper
+            │   │   └── util/                  # SharedPreferenceUtil, TooltipHelper, DemoLog
             │   └── res/
             │       ├── values/{strings,colors,styles}.xml
             │       ├── raw/                   # vine_boom.wav
