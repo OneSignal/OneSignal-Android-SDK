@@ -229,13 +229,9 @@ Don't run the shared Appium suite against a `-PSHOW_NSE_SECTION=true` build. The
 
 Every behavior is off until switched on in that section, so the notifications the demo sends stay usable as a manual QA baseline. Switches live in `NotificationExtensionOptions` and persist through `SharedPreferenceUtil`; the extension reads them from SharedPreferences rather than `MainViewModel`, because it runs whether or not the app is open.
 
-The five behavior switches sit behind a Show options / Hide options row so the section stays two rows tall while the extension is off. Enable Extension is always visible, and turning it on opens the options. The row reuses the collapse idiom from `CollapsibleSingleList` in `ListComponents.kt` (centered, `OsPrimary` label, `ExpandMore` / `ExpandLess` chevron).
-
 | Toggle | testTag | What it does |
 | --- | --- | --- |
-| Enable Extension | `nse_enabled_toggle` | Master switch. Off means `onNotificationReceived` returns before touching anything. |
-| Show / Hide options | `nse_options_toggle` | Folds the five switches below. Not a setting, nothing is persisted. |
-| Log Details | `nse_log_toggle` | Logs id, sent time, and the channel the SDK resolved, under the `[Demo]NSE` tag. |
+| Enable Extension | `nse_enabled_toggle` | Master switch. Off means `onNotificationReceived` returns before touching anything. On logs id, sent time, and the channel the SDK resolved, under the `[Demo]NSE` tag. |
 | Apply Extender | `nse_extender_toggle` | Prefixes the title with `[NSE]` through a `NotificationCompat.Extender`. |
 | Force High Importance Channel | `nse_high_importance_toggle` | Moves the notification onto an app-owned `IMPORTANCE_HIGH` channel. |
 | Delay Display | `nse_delay_toggle` | `preventDefault()`, then `display()` five seconds later. |
@@ -243,7 +239,7 @@ The five behavior switches sit behind a Show options / Hide options row so the s
 
 The channel readout comes from `NotificationCompat.getChannelId(builder.build())` inside the extender, the only place an extension can see the SDK's choice. A restored notification lands on `restored_OS_notifications` no matter what the payload asked for, which the payload alone never shows. `event.restoring` is not on `INotificationReceivedEvent` yet; see the TODO in the class and SDK-5011.
 
-The class sets an extender only when a switch needs one rather than installing a no-op whenever the extension is on, which is about not doing work nothing asked for. An extender cannot change what displays. `NotificationGenerationProcessor.shouldDisplayNotification` does read `hasExtender()`, but `processHandlerResponse` has already dropped a push with an empty body on `canDisplay` by the time it runs.
+The class sets an extender on every notification it handles, because the channel readout is only reachable from inside `extend(builder)`. That costs nothing: an extender cannot change what displays. `NotificationGenerationProcessor.shouldDisplayNotification` does read `hasExtender()`, but `processHandlerResponse` has already dropped a push with an empty body on `canDisplay` by the time it runs.
 
 ---
 

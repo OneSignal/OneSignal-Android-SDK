@@ -8,7 +8,6 @@ package com.onesignal.example.data.model
  */
 data class NotificationExtensionOptions(
     val enabled: Boolean = false,
-    val logDetails: Boolean = false,
     val applyExtender: Boolean = false,
     val forceHighImportanceChannel: Boolean = false,
     val delayDisplay: Boolean = false,

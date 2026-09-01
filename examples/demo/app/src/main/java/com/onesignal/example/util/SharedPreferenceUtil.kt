@@ -18,7 +18,6 @@ object SharedPreferenceUtil {
     // Notification service extension switches. DemoNotificationServiceExtension reads these
     // directly because it runs whether or not the app is open.
     private const val NSE_ENABLED_PREF = "NSE_ENABLED_PREF"
-    private const val NSE_LOG_DETAILS_PREF = "NSE_LOG_DETAILS_PREF"
     private const val NSE_APPLY_EXTENDER_PREF = "NSE_APPLY_EXTENDER_PREF"
     private const val NSE_FORCE_HIGH_IMPORTANCE_PREF = "NSE_FORCE_HIGH_IMPORTANCE_PREF"
     private const val NSE_DELAY_DISPLAY_PREF = "NSE_DELAY_DISPLAY_PREF"
@@ -97,7 +96,6 @@ object SharedPreferenceUtil {
         val prefs = getSharedPreference(context)
         return NotificationExtensionOptions(
             enabled = prefs.getBoolean(NSE_ENABLED_PREF, false),
-            logDetails = prefs.getBoolean(NSE_LOG_DETAILS_PREF, false),
             applyExtender = prefs.getBoolean(NSE_APPLY_EXTENDER_PREF, false),
             forceHighImportanceChannel = prefs.getBoolean(NSE_FORCE_HIGH_IMPORTANCE_PREF, false),
             delayDisplay = prefs.getBoolean(NSE_DELAY_DISPLAY_PREF, false),
@@ -108,7 +106,6 @@ object SharedPreferenceUtil {
     fun cacheNotificationExtensionOptions(context: Context, options: NotificationExtensionOptions) {
         getSharedPreference(context).edit()
             .putBoolean(NSE_ENABLED_PREF, options.enabled)
-            .putBoolean(NSE_LOG_DETAILS_PREF, options.logDetails)
             .putBoolean(NSE_APPLY_EXTENDER_PREF, options.applyExtender)
             .putBoolean(NSE_FORCE_HIGH_IMPORTANCE_PREF, options.forceHighImportanceChannel)
             .putBoolean(NSE_DELAY_DISPLAY_PREF, options.delayDisplay)

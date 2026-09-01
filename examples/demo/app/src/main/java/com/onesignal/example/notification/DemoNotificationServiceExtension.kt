@@ -33,34 +33,25 @@ class DemoNotificationServiceExtension : INotificationServiceExtension {
 
         val notification = event.notification
 
-        if (options.logDetails) {
-            // TODO: [SDK-5011] log `event.restoring` here once it ships. Reading it next to the
-            // channel below is the whole diagnosis for a notification that re-alerts on reboot.
-            DemoLog.d(
-                TAG,
-                "received androidNotificationId=${notification.androidNotificationId}" +
-                    " notificationId=${notification.notificationId}" +
-                    " sentTime=${notification.sentTime}" +
-                    " title=${notification.title}",
-            )
-        }
+        // TODO: [SDK-5011] log `event.restoring` here once it ships. Reading it next to the
+        // channel below is the whole diagnosis for a notification that re-alerts on reboot.
+        DemoLog.d(
+            TAG,
+            "received androidNotificationId=${notification.androidNotificationId}" +
+                " notificationId=${notification.notificationId}" +
+                " sentTime=${notification.sentTime}" +
+                " title=${notification.title}",
+        )
 
         if (options.discard) {
-            if (options.logDetails) {
-                DemoLog.d(TAG, "discarding androidNotificationId=${notification.androidNotificationId}")
-            }
+            DemoLog.d(TAG, "discarding androidNotificationId=${notification.androidNotificationId}")
             event.preventDefault(true)
             return
         }
 
-        // Set an extender only when a switch needs one, rather than installing a no-op
-        // whenever the extension is on. This is about not doing work nothing asked for.
-        // An extender cannot change what displays: NotificationGenerationProcessor
-        // .shouldDisplayNotification does read hasExtender(), but processHandlerResponse
-        // has already dropped a push with an empty body on canDisplay by the time it runs.
-        if (options.logDetails || options.applyExtender || options.forceHighImportanceChannel) {
-            notification.setExtender(buildExtender(event.context, notification, options))
-        }
+        // The channel readout below is only reachable from inside extend(builder), so the
+        // extender goes on every notification the extension handles.
+        notification.setExtender(buildExtender(event.context, notification, options))
 
         if (options.delayDisplay) {
             event.preventDefault()
@@ -76,17 +67,15 @@ class DemoNotificationServiceExtension : INotificationServiceExtension {
         notification: IDisplayableMutableNotification,
         options: NotificationExtensionOptions,
     ) = NotificationCompat.Extender { builder ->
-        if (options.logDetails) {
-            // Read the channel before anything below overwrites it. This is the only place an
-            // extension can see what the SDK picked. A restored notification lands on
-            // `restored_OS_notifications` no matter what the payload asked for, and the payload
-            // by itself never shows that.
-            DemoLog.d(
-                TAG,
-                "building androidNotificationId=${notification.androidNotificationId}" +
-                    " channel=${NotificationCompat.getChannelId(builder.build())}",
-            )
-        }
+        // Read the channel before anything below overwrites it. This is the only place an
+        // extension can see what the SDK picked. A restored notification lands on
+        // `restored_OS_notifications` no matter what the payload asked for, and the payload
+        // by itself never shows that.
+        DemoLog.d(
+            TAG,
+            "building androidNotificationId=${notification.androidNotificationId}" +
+                " channel=${NotificationCompat.getChannelId(builder.build())}",
+        )
 
         if (options.applyExtender) {
             builder.setContentTitle("[NSE] ${notification.title.orEmpty()}")
