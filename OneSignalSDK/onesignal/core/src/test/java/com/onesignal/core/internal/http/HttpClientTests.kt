@@ -1,6 +1,8 @@
 package com.onesignal.core.internal.http
 
 import com.onesignal.common.OneSignalUtils
+import com.onesignal.core.internal.device.IFidEnv
+import com.onesignal.core.internal.device.impl.HTTP_FID_ENV_HEADER_KEY
 import com.onesignal.core.internal.device.impl.InstallIdService
 import com.onesignal.core.internal.http.impl.HttpClient
 import com.onesignal.core.internal.http.impl.OptionalHeaders
@@ -23,8 +25,9 @@ class Mocks {
     internal val response = MockHttpConnectionFactory.MockResponse()
     internal val factory = MockHttpConnectionFactory(response)
     internal val installIdService = InstallIdService(MockPreferencesService())
+    internal val fidEnv = FakeFidEnv()
     internal val httpClient by lazy {
-        HttpClient(factory, MockPreferencesService(), mockConfigModel, Time(), installIdService)
+        HttpClient(factory, MockPreferencesService(), mockConfigModel, Time(), installIdService, fidEnv)
     }
 }
 
@@ -69,6 +72,7 @@ class HttpClientTests : FunSpec({
         for (connection in mocks.factory.connections) {
             connection.getRequestProperty("SDK-Version") shouldBe "onesignal/android/${OneSignalUtils.sdkVersion}"
             connection.getRequestProperty("OneSignal-Install-Id") shouldBe mocks.installIdService.getId().toString()
+            connection.getRequestProperty(HTTP_FID_ENV_HEADER_KEY) shouldBe FakeFidEnv.VALUE
         }
     }
 
@@ -299,4 +303,23 @@ class HttpClientTests : FunSpec({
         response.throwable shouldBe null
         mocks.factory.connections.last().getRequestProperty("Authorization") shouldBe "Bearer the-jwt"
     }
+
+    test("Fid-Env header is omitted when the probe returns empty") {
+        val mocks = Mocks()
+        mocks.fidEnv.value = ""
+
+        mocks.httpClient.get("URL")
+
+        mocks.factory.connections.last().getRequestProperty(HTTP_FID_ENV_HEADER_KEY) shouldBe null
+    }
 })
+
+internal class FakeFidEnv(
+    var value: String = VALUE,
+) : IFidEnv {
+    override fun headerValue(): String = value
+
+    companion object {
+        const val VALUE = "gs=0;agp=8.8.2;fcm=-;flag=0;def=0;prov=0;min=21;tgt=34;snd=-"
+    }
+}

@@ -25,8 +25,11 @@
     <ID>ConstructorParameterNaming:DatabaseCursor.kt$DatabaseCursor$private val _cursor: Cursor</ID>
     <ID>ConstructorParameterNaming:DatabaseProvider.kt$DatabaseProvider$private val _application: IApplicationService</ID>
     <ID>ConstructorParameterNaming:DeviceService.kt$DeviceService$private val _applicationService: IApplicationService</ID>
+    <ID>ConstructorParameterNaming:FidEnv.kt$FidEnvService$private val _applicationService: IApplicationService</ID>
+    <ID>ConstructorParameterNaming:FidEnv.kt$FidEnvService$private val _configModelStore: ConfigModelStore</ID>
     <ID>ConstructorParameterNaming:HttpClient.kt$HttpClient$private val _configModelStore: ConfigModelStore</ID>
     <ID>ConstructorParameterNaming:HttpClient.kt$HttpClient$private val _connectionFactory: IHttpConnectionFactory</ID>
+    <ID>ConstructorParameterNaming:HttpClient.kt$HttpClient$private val _fidEnv: IFidEnv</ID>
     <ID>ConstructorParameterNaming:HttpClient.kt$HttpClient$private val _installIdService: IInstallIdService</ID>
     <ID>ConstructorParameterNaming:HttpClient.kt$HttpClient$private val _prefs: IPreferencesService</ID>
     <ID>ConstructorParameterNaming:HttpClient.kt$HttpClient$private val _time: ITime</ID>

@@ -17,8 +17,10 @@ import com.onesignal.core.internal.config.impl.IdentityVerificationService
 import com.onesignal.core.internal.database.IDatabaseProvider
 import com.onesignal.core.internal.database.impl.DatabaseProvider
 import com.onesignal.core.internal.device.IDeviceService
+import com.onesignal.core.internal.device.IFidEnv
 import com.onesignal.core.internal.device.IInstallIdService
 import com.onesignal.core.internal.device.impl.DeviceService
+import com.onesignal.core.internal.device.impl.FidEnvService
 import com.onesignal.core.internal.device.impl.InstallIdService
 import com.onesignal.core.internal.features.FeatureManager
 import com.onesignal.core.internal.features.IFeatureManager
@@ -62,6 +64,7 @@ internal class CoreModule : IModule {
         builder.register { ApplicationService.getInstanceOrNull() ?: ApplicationService() }
             .provides<IApplicationService>()
         builder.register<DeviceService>().provides<IDeviceService>()
+        builder.register<FidEnvService>().provides<IFidEnv>()
         builder.register<Time>().provides<ITime>()
         builder.register<DatabaseProvider>().provides<IDatabaseProvider>()
         builder.register<InstallIdService>().provides<IInstallIdService>()
@@ -103,9 +106,11 @@ internal class CoreModule : IModule {
 
         // Crash Uploader (crash handler is initialized directly in OneSignalImp for early initialization)
         builder.register<OneSignalCrashUploaderWrapper>().provides<IStartableService>()
+        registerFallbackManagers(builder)
+    }
 
-        // Register dummy services in the event they are not configured. These dummy services
-        // will throw an error message if the associated functionality is attempted to be used.
+    /** Dummy managers so a missing optional module fails at the API, not as a DI miss. */
+    private fun registerFallbackManagers(builder: ServiceBuilder) {
         builder.register<MisconfiguredNotificationsManager>().provides<INotificationsManager>()
         builder.register<MisconfiguredIAMManager>().provides<IInAppMessagesManager>()
         builder.register<MisconfiguredLocationManager>().provides<ILocationManager>()
