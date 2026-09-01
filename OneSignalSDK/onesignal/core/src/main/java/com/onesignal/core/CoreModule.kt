@@ -106,11 +106,9 @@ internal class CoreModule : IModule {
 
         // Crash Uploader (crash handler is initialized directly in OneSignalImp for early initialization)
         builder.register<OneSignalCrashUploaderWrapper>().provides<IStartableService>()
-        registerFallbackManagers(builder)
-    }
 
-    /** Dummy managers so a missing optional module fails at the API, not as a DI miss. */
-    private fun registerFallbackManagers(builder: ServiceBuilder) {
+        // Register dummy services in the event they are not configured. These dummy services
+        // will throw an error message if the associated functionality is attempted to be used.
         builder.register<MisconfiguredNotificationsManager>().provides<INotificationsManager>()
         builder.register<MisconfiguredIAMManager>().provides<IInAppMessagesManager>()
         builder.register<MisconfiguredLocationManager>().provides<ILocationManager>()
