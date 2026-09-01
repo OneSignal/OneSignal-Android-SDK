@@ -13,6 +13,7 @@ import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 import org.robolectric.annotation.Config
 
 @Config(
@@ -27,7 +28,7 @@ class NotificationRepositoryTests : FunSpec({
         ShadowRoboNotificationManager.reset()
     }
 
-    fun repository(): NotificationRepository {
+    fun repository(badgeCountUpdater: IBadgeCountUpdater = mockk(relaxed = true)): NotificationRepository {
         val database = DatabaseMockHelper.databaseProvider("notification")
         every { database.second.update(any(), any(), any(), any()) } returns 1
         return NotificationRepository(
@@ -35,7 +36,7 @@ class NotificationRepositoryTests : FunSpec({
             mockk(relaxed = true),
             database.first,
             MockHelper.time(1111),
-            mockk<IBadgeCountUpdater>(relaxed = true),
+            badgeCountUpdater,
         )
     }
 
@@ -43,6 +44,16 @@ class NotificationRepositoryTests : FunSpec({
         repository().markAsDismissedWithoutCancel(7)
 
         ShadowRoboNotificationManager.cancelledNotifications shouldBe emptyList()
+    }
+
+    test("markAsDismissedWithoutCancel should refresh the badge count") {
+        // Below API 23 the badge counts undismissed rows, so it has to drop here even though the
+        // notification stays in the shade.
+        val badgeCountUpdater = mockk<IBadgeCountUpdater>(relaxed = true)
+
+        repository(badgeCountUpdater).markAsDismissedWithoutCancel(7)
+
+        verify(exactly = 1) { badgeCountUpdater.update() }
     }
 
     test("markAsDismissed should cancel the notification from the shade") {

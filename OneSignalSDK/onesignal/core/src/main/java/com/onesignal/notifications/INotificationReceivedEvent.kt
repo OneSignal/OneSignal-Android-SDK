@@ -54,9 +54,10 @@ interface INotificationReceivedEvent {
      * notification keeps your customizations. Channel and sound are the exception. OneSignal puts
      * a restored notification back on its silent Restored channel, so it never alerts again.
      *
-     * Call `preventDefault(true)` to stop a shade restore from coming back. A group-collapse
-     * rebuild is left in place. The no-argument [preventDefault] waits up to 30 seconds for
-     * `notification.display()`.
+     * Call `preventDefault(true)` to stop a restored notification from coming back. A
+     * group-collapse rebuild still showing in the shade is left in place; one that is not
+     * showing is marked dismissed so it stays gone. The no-argument [preventDefault] waits up
+     * to 30 seconds for `notification.display()`.
      */
     val restoring: Boolean
         get() = false

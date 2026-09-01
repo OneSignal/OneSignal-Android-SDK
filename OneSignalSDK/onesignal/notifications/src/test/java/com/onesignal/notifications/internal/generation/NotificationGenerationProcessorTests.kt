@@ -10,6 +10,7 @@ import com.onesignal.mocks.IOMockHelper
 import com.onesignal.mocks.MockHelper
 import com.onesignal.notifications.INotificationReceivedEvent
 import com.onesignal.notifications.INotificationWillDisplayEvent
+import com.onesignal.notifications.internal.common.NotificationHelper
 import com.onesignal.notifications.internal.common.NotificationRestoreReason
 import com.onesignal.notifications.internal.data.INotificationRepository
 import com.onesignal.notifications.internal.display.INotificationDisplayer
@@ -23,9 +24,11 @@ import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
+import io.mockk.mockkObject
 import io.mockk.mockkStatic
 import io.mockk.runs
 import io.mockk.spyk
+import io.mockk.unmockkObject
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -131,6 +134,10 @@ class NotificationGenerationProcessorTests : FunSpec({
 
         mockkStatic(android.text.TextUtils::class)
         every { android.text.TextUtils.isEmpty(any()) } answers { firstArg<CharSequence?>()?.isEmpty() ?: true }
+    }
+
+    afterAny {
+        unmockkObject(NotificationHelper)
     }
 
     test("processNotificationData should set title correctly") {
@@ -342,13 +349,15 @@ class NotificationGenerationProcessorTests : FunSpec({
         }
     }
 
-    test("processNotificationData should leave a regrouped notification alone when the received event prevents display") {
+    test("processNotificationData should leave a suppressed regroup alone when the notification is still posted") {
         // A group dropping to one member sends that member back through generation. It is still in
         // the shade and the user never dismissed it, so suppressing the rebuild must not take it
         // down or dismiss the record.
         // Given
         val mocks = Mocks()
         every { mocks.notificationGenerationProcessor getProperty "EXTERNAL_CALLBACKS_TIMEOUT" } answers { 1_000L }
+        mockkObject(NotificationHelper)
+        every { NotificationHelper.isNotificationActive(any(), any()) } returns true
         coEvery { mocks.notificationLifecycleService.externalRemoteNotificationReceived(any()) } answers {
             firstArg<INotificationReceivedEvent>().preventDefault(true)
         }
@@ -365,6 +374,61 @@ class NotificationGenerationProcessorTests : FunSpec({
         }
         coVerify(exactly = 0) {
             mocks.notificationRepository.markAsDismissedWithoutCancel(any())
+        }
+        coVerify(exactly = 0) {
+            mocks.notificationSummaryManager.updatePossibleDependentSummaryOnDismiss(any())
+        }
+    }
+
+    test("processNotificationData should dismiss a suppressed regroup when the notification is not posted") {
+        // A regroup enqueued while the restore pass is still walking the outstanding list steals
+        // the sibling's shade-restore work, since unique work is keyed on the OS id alone. Nothing
+        // is posted then, so the suppression has to stick like a shade dismiss or the row comes
+        // back on the next restore.
+        // Given
+        val mocks = Mocks()
+        every { mocks.notificationGenerationProcessor getProperty "EXTERNAL_CALLBACKS_TIMEOUT" } answers { 1_000L }
+        mockkObject(NotificationHelper)
+        every { NotificationHelper.isNotificationActive(any(), any()) } returns false
+        coEvery { mocks.notificationLifecycleService.externalRemoteNotificationReceived(any()) } answers {
+            firstArg<INotificationReceivedEvent>().preventDefault(true)
+        }
+
+        // When
+        mocks.notificationGenerationProcessor.processNotificationData(mocks.context, 1, mocks.notificationPayload, NotificationRestoreReason.GROUP_REGROUP, 1111)
+
+        // Then
+        coVerify(exactly = 0) {
+            mocks.notificationDisplayer.displayNotification(any())
+        }
+        coVerify(exactly = 1) {
+            mocks.notificationRepository.markAsDismissedWithoutCancel(1)
+        }
+        coVerify(exactly = 0) {
+            mocks.notificationRepository.markAsDismissed(any())
+        }
+        coVerify(exactly = 1) {
+            mocks.notificationSummaryManager.updatePossibleDependentSummaryOnDismiss(1)
+        }
+    }
+
+    test("processNotificationData should not update the summary when a suppressed unposted regroup was already dismissed") {
+        // Given
+        val mocks = Mocks()
+        every { mocks.notificationGenerationProcessor getProperty "EXTERNAL_CALLBACKS_TIMEOUT" } answers { 1_000L }
+        mockkObject(NotificationHelper)
+        every { NotificationHelper.isNotificationActive(any(), any()) } returns false
+        coEvery { mocks.notificationRepository.markAsDismissedWithoutCancel(any()) } returns false
+        coEvery { mocks.notificationLifecycleService.externalRemoteNotificationReceived(any()) } answers {
+            firstArg<INotificationReceivedEvent>().preventDefault(true)
+        }
+
+        // When
+        mocks.notificationGenerationProcessor.processNotificationData(mocks.context, 1, mocks.notificationPayload, NotificationRestoreReason.GROUP_REGROUP, 1111)
+
+        // Then
+        coVerify(exactly = 1) {
+            mocks.notificationRepository.markAsDismissedWithoutCancel(1)
         }
         coVerify(exactly = 0) {
             mocks.notificationSummaryManager.updatePossibleDependentSummaryOnDismiss(any())

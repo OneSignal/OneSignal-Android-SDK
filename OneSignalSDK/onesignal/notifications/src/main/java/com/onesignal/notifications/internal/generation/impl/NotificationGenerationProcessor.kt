@@ -13,6 +13,7 @@ import com.onesignal.notifications.internal.NotificationReceivedEvent
 import com.onesignal.notifications.internal.NotificationWillDisplayEvent
 import com.onesignal.notifications.internal.common.NotificationConstants
 import com.onesignal.notifications.internal.common.NotificationGenerationJob
+import com.onesignal.notifications.internal.common.NotificationHelper
 import com.onesignal.notifications.internal.common.NotificationRestoreReason
 import com.onesignal.notifications.internal.data.INotificationRepository
 import com.onesignal.notifications.internal.display.INotificationDisplayer
@@ -190,16 +191,18 @@ internal class NotificationGenerationProcessor(
         // calls from canonical ids.
         when (restoreReason) {
             // Restore can include notifications still on screen. Don't cancel them.
-            NotificationRestoreReason.SHADE_RESTORE -> {
-                Logging.debug("Suppressed restore of notification ${notificationJob.androidId}, marking it dismissed so it stays gone")
-                if (_dataController.markAsDismissedWithoutCancel(notificationJob.androidId)) {
-                    _notificationSummaryManager.updatePossibleDependentSummaryOnDismiss(notificationJob.androidId)
-                }
-            }
+            NotificationRestoreReason.SHADE_RESTORE -> suppressRestoredNotification(notificationJob)
 
-            // Still in the shade. The user did not dismiss it.
             NotificationRestoreReason.GROUP_REGROUP ->
-                Logging.debug("Suppressed regroup of notification ${notificationJob.androidId}, leaving it as is")
+                if (NotificationHelper.isNotificationActive(_applicationService.appContext, notificationJob.androidId)) {
+                    // Still in the shade. The user did not dismiss it.
+                    Logging.debug("Suppressed regroup of notification ${notificationJob.androidId}, leaving it as is")
+                } else {
+                    // A regroup enqueued during a restore pass steals the sibling's shade-restore work,
+                    // because unique work is keyed on the OS id alone. Nothing is posted here, so treat
+                    // the suppression as a shade dismiss or the row comes back on the next restore.
+                    suppressRestoredNotification(notificationJob)
+                }
 
             null -> {
                 // indicate the notification job did not display. We process it as "opened" to prevent
@@ -210,6 +213,20 @@ internal class NotificationGenerationProcessor(
         }
 
         return null
+    }
+
+    /**
+     * A restored notification the callback suppressed must not come back on the next restore.
+     * Marks the row dismissed without touching the shade, then reconciles any dependent group
+     * summary the same way a real dismissal would.
+     */
+    private suspend fun suppressRestoredNotification(notificationJob: NotificationGenerationJob) {
+        if (_dataController.markAsDismissedWithoutCancel(notificationJob.androidId)) {
+            Logging.debug("Suppressed restore of notification ${notificationJob.androidId}, marked it dismissed so it stays gone")
+            _notificationSummaryManager.updatePossibleDependentSummaryOnDismiss(notificationJob.androidId)
+        } else {
+            Logging.debug("Suppressed restore of notification ${notificationJob.androidId}, row was already dismissed or opened")
+        }
     }
 
     // If available TTL times comes in seconds, by default is 3 days in seconds

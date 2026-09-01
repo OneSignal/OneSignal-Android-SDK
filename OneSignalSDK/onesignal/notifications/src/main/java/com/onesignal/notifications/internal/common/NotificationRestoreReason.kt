@@ -6,8 +6,9 @@ internal enum class NotificationRestoreReason {
     SHADE_RESTORE,
 
     /**
-     * A group dropped to one member. Shown as a standalone notification, still in the shade,
-     * so the app's extender still applies.
+     * A group dropped to one member, which is re-posted so it looks standalone. Normally still
+     * in the shade. The extender applies, but channel and sound are forced back to the silent
+     * restore channel, the same as any restore.
      */
     GROUP_REGROUP,
 }
