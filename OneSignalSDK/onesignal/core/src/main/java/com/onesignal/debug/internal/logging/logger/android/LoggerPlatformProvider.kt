@@ -1,4 +1,4 @@
-package com.onesignal.debug.internal.logging.otel.android
+package com.onesignal.debug.internal.logging.logger.android
 
 import android.app.ActivityManager
 import android.content.Context
@@ -8,16 +8,14 @@ import com.onesignal.common.OneSignalWrapper
 import com.onesignal.core.internal.features.IFeatureManager
 import com.onesignal.core.internal.http.OneSignalService
 import com.onesignal.debug.internal.logging.Logging
-import com.onesignal.otel.IOtelPlatformProvider
+import com.onesignal.logger.ILoggerPlatformProvider
 import java.io.File
 
-// Use this to enable/disable the Otel exporter logging in debug builds.
-internal const val OTEL_EXPORTER_LOGGING_ENABLED = false
+// Use this to enable/disable local exporter diagnostics in debug builds.
+internal const val EXPORTER_LOGGING_ENABLED = false
 
-/**
- * Configuration for AndroidOtelPlatformProvider.
- */
-internal data class OtelPlatformProviderConfig(
+/** Configuration for [LoggerPlatformProvider]. */
+internal data class LoggerPlatformProviderConfig(
     val crashStoragePath: String,
     val appPackageId: String,
     val appVersion: String,
@@ -26,24 +24,19 @@ internal data class OtelPlatformProviderConfig(
 )
 
 /**
- * Android-specific implementation of IOtelPlatformProvider.
- * Reads all values directly from SharedPreferences and system services.
- * No SDK service dependencies required.
- *
- * All IDs (appId, onesignalId, pushSubscriptionId) are resolved from SharedPreferences via OtelIdResolver.
- * Remote log level defaults to ERROR if not found in config.
+ * Android [ILoggerPlatformProvider], reading straight from SharedPreferences and system services
+ * so the logging pipeline can come up before SDK service bootstrap.
  */
-internal class OtelPlatformProvider(
-    config: OtelPlatformProviderConfig,
+internal class LoggerPlatformProvider(
+    config: LoggerPlatformProviderConfig,
     private val featureManagerProvider: () -> IFeatureManager,
-) : IOtelPlatformProvider {
+) : ILoggerPlatformProvider {
     override val appPackageId: String = config.appPackageId
     override val appVersion: String = config.appVersion
     private val context: Context? = config.context
     private val getIsInForeground: (() -> Boolean?)? = config.getIsInForeground
-    private val idResolver = OtelIdResolver(context)
+    private val idResolver = LoggerIdResolver(context)
 
-    // Top-level attributes (static, calculated once)
     override suspend fun getInstallId(): String = idResolver.resolveInstallId()
 
     override val sdkBase: String = "android"
@@ -67,19 +60,12 @@ internal class OtelPlatformProvider(
     // Compile-time Kotlin stdlib, not the host app's Kotlin.
     override val kotlinVersion: String? = KotlinVersion.CURRENT.toString()
 
-    override val swiftVersion: String? = null
-
-    // Device API level; complementary to os.version (RELEASE).
-    // Do not emit java_version — ART hardcodes java.specification.version to "0.9".
+    // Do not add java_version here — ART hardcodes java.specification.version to "0.9".
     override val additionalVersionAttributes: Map<String, String> =
         mapOf("android_api_level" to Build.VERSION.SDK_INT.toString())
 
-    // Read through the supplier on every access so per-event attributes always reflect the
-    // current featureStates snapshot (including IMMEDIATE-mode flag changes). The supplier is
-    // an immutable constructor val that resolves IFeatureManager lazily — this lets the OTel
-    // pipeline come up early in init (before service bootstrap) without mutable late-bound
-    // state. Returns an empty list when the supplier or the manager throws (e.g. very early
-    // emissions before services are ready); the attribute is then omitted by OtelFieldsPerEvent.
+    // Resolve through the supplier on every access, so per-event attributes track the current
+    // featureStates snapshot. Empty when it throws, which it does before services are ready.
     @Suppress("TooGenericExceptionCaught", "SwallowedException")
     override val enabledFeatureFlags: List<String>
         get() = try {
@@ -88,7 +74,6 @@ internal class OtelPlatformProvider(
             emptyList()
         }
 
-    // Per-event attributes - IDs are cached (calculated once), appState is dynamic (calculated per access)
     override val appId: String? by lazy {
         idResolver.resolveAppId()
     }
@@ -105,11 +90,9 @@ internal class OtelPlatformProvider(
     override val appState: String
         @Suppress("TooGenericExceptionCaught", "SwallowedException")
         get() = try {
-            // Try to get from ApplicationService if available
             getIsInForeground?.invoke()?.let { isForeground ->
                 if (isForeground) "foreground" else "background"
             } ?: run {
-                // Fall back to ActivityManager if Context is available
                 context?.let { ctx ->
                     @Suppress("TooGenericExceptionCaught", "SwallowedException")
                     try {
@@ -146,16 +129,12 @@ internal class OtelPlatformProvider(
 
     override val minFileAgeForReadMillis: Long = 5_000
 
-    // Cached from SharedPreferences on first access and held for the session.
-    // Mid-session config updates are handled by OtelLifecycleManager reading
-    // from ConfigModel directly, not from these cached values.
+    // Session-scoped: mid-session updates reach LoggerLifecycleManager via ConfigModel, not here.
     override val isRemoteLoggingEnabled: Boolean by lazy {
         idResolver.resolveRemoteLoggingEnabled()
     }
 
-    // Cached from SharedPreferences on first access and held for the session.
-    // Mid-session config updates are handled by OtelLifecycleManager reading
-    // from ConfigModel directly, not from these cached values.
+    // Session-scoped, as above.
     @Suppress("TooGenericExceptionCaught", "SwallowedException")
     override val remoteLogLevel: String? by lazy {
         try {
@@ -165,7 +144,7 @@ internal class OtelPlatformProvider(
         }
     }
 
-    override val isOtelExporterLoggingEnabled: Boolean = OTEL_EXPORTER_LOGGING_ENABLED
+    override val isExporterLoggingEnabled: Boolean = EXPORTER_LOGGING_ENABLED
 
     override val appIdForHeaders: String
         get() = appId ?: ""
@@ -174,18 +153,16 @@ internal class OtelPlatformProvider(
 }
 
 /**
- * Factory function to create AndroidOtelPlatformProvider. Reads value-config directly from
- * SharedPreferences / system services; receives a [featureManagerProvider] supplier that the
- * provider invokes lazily on each `enabledFeatureFlags` read so the OTel pipeline can come up
- * before service bootstrap completes.
+ * Builds the Android [ILoggerPlatformProvider]. [featureManagerProvider] is resolved lazily per
+ * read, so the logging pipeline can come up before service bootstrap completes.
  */
-internal fun createAndroidOtelPlatformProvider(
+internal fun createAndroidLoggerPlatformProvider(
     context: Context,
     featureManagerProvider: () -> IFeatureManager,
-): OtelPlatformProvider {
-    return OtelPlatformProvider(
-        OtelPlatformProviderConfig(
-            crashStoragePath = getOtelCrashStoragePath(context),
+): LoggerPlatformProvider {
+    return LoggerPlatformProvider(
+        LoggerPlatformProviderConfig(
+            crashStoragePath = getCrashStoragePath(context),
             appPackageId = context.packageName,
             appVersion = com.onesignal.common.AndroidUtils.getAppVersion(context) ?: "unknown",
             context = context,
@@ -194,5 +171,9 @@ internal fun createAndroidOtelPlatformProvider(
     )
 }
 
-internal fun getOtelCrashStoragePath(context: Context): String =
+/**
+ * The `otel` segment stays although OpenTelemetry is gone: upgrading installs already hold crash
+ * records there, and moving it would orphan pending uploads.
+ */
+internal fun getCrashStoragePath(context: Context): String =
     File(File(File(context.cacheDir, "onesignal"), "otel"), "crashes").path

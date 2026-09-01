@@ -3,10 +3,7 @@ package com.onesignal.debug.internal.logging.logger.android
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.logger.ILogger
 
-/**
- * Android implementation of [ILogger] for the `logger` module. Delegates to the
- * existing [Logging] object. Direct analogue of `AndroidOtelLogger`.
- */
+/** Android [ILogger], delegating to the existing [Logging] object. */
 internal class AndroidLogger : ILogger {
     override fun error(message: String) {
         Logging.error(message)

@@ -6,31 +6,16 @@ import android.os.SystemClock
 import com.onesignal.debug.internal.crash.AnrCheckEvaluator
 import com.onesignal.debug.internal.crash.AnrCheckResult
 import com.onesignal.debug.internal.crash.AnrConstants
-import com.onesignal.debug.internal.crash.buildBlockFingerprint
-import com.onesignal.logger.CrashData
+import com.onesignal.debug.internal.crash.buildAnrCrashData
+import com.onesignal.debug.internal.crash.buildBackgroundBlockCrashData
 import com.onesignal.logger.ILogAnrDetector
 import com.onesignal.logger.ILogCrashReporter
 import com.onesignal.logger.ILogger
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
- * Android [ILogAnrDetector] — watchdog that monitors main-thread responsiveness and, if
- * OneSignal is at fault, persists a report via the `logger` module's [ILogCrashReporter].
- * Transport-agnostic analogue of `OtelAnrDetector`.
- *
- * Detection is app-state aware, because a blocked main thread does not mean the same thing
- * in the foreground as in the background:
- * - Foreground block > [anrThresholdMs]: a real, user-visible ANR — reported via
- *   [ILogCrashReporter.saveCrash] (fatal).
- * - Background block > [backgroundThresholdMs]: not an ANR (Android raises none for a
- *   backgrounded app) — recorded via [ILogCrashReporter.saveNonFatal] under a distinct
- *   exception type so it stays out of the ANR metric while remaining queryable.
- * - If the watchdog's own sleep overran far beyond [checkIntervalMs], the whole process was
- *   descheduled (Doze / cached-process freeze), so the measured block is a freeze artifact
- *   and is suppressed.
- *
- * Every timing/classification/dedup decision is delegated to the shared [AnrCheckEvaluator]
- * (pure, JVM-tested), the same core the `otel` watchdog uses, so the two stay in lockstep.
+ * Android [ILogAnrDetector]: owns the watchdog thread and the reporting side effects. Every
+ * timing, classification and dedup decision belongs in [AnrCheckEvaluator], not here.
  */
 internal class AndroidLogAnrDetector(
     private val crashReporter: ILogCrashReporter,
@@ -38,8 +23,6 @@ internal class AndroidLogAnrDetector(
     private val anrThresholdMs: Long = AnrConstants.DEFAULT_ANR_THRESHOLD_MS,
     private val checkIntervalMs: Long = AnrConstants.DEFAULT_CHECK_INTERVAL_MS,
     backgroundThresholdMs: Long = AnrConstants.DEFAULT_BACKGROUND_BLOCK_THRESHOLD_MS,
-    // Only "background" downgrades to a warning; "unknown" is treated as foreground so a
-    // genuine ANR is never silently dropped.
     private val isAppInForeground: () -> Boolean = { true },
 ) : ILogAnrDetector {
     private val mainHandler = Handler(Looper.getMainLooper())
@@ -164,25 +147,14 @@ internal class AndroidLogAnrDetector(
                 logger.debug("$TAG: ANR not OneSignal-related, skipping report")
                 return
             }
-            val crash =
-                CrashData(
-                    threadName = mainThread.name,
-                    exceptionType = "ApplicationNotRespondingException",
-                    exceptionMessage = "Application Not Responding: Main thread blocked for ${unresponsiveDurationMs}ms",
-                    stacktrace = stackTrace.joinToString("\n") { it.toString() },
-                )
-            crashReporter.saveCrash(crash)
+            crashReporter.saveCrash(buildAnrCrashData(mainThread.name, stackTrace, unresponsiveDurationMs))
             logger.info("$TAG: ANR report saved")
         } catch (t: Throwable) {
             logger.error("$TAG: failed to report ANR: ${t.message}")
         }
     }
 
-    /**
-     * Records a backgrounded main-thread block as a retained non-fatal warning rather than an
-     * ANR. Uses a distinct exception type so it can be segmented into its own stream, and the
-     * message carries a compact stack fingerprint (top frame + first OneSignal frame) for triage.
-     */
+    /** Non-fatal, under a distinct exception type, so backgrounded blocks stay out of the ANR metric. */
     @Suppress("TooGenericExceptionCaught")
     private fun reportBackgroundBlock(unresponsiveDurationMs: Long) {
         try {
@@ -192,15 +164,7 @@ internal class AndroidLogAnrDetector(
                 logger.debug("$TAG: background block not OneSignal-related, skipping")
                 return
             }
-            val crash =
-                CrashData(
-                    threadName = mainThread.name,
-                    exceptionType = "BackgroundMainThreadBlockException",
-                    exceptionMessage =
-                    "Background main-thread block for ${unresponsiveDurationMs}ms | ${buildBlockFingerprint(stackTrace)}",
-                    stacktrace = stackTrace.joinToString("\n") { it.toString() },
-                )
-            crashReporter.saveNonFatal(crash)
+            crashReporter.saveNonFatal(buildBackgroundBlockCrashData(mainThread.name, stackTrace, unresponsiveDurationMs))
             logger.info("$TAG: background block warning recorded")
         } catch (t: Throwable) {
             logger.error("$TAG: failed to record background block: ${t.message}")

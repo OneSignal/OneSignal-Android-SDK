@@ -8,8 +8,6 @@ import com.onesignal.debug.LogLevel
 import com.onesignal.debug.OneSignalLogEvent
 import com.onesignal.logger.ILogTelemetryRemote
 import com.onesignal.logger.LogLoggingHelper
-import com.onesignal.otel.IOtelOpenTelemetryRemote
-import com.onesignal.otel.OtelLoggingHelper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -26,49 +24,20 @@ object Logging {
     private val logListeners = CopyOnWriteArraySet<ILogListener>()
 
     /**
-     * Optional Otel remote telemetry for logging SDK events.
+     * Optional `logger` module remote telemetry for shipping SDK events.
      * Set this when remote logging is enabled.
      */
     @Volatile
-    private var otelRemoteTelemetry: IOtelOpenTelemetryRemote? = null
+    private var loggerRemoteTelemetry: ILogTelemetryRemote? = null
 
     /**
      * Function to check if a specific log level should be sent remotely.
      * Set this to dynamically check remote logging configuration based on log level.
      */
     @Volatile
-    private var shouldSendLogLevel: (LogLevel) -> Boolean = { false }
-
-    /**
-     * Sets the Otel remote telemetry instance and log level check function.
-     * This should be called when remote logging is enabled.
-     *
-     * @param telemetry The Otel remote telemetry instance
-     * @param shouldSend Function that returns true if a log level should be sent remotely
-     */
-    fun setOtelTelemetry(
-        telemetry: IOtelOpenTelemetryRemote?,
-        shouldSend: (LogLevel) -> Boolean = { false },
-    ) {
-        otelRemoteTelemetry = telemetry
-        shouldSendLogLevel = shouldSend
-    }
-
-    /**
-     * Optional `logger` module remote telemetry. This is the OpenTelemetry-free
-     * replacement for [otelRemoteTelemetry]; only one of the two is wired at a time
-     * (see LoggerModuleSwitch). Set this when remote logging is enabled via the
-     * logger module.
-     */
-    @Volatile
-    private var loggerRemoteTelemetry: ILogTelemetryRemote? = null
-
-    @Volatile
     private var shouldSendLoggerLogLevel: (LogLevel) -> Boolean = { false }
 
-    /**
-     * Sets the `logger` module remote telemetry instance and log level check function.
-     */
+    /** Installs the remote sink; pass a null [telemetry] to stop shipping logs remotely. */
     fun setLoggerTelemetry(
         telemetry: ILogTelemetryRemote?,
         shouldSend: (LogLevel) -> Boolean = { false },
@@ -77,8 +46,8 @@ object Logging {
         shouldSendLoggerLogLevel = shouldSend
     }
 
-    // Coroutine scope for async Otel logging (non-blocking)
-    private val otelLoggingScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    // Coroutine scope for async remote logging (non-blocking)
+    private val remoteLoggingScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     @JvmStatic
     var logLevel = LogLevel.WARN
@@ -156,7 +125,6 @@ object Logging {
         logToLogcat(level, fullMessage, throwable)
         showVisualLogging(level, fullMessage, throwable)
         callLogListeners(level, fullMessage, throwable)
-        logToOtel(level, fullMessage, throwable)
         logToLogger(level, fullMessage, throwable)
     }
 
@@ -226,44 +194,8 @@ object Logging {
     }
 
     /**
-     * Logs to Otel remote telemetry if enabled.
+     * Logs to the `logger` module remote telemetry if enabled.
      * This is non-blocking and runs asynchronously.
-     */
-    @Suppress("TooGenericExceptionCaught", "ReturnCount")
-    private fun logToOtel(
-        level: LogLevel,
-        message: String,
-        throwable: Throwable?,
-    ) {
-        val telemetry = otelRemoteTelemetry ?: return
-
-        // Skip NONE level
-        if (level == LogLevel.NONE) return
-
-        // Check if this log level should be sent remotely
-        if (!shouldSendLogLevel(level)) return
-
-        // Log asynchronously (non-blocking)
-        otelLoggingScope.launch {
-            try {
-                OtelLoggingHelper.logToOtel(
-                    telemetry = telemetry,
-                    level = level.name,
-                    message = message,
-                    exceptionType = throwable?.javaClass?.name,
-                    exceptionMessage = throwable?.message,
-                    exceptionStacktrace = throwable?.stackTraceToString(),
-                )
-            } catch (t: Throwable) {
-                // Don't log Otel errors to Otel (would cause infinite loop)
-                android.util.Log.e(TAG, "Failed to log to Otel: ${t.message}", t)
-            }
-        }
-    }
-
-    /**
-     * Logs to the `logger` module remote telemetry if enabled. Non-blocking, mirrors
-     * [logToOtel]. Only one of the otel/logger sinks is active at a time.
      */
     @Suppress("TooGenericExceptionCaught", "ReturnCount")
     private fun logToLogger(
@@ -273,10 +205,14 @@ object Logging {
     ) {
         val telemetry = loggerRemoteTelemetry ?: return
 
+        // Skip NONE level
         if (level == LogLevel.NONE) return
+
+        // Check if this log level should be sent remotely
         if (!shouldSendLoggerLogLevel(level)) return
 
-        otelLoggingScope.launch {
+        // Log asynchronously (non-blocking)
+        remoteLoggingScope.launch {
             try {
                 LogLoggingHelper.log(
                     telemetry = telemetry,

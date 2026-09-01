@@ -506,7 +506,8 @@ class RemoteLoggingConfigModel(
 
     /**
      * Whether remote logging is enabled.
-     * Set by backend config hydration — true when the server sends a valid log_level, false otherwise.
+     * Set by backend config hydration — true when the server sends a valid log_level other than
+     * NONE, false otherwise.
      */
     var isEnabled: Boolean
         get() = getBooleanProperty(::isEnabled.name) { false }
