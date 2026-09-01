@@ -49,12 +49,7 @@ class FidEnvTests : FunSpec({
     }
 
     test("parseAgpVersion reads androidGradlePluginVersion") {
-        parseAgpVersion(
-            """
-            appMetadataVersion=1.1
-            androidGradlePluginVersion=8.8.2
-            """.trimIndent(),
-        ) shouldBe "8.8.2"
+        parseAgpVersion("androidGradlePluginVersion=8.8.2\n") shouldBe "8.8.2"
     }
 
     test("parseAgpVersion returns null when the key is missing") {

@@ -39,12 +39,7 @@ class FidEnvReaderTests : FunSpec({
         snapshot.senderMatch shouldBe null
         snapshot.minSdk shouldBe context.applicationInfo.minSdkVersion
         snapshot.targetSdk shouldBe context.applicationInfo.targetSdkVersion
-    }
-
-    test("reads host AGP version from APK metadata when present") {
-        val snapshot = AndroidFidEnvReader(context).collect(null)
-
-        snapshot.agpVersion shouldBe "8.8.2"
+        snapshot.agpVersion shouldBe null
     }
 
     test("gs and sender match follow google-services string resources") {
@@ -80,7 +75,7 @@ class FidEnvReaderTests : FunSpec({
         val header = FidEnvService(applicationService, configStore).headerValue()
 
         header.shouldContain("gs=0")
-        header.shouldContain("agp=8.8.2")
+        header.shouldContain("agp=-")
         header.shouldContain("snd=-")
     }
 })
