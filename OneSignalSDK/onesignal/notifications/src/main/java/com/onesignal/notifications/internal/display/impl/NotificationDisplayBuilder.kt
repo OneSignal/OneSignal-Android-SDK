@@ -83,6 +83,7 @@ internal class NotificationDisplayBuilder(
         val fcmJson: JSONObject = notificationJob.jsonPayload!!
         val oneSignalNotificationBuilder = OneSignalNotificationBuilder()
         val channelId = _notificationChannelManager.createNotificationChannel(notificationJob)
+        oneSignalNotificationBuilder.channelId = channelId
         val notificationBuilder = NotificationCompat.Builder(currentContext, channelId)
         val message = fcmJson.optString("alert", null)
         notificationBuilder
@@ -461,5 +462,8 @@ internal class NotificationDisplayBuilder(
     internal class OneSignalNotificationBuilder {
         var compatBuilder: NotificationCompat.Builder? = null
         var hasLargeIcon = false
+
+        // The channel OneSignal picked, before any extender could change it.
+        var channelId: String? = null
     }
 }
