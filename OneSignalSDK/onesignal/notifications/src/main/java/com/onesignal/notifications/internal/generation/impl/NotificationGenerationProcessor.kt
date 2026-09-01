@@ -69,7 +69,7 @@ internal class NotificationGenerationProcessor(
         Logging.info("Fire remoteNotificationReceived")
 
         try {
-            val notificationReceivedEvent = NotificationReceivedEvent(context, notification)
+            val notificationReceivedEvent = NotificationReceivedEvent(context, notification, isRestoring)
             withTimeout(EXTERNAL_CALLBACKS_TIMEOUT) {
                 launchOnIO {
                     _lifecycleService.externalRemoteNotificationReceived(notificationReceivedEvent)

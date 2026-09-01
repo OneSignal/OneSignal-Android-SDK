@@ -7,6 +7,7 @@ import com.onesignal.notifications.INotificationReceivedEvent
 internal class NotificationReceivedEvent(
     override val context: Context,
     override val notification: Notification,
+    override val restoring: Boolean,
 ) : INotificationReceivedEvent {
     var isPreventDefault: Boolean = false
     var discard: Boolean = false
