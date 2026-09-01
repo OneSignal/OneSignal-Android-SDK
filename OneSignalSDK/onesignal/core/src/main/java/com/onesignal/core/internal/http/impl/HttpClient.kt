@@ -154,7 +154,10 @@ internal class HttpClient(
 
                     val fidEnv = _fidEnv.headerValue()
                     if (fidEnv.isNotEmpty()) {
-                        con.setRequestProperty(HTTP_FID_ENV_HEADER_KEY, fidEnv)
+                        try {
+                            con.setRequestProperty(HTTP_FID_ENV_HEADER_KEY, fidEnv)
+                        } catch (_: IllegalArgumentException) {
+                        }
                     }
 
                     if (jsonBody != null) {

@@ -13,7 +13,6 @@ class FidEnvTests : FunSpec({
             FidEnvSnapshot(
                 googleServices = true,
                 agpVersion = "8.8.2",
-                fcmVersion = "24.0.0",
                 fidFlag = false,
                 defaultFirebaseApp = true,
                 firebaseInitProvider = true,
@@ -22,7 +21,7 @@ class FidEnvTests : FunSpec({
                 senderMatch = true,
             ).toHeaderValue()
 
-        header shouldBe "gs=1;agp=8.8.2;fcm=24.0.0;flag=0;def=1;prov=1;min=24;tgt=35;snd=1"
+        header shouldBe "gs=1;agp=8.8.2;flag=0;def=1;prov=1;min=24;tgt=35;snd=1"
     }
 
     test("header uses dashes for unknown optional fields") {
@@ -30,7 +29,6 @@ class FidEnvTests : FunSpec({
             FidEnvSnapshot(
                 googleServices = false,
                 agpVersion = null,
-                fcmVersion = null,
                 fidFlag = false,
                 defaultFirebaseApp = false,
                 firebaseInitProvider = false,
@@ -39,12 +37,13 @@ class FidEnvTests : FunSpec({
                 senderMatch = null,
             ).toHeaderValue()
 
-        header shouldBe "gs=0;agp=-;fcm=-;flag=0;def=0;prov=0;min=-;tgt=-;snd=-"
+        header shouldBe "gs=0;agp=-;flag=0;def=0;prov=0;min=-;tgt=-;snd=-"
     }
 
     test("sanitizeToken strips header-unsafe characters and caps length") {
         sanitizeToken("8.8.2-alpha01") shouldBe "8.8.2-alpha01"
         sanitizeToken("8.8.2 injected\nX-Other: 1") shouldBe "8.8.2injectedX-Other1"
+        sanitizeToken("8.8.2\u00e9") shouldBe "8.8.2"
         sanitizeToken(" ".repeat(40)) shouldBe "-"
         sanitizeToken("a".repeat(40)).length shouldBe 32
     }
@@ -60,6 +59,10 @@ class FidEnvTests : FunSpec({
 
     test("parseAgpVersion returns null when the key is missing") {
         parseAgpVersion("appMetadataVersion=1.1\n") shouldBe null
+    }
+
+    test("parseAgpVersion returns null for malformed properties") {
+        parseAgpVersion("androidGradlePluginVersion=\\uXXXX") shouldBe null
     }
 
     test("senderMatch is unknown until dashboard sender is available") {

@@ -17,7 +17,6 @@ internal const val HTTP_FID_ENV_HEADER_KEY = "OneSignal-Fid-Env"
 internal data class FidEnvSnapshot(
     val googleServices: Boolean,
     val agpVersion: String?,
-    val fcmVersion: String?,
     val fidFlag: Boolean,
     val defaultFirebaseApp: Boolean,
     val firebaseInitProvider: Boolean,
@@ -29,7 +28,6 @@ internal data class FidEnvSnapshot(
         listOf(
             "gs=${googleServices.toBit()}",
             "agp=${agpVersion.sanitized()}",
-            "fcm=${fcmVersion.sanitized()}",
             "flag=${fidFlag.toBit()}",
             "def=${defaultFirebaseApp.toBit()}",
             "prov=${firebaseInitProvider.toBit()}",
@@ -40,12 +38,17 @@ internal data class FidEnvSnapshot(
 }
 
 internal fun sanitizeToken(value: String): String =
-    value.filter { it.isLetterOrDigit() || it in "._+-" }.take(MAX_TOKEN_CHARS).ifEmpty { "-" }
+    value.filter { it in TOKEN_CHARS }.take(MAX_TOKEN_CHARS).ifEmpty { "-" }
 
+@Suppress("TooGenericExceptionCaught")
 internal fun parseAgpVersion(propertiesText: String): String? {
-    val props = Properties()
-    props.load(propertiesText.reader())
-    return props.getProperty("androidGradlePluginVersion")?.takeIf { it.isNotBlank() }
+    return try {
+        val props = Properties()
+        props.load(propertiesText.reader())
+        props.getProperty("androidGradlePluginVersion")?.takeIf { it.isNotBlank() }
+    } catch (_: Exception) {
+        null
+    }
 }
 
 internal fun senderMatch(
@@ -78,7 +81,6 @@ internal class AndroidFidEnvReader(
         return FidEnvSnapshot(
             googleServices = !googleAppId.isNullOrBlank(),
             agpVersion = readApkEntry(AGP_METADATA_PATH)?.let { parseAgpVersion(it) },
-            fcmVersion = firebaseMessagingVersion(),
             fidFlag = AndroidUtils.getManifestMetaBoolean(context, FID_FLAG),
             defaultFirebaseApp = false,
             firebaseInitProvider = hasFirebaseInitProvider(),
@@ -114,15 +116,6 @@ internal class AndroidFidEnvReader(
         ZipFile(sourceDir).use { zip ->
             val entry = zip.getEntry(path) ?: return null
             return zip.getInputStream(entry).bufferedReader().use { it.readText() }
-        }
-    }
-
-    @Suppress("TooGenericExceptionCaught")
-    private fun firebaseMessagingVersion(): String? {
-        return try {
-            Class.forName(FIREBASE_MESSAGING_BUILD_CONFIG).getField("VERSION_NAME").get(null) as? String
-        } catch (_: Throwable) {
-            null
         }
     }
 
@@ -168,7 +161,6 @@ internal class AndroidFidEnvReader(
         private const val FID_FLAG = "firebase_messaging_installation_id_enabled"
         private const val FIREBASE_INIT_PROVIDER = "com.google.firebase.provider.FirebaseInitProvider"
         private const val AGP_METADATA_PATH = "META-INF/com/android/build/gradle/app-metadata.properties"
-        private const val FIREBASE_MESSAGING_BUILD_CONFIG = "com.google.firebase.messaging.BuildConfig"
         private const val FIREBASE_APP = "com.google.firebase.FirebaseApp"
         private const val DEFAULT_APP_NAME = "[DEFAULT]"
     }
@@ -197,6 +189,7 @@ internal class FidEnvService(
 }
 
 private const val MAX_TOKEN_CHARS = 32
+private const val TOKEN_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._+-"
 
 private fun Boolean.toBit(): String = if (this) "1" else "0"
 

@@ -320,6 +320,6 @@ internal class FakeFidEnv(
     override fun headerValue(): String = value
 
     companion object {
-        const val VALUE = "gs=0;agp=8.8.2;fcm=-;flag=0;def=0;prov=0;min=21;tgt=34;snd=-"
+        const val VALUE = "gs=0;agp=8.8.2;flag=0;def=0;prov=0;min=21;tgt=34;snd=-"
     }
 }
