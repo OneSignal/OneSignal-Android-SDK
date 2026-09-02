@@ -10,16 +10,8 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 /**
- * Android [ILogHttpSender] backed by [HttpURLConnection].
- *
- * The `logger` module deliberately has no networking dependency, so the platform
- * supplies the transport. This keeps the module pure-Kotlin/multiplatform while
- * routing all SDK log traffic through a standard, well-understood HTTP client.
- *
- * Request/response diagnostics are emitted through [logger] only when
- * [isDiagnosticsEnabled] returns true (driven by the remote-config exporter-logging
- * toggle), mirroring the old otel exporter's opt-in logging — never unconditional
- * logcat noise in production.
+ * Android [ILogHttpSender] backed by [HttpURLConnection]. Request and response diagnostics go
+ * through [logger] only when [isDiagnosticsEnabled], so production stays quiet.
  */
 internal class OneSignalLogHttpSender(
     private val logger: ILogger,

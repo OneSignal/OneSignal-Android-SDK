@@ -19,6 +19,7 @@ import com.onesignal.notifications.INotificationLifecycleListener
 import com.onesignal.notifications.INotificationWillDisplayEvent
 import com.onesignal.example.BuildConfig
 import com.onesignal.example.data.network.OneSignalService
+import com.onesignal.example.util.DemoLog
 import com.onesignal.example.util.SharedPreferenceUtil
 import com.onesignal.example.util.TooltipHelper
 import com.onesignal.user.state.IUserStateObserver
@@ -68,7 +69,7 @@ class MainApplication : MultiDexApplication() {
         // Initialize OneSignal on main thread (required)
         // Crash handler + ANR detector are initialized early inside initWithContext
         OneSignal.initWithContext(this, appId)
-        Log.i(TAG, "OneSignal init completed (crash handler, ANR detector, and logging active)")
+        DemoLog.i(TAG, "OneSignal init completed (crash handler, ANR detector, and logging active)")
 
         // Set up all OneSignal listeners
         setupOneSignalListeners()
@@ -80,37 +81,37 @@ class MainApplication : MultiDexApplication() {
     private fun setupOneSignalListeners() {
         OneSignal.InAppMessages.addLifecycleListener(object : IInAppMessageLifecycleListener {
             override fun onWillDisplay(event: IInAppMessageWillDisplayEvent) {
-                Log.d(TAG, "onWillDisplayInAppMessage")
+                DemoLog.d(TAG, "onWillDisplayInAppMessage")
             }
 
             override fun onDidDisplay(event: IInAppMessageDidDisplayEvent) {
-                Log.d(TAG, "onDidDisplayInAppMessage")
+                DemoLog.d(TAG, "onDidDisplayInAppMessage")
             }
 
             override fun onWillDismiss(event: IInAppMessageWillDismissEvent) {
-                Log.d(TAG, "onWillDismissInAppMessage")
+                DemoLog.d(TAG, "onWillDismissInAppMessage")
             }
 
             override fun onDidDismiss(event: IInAppMessageDidDismissEvent) {
-                Log.d(TAG, "onDidDismissInAppMessage")
+                DemoLog.d(TAG, "onDidDismissInAppMessage")
             }
         })
 
         OneSignal.InAppMessages.addClickListener(object : IInAppMessageClickListener {
             override fun onClick(event: IInAppMessageClickEvent) {
-                Log.d(TAG, "IInAppMessageClickListener.onClick")
+                DemoLog.d(TAG, "IInAppMessageClickListener.onClick")
             }
         })
 
         OneSignal.Notifications.addClickListener(object : INotificationClickListener {
             override fun onClick(event: INotificationClickEvent) {
-                Log.d(TAG, "INotificationClickListener.onClick fired with event: $event")
+                DemoLog.d(TAG, "INotificationClickListener.onClick fired with event: $event")
             }
         })
 
         OneSignal.Notifications.addForegroundLifecycleListener(object : INotificationLifecycleListener {
             override fun onWillDisplay(event: INotificationWillDisplayEvent) {
-                Log.d(TAG, "INotificationLifecycleListener.onWillDisplay fired with event: $event")
+                DemoLog.d(TAG, "INotificationLifecycleListener.onWillDisplay fired with event: $event")
 
                 val notification: IDisplayableNotification = event.notification
 
@@ -129,7 +130,7 @@ class MainApplication : MultiDexApplication() {
 
         OneSignal.User.addObserver(object : IUserStateObserver {
             override fun onUserStateChange(state: UserChangedState) {
-                Log.i(TAG, "User state changed: onesignalId=${state.current.onesignalId}, externalId=${state.current.externalId}")
+                DemoLog.i(TAG, "User state changed: onesignalId=${state.current.onesignalId}, externalId=${state.current.externalId}")
             }
         })
 

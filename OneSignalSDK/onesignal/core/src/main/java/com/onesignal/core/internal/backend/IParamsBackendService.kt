@@ -58,5 +58,7 @@ internal class FCMParamsObject(
 
 internal class RemoteLoggingParamsObject(
     val logLevel: com.onesignal.debug.LogLevel? = null,
-    val isEnabled: Boolean = logLevel != null,
+    // NONE means "ship nothing", so it has to read as disabled here the way the cached-config
+    // path already reads it; otherwise HYDRATE starts components with no delivery path.
+    val isEnabled: Boolean = logLevel != null && logLevel != com.onesignal.debug.LogLevel.NONE,
 )

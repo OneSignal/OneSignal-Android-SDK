@@ -15,7 +15,6 @@ gradle.rootProject {
                 substitute(module('com.onesignal:notifications')).using(project(':OneSignal:notifications'))
                 substitute(module('com.onesignal:location')).using(project(':OneSignal:location'))
                 substitute(module('com.onesignal:in-app-messages')).using(project(':OneSignal:in-app-messages'))
-                substitute(module('com.onesignal:otel')).using(project(':OneSignal:otel'))
                 substitute(module('com.onesignal:kmp')).using(project(':OneSignal:kmp'))
             }
         }
@@ -32,7 +31,6 @@ include ':OneSignal:in-app-messages'
 include ':OneSignal:location'
 include ':OneSignal:notifications'
 include ':OneSignal:testhelpers'
-include ':OneSignal:otel'
 
 // The :kmp module is the shared Kotlin Multiplatform module maintained in the standalone
 // OneSignal-KMP-SDK repo and consumed here as a git submodule (pinned commit). Its

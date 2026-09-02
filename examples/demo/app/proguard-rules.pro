@@ -20,6 +20,5 @@
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
 
-# No app-level -dontwarn for OneSignal OTel here: when com.onesignal:core pulls in com.onesignal:otel
-# (implementation dependency), AGP merges otel's consumer-rules.pro for R8 (SDK-4207 / #2596).
-# Older SDK lines without otel never put those optional classes on the classpath, so duplicates are unnecessary.
+# No app-level -dontwarn for OpenTelemetry: the SDK no longer depends on it, so the optional
+# Jackson / AutoValue / io.opentelemetry classes it used to reference are never on the classpath.

@@ -2,6 +2,7 @@ package com.onesignal.example.util
 
 import android.content.Context
 import android.content.SharedPreferences
+import com.onesignal.example.data.model.NotificationExtensionOptions
 
 object SharedPreferenceUtil {
 
@@ -13,6 +14,14 @@ object SharedPreferenceUtil {
     private const val CONSENT_REQUIRED_PREF = "CONSENT_REQUIRED_PREF"
     private const val IDENTITY_VERIFICATION_PREF = "IDENTITY_VERIFICATION_PREF"
     private const val JWT_TOKEN_PREF = "JWT_TOKEN_PREF"
+
+    // Notification service extension switches. DemoNotificationServiceExtension reads these
+    // directly because it runs whether or not the app is open.
+    private const val NSE_ENABLED_PREF = "NSE_ENABLED_PREF"
+    private const val NSE_APPLY_EXTENDER_PREF = "NSE_APPLY_EXTENDER_PREF"
+    private const val NSE_FORCE_HIGH_IMPORTANCE_PREF = "NSE_FORCE_HIGH_IMPORTANCE_PREF"
+    private const val NSE_DELAY_DISPLAY_PREF = "NSE_DELAY_DISPLAY_PREF"
+    private const val NSE_DISCARD_PREF = "NSE_DISCARD_PREF"
 
     private fun getSharedPreference(context: Context): SharedPreferences {
         return context.getSharedPreferences(APP_SHARED_PREFS, Context.MODE_PRIVATE)
@@ -79,5 +88,28 @@ object SharedPreferenceUtil {
 
     fun cacheJwtToken(context: Context, token: String?) {
         getSharedPreference(context).edit().putString(JWT_TOKEN_PREF, token).apply()
+    }
+
+    // Every switch defaults to false so a fresh install behaves as if no extension were
+    // registered. See NotificationExtensionOptions.
+    fun getNotificationExtensionOptions(context: Context): NotificationExtensionOptions {
+        val prefs = getSharedPreference(context)
+        return NotificationExtensionOptions(
+            enabled = prefs.getBoolean(NSE_ENABLED_PREF, false),
+            applyExtender = prefs.getBoolean(NSE_APPLY_EXTENDER_PREF, false),
+            forceHighImportanceChannel = prefs.getBoolean(NSE_FORCE_HIGH_IMPORTANCE_PREF, false),
+            delayDisplay = prefs.getBoolean(NSE_DELAY_DISPLAY_PREF, false),
+            discard = prefs.getBoolean(NSE_DISCARD_PREF, false),
+        )
+    }
+
+    fun cacheNotificationExtensionOptions(context: Context, options: NotificationExtensionOptions) {
+        getSharedPreference(context).edit()
+            .putBoolean(NSE_ENABLED_PREF, options.enabled)
+            .putBoolean(NSE_APPLY_EXTENDER_PREF, options.applyExtender)
+            .putBoolean(NSE_FORCE_HIGH_IMPORTANCE_PREF, options.forceHighImportanceChannel)
+            .putBoolean(NSE_DELAY_DISPLAY_PREF, options.delayDisplay)
+            .putBoolean(NSE_DISCARD_PREF, options.discard)
+            .apply()
     }
 }

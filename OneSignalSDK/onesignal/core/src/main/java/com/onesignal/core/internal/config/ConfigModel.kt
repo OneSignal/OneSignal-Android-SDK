@@ -229,6 +229,15 @@ class ConfigModel : Model() {
         }
 
     /**
+     * App ID [googleProjectNumber] was fetched for.
+     */
+    var dashboardSenderAppId: String?
+        get() = getOptStringProperty(::dashboardSenderAppId.name)
+        set(value) {
+            setOptStringProperty(::dashboardSenderAppId.name, value)
+        }
+
+    /**
      * Whether the current application is an enterprise-level
      */
     var enterprise: Boolean
@@ -506,7 +515,8 @@ class RemoteLoggingConfigModel(
 
     /**
      * Whether remote logging is enabled.
-     * Set by backend config hydration — true when the server sends a valid log_level, false otherwise.
+     * Set by backend config hydration — true when the server sends a valid log_level other than
+     * NONE, false otherwise.
      */
     var isEnabled: Boolean
         get() = getBooleanProperty(::isEnabled.name) { false }

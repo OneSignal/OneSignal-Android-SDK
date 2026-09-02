@@ -221,7 +221,7 @@ object OneSignalDispatchers {
      *
      * Background:
      * The lazy `by lazy` properties below construct `ThreadPoolExecutor` instances and wrap them
-     * in `asCoroutineDispatcher() + SupervisorJob() + CoroutineScope(...)`. Production OTel
+     * in `asCoroutineDispatcher() + SupervisorJob() + CoroutineScope(...)`. Production remote-logging
      * shows that when the **first** caller of [launchOnIO] / [launchOnSerialIO] is on the main
      * thread (Activity-lifecycle handler, `JobService.onStartJob`, etc.), the construction cost
      * — which includes a `kotlinx.coroutines.BuildersKt.launch` that hits
@@ -323,7 +323,7 @@ object OneSignalDispatchers {
      * thread parked in a non-cancellable JVM wait (e.g. a `CountDownLatch.await()` that never gets
      * released because the test asserted/failed first); a plain coroutine cancellation cannot free
      * such a thread, so it permanently starves the small pool. Later specs that use the real pool
-     * (e.g. HttpClientTests' `launchOnIO {…}.join()`, OperationRepo, OtelIdResolver) then see
+     * (e.g. HttpClientTests' `launchOnIO {…}.join()`, OperationRepo, LoggerIdResolver) then see
      * `launchOnIO` rejected/cancelled and observe null results.
      *
      * This atomically swaps in a fresh [Pools] generation and tears the old one down —

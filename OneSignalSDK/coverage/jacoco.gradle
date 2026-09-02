@@ -16,6 +16,19 @@ subprojects {
                     testCoverageEnabled = true
                 }
             }
+
+            // Robolectric loads classes through its own instrumenting classloader, which
+            // strips the source-location metadata JaCoCo uses to attribute execution. Without
+            // this, every class exercised only by a @RobolectricTest reports 0% coverage even
+            // when it is thoroughly tested.
+            testOptions {
+                unitTests.all {
+                    jacoco {
+                        includeNoLocationClasses = true
+                        excludes = ['jdk.internal.*']
+                    }
+                }
+            }
         }
         
         def coverageExcludes = [
