@@ -25,6 +25,7 @@ object OneSignalService {
     private const val TAG = "OneSignalService"
     private const val ONESIGNAL_API_URL = "https://onesignal.com/api/v1/notifications"
     private const val ONESIGNAL_API_BASE_URL = "https://api.onesignal.com"
+    private const val DEMO_ANDROID_GROUP = "demo-group"
     
     private var appId: String = ""
 
@@ -57,7 +58,7 @@ object OneSignalService {
                 put("include_subscription_ids", org.json.JSONArray().put(subscriptionId))
                 put("headings", JSONObject().put("en", type.notificationTitle))
                 put("contents", JSONObject().put("en", type.notificationBody))
-                put("android_group", type.title)
+                put("android_group", DEMO_ANDROID_GROUP)
                 put("android_led_color", "FF595CF2")
                 put("android_accent_color", "FF595CF2")
                 type.largeIcon?.let {
@@ -107,6 +108,7 @@ object OneSignalService {
                 put("include_subscription_ids", org.json.JSONArray().put(subscriptionId))
                 put("headings", JSONObject().put("en", title))
                 put("contents", JSONObject().put("en", body))
+                put("android_group", DEMO_ANDROID_GROUP)
                 put("android_led_color", "FF595CF2")
                 put("android_accent_color", "FF595CF2")
             }
