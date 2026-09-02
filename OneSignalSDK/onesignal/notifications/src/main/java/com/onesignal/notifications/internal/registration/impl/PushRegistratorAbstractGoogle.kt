@@ -61,17 +61,15 @@ internal abstract class PushRegistratorAbstractGoogle(
             return IPushRegistrator.RegisterResult(null, SubscriptionStatus.MISSING_FIREBASE_FCM_LIBRARY)
         }
 
-        return if (!isValidProjectNumber(_configModelStore.model.googleProjectNumber)) {
+        val dashboardSenderId = _configModelStore.model.googleProjectNumber ?: ""
+        if (!isValidProjectNumber(dashboardSenderId)) {
             Logging.warn(
-                "Missing Google Project number!\nPlease enter a Google Project number / Sender ID on under App Settings > Android > Configuration on the OneSignal dashboard.",
+                "Missing or invalid Google Project number from the OneSignal dashboard. " +
+                    "FCM registration will use this app's google-services.json or backend Firebase " +
+                    "credentials when they form a complete project.",
             )
-            IPushRegistrator.RegisterResult(
-                null,
-                SubscriptionStatus.INVALID_FCM_SENDER_ID,
-            )
-        } else {
-            internalRegisterForPush(_configModelStore.model.googleProjectNumber!!)
         }
+        return internalRegisterForPush(dashboardSenderId)
     }
 
     override suspend fun fireCallback(id: String?) {
@@ -131,6 +129,8 @@ internal abstract class PushRegistratorAbstractGoogle(
                 registrationId,
                 SubscriptionStatus.SUBSCRIBED,
             )
+        } catch (e: InvalidFcmProjectException) {
+            return invalidFcmProjectResult(e)
         } catch (e: IOException) {
             val pushStatus: SubscriptionStatus = pushStatusFromThrowable(e)
             val exceptionMessage: String? = AndroidUtils.getRootCauseMessage(e)
@@ -165,6 +165,14 @@ internal abstract class PushRegistratorAbstractGoogle(
         }
 
         return null
+    }
+
+    private fun invalidFcmProjectResult(e: InvalidFcmProjectException): IPushRegistrator.RegisterResult {
+        Logging.warn(e.message ?: "Missing Google Project number!")
+        return IPushRegistrator.RegisterResult(
+            null,
+            SubscriptionStatus.INVALID_FCM_SENDER_ID,
+        )
     }
 
     private fun pushStatusFromThrowable(throwable: Throwable): SubscriptionStatus {
