@@ -187,7 +187,6 @@
     <ID>InstanceOfCheckForException:HttpClient.kt$HttpClient$t is UnknownHostException</ID>
     <ID>LongMethod:ApplicationService.kt$ApplicationService$override suspend fun waitUntilSystemConditionsAvailable(): Boolean</ID>
     <ID>LongMethod:ConfigModelStoreListener.kt$ConfigModelStoreListener$private fun fetchParams()</ID>
-    <ID>LongMethod:FeatureFlagsBackendService.kt$FeatureFlagsBackendService$override suspend fun fetchRemoteFeatureFlags(appId: String): RemoteFeatureFlagsFetchOutcome</ID>
     <ID>LongMethod:HttpClient.kt$HttpClient$private suspend fun makeRequestIODispatcher( url: String, method: String?, jsonBody: JSONObject?, timeout: Int, headers: OptionalHeaders?, ): HttpResponse</ID>
     <ID>LongMethod:IdentityOperationExecutor.kt$IdentityOperationExecutor$override suspend fun execute(operations: List&lt;Operation>): ExecutionResponse</ID>
     <ID>LongMethod:LoginUserOperationExecutor.kt$LoginUserOperationExecutor$private suspend fun createUser( createUserOperation: LoginUserOperation, operations: List&lt;Operation>, ): ExecutionResponse</ID>
@@ -207,6 +206,7 @@
     <ID>LongMethod:TrackGooglePurchase.kt$TrackGooglePurchase$private fun queryBoughtItems()</ID>
     <ID>LongMethod:TrackGooglePurchase.kt$TrackGooglePurchase$private fun sendPurchases( skusToAdd: ArrayList&lt;String>, newPurchaseTokens: ArrayList&lt;String>, )</ID>
     <ID>LongMethod:UpdateUserOperationExecutor.kt$UpdateUserOperationExecutor$override suspend fun execute(operations: List&lt;Operation>): ExecutionResponse</ID>
+    <ID>LongParameterList:CrashDirCleanup.kt$( label: String, path: String, entries: List&lt;CrashDirEntry>, nowMs: Long, maxSample: Int, ownedSuffix: String = CRASH_OWNED_SUFFIX, )</ID>
     <ID>LongParameterList:CreateSubscriptionOperation.kt$CreateSubscriptionOperation$(appId: String, onesignalId: String, externalId: String?, subscriptionId: String, type: SubscriptionType, enabled: Boolean, address: String, status: SubscriptionStatus)</ID>
     <ID>LongParameterList:ICustomEventBackendService.kt$ICustomEventBackendService$( appId: String, onesignalId: String, externalId: String?, timestamp: Long, eventName: String, eventProperties: String?, metadata: CustomEventMetadata, jwt: String? = null, )</ID>
     <ID>LongParameterList:IDatabase.kt$IDatabase$( table: String, columns: Array&lt;String>? = null, whereClause: String? = null, whereArgs: Array&lt;String>? = null, groupBy: String? = null, having: String? = null, orderBy: String? = null, limit: String? = null, action: (ICursor) -> Unit, )</ID>
@@ -253,7 +253,7 @@
     <ID>MagicNumber:PermissionsActivity.kt$PermissionsActivity$23</ID>
     <ID>MagicNumber:RefreshUserOperationExecutor.kt$RefreshUserOperationExecutor$404</ID>
     <ID>MagicNumber:SessionListener.kt$SessionListener$1000</ID>
-    <ID>MagicNumber:SubscriptionModel.kt$SubscriptionStatus.DISABLED_FROM_REST_API_DEFAULT_REASON$30</ID>
+    <ID>MagicNumber:SubscriptionModel.kt$SubscriptionStatus.DISABLED_FROM_REST_API$31</ID>
     <ID>MagicNumber:SubscriptionModel.kt$SubscriptionStatus.ERROR$9999</ID>
     <ID>MagicNumber:SubscriptionModel.kt$SubscriptionStatus.FIREBASE_FCM_ERROR_IOEXCEPTION_AUTHENTICATION_FAILED$29</ID>
     <ID>MagicNumber:SubscriptionModel.kt$SubscriptionStatus.FIREBASE_FCM_ERROR_IOEXCEPTION_OTHER$11</ID>
@@ -304,7 +304,7 @@
     <ID>ReturnCount:ConfigModel.kt$ConfigModel$override fun createModelForProperty( property: String, jsonObject: JSONObject, ): Model?</ID>
     <ID>ReturnCount:ExecutorsIvExtensions.kt$internal fun resolveIvBackendParams( op: Operation, onesignalId: String, jwtTokenStore: JwtTokenStore, ivBehaviorActive: Boolean, ): IvBackendParams</ID>
     <ID>ReturnCount:ExecutorsIvExtensions.kt$internal fun resolveIvJwt( op: Operation, jwtTokenStore: JwtTokenStore, ivBehaviorActive: Boolean, ): String?</ID>
-    <ID>ReturnCount:FeatureFlagsBackendService.kt$FeatureFlagsBackendService$override suspend fun fetchRemoteFeatureFlags(appId: String): RemoteFeatureFlagsFetchOutcome</ID>
+    <ID>ReturnCount:FeatureFlagsRefreshService.kt$FeatureFlagsRefreshService$private suspend fun fetchAndApply(appId: String)</ID>
     <ID>ReturnCount:HttpClient.kt$HttpClient$private suspend fun makeRequest( url: String, method: String?, jsonBody: JSONObject?, timeout: Int, headers: OptionalHeaders?, ): HttpResponse</ID>
     <ID>ReturnCount:IdentityOperationExecutor.kt$IdentityOperationExecutor$override suspend fun execute(operations: List&lt;Operation>): ExecutionResponse</ID>
     <ID>ReturnCount:JSONUtils.kt$JSONUtils$fun compareJSONArrays( jsonArray1: JSONArray?, jsonArray2: JSONArray?, ): Boolean</ID>
@@ -317,7 +317,6 @@
     <ID>ReturnCount:Model.kt$Model$protected fun getOptIntProperty( name: String, create: (() -> Int?)? = null, ): Int?</ID>
     <ID>ReturnCount:Model.kt$Model$protected fun getOptLongProperty( name: String, create: (() -> Long?)? = null, ): Long?</ID>
     <ID>ReturnCount:Model.kt$Model$protected inline fun &lt;reified T : Enum&lt;T>> getOptEnumProperty(name: String): T?</ID>
-    <ID>ReturnCount:OneSignalImp.kt$OneSignalImp$private fun internalInit( context: Context, appId: String?, ): Boolean</ID>
     <ID>ReturnCount:OperationModelStore.kt$OperationModelStore$override fun create(jsonObject: JSONObject?): Operation?</ID>
     <ID>ReturnCount:OperationModelStore.kt$OperationModelStore$private fun isValidOperation(jsonObject: JSONObject): Boolean</ID>
     <ID>ReturnCount:OperationRepo.kt$OperationRepo$private fun shouldSuppressAnonymousOp(op: Operation): Boolean</ID>
@@ -350,7 +349,6 @@
     <ID>SwallowedException:PreferencesService.kt$PreferencesService$t: Throwable</ID>
     <ID>SwallowedException:SyncJobService.kt$SyncJobService$e: Exception</ID>
     <ID>SwallowedException:TrackGooglePurchase.kt$TrackGooglePurchase.Companion$t: Throwable</ID>
-    <ID>ThrowsCount:OneSignalImp.kt$OneSignalImp$private suspend fun waitUntilInitInternal(operationName: String? = null)</ID>
     <ID>TooGenericExceptionCaught:AndroidUtils.kt$AndroidUtils$e: Throwable</ID>
     <ID>TooGenericExceptionCaught:DeviceUtils.kt$DeviceUtils$t: Throwable</ID>
     <ID>TooGenericExceptionCaught:FeatureFlagsRefreshService.kt$FeatureFlagsRefreshService$e: Exception</ID>
@@ -359,6 +357,7 @@
     <ID>TooGenericExceptionCaught:JSONUtils.kt$JSONUtils$t: Throwable</ID>
     <ID>TooGenericExceptionCaught:Logging.kt$Logging$t: Throwable</ID>
     <ID>TooGenericExceptionCaught:OneSignalDispatchers.kt$OneSignalDispatchers$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:OneSignalDispatchers.kt$OneSignalDispatchers.Pools$e: Exception</ID>
     <ID>TooGenericExceptionCaught:OperationRepo.kt$OperationRepo$e: Throwable</ID>
     <ID>TooGenericExceptionCaught:PreferenceStoreFix.kt$PreferenceStoreFix$e: Throwable</ID>
     <ID>TooGenericExceptionCaught:PreferencesService.kt$PreferencesService$e: Throwable</ID>
@@ -628,15 +627,7 @@
     <ID>UnusedPrivateMember:JSONUtils.kt$JSONUtils$`object`: Any</ID>
     <ID>UnusedPrivateMember:OSDatabase.kt$OSDatabase.Companion$private const val FLOAT_TYPE = " FLOAT"</ID>
     <ID>UnusedPrivateMember:OperationRepo.kt$OperationRepo$private val _time: ITime</ID>
-    <ID>UseCheckOrError:OneSignalImp.kt$OneSignalImp$throw IllegalStateException("'initWithContext failed' before 'login'")</ID>
-    <ID>UseCheckOrError:OneSignalImp.kt$OneSignalImp$throw IllegalStateException("'initWithContext failed' before 'logout'")</ID>
     <ID>UseCheckOrError:OneSignalImp.kt$OneSignalImp$throw IllegalStateException("'initWithContext failed' before 'updateUserJwt'")</ID>
-    <ID>UseCheckOrError:OneSignalImp.kt$OneSignalImp$throw IllegalStateException("Must call 'initWithContext' before 'addUserJwtInvalidatedListener'")</ID>
-    <ID>UseCheckOrError:OneSignalImp.kt$OneSignalImp$throw IllegalStateException("Must call 'initWithContext' before 'login'")</ID>
-    <ID>UseCheckOrError:OneSignalImp.kt$OneSignalImp$throw IllegalStateException("Must call 'initWithContext' before 'logout'")</ID>
-    <ID>UseCheckOrError:OneSignalImp.kt$OneSignalImp$throw IllegalStateException("Must call 'initWithContext' before 'removeUserJwtInvalidatedListener'")</ID>
-    <ID>UseCheckOrError:OneSignalImp.kt$OneSignalImp$throw IllegalStateException("Must call 'initWithContext' before 'updateUserJwt'")</ID>
-    <ID>UseCheckOrError:OneSignalImp.kt$OneSignalImp$throw IllegalStateException("Must call 'initWithContext' before use")</ID>
     <ID>UseCheckOrError:OneSignalImp.kt$OneSignalImp$throw initFailureException ?: IllegalStateException("Initialization failed. Cannot proceed.")</ID>
   </CurrentIssues>
 </SmellBaseline>
