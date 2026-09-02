@@ -1,6 +1,7 @@
 package com.onesignal.core.internal.device
 
 import com.onesignal.core.internal.device.impl.FidEnvSnapshot
+import com.onesignal.core.internal.device.impl.dashboardSenderForCensus
 import com.onesignal.core.internal.device.impl.parseAgpVersion
 import com.onesignal.core.internal.device.impl.sanitizeToken
 import com.onesignal.core.internal.device.impl.senderMatch
@@ -73,5 +74,26 @@ class FidEnvTests : FunSpec({
     test("senderMatch compares the google-services sender to the dashboard sender") {
         senderMatch("123", "123") shouldBe true
         senderMatch("123", "999") shouldBe false
+    }
+
+    test("dashboardSenderForCensus requires hydrated params for the current appId") {
+        dashboardSenderForCensus(
+            hydrated = false,
+            appId = "app-a",
+            senderAppId = "app-a",
+            sender = "111",
+        ) shouldBe null
+        dashboardSenderForCensus(
+            hydrated = true,
+            appId = "app-b",
+            senderAppId = "app-a",
+            sender = "111",
+        ) shouldBe null
+        dashboardSenderForCensus(
+            hydrated = true,
+            appId = "app-a",
+            senderAppId = "app-a",
+            sender = "111",
+        ) shouldBe "111"
     }
 })

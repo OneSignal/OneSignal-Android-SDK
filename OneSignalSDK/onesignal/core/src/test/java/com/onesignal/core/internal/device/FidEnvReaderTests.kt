@@ -77,19 +77,20 @@ class FidEnvReaderTests : FunSpec({
         header.shouldContain("snd=-")
     }
 
-    test("snd stays unknown until dashboard params have hydrated") {
+    test("snd stays unknown until dashboard params for this appId have hydrated") {
         val applicationService = MockHelper.applicationService()
         every { applicationService.appContext } returns context
         val configStore =
             MockHelper.configModelStore {
                 it.googleProjectNumber = "123"
-                it.isInitializedWithRemote = false
+                it.dashboardSenderAppId = "other-app"
+                it.isInitializedWithRemote = true
             }
         val service = FidEnvService(applicationService, configStore)
 
         service.headerValue().shouldContain("snd=-")
 
-        configStore.model.isInitializedWithRemote = true
+        configStore.model.dashboardSenderAppId = MockHelper.DEFAULT_APP_ID
 
         service.headerValue().shouldContain("snd=0")
     }

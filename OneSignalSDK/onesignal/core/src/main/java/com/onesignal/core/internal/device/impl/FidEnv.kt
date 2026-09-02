@@ -61,6 +61,14 @@ internal fun senderMatch(
         else -> resourceSender == dashboardSender
     }
 
+internal fun dashboardSenderForCensus(
+    hydrated: Boolean,
+    appId: String,
+    senderAppId: String?,
+    sender: String?,
+): String? =
+    if (hydrated && senderAppId == appId) sender else null
+
 internal class AndroidFidEnvReader(
     private val context: Context,
 ) {
@@ -178,7 +186,12 @@ internal class FidEnvService(
         return try {
             val model = _configModelStore.model
             val dashboardSender =
-                if (model.isInitializedWithRemote) model.googleProjectNumber else null
+                dashboardSenderForCensus(
+                    hydrated = model.isInitializedWithRemote,
+                    appId = model.appId,
+                    senderAppId = model.dashboardSenderAppId,
+                    sender = model.googleProjectNumber,
+                )
             val value = reader.collect(dashboardSender).toHeaderValue()
             if (logged.compareAndSet(false, true)) {
                 Logging.debug("HttpClient: $HTTP_FID_ENV_HEADER_KEY $value")
