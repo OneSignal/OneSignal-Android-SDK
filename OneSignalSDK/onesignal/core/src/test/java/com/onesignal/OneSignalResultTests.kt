@@ -465,4 +465,77 @@ class OneSignalResultTests : FunSpec({
         restored.error!!.first.source shouldBe ErrorSource.BACKEND
         restored.error!!.toList().first()["source"] shouldBe "BACKEND"
     }
+
+    // Required identity fields cannot be invented. A missing, null, empty, or wrongly typed
+    // onesignalId/externalId used to become LoginData("", "") under isSuccess == true.
+    test("LoginData with missing, null, empty, or wrongly typed identity fields is a failure") {
+        val badPayloads =
+            listOf<Any>(
+                emptyMap<String, Any?>(),
+                mapOf("onesignalId" to "os-1"),
+                mapOf("externalId" to "ext-1"),
+                mapOf("onesignalId" to "os-1", "externalId" to null),
+                mapOf("onesignalId" to null, "externalId" to "ext-1"),
+                mapOf("onesignalId" to "", "externalId" to "ext-1"),
+                mapOf("onesignalId" to "os-1", "externalId" to ""),
+                mapOf("onesignalId" to 1, "externalId" to "ext-1"),
+                mapOf("onesignalId" to "os-1", "externalId" to 1),
+                mapOf("onesignalId" to JSONObject.NULL, "externalId" to "ext-1"),
+                JSONObject("""{"onesignalId":"os-1"}"""),
+            )
+
+        badPayloads.forEach { payload ->
+            withClue("payload $payload") {
+                val restored =
+                    OneSignalResult.fromMap(
+                        mapOf("success" to true, "data" to payload, "error" to null),
+                        LoginData::fromMap,
+                    )
+
+                restored.isSuccess.shouldBeFalse()
+                restored.data.shouldBeNull()
+                restored.error!!.first.code shouldBe ErrorCode.UNKNOWN
+                restored.error!!.first.message shouldNotContain "os-1"
+                restored.error!!.first.message shouldNotContain "ext-1"
+            }
+        }
+    }
+
+    test("an absent LoginData payload is a failure rather than a blank success") {
+        val restored = OneSignalResult.fromMap(mapOf("success" to true), LoginData::fromMap)
+
+        restored.isSuccess.shouldBeFalse()
+        restored.data.shouldBeNull()
+        restored.error!!.first.code shouldBe ErrorCode.UNKNOWN
+    }
+
+    // JSONObject.NULL is what org.json puts under a JSON null. It is a live object, so a
+    // `!= null` check treats a successful envelope's `"error": null` as a present error.
+    test("JSONObject.NULL under error is treated as no error") {
+        val restored =
+            OneSignalResult.fromMap(
+                mapOf(
+                    "success" to true,
+                    "data" to mapOf("onesignalId" to "os-1", "externalId" to "ext-1"),
+                    "error" to JSONObject.NULL,
+                ),
+                LoginData::fromMap,
+            )
+
+        restored.isSuccess.shouldBeTrue()
+        restored.data!!.onesignalId shouldBe "os-1"
+        restored.data!!.externalId shouldBe "ext-1"
+        restored.error.shouldBeNull()
+    }
+
+    test("JSONObject.NULL under data is treated as an absent payload") {
+        val restored =
+            OneSignalResult.fromMap(
+                mapOf("success" to true, "data" to JSONObject.NULL, "error" to JSONObject.NULL),
+                InitData::fromMap,
+            )
+
+        restored.isSuccess.shouldBeTrue()
+        restored.data.shouldNotBeNull()
+    }
 })

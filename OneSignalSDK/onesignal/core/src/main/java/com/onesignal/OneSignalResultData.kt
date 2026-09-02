@@ -45,11 +45,13 @@ class LoginData internal constructor(
         private const val KEY_ONESIGNAL_ID = "onesignalId"
         private const val KEY_EXTERNAL_ID = "externalId"
 
-        fun fromMap(map: Map<*, *>): LoginData =
-            LoginData(
-                onesignalId = map[KEY_ONESIGNAL_ID] as? String ?: "",
-                externalId = map[KEY_EXTERNAL_ID] as? String ?: "",
-            )
+        /** Null when [onesignalId] or [externalId] is missing, empty, or not a string. */
+        fun fromMap(map: Map<*, *>): LoginData? {
+            val onesignalId = map[KEY_ONESIGNAL_ID] as? String
+            val externalId = map[KEY_EXTERNAL_ID] as? String
+            if (onesignalId.isNullOrEmpty() || externalId.isNullOrEmpty()) return null
+            return LoginData(onesignalId, externalId)
+        }
     }
 }
 

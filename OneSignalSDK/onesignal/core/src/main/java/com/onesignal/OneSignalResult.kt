@@ -108,30 +108,40 @@ class OneSignalResult<T : OneSignalResultData> private constructor(
          */
         fun <T : OneSignalResultData> fromMap(
             map: Map<String, Any?>,
-            dataParser: (Map<*, *>) -> T,
+            dataParser: (Map<*, *>) -> T?,
         ): OneSignalResult<T> {
             val reasons = map[KEY_ERROR]
-            if (reasons != null) {
+            // JSONObject.NULL is org.json's JSON null, a live object, so `!= null` would treat a
+            // successful envelope's `"error": null` as a present error.
+            if (!reasons.isJsonAbsent()) {
                 return failure(OneSignalError.fromWire(reasons))
             }
 
-            return when (val payload = map[KEY_DATA]) {
-                // Absent or null is a payload with no fields, which is exactly what the empty
-                // payload types serialize to. Only a payload sent in a shape that cannot be read
-                // is a failure.
-                null -> success(dataParser(emptyMap<Any?, Any?>()))
-                is Map<*, *> -> success(dataParser(payload))
-                // org.json is what a bridge naturally parses with. JSONObject is not a kotlin Map,
-                // but it is a map on the wire — convert rather than report a blank failure.
-                is JSONObject -> success(dataParser(payload.toMap()))
+            val payload = map[KEY_DATA]
+            return when {
+                payload.isJsonAbsent() -> parsed(dataParser, emptyMap<Any?, Any?>())
+                payload is Map<*, *> -> parsed(dataParser, payload)
+                payload is JSONObject -> parsed(dataParser, payload.toMap())
                 else -> failure(ErrorCode.UNKNOWN, unreadablePayload(payload))
             }
         }
 
+        private fun <T : OneSignalResultData> parsed(
+            dataParser: (Map<*, *>) -> T?,
+            payload: Map<*, *>,
+        ): OneSignalResult<T> {
+            val data = dataParser(payload) ?: return failure(ErrorCode.UNKNOWN, MISSING_REQUIRED_FIELDS)
+            return success(data)
+        }
+
         // The type is enough to diagnose the producer. The payload itself is identity data, and an
         // error message is somewhere it would be logged.
-        private fun unreadablePayload(payload: Any): String =
-            "Result data could not be read: expected a map but received ${payload::class.simpleName}."
+        private fun unreadablePayload(payload: Any?): String =
+            "Result data could not be read: expected a map but received ${payload?.let { it::class.simpleName }}."
+
+        private const val MISSING_REQUIRED_FIELDS = "Result data was missing required fields."
+
+        private fun Any?.isJsonAbsent(): Boolean = this === null || this === JSONObject.NULL
     }
 }
 
