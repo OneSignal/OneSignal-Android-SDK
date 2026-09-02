@@ -229,6 +229,15 @@ class ConfigModel : Model() {
         }
 
     /**
+     * App ID [googleProjectNumber] was fetched for.
+     */
+    var dashboardSenderAppId: String?
+        get() = getOptStringProperty(::dashboardSenderAppId.name)
+        set(value) {
+            setOptStringProperty(::dashboardSenderAppId.name, value)
+        }
+
+    /**
      * Whether the current application is an enterprise-level
      */
     var enterprise: Boolean

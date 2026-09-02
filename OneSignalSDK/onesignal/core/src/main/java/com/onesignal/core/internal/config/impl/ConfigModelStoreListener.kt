@@ -80,6 +80,7 @@ internal class ConfigModelStoreListener(
                     config.appId = appId
                     config.notificationChannels = params.notificationChannels
                     config.googleProjectNumber = params.googleProjectNumber
+                    config.dashboardSenderAppId = appId
                     config.fcmParams.projectId = params.fcmParams.projectId
                     config.fcmParams.appId = params.fcmParams.appId
                     config.fcmParams.apiKey = params.fcmParams.apiKey

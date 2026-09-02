@@ -25,8 +25,11 @@
     <ID>ConstructorParameterNaming:DatabaseCursor.kt$DatabaseCursor$private val _cursor: Cursor</ID>
     <ID>ConstructorParameterNaming:DatabaseProvider.kt$DatabaseProvider$private val _application: IApplicationService</ID>
     <ID>ConstructorParameterNaming:DeviceService.kt$DeviceService$private val _applicationService: IApplicationService</ID>
+    <ID>ConstructorParameterNaming:FidEnv.kt$FidEnvService$private val _applicationService: IApplicationService</ID>
+    <ID>ConstructorParameterNaming:FidEnv.kt$FidEnvService$private val _configModelStore: ConfigModelStore</ID>
     <ID>ConstructorParameterNaming:HttpClient.kt$HttpClient$private val _configModelStore: ConfigModelStore</ID>
     <ID>ConstructorParameterNaming:HttpClient.kt$HttpClient$private val _connectionFactory: IHttpConnectionFactory</ID>
+    <ID>ConstructorParameterNaming:HttpClient.kt$HttpClient$private val _fidEnv: IFidEnv</ID>
     <ID>ConstructorParameterNaming:HttpClient.kt$HttpClient$private val _installIdService: IInstallIdService</ID>
     <ID>ConstructorParameterNaming:HttpClient.kt$HttpClient$private val _prefs: IPreferencesService</ID>
     <ID>ConstructorParameterNaming:HttpClient.kt$HttpClient$private val _time: ITime</ID>
@@ -187,6 +190,7 @@
     <ID>InstanceOfCheckForException:HttpClient.kt$HttpClient$t is UnknownHostException</ID>
     <ID>LongMethod:ApplicationService.kt$ApplicationService$override suspend fun waitUntilSystemConditionsAvailable(): Boolean</ID>
     <ID>LongMethod:ConfigModelStoreListener.kt$ConfigModelStoreListener$private fun fetchParams()</ID>
+    <ID>LongMethod:CoreModule.kt$CoreModule$override fun register(builder: ServiceBuilder)</ID>
     <ID>LongMethod:FeatureFlagsBackendService.kt$FeatureFlagsBackendService$override suspend fun fetchRemoteFeatureFlags(appId: String): RemoteFeatureFlagsFetchOutcome</ID>
     <ID>LongMethod:HttpClient.kt$HttpClient$private suspend fun makeRequestIODispatcher( url: String, method: String?, jsonBody: JSONObject?, timeout: Int, headers: OptionalHeaders?, ): HttpResponse</ID>
     <ID>LongMethod:IdentityOperationExecutor.kt$IdentityOperationExecutor$override suspend fun execute(operations: List&lt;Operation>): ExecutionResponse</ID>
