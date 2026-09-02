@@ -47,7 +47,6 @@ class FidEnvReaderTests : FunSpec({
         every { AndroidUtils.getResourceString(context, "google_app_id", null) } returns "1:388536902528:android:abc"
         every { AndroidUtils.getResourceString(context, "gcm_defaultSenderId", null) } returns "388536902528"
         every { AndroidUtils.getManifestMetaBoolean(context, any()) } returns false
-        every { AndroidUtils.getTargetSdkVersion(context) } returns 35
 
         val snapshot = AndroidFidEnvReader(context).collect("388536902528")
 
@@ -60,7 +59,6 @@ class FidEnvReaderTests : FunSpec({
         every { AndroidUtils.getResourceString(context, "google_app_id", null) } returns "1:1:android:abc"
         every { AndroidUtils.getResourceString(context, "gcm_defaultSenderId", null) } returns "111"
         every { AndroidUtils.getManifestMetaBoolean(context, any()) } returns false
-        every { AndroidUtils.getTargetSdkVersion(context) } returns 35
 
         val snapshot = AndroidFidEnvReader(context).collect("999")
 
@@ -77,5 +75,22 @@ class FidEnvReaderTests : FunSpec({
         header.shouldContain("gs=0")
         header.shouldContain("agp=-")
         header.shouldContain("snd=-")
+    }
+
+    test("snd stays unknown until dashboard params for this appId have hydrated") {
+        val applicationService = MockHelper.applicationService()
+        every { applicationService.appContext } returns context
+        val configStore =
+            MockHelper.configModelStore {
+                it.googleProjectNumber = "123"
+                it.isInitializedWithRemote = false
+            }
+        val service = FidEnvService(applicationService, configStore)
+
+        service.headerValue().shouldContain("snd=-")
+
+        configStore.model.isInitializedWithRemote = true
+
+        service.headerValue().shouldContain("snd=0")
     }
 })

@@ -8,6 +8,7 @@ import com.onesignal.common.threading.suspendifyOnIO
 import com.onesignal.core.internal.backend.IParamsBackendService
 import com.onesignal.core.internal.config.ConfigModel
 import com.onesignal.core.internal.config.ConfigModelStore
+import com.onesignal.core.internal.config.forgetDashboardSenderIfAppIdDiffers
 import com.onesignal.core.internal.startup.IStartableService
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.user.internal.jwt.JwtRequirement
@@ -40,6 +41,8 @@ internal class ConfigModelStoreListener(
             return
         }
 
+        val newAppId = args.newValue as? String ?: return
+        _configModelStore.model.forgetDashboardSenderIfAppIdDiffers(args.oldValue as? String, newAppId)
         fetchParams()
     }
 

@@ -85,7 +85,7 @@ internal class AndroidFidEnvReader(
             defaultFirebaseApp = false,
             firebaseInitProvider = hasFirebaseInitProvider(),
             minSdk = minSdk(),
-            targetSdk = AndroidUtils.getTargetSdkVersion(context),
+            targetSdk = context.applicationInfo.targetSdkVersion,
             senderMatch = null,
         )
     }
@@ -176,7 +176,10 @@ internal class FidEnvService(
     @Suppress("TooGenericExceptionCaught")
     override fun headerValue(): String {
         return try {
-            val value = reader.collect(_configModelStore.model.googleProjectNumber).toHeaderValue()
+            val model = _configModelStore.model
+            val dashboardSender =
+                if (model.isInitializedWithRemote) model.googleProjectNumber else null
+            val value = reader.collect(dashboardSender).toHeaderValue()
             if (logged.compareAndSet(false, true)) {
                 Logging.debug("HttpClient: $HTTP_FID_ENV_HEADER_KEY $value")
             }
