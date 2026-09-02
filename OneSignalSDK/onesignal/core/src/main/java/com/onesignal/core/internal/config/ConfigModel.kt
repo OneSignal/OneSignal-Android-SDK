@@ -515,13 +515,3 @@ class RemoteLoggingConfigModel(
             setBooleanProperty(::isEnabled.name, value)
         }
 }
-
-internal fun ConfigModel.forgetDashboardSenderIfAppIdDiffers(
-    previousAppId: String?,
-    newAppId: String,
-) {
-    if (!previousAppId.isNullOrEmpty() && previousAppId != newAppId) {
-        googleProjectNumber = null
-        isInitializedWithRemote = false
-    }
-}

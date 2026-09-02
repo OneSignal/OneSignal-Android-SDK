@@ -18,7 +18,6 @@ import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.application.impl.ApplicationService
 import com.onesignal.core.internal.config.ConfigModel
 import com.onesignal.core.internal.config.ConfigModelStore
-import com.onesignal.core.internal.config.forgetDashboardSenderIfAppIdDiffers
 import com.onesignal.core.internal.config.impl.IdentityVerificationService
 import com.onesignal.core.internal.features.IFeatureManager
 import com.onesignal.core.internal.operations.IOperationRepo
@@ -431,11 +430,7 @@ internal class OneSignalImp : IOneSignal,
                 completeInit(InitState.FAILED)
                 return false
             }
-            val newAppId = result.appId!!
-            val previousAppId =
-                if (configModel.hasProperty(ConfigModel::appId.name)) configModel.appId else null
-            configModel.forgetDashboardSenderIfAppIdDiffers(previousAppId, newAppId)
-            configModel.appId = newAppId
+            configModel.appId = result.appId!! // safe because failed is false
             val forceCreateUser = result.forceCreateUser
 
             updateConfig()

@@ -77,7 +77,7 @@ class FidEnvReaderTests : FunSpec({
         header.shouldContain("snd=-")
     }
 
-    test("snd stays unknown until dashboard params for this appId have hydrated") {
+    test("snd stays unknown until dashboard params have hydrated") {
         val applicationService = MockHelper.applicationService()
         every { applicationService.appContext } returns context
         val configStore =

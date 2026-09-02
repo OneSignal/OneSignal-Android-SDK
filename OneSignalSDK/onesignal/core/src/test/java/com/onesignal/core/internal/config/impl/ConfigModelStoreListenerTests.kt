@@ -3,9 +3,7 @@ package com.onesignal.core.internal.config.impl
 import com.onesignal.core.internal.backend.IParamsBackendService
 import com.onesignal.core.internal.backend.ParamsObject
 import com.onesignal.core.internal.backend.RemoteLoggingParamsObject
-import com.onesignal.core.internal.config.ConfigModel
 import com.onesignal.core.internal.config.ConfigModelStore
-import com.onesignal.core.internal.config.forgetDashboardSenderIfAppIdDiffers
 import com.onesignal.debug.LogLevel
 import com.onesignal.mocks.IOMockHelper
 import com.onesignal.mocks.IOMockHelper.awaitIO
@@ -138,29 +136,5 @@ class ConfigModelStoreListenerTests : FunSpec({
 
         store.model.sdkRemoteFeatureFlags shouldBe listOf("sdk_background_threading")
         store.model.sdkRemoteFeatureFlagMetadata shouldBe """{"sdk_background_threading":{"x":1}}"""
-    }
-
-    test("forgetDashboardSenderIfAppIdDiffers keeps sender when appId is unchanged") {
-        val model = ConfigModel()
-        model.appId = "app-a"
-        model.googleProjectNumber = "111"
-        model.isInitializedWithRemote = true
-
-        model.forgetDashboardSenderIfAppIdDiffers("app-a", "app-a")
-
-        model.googleProjectNumber shouldBe "111"
-        model.isInitializedWithRemote shouldBe true
-    }
-
-    test("forgetDashboardSenderIfAppIdDiffers drops sender when appId changes") {
-        val model = ConfigModel()
-        model.appId = "app-a"
-        model.googleProjectNumber = "111"
-        model.isInitializedWithRemote = true
-
-        model.forgetDashboardSenderIfAppIdDiffers("app-a", "app-b")
-
-        model.googleProjectNumber shouldBe null
-        model.isInitializedWithRemote shouldBe false
     }
 })
