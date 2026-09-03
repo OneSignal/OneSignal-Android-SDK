@@ -7,6 +7,7 @@ import com.google.android.gms.tasks.Task
 import com.google.android.gms.tasks.Tasks
 import com.google.firebase.FirebaseApp
 import com.google.firebase.FirebaseOptions
+import com.google.firebase.installations.FirebaseInstallations
 import com.google.firebase.messaging.FirebaseMessaging
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.mocks.MockHelper
@@ -16,20 +17,27 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.mockkObject
 import io.mockk.mockkStatic
 import io.mockk.unmockkAll
+import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 private const val SENDER_ID = "388536902528"
 
-private fun defaultApp(senderId: String): FirebaseApp {
+private fun defaultApp(
+    senderId: String?,
+    messaging: FirebaseMessaging = mockk(),
+): FirebaseApp {
     val options = mockk<FirebaseOptions>()
     every { options.gcmSenderId } returns senderId
+    every { options.applicationId } returns "1:$SENDER_ID:android:abc"
 
     val app = mockk<FirebaseApp>()
     every { app.name } returns FirebaseApp.DEFAULT_APP_NAME
     every { app.options } returns options
+    every { app.get(FirebaseMessaging::class.java) } returns messaging
 
     return app
 }
@@ -71,6 +79,28 @@ class PushRegistratorFCMTests : FunSpec({
         val token = withContext(Dispatchers.IO) { registrator.getToken(SENDER_ID) }
 
         token shouldBe "fcm-token"
+    }
+
+    test("registers the installation id through the matching default FirebaseApp") {
+        val messaging = mockk<FirebaseMessaging>()
+        val app = defaultApp(null, messaging)
+        val installations = mockk<FirebaseInstallations>()
+        every { installations.id } returns Tasks.forResult("installation-id")
+        mockkStatic(FirebaseInstallations::class)
+        every { FirebaseInstallations.getInstance(app) } returns installations
+        mockkObject(FCMTokenProvider)
+        every { FCMTokenProvider.invokeRegister(messaging) } returns Tasks.forResult(null)
+        val registrator =
+            registrator(
+                legacyToken = Tasks.forException(disabledLegacyApi),
+                installedApps = listOf(app),
+            )
+
+        val token = withContext(Dispatchers.IO) { registrator.getToken(SENDER_ID) }
+
+        token shouldBe "installation-id"
+        verify(exactly = 1) { FCMTokenProvider.invokeRegister(messaging) }
+        verify(exactly = 1) { FirebaseInstallations.getInstance(app) }
     }
 
     test("explains the problem when the app has no default FirebaseApp to register with") {

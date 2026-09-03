@@ -88,9 +88,14 @@ internal class PushRegistratorFCM(
             FirebaseApp
                 .getApps(_applicationService.appContext)
                 .firstOrNull { it.name == FirebaseApp.DEFAULT_APP_NAME } ?: return null
+        val defaultSenderId =
+            FCMTokenProvider.defaultSenderId(
+                defaultApp.options.gcmSenderId,
+                defaultApp.options.applicationId,
+            )
 
         return FCMTokenProvider.InstallationIdRegistration(
-            senderId = defaultApp.options.gcmSenderId,
+            senderId = defaultSenderId,
             register = { FCMTokenProvider.invokeRegister(defaultApp.get(FirebaseMessaging::class.java)) },
             installationId = { FirebaseInstallations.getInstance(defaultApp).id },
         )
@@ -111,6 +116,16 @@ internal class PushRegistratorFCM(
 }
 
 internal object FCMTokenProvider {
+    fun defaultSenderId(
+        senderId: String?,
+        applicationId: String,
+    ): String? =
+        when {
+            senderId != null -> senderId
+            !applicationId.startsWith("1:") -> applicationId
+            else -> applicationId.split(":").getOrNull(1)?.ifEmpty { null }
+        }
+
     /**
      * The Firebase Installation ID registration that replaces the legacy token API, along with the
      * sender id of the Firebase project it would register against.
