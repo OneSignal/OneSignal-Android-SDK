@@ -15,16 +15,24 @@ import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.debug.internal.logging.logger.android.AndroidLogCrashHandler
 import com.onesignal.logger.ILogAnrDetector
 import com.onesignal.logger.ILogFileStore
+import com.onesignal.logger.ILogHttpSender
+import com.onesignal.logger.ILogTelemetry
 import com.onesignal.logger.ILogTelemetryRemote
+import com.onesignal.logger.ILoggerPlatformProvider
+import com.onesignal.logger.ISdkEventRecorder
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.types.shouldBeInstanceOf
+import io.mockk.Runs
 import io.mockk.clearMocks
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
+import io.mockk.just
 import io.mockk.mockk
 import io.mockk.verify
+import io.mockk.verifyOrder
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
@@ -257,6 +265,108 @@ class LoggerLifecycleManagerTest : FunSpec({
         Logging.error("dropped after disable")
         runBlocking { delay(SINK_QUIET_MS) }
         coVerify(exactly = 0) { telemetry.emit(any()) }
+    }
+
+    // ===== Named events ride the remote sink =====
+    // The recorder is handed over after bootstrap and has to follow every sink swap, so an event
+    // recorded before HYDRATE leaves through the sink HYDRATE installs.
+
+    /** Every collaborator mocked, so only the hand-over and the sink swaps are observable. */
+    fun mutedManager(
+        platformProvider: ILoggerPlatformProvider = mockk(relaxed = true),
+        remoteTelemetryFactory: (ILoggerPlatformProvider, ILogHttpSender) -> ILogTelemetryRemote =
+            { _, _ -> mockk(relaxed = true) },
+    ): LoggerLifecycleManager =
+        LoggerLifecycleManager(
+            context = context,
+            featureManagerProvider = { featureManager },
+            platformProviderFactory = { _, _ -> platformProvider },
+            logger = mockk(relaxed = true),
+            fileStoreFactory = { mockk<ILogFileStore>(relaxed = true) },
+            crashHandlerFactory = { _, _, _ -> mockk(relaxed = true) },
+            anrDetectorFactory = { _, _, _ -> mockk(relaxed = true) },
+            remoteTelemetryFactory = remoteTelemetryFactory,
+        )
+
+    test("the event recorder waits for a sink and attaches to the one HYDRATE installs") {
+        val telemetry = mockk<ILogTelemetryRemote>(relaxed = true)
+        val recorder = mockk<ISdkEventRecorder>(relaxed = true)
+        val manager = mutedManager(remoteTelemetryFactory = { _, _ -> telemetry })
+        manager.initializeFromCachedConfig()
+
+        manager.attachEventRecorder(recorder)
+        verify(exactly = 0) { recorder.attach(any()) }
+
+        manager.onModelReplaced(configWith(isEnabled = true, logLevel = LogLevel.ERROR), ModelChangeTags.HYDRATE)
+
+        verify(exactly = 1) { recorder.attach(telemetry) }
+    }
+
+    test("the event recorder attaches at once when the cached-config sink is already live") {
+        val telemetry = mockk<ILogTelemetryRemote>(relaxed = true)
+        val recorder = mockk<ISdkEventRecorder>(relaxed = true)
+        val cachedProvider = mockk<ILoggerPlatformProvider>(relaxed = true)
+        every { cachedProvider.isRemoteLoggingEnabled } returns true
+        every { cachedProvider.remoteLogLevel } returns "ERROR"
+        val manager = mutedManager(platformProvider = cachedProvider, remoteTelemetryFactory = { _, _ -> telemetry })
+        manager.initializeFromCachedConfig()
+
+        manager.attachEventRecorder(recorder)
+
+        verify(exactly = 1) { recorder.attach(telemetry) }
+    }
+
+    test("disabling detaches the event recorder before the sink shuts down") {
+        val telemetry = mockk<ILogTelemetryRemote>(relaxed = true)
+        val recorder = mockk<ISdkEventRecorder>(relaxed = true)
+        val manager = mutedManager(remoteTelemetryFactory = { _, _ -> telemetry })
+        manager.attachEventRecorder(recorder)
+        manager.onModelReplaced(configWith(isEnabled = true, logLevel = LogLevel.ERROR), ModelChangeTags.HYDRATE)
+
+        manager.onModelReplaced(configWith(isEnabled = false, logLevel = null), ModelChangeTags.HYDRATE)
+
+        verifyOrder {
+            recorder.attach(telemetry)
+            recorder.detach()
+            telemetry.shutdown()
+        }
+    }
+
+    test("a level change moves the event recorder to the replacement sink") {
+        val recorder = mockk<ISdkEventRecorder>(relaxed = true)
+        val attached = mutableListOf<ILogTelemetry>()
+        every { recorder.attach(capture(attached)) } just Runs
+        val manager = mutedManager()
+        manager.attachEventRecorder(recorder)
+        manager.onModelReplaced(configWith(isEnabled = true, logLevel = LogLevel.ERROR), ModelChangeTags.HYDRATE)
+
+        manager.onModelReplaced(configWith(isEnabled = true, logLevel = LogLevel.WARN), ModelChangeTags.HYDRATE)
+
+        attached.size shouldBe 2
+        attached[0] shouldNotBe attached[1]
+    }
+
+    test("repeating the same config does not re-attach the event recorder") {
+        val recorder = mockk<ISdkEventRecorder>(relaxed = true)
+        val manager = mutedManager()
+        manager.attachEventRecorder(recorder)
+
+        manager.onModelReplaced(configWith(isEnabled = true, logLevel = LogLevel.ERROR), ModelChangeTags.HYDRATE)
+        manager.onModelReplaced(configWith(isEnabled = true, logLevel = LogLevel.ERROR), ModelChangeTags.HYDRATE)
+
+        verify(exactly = 1) { recorder.attach(any()) }
+    }
+
+    test("the event recorder never attaches when the SDK level is unsupported") {
+        ObservabilitySdkSupport.isSupported = false
+        val recorder = mockk<ISdkEventRecorder>(relaxed = true)
+        val manager = mutedManager()
+        manager.initializeFromCachedConfig()
+        manager.attachEventRecorder(recorder)
+
+        manager.onModelReplaced(configWith(isEnabled = true, logLevel = LogLevel.ERROR), ModelChangeTags.HYDRATE)
+
+        verify(exactly = 0) { recorder.attach(any()) }
     }
 })
 

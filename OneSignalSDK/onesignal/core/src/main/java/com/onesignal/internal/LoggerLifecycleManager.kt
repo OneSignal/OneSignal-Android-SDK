@@ -25,6 +25,7 @@ import com.onesignal.logger.ILogHttpSender
 import com.onesignal.logger.ILogTelemetryRemote
 import com.onesignal.logger.ILogger
 import com.onesignal.logger.ILoggerPlatformProvider
+import com.onesignal.logger.ISdkEventRecorder
 import com.onesignal.logger.LoggerFactory
 
 /** Shared by the crash-handler and ANR-detector defaults, which each report through their own reporter. */
@@ -81,6 +82,7 @@ internal class LoggerLifecycleManager(
     private var crashHandler: ILogCrashHandler? = null
     private var anrDetector: ILogAnrDetector? = null
     private var remoteTelemetry: ILogTelemetryRemote? = null
+    private var eventRecorder: ISdkEventRecorder? = null
     private var currentConfig: ObservabilityConfig? = null
 
     /** Level the live sink is actually filtering at, which is not always [currentConfig]'s level. */
@@ -105,6 +107,25 @@ internal class LoggerLifecycleManager(
 
     override fun subscribeToConfigStore(configModelStore: ConfigModelStore) {
         configModelStore.subscribe(this)
+    }
+
+    /**
+     * The recorder arrives after bootstrap, and the cached-config sink may already be live from
+     * [initializeFromCachedConfig], so it attaches straight away in that case. Events recorded
+     * in the gap wait in the recorder's own queue; that queue, not subscriber order on the config
+     * store, is what carries them across.
+     */
+    @Suppress("TooGenericExceptionCaught")
+    override fun attachEventRecorder(recorder: ISdkEventRecorder) {
+        synchronized(lock) {
+            eventRecorder = recorder
+            val telemetry = remoteTelemetry ?: return
+            try {
+                recorder.attach(telemetry)
+            } catch (t: Throwable) {
+                Logging.warn("OneSignal: Failed to attach the event recorder to the live sink: ${t.message}", t)
+            }
+        }
     }
 
     @Suppress("TooGenericExceptionCaught")
@@ -233,6 +254,11 @@ internal class LoggerLifecycleManager(
             Logging.warn("OneSignal: Error unregistering logger crash handler: ${t.message}", t)
         }
         try {
+            eventRecorder?.detach()
+        } catch (t: Throwable) {
+            Logging.warn("OneSignal: Error detaching the event recorder: ${t.message}", t)
+        }
+        try {
             val telemetry = remoteTelemetry
             remoteTelemetry = null
             activeLogLevel = null
@@ -310,6 +336,14 @@ internal class LoggerLifecycleManager(
         remoteTelemetry = telemetry
         activeLogLevel = logLevel
         Logging.setLoggerTelemetry(telemetry, shouldSend)
+        // Events ride the same sink as Logging.* lines, so the recorder moves with it. Isolated
+        // like the shutdown below: the sink is already live, and a recorder fault must not
+        // report the level change as failed.
+        try {
+            eventRecorder?.attach(telemetry)
+        } catch (t: Throwable) {
+            Logging.warn("OneSignal: Failed to attach the event recorder: ${t.message}", t)
+        }
         try {
             previous?.shutdown()
         } catch (t: Throwable) {

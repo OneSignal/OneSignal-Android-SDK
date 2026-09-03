@@ -42,10 +42,13 @@ import com.onesignal.core.internal.startup.IStartableService
 import com.onesignal.core.internal.time.ITime
 import com.onesignal.core.internal.time.impl.Time
 import com.onesignal.debug.internal.crash.OneSignalCrashUploaderWrapper
+import com.onesignal.debug.internal.logging.logger.android.AndroidLogger
 import com.onesignal.inAppMessages.IInAppMessagesManager
 import com.onesignal.inAppMessages.internal.MisconfiguredIAMManager
 import com.onesignal.location.ILocationManager
 import com.onesignal.location.internal.MisconfiguredLocationManager
+import com.onesignal.logger.ISdkEventRecorder
+import com.onesignal.logger.LoggerFactory
 import com.onesignal.notifications.INotificationsManager
 import com.onesignal.notifications.internal.MisconfiguredNotificationsManager
 import com.onesignal.user.internal.jwt.JwtTokenStore
@@ -106,6 +109,17 @@ internal class CoreModule : IModule {
 
         // Crash Uploader (crash handler is initialized directly in OneSignalImp for early initialization)
         builder.register<OneSignalCrashUploaderWrapper>().provides<IStartableService>()
+
+        // Named events on the log pipeline. The shared recorder owns the flag check, the pre-sink
+        // queue and the session cap; this host wires the flag read to its feature manager and
+        // hands the recorder to the observability lifecycle manager, which attaches the sink.
+        builder.register { provider ->
+            val featureManager = provider.getService(IFeatureManager::class.java)
+            LoggerFactory.createEventRecorder(
+                isEnabled = { event -> featureManager.isEnabled(event.flag) },
+                logger = AndroidLogger(),
+            )
+        }.provides<ISdkEventRecorder>()
 
         // Register dummy services in the event they are not configured. These dummy services
         // will throw an error message if the associated functionality is attempted to be used.
