@@ -45,7 +45,7 @@ class FCMTokenProviderTests : FunSpec({
         FCMTokenProvider.defaultSenderId(null, "1::android:abc") shouldBe null
     }
 
-    test("returns the legacy FCM token when the API is enabled") {
+    test("returns the legacy FCM token when installation id registration is unavailable") {
         val token =
             withContext(Dispatchers.IO) {
                 FCMTokenProvider.getToken(SENDER_ID, { "true" }, { Tasks.forResult("fcm-token") }) {
@@ -54,6 +54,26 @@ class FCMTokenProviderTests : FunSpec({
             }
 
         token shouldBe "fcm-token"
+    }
+
+    test("uses installation id registration directly when enabled and available") {
+        var legacyTokenRequested = false
+        val token =
+            withContext(Dispatchers.IO) {
+                FCMTokenProvider.getToken(
+                    senderId = SENDER_ID,
+                    installationIdEnabled = { "true" },
+                    legacyToken = {
+                        legacyTokenRequested = true
+                        Tasks.forResult("fcm-token")
+                    },
+                    installationIdApiAvailable = { true },
+                    installationIdRegistration = { registration() },
+                )
+            }
+
+        token shouldBe "installation-id"
+        legacyTokenRequested shouldBe false
     }
 
     test("registers the installation id when the legacy API is disabled") {
@@ -145,6 +165,11 @@ class FCMTokenProviderTests : FunSpec({
 
     test("invokes register reflectively") {
         FCMTokenProvider.invokeRegister(Registrar()).isSuccessful shouldBe true
+    }
+
+    test("detects whether register is available") {
+        FCMTokenProvider.hasRegisterMethod(Registrar::class.java) shouldBe true
+        FCMTokenProvider.hasRegisterMethod(WithoutRegister::class.java) shouldBe false
     }
 
     test("unwraps what register throws instead of surfacing the reflection wrapper") {

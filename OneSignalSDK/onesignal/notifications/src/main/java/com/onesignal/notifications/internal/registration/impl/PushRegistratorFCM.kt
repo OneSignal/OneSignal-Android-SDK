@@ -54,22 +54,21 @@ internal class PushRegistratorFCM(
 
     @Throws(ExecutionException::class, InterruptedException::class)
     override suspend fun getToken(senderId: String): String {
-        initFirebaseApp(senderId)
-        return getTokenWithClassFirebaseMessaging(senderId)
+        return FCMTokenProvider.getToken(
+            senderId = senderId,
+            installationIdEnabled = ::installationIdEnabled,
+            legacyToken = { getLegacyToken(senderId) },
+            installationIdApiAvailable = { FCMTokenProvider.hasRegisterMethod(FirebaseMessaging::class.java) },
+            installationIdRegistration = ::defaultAppRegistration,
+        )
     }
 
-    @Throws(ExecutionException::class, InterruptedException::class)
-    private fun getTokenWithClassFirebaseMessaging(senderId: String): String {
+    private fun getLegacyToken(senderId: String): Task<String> {
+        initFirebaseApp(senderId)
         // We use firebaseApp.get(FirebaseMessaging.class) instead of FirebaseMessaging.getInstance()
         //   as the latter uses the default Firebase app. We need to use a custom Firebase app as
         //   the senderId is provided at runtime.
-        val fcmInstance = firebaseApp!!.get(FirebaseMessaging::class.java)
-        return FCMTokenProvider.getToken(
-            senderId,
-            ::installationIdEnabled,
-            { fcmInstance.token },
-            ::defaultAppRegistration,
-        )
+        return firebaseApp!!.get(FirebaseMessaging::class.java).token
     }
 
     // Manifest merging means the flag can arrive from a dependency instead of the app's own
@@ -137,22 +136,28 @@ internal object FCMTokenProvider {
     )
 
     /**
-     * Retrieves an FCM token for [senderId], falling back to Firebase Installation ID registration
-     * when the host app has opted into it. Opting in disables the legacy token API for the whole
-     * app, not just the FirebaseApp that opted in.
+     * Retrieves an FCM token for [senderId]. When the host app has opted into Firebase Installation
+     * ID registration and that API is available, it is used directly because opting in disables the
+     * legacy token API for the whole app, not just the FirebaseApp that opted in.
      */
     fun getToken(
         senderId: String,
         installationIdEnabled: () -> String,
         legacyToken: () -> Task<String>,
+        installationIdApiAvailable: () -> Boolean = { false },
         installationIdRegistration: () -> InstallationIdRegistration?,
     ): String {
+        val installationIdEnabledValue = installationIdEnabled()
+        if (installationIdEnabledValue.equals("true", ignoreCase = true) && installationIdApiAvailable()) {
+            return registerInstallationId(senderId, installationIdEnabledValue, installationIdRegistration())
+        }
+
         return try {
             await(legacyToken())
         } catch (e: IllegalStateException) {
             if (!isLegacyTokenApiDisabled(e)) throw e
 
-            registerInstallationId(senderId, installationIdEnabled(), installationIdRegistration())
+            registerInstallationId(senderId, installationIdEnabledValue, installationIdRegistration())
         }
     }
 
@@ -191,6 +196,14 @@ internal object FCMTokenProvider {
      * 25.1.0. This module compiles against the preferred 24.0.0, but the non-strict Gradle
      * constraint lets apps select newer versions through conflict resolution.
      */
+    fun hasRegisterMethod(targetClass: Class<*>): Boolean =
+        try {
+            targetClass.getMethod("register")
+            true
+        } catch (_: NoSuchMethodException) {
+            false
+        }
+
     fun invokeRegister(target: Any): Task<*> {
         val register =
             try {

@@ -1,6 +1,7 @@
 package com.onesignal.notifications.internal.registration.impl
 
 import android.content.Context
+import android.os.Bundle
 import androidx.test.core.app.ApplicationProvider
 import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
 import com.google.android.gms.tasks.Task
@@ -9,6 +10,7 @@ import com.google.firebase.FirebaseApp
 import com.google.firebase.FirebaseOptions
 import com.google.firebase.installations.FirebaseInstallations
 import com.google.firebase.messaging.FirebaseMessaging
+import com.onesignal.common.AndroidUtils
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.mocks.MockHelper
 import io.kotest.assertions.throwables.shouldThrow
@@ -82,6 +84,9 @@ class PushRegistratorFCMTests : FunSpec({
     }
 
     test("registers the installation id through the matching default FirebaseApp") {
+        val metaData = Bundle().apply { putBoolean("firebase_messaging_installation_id_enabled", true) }
+        mockkObject(AndroidUtils)
+        every { AndroidUtils.getManifestMetaBundle(any()) } returns metaData
         val messaging = mockk<FirebaseMessaging>()
         val app = defaultApp(null, messaging)
         val installations = mockk<FirebaseInstallations>()
@@ -89,10 +94,11 @@ class PushRegistratorFCMTests : FunSpec({
         mockkStatic(FirebaseInstallations::class)
         every { FirebaseInstallations.getInstance(app) } returns installations
         mockkObject(FCMTokenProvider)
+        every { FCMTokenProvider.hasRegisterMethod(FirebaseMessaging::class.java) } returns true
         every { FCMTokenProvider.invokeRegister(messaging) } returns Tasks.forResult(null)
         val registrator =
             registrator(
-                legacyToken = Tasks.forException(disabledLegacyApi),
+                legacyToken = Tasks.forResult("unused-fcm-token"),
                 installedApps = listOf(app),
             )
 
@@ -101,6 +107,7 @@ class PushRegistratorFCMTests : FunSpec({
         token shouldBe "installation-id"
         verify(exactly = 1) { FCMTokenProvider.invokeRegister(messaging) }
         verify(exactly = 1) { FirebaseInstallations.getInstance(app) }
+        verify(exactly = 0) { FirebaseApp.initializeApp(any(), any<FirebaseOptions>(), any()) }
     }
 
     test("explains the problem when the app has no default FirebaseApp to register with") {
