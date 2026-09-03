@@ -61,6 +61,11 @@ internal fun senderMatch(
         else -> resourceSender == dashboardSender
     }
 
+internal fun fidRegistrationEnabled(
+    hasRegisterApi: Boolean,
+    manifestFlag: Boolean,
+): Boolean = hasRegisterApi && manifestFlag
+
 internal fun dashboardSenderForCensus(
     hydrated: Boolean,
     appId: String,
@@ -89,7 +94,7 @@ internal class AndroidFidEnvReader(
         return FidEnvSnapshot(
             googleServices = !googleAppId.isNullOrBlank(),
             agpVersion = readApkEntry(AGP_METADATA_PATH)?.let { parseAgpVersion(it) },
-            fidFlag = AndroidUtils.getManifestMetaBoolean(context, FID_FLAG),
+            fidFlag = fidRegistrationEnabled(hasFirebaseMessagingRegisterApi(), fidFlagFromMetadata()),
             defaultFirebaseApp = false,
             firebaseInitProvider = hasFirebaseInitProvider(),
             minSdk = minSdk(),
@@ -124,6 +129,31 @@ internal class AndroidFidEnvReader(
         ZipFile(sourceDir).use { zip ->
             val entry = zip.getEntry(path) ?: return null
             return zip.getInputStream(entry).bufferedReader().use { it.readText() }
+        }
+    }
+
+    // 25.1+ exposes register(); older libraries ignore the metadata and keep getToken().
+    @Suppress("TooGenericExceptionCaught")
+    private fun hasFirebaseMessagingRegisterApi(): Boolean {
+        return try {
+            Class.forName(FIREBASE_MESSAGING).getMethod("register")
+            true
+        } catch (_: Throwable) {
+            false
+        }
+    }
+
+    @Suppress("TooGenericExceptionCaught")
+    private fun fidFlagFromMetadata(): Boolean {
+        return try {
+            val meta =
+                context.packageManager.getApplicationInfo(
+                    context.packageName,
+                    PackageManager.GET_META_DATA,
+                ).metaData ?: return false
+            meta.containsKey(FID_FLAG) && meta.getBoolean(FID_FLAG)
+        } catch (_: Throwable) {
+            false
         }
     }
 
@@ -170,6 +200,7 @@ internal class AndroidFidEnvReader(
         private const val FIREBASE_INIT_PROVIDER = "com.google.firebase.provider.FirebaseInitProvider"
         private const val AGP_METADATA_PATH = "META-INF/com/android/build/gradle/app-metadata.properties"
         private const val FIREBASE_APP = "com.google.firebase.FirebaseApp"
+        private const val FIREBASE_MESSAGING = "com.google.firebase.messaging.FirebaseMessaging"
         private const val DEFAULT_APP_NAME = "[DEFAULT]"
     }
 }
