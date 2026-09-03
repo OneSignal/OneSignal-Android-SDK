@@ -544,10 +544,10 @@ class LoggerLifecycleManagerFaultTest : FunSpec({
     }
 
     // ===== The event recorder cannot take the pipeline down =====
-    // It is a passenger on the sink: a fault in it must not fail the level change, block the
+    // It rides the remote telemetry: a fault in it must not fail the level change, block the
     // teardown, or reach the init path that hands it over.
 
-    test("event recorder attach and detach throw — the sink still comes up and is torn down") {
+    test("event recorder attach and detach throw — the telemetry still comes up and is torn down") {
         val telemetry = mockk<ILogTelemetryRemote>(relaxed = true)
         val recorder = mockk<ISdkEventRecorder>()
         every { recorder.attach(any()) } throws RuntimeException("attach boom")
@@ -561,7 +561,7 @@ class LoggerLifecycleManagerFaultTest : FunSpec({
         verify { telemetry.shutdown() }
     }
 
-    test("event recorder attach throws during a level change — the new sink is still adopted") {
+    test("event recorder attach throws during a level change — the new telemetry is still adopted") {
         val first = mockk<ILogTelemetryRemote>(relaxed = true)
         val second = mockk<ILogTelemetryRemote>(relaxed = true)
         var calls = 0
@@ -577,7 +577,7 @@ class LoggerLifecycleManagerFaultTest : FunSpec({
         calls shouldBe 2
     }
 
-    test("event recorder attach throws against a live sink — attachEventRecorder does not propagate") {
+    test("event recorder attach throws against live telemetry — attachEventRecorder does not propagate") {
         val recorder = mockk<ISdkEventRecorder>()
         every { recorder.attach(any()) } throws RuntimeException("attach boom")
         val manager = managerWith()

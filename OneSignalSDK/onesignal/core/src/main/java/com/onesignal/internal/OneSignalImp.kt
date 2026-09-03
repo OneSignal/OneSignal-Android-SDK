@@ -420,8 +420,7 @@ internal class OneSignalImp : IOneSignal,
             // Now that the IoC container is ready, subscribe the observability lifecycle
             // manager to config store events so it reacts to fresh remote config.
             observabilityManager?.subscribeToConfigStore(services.getService<ConfigModelStore>())
-            // The recorder for named events lives in the container, so it can only be handed over
-            // now; the manager attaches it to the cached-config sink if that is already live.
+            // The event recorder is a container service, so it can only be handed over now.
             observabilityManager?.attachEventRecorder(services.getService<ISdkEventRecorder>())
 
             val result = resolveAppId(appId, configModel, preferencesService)

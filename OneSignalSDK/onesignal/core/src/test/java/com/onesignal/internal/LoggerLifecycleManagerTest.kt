@@ -267,11 +267,11 @@ class LoggerLifecycleManagerTest : FunSpec({
         coVerify(exactly = 0) { telemetry.emit(any()) }
     }
 
-    // ===== Named events ride the remote sink =====
-    // The recorder is handed over after bootstrap and has to follow every sink swap, so an event
-    // recorded before HYDRATE leaves through the sink HYDRATE installs.
+    // ===== Named events ride the remote telemetry =====
+    // The recorder is handed over after bootstrap and has to follow every telemetry swap, so an
+    // event recorded before HYDRATE leaves through the telemetry HYDRATE installs.
 
-    /** Every collaborator mocked, so only the hand-over and the sink swaps are observable. */
+    /** Every collaborator mocked, so only the hand-over and the telemetry swaps are observable. */
     fun mutedManager(
         platformProvider: ILoggerPlatformProvider = mockk(relaxed = true),
         remoteTelemetryFactory: (ILoggerPlatformProvider, ILogHttpSender) -> ILogTelemetryRemote =
@@ -288,7 +288,7 @@ class LoggerLifecycleManagerTest : FunSpec({
             remoteTelemetryFactory = remoteTelemetryFactory,
         )
 
-    test("the event recorder waits for a sink and attaches to the one HYDRATE installs") {
+    test("the event recorder waits for remote telemetry and attaches to the one HYDRATE installs") {
         val telemetry = mockk<ILogTelemetryRemote>(relaxed = true)
         val recorder = mockk<ISdkEventRecorder>(relaxed = true)
         val manager = mutedManager(remoteTelemetryFactory = { _, _ -> telemetry })
@@ -302,7 +302,7 @@ class LoggerLifecycleManagerTest : FunSpec({
         verify(exactly = 1) { recorder.attach(telemetry) }
     }
 
-    test("the event recorder attaches at once when the cached-config sink is already live") {
+    test("the event recorder attaches at once when the cached-config telemetry is already live") {
         val telemetry = mockk<ILogTelemetryRemote>(relaxed = true)
         val recorder = mockk<ISdkEventRecorder>(relaxed = true)
         val cachedProvider = mockk<ILoggerPlatformProvider>(relaxed = true)
@@ -316,7 +316,7 @@ class LoggerLifecycleManagerTest : FunSpec({
         verify(exactly = 1) { recorder.attach(telemetry) }
     }
 
-    test("disabling detaches the event recorder before the sink shuts down") {
+    test("disabling detaches the event recorder before the telemetry shuts down") {
         val telemetry = mockk<ILogTelemetryRemote>(relaxed = true)
         val recorder = mockk<ISdkEventRecorder>(relaxed = true)
         val manager = mutedManager(remoteTelemetryFactory = { _, _ -> telemetry })
@@ -332,7 +332,7 @@ class LoggerLifecycleManagerTest : FunSpec({
         }
     }
 
-    test("a level change moves the event recorder to the replacement sink") {
+    test("a level change moves the event recorder to the replacement telemetry") {
         val recorder = mockk<ISdkEventRecorder>(relaxed = true)
         val attached = mutableListOf<ILogTelemetry>()
         every { recorder.attach(capture(attached)) } just Runs

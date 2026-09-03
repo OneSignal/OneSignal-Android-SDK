@@ -14,10 +14,6 @@ internal interface IObservabilityLifecycleManager {
     /** Subscribes to config store change events so features react to fresh remote config. */
     fun subscribeToConfigStore(configModelStore: ConfigModelStore)
 
-    /**
-     * Hands over the recorder named events ship through, once the IoC container exists. The
-     * manager attaches it to the live remote sink straight away if there is one, and to every
-     * sink it installs afterwards.
-     */
+    /** Attaches [recorder] to the live remote telemetry, if any, and to every one installed afterwards. */
     fun attachEventRecorder(recorder: ISdkEventRecorder)
 }

@@ -110,9 +110,7 @@ internal class CoreModule : IModule {
         // Crash Uploader (crash handler is initialized directly in OneSignalImp for early initialization)
         builder.register<OneSignalCrashUploaderWrapper>().provides<IStartableService>()
 
-        // Named events on the log pipeline. The shared recorder owns the flag check, the pre-sink
-        // queue and the session cap; this host wires the flag read to its feature manager and
-        // hands the recorder to the observability lifecycle manager, which attaches the sink.
+        // Named events; the observability lifecycle manager attaches the remote telemetry after bootstrap.
         builder.register { provider ->
             val featureManager = provider.getService(IFeatureManager::class.java)
             LoggerFactory.createEventRecorder(

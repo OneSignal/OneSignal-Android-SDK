@@ -110,10 +110,8 @@ internal class LoggerLifecycleManager(
     }
 
     /**
-     * The recorder arrives after bootstrap, and the cached-config sink may already be live from
-     * [initializeFromCachedConfig], so it attaches straight away in that case. Events recorded
-     * in the gap wait in the recorder's own queue; that queue, not subscriber order on the config
-     * store, is what carries them across.
+     * The cached-config remote telemetry may already be live from [initializeFromCachedConfig],
+     * so attach at once when it is.
      */
     @Suppress("TooGenericExceptionCaught")
     override fun attachEventRecorder(recorder: ISdkEventRecorder) {
@@ -123,7 +121,7 @@ internal class LoggerLifecycleManager(
             try {
                 recorder.attach(telemetry)
             } catch (t: Throwable) {
-                Logging.warn("OneSignal: Failed to attach the event recorder to the live sink: ${t.message}", t)
+                Logging.warn("OneSignal: Failed to attach the event recorder to the live remote telemetry: ${t.message}", t)
             }
         }
     }
@@ -336,9 +334,8 @@ internal class LoggerLifecycleManager(
         remoteTelemetry = telemetry
         activeLogLevel = logLevel
         Logging.setLoggerTelemetry(telemetry, shouldSend)
-        // Events ride the same sink as Logging.* lines, so the recorder moves with it. Isolated
-        // like the shutdown below: the sink is already live, and a recorder fault must not
-        // report the level change as failed.
+        // Isolated like the shutdown below: the telemetry is already live, so a recorder fault
+        // must not fail the level change.
         try {
             eventRecorder?.attach(telemetry)
         } catch (t: Throwable) {
