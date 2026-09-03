@@ -16,7 +16,7 @@ import com.onesignal.logger.ILogFileStore
 import com.onesignal.logger.ILogTelemetryRemote
 import com.onesignal.logger.ILogger
 import com.onesignal.logger.ILoggerPlatformProvider
-import com.onesignal.logger.ISdkEventRecorder
+import com.onesignal.logger.IObservabilityEventRecorder
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.mockk.coEvery
@@ -549,7 +549,7 @@ class LoggerLifecycleManagerFaultTest : FunSpec({
 
     test("event recorder attach and detach throw — the telemetry still comes up and is torn down") {
         val telemetry = mockk<ILogTelemetryRemote>(relaxed = true)
-        val recorder = mockk<ISdkEventRecorder>()
+        val recorder = mockk<IObservabilityEventRecorder>()
         every { recorder.attach(any()) } throws RuntimeException("attach boom")
         every { recorder.detach(any()) } throws RuntimeException("detach boom")
         val manager = managerWith(remoteTelemetry = { telemetry })
@@ -565,7 +565,7 @@ class LoggerLifecycleManagerFaultTest : FunSpec({
         val first = mockk<ILogTelemetryRemote>(relaxed = true)
         val second = mockk<ILogTelemetryRemote>(relaxed = true)
         var calls = 0
-        val recorder = mockk<ISdkEventRecorder>()
+        val recorder = mockk<IObservabilityEventRecorder>()
         every { recorder.attach(any()) } throws RuntimeException("attach boom")
         val manager = managerWith(remoteTelemetry = { if (calls++ == 0) first else second })
         manager.attachEventRecorder(recorder)
@@ -578,7 +578,7 @@ class LoggerLifecycleManagerFaultTest : FunSpec({
     }
 
     test("event recorder attach throws against live telemetry — attachEventRecorder does not propagate and the recorder is kept") {
-        val recorder = mockk<ISdkEventRecorder>()
+        val recorder = mockk<IObservabilityEventRecorder>()
         every { recorder.attach(any()) } throws RuntimeException("attach boom")
         val manager = managerWith()
         manager.onModelReplaced(enabledConfig(), ModelChangeTags.HYDRATE)
@@ -592,7 +592,7 @@ class LoggerLifecycleManagerFaultTest : FunSpec({
 
     test("an enable retry after a partial failure attaches the event recorder once") {
         var crashHandlerAttempts = 0
-        val recorder = mockk<ISdkEventRecorder>(relaxed = true)
+        val recorder = mockk<IObservabilityEventRecorder>(relaxed = true)
         val manager =
             managerWith(
                 crashHandler = {

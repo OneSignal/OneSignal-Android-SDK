@@ -1,7 +1,7 @@
 package com.onesignal.internal
 
 import com.onesignal.core.internal.config.ConfigModelStore
-import com.onesignal.logger.ISdkEventRecorder
+import com.onesignal.logger.IObservabilityEventRecorder
 
 /**
  * Narrow contract over the observability pipeline, so [OneSignalImp] holds it without depending
@@ -15,5 +15,5 @@ internal interface IObservabilityLifecycleManager {
     fun subscribeToConfigStore(configModelStore: ConfigModelStore)
 
     /** Attaches [recorder] to the live remote telemetry, if any, and to every one installed afterwards. */
-    fun attachEventRecorder(recorder: ISdkEventRecorder)
+    fun attachEventRecorder(recorder: IObservabilityEventRecorder)
 }

@@ -20,10 +20,10 @@ import com.onesignal.logger.ILogHttpSender
 import com.onesignal.logger.ILogTelemetry
 import com.onesignal.logger.ILogTelemetryRemote
 import com.onesignal.logger.ILoggerPlatformProvider
-import com.onesignal.logger.ISdkEventRecorder
+import com.onesignal.logger.IObservabilityEventRecorder
 import com.onesignal.logger.LogRecord
 import com.onesignal.logger.LoggerFactory
-import com.onesignal.logger.SdkEvent
+import com.onesignal.logger.ObservabilityEvent
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
@@ -271,7 +271,7 @@ class LoggerLifecycleManagerTest : FunSpec({
         coVerify(exactly = 0) { telemetry.emit(any()) }
     }
 
-    // ===== Named events ride the remote telemetry =====
+    // ===== Observability events ride the remote telemetry =====
     // The recorder is handed over after bootstrap and has to follow every telemetry swap, so an
     // event recorded before HYDRATE leaves through the telemetry HYDRATE installs.
 
@@ -294,7 +294,7 @@ class LoggerLifecycleManagerTest : FunSpec({
 
     test("the event recorder waits for remote telemetry and attaches to the one HYDRATE installs") {
         val telemetry = mockk<ILogTelemetryRemote>(relaxed = true)
-        val recorder = mockk<ISdkEventRecorder>(relaxed = true)
+        val recorder = mockk<IObservabilityEventRecorder>(relaxed = true)
         val manager = mutedManager(remoteTelemetryFactory = { _, _ -> telemetry })
         manager.initializeFromCachedConfig()
 
@@ -308,7 +308,7 @@ class LoggerLifecycleManagerTest : FunSpec({
 
     test("the event recorder attaches at once when the cached-config telemetry is already live") {
         val telemetry = mockk<ILogTelemetryRemote>(relaxed = true)
-        val recorder = mockk<ISdkEventRecorder>(relaxed = true)
+        val recorder = mockk<IObservabilityEventRecorder>(relaxed = true)
         val cachedProvider = mockk<ILoggerPlatformProvider>(relaxed = true)
         every { cachedProvider.isRemoteLoggingEnabled } returns true
         every { cachedProvider.remoteLogLevel } returns "ERROR"
@@ -322,7 +322,7 @@ class LoggerLifecycleManagerTest : FunSpec({
 
     test("disabling detaches the event recorder before the telemetry shuts down") {
         val telemetry = mockk<ILogTelemetryRemote>(relaxed = true)
-        val recorder = mockk<ISdkEventRecorder>(relaxed = true)
+        val recorder = mockk<IObservabilityEventRecorder>(relaxed = true)
         val manager = mutedManager(remoteTelemetryFactory = { _, _ -> telemetry })
         manager.attachEventRecorder(recorder)
         manager.onModelReplaced(configWith(isEnabled = true, logLevel = LogLevel.ERROR), ModelChangeTags.HYDRATE)
@@ -338,8 +338,8 @@ class LoggerLifecycleManagerTest : FunSpec({
 
     test("a different event recorder handed over later takes the live telemetry from the first") {
         val telemetry = mockk<ILogTelemetryRemote>(relaxed = true)
-        val first = mockk<ISdkEventRecorder>(relaxed = true)
-        val second = mockk<ISdkEventRecorder>(relaxed = true)
+        val first = mockk<IObservabilityEventRecorder>(relaxed = true)
+        val second = mockk<IObservabilityEventRecorder>(relaxed = true)
         val manager = mutedManager(remoteTelemetryFactory = { _, _ -> telemetry })
         manager.attachEventRecorder(first)
         manager.onModelReplaced(configWith(isEnabled = true, logLevel = LogLevel.ERROR), ModelChangeTags.HYDRATE)
@@ -355,7 +355,7 @@ class LoggerLifecycleManagerTest : FunSpec({
 
     test("handing over the same event recorder twice does not detach it") {
         val telemetry = mockk<ILogTelemetryRemote>(relaxed = true)
-        val recorder = mockk<ISdkEventRecorder>(relaxed = true)
+        val recorder = mockk<IObservabilityEventRecorder>(relaxed = true)
         val manager = mutedManager(remoteTelemetryFactory = { _, _ -> telemetry })
         manager.attachEventRecorder(recorder)
         manager.onModelReplaced(configWith(isEnabled = true, logLevel = LogLevel.ERROR), ModelChangeTags.HYDRATE)
@@ -372,11 +372,11 @@ class LoggerLifecycleManagerTest : FunSpec({
         val emitted = CompletableDeferred<LogRecord>()
         val telemetry = mockk<ILogTelemetryRemote>(relaxed = true)
         coEvery { telemetry.emit(any()) } answers { emitted.complete(firstArg()); Unit }
-        val recorder = LoggerFactory.createEventRecorder({ true }, AndroidLogger())
+        val recorder = LoggerFactory.createObservabilityEventRecorder({ true }, AndroidLogger())
         val manager = mutedManager(remoteTelemetryFactory = { _, _ -> telemetry })
         manager.attachEventRecorder(recorder)
 
-        recorder.record(SdkEvent.DEVICE_GESTURE, mapOf("gesture.result" to "copied"))
+        recorder.record(ObservabilityEvent.DEVICE_GESTURE, mapOf("gesture.result" to "copied"))
         manager.onModelReplaced(configWith(isEnabled = true, logLevel = LogLevel.ERROR), ModelChangeTags.HYDRATE)
         Logging.info("filtered out at level ERROR")
 
@@ -389,7 +389,7 @@ class LoggerLifecycleManagerTest : FunSpec({
     }
 
     test("a level change moves the event recorder to the replacement telemetry") {
-        val recorder = mockk<ISdkEventRecorder>(relaxed = true)
+        val recorder = mockk<IObservabilityEventRecorder>(relaxed = true)
         val attached = mutableListOf<ILogTelemetry>()
         every { recorder.attach(capture(attached)) } just Runs
         val manager = mutedManager()
@@ -403,7 +403,7 @@ class LoggerLifecycleManagerTest : FunSpec({
     }
 
     test("repeating the same config does not re-attach the event recorder") {
-        val recorder = mockk<ISdkEventRecorder>(relaxed = true)
+        val recorder = mockk<IObservabilityEventRecorder>(relaxed = true)
         val manager = mutedManager()
         manager.attachEventRecorder(recorder)
 
@@ -415,7 +415,7 @@ class LoggerLifecycleManagerTest : FunSpec({
 
     test("the event recorder never attaches when the SDK level is unsupported") {
         ObservabilitySdkSupport.isSupported = false
-        val recorder = mockk<ISdkEventRecorder>(relaxed = true)
+        val recorder = mockk<IObservabilityEventRecorder>(relaxed = true)
         val manager = mutedManager()
         manager.initializeFromCachedConfig()
         manager.attachEventRecorder(recorder)

@@ -31,7 +31,7 @@ import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.debug.internal.logging.logger.android.getCrashStoragePath
 import com.onesignal.inAppMessages.IInAppMessagesManager
 import com.onesignal.location.ILocationManager
-import com.onesignal.logger.ISdkEventRecorder
+import com.onesignal.logger.IObservabilityEventRecorder
 import com.onesignal.notifications.INotificationsManager
 import com.onesignal.session.ISessionManager
 import com.onesignal.session.SessionModule
@@ -422,11 +422,11 @@ internal class OneSignalImp : IOneSignal,
             observabilityManager?.subscribeToConfigStore(services.getService<ConfigModelStore>())
             // The event recorder is a container service, so it can only be handed over now. Fail-open
             // like the observability calls around it: telemetry must not be able to fail init.
-            val eventRecorder = services.getServiceOrNull<ISdkEventRecorder>()
+            val eventRecorder = services.getServiceOrNull<IObservabilityEventRecorder>()
             if (eventRecorder != null) {
                 observabilityManager?.attachEventRecorder(eventRecorder)
             } else {
-                Logging.warn("OneSignal: event recorder unavailable, named events will not ship")
+                Logging.warn("OneSignal: event recorder unavailable, observability events will not ship")
             }
 
             val result = resolveAppId(appId, configModel, preferencesService)

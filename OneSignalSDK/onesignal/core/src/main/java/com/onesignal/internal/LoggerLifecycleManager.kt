@@ -25,7 +25,7 @@ import com.onesignal.logger.ILogHttpSender
 import com.onesignal.logger.ILogTelemetryRemote
 import com.onesignal.logger.ILogger
 import com.onesignal.logger.ILoggerPlatformProvider
-import com.onesignal.logger.ISdkEventRecorder
+import com.onesignal.logger.IObservabilityEventRecorder
 import com.onesignal.logger.LoggerFactory
 
 /** Shared by the crash-handler and ANR-detector defaults, which each report through their own reporter. */
@@ -82,7 +82,7 @@ internal class LoggerLifecycleManager(
     private var crashHandler: ILogCrashHandler? = null
     private var anrDetector: ILogAnrDetector? = null
     private var remoteTelemetry: ILogTelemetryRemote? = null
-    private var eventRecorder: ISdkEventRecorder? = null
+    private var eventRecorder: IObservabilityEventRecorder? = null
     private var currentConfig: ObservabilityConfig? = null
 
     /** Level the live sink is actually filtering at, which is not always [currentConfig]'s level. */
@@ -115,7 +115,7 @@ internal class LoggerLifecycleManager(
      * it replaces is detached so it is not left pointing at telemetry this manager will shut down.
      */
     @Suppress("TooGenericExceptionCaught")
-    override fun attachEventRecorder(recorder: ISdkEventRecorder) {
+    override fun attachEventRecorder(recorder: IObservabilityEventRecorder) {
         synchronized(lock) {
             val previous = eventRecorder
             eventRecorder = recorder
