@@ -12,7 +12,7 @@ import io.kotest.matchers.types.shouldBeInstanceOf
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-private const val SENDER_ID = "388536902528"
+private const val SENDER_ID = "123456789012"
 
 private fun completedTask(): Task<Void> = TaskCompletionSource<Void>().apply { setResult(null) }.task
 
