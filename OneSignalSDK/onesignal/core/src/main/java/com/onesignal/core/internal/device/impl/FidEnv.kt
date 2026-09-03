@@ -18,6 +18,7 @@ internal data class FidEnvSnapshot(
     val googleServices: Boolean,
     val agpVersion: String?,
     val fidFlag: Boolean,
+    val fidRegisterApi: Boolean,
     val defaultFirebaseApp: Boolean,
     val firebaseInitProvider: Boolean,
     val minSdk: Int?,
@@ -29,6 +30,7 @@ internal data class FidEnvSnapshot(
             "gs=${googleServices.toBit()}",
             "agp=${agpVersion.sanitized()}",
             "flag=${fidFlag.toBit()}",
+            "reg=${fidRegisterApi.toBit()}",
             "def=${defaultFirebaseApp.toBit()}",
             "prov=${firebaseInitProvider.toBit()}",
             "min=${minSdk?.toString() ?: "-"}",
@@ -61,11 +63,6 @@ internal fun senderMatch(
         else -> resourceSender == dashboardSender
     }
 
-internal fun fidRegistrationEnabled(
-    hasRegisterApi: Boolean,
-    manifestFlag: Boolean,
-): Boolean = hasRegisterApi && manifestFlag
-
 internal fun dashboardSenderForCensus(
     hydrated: Boolean,
     appId: String,
@@ -94,7 +91,8 @@ internal class AndroidFidEnvReader(
         return FidEnvSnapshot(
             googleServices = !googleAppId.isNullOrBlank(),
             agpVersion = readApkEntry(AGP_METADATA_PATH)?.let { parseAgpVersion(it) },
-            fidFlag = fidRegistrationEnabled(hasFirebaseMessagingRegisterApi(), fidFlagFromMetadata()),
+            fidFlag = fidFlagFromMetadata(),
+            fidRegisterApi = hasFirebaseMessagingRegisterApi(),
             defaultFirebaseApp = false,
             firebaseInitProvider = hasFirebaseInitProvider(),
             minSdk = minSdk(),

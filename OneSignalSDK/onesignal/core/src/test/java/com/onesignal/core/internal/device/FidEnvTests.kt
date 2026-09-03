@@ -2,7 +2,6 @@ package com.onesignal.core.internal.device
 
 import com.onesignal.core.internal.device.impl.FidEnvSnapshot
 import com.onesignal.core.internal.device.impl.dashboardSenderForCensus
-import com.onesignal.core.internal.device.impl.fidRegistrationEnabled
 import com.onesignal.core.internal.device.impl.parseAgpVersion
 import com.onesignal.core.internal.device.impl.sanitizeToken
 import com.onesignal.core.internal.device.impl.senderMatch
@@ -16,6 +15,7 @@ class FidEnvTests : FunSpec({
                 googleServices = true,
                 agpVersion = "8.8.2",
                 fidFlag = false,
+                fidRegisterApi = true,
                 defaultFirebaseApp = true,
                 firebaseInitProvider = true,
                 minSdk = 24,
@@ -23,7 +23,7 @@ class FidEnvTests : FunSpec({
                 senderMatch = true,
             ).toHeaderValue()
 
-        header shouldBe "gs=1;agp=8.8.2;flag=0;def=1;prov=1;min=24;tgt=35;snd=1"
+        header shouldBe "gs=1;agp=8.8.2;flag=0;reg=1;def=1;prov=1;min=24;tgt=35;snd=1"
     }
 
     test("header uses dashes for unknown optional fields") {
@@ -32,6 +32,7 @@ class FidEnvTests : FunSpec({
                 googleServices = false,
                 agpVersion = null,
                 fidFlag = false,
+                fidRegisterApi = false,
                 defaultFirebaseApp = false,
                 firebaseInitProvider = false,
                 minSdk = null,
@@ -39,7 +40,7 @@ class FidEnvTests : FunSpec({
                 senderMatch = null,
             ).toHeaderValue()
 
-        header shouldBe "gs=0;agp=-;flag=0;def=0;prov=0;min=-;tgt=-;snd=-"
+        header shouldBe "gs=0;agp=-;flag=0;reg=0;def=0;prov=0;min=-;tgt=-;snd=-"
     }
 
     test("sanitizeToken strips header-unsafe characters and caps length") {
@@ -75,12 +76,6 @@ class FidEnvTests : FunSpec({
     test("senderMatch compares the google-services sender to the dashboard sender") {
         senderMatch("123", "123") shouldBe true
         senderMatch("123", "999") shouldBe false
-    }
-
-    test("fidRegistrationEnabled requires the 25.1 register API and the metadata flag") {
-        fidRegistrationEnabled(hasRegisterApi = false, manifestFlag = true) shouldBe false
-        fidRegistrationEnabled(hasRegisterApi = true, manifestFlag = false) shouldBe false
-        fidRegistrationEnabled(hasRegisterApi = true, manifestFlag = true) shouldBe true
     }
 
     test("dashboardSenderForCensus requires hydrated params for the current appId") {

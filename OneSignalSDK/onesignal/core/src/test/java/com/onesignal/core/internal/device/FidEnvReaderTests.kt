@@ -35,6 +35,7 @@ class FidEnvReaderTests : FunSpec({
 
         snapshot.googleServices shouldBe false
         snapshot.fidFlag shouldBe false
+        snapshot.fidRegisterApi shouldBe false
         snapshot.defaultFirebaseApp shouldBe false
         snapshot.firebaseInitProvider shouldBe false
         snapshot.senderMatch shouldBe null
@@ -43,12 +44,14 @@ class FidEnvReaderTests : FunSpec({
         snapshot.agpVersion shouldBe null
     }
 
-    test("fid flag stays off when metadata is set but FirebaseMessaging.register is absent") {
+    test("manifest flag and register API are reported independently") {
         val info = context.applicationInfo
         if (info.metaData == null) info.metaData = Bundle()
         info.metaData.putBoolean("firebase_messaging_installation_id_enabled", true)
 
-        AndroidFidEnvReader(context).collect(null).fidFlag shouldBe false
+        val snapshot = AndroidFidEnvReader(context).collect(null)
+        snapshot.fidFlag shouldBe true
+        snapshot.fidRegisterApi shouldBe false
     }
 
     test("gs and sender match follow google-services string resources") {
