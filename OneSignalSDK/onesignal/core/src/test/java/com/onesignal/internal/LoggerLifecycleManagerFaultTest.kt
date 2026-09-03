@@ -551,7 +551,7 @@ class LoggerLifecycleManagerFaultTest : FunSpec({
         val telemetry = mockk<ILogTelemetryRemote>(relaxed = true)
         val recorder = mockk<ISdkEventRecorder>()
         every { recorder.attach(any()) } throws RuntimeException("attach boom")
-        every { recorder.detach() } throws RuntimeException("detach boom")
+        every { recorder.detach(any()) } throws RuntimeException("detach boom")
         val manager = managerWith(remoteTelemetry = { telemetry })
         manager.attachEventRecorder(recorder)
 
@@ -577,13 +577,36 @@ class LoggerLifecycleManagerFaultTest : FunSpec({
         calls shouldBe 2
     }
 
-    test("event recorder attach throws against live telemetry — attachEventRecorder does not propagate") {
+    test("event recorder attach throws against live telemetry — attachEventRecorder does not propagate and the recorder is kept") {
         val recorder = mockk<ISdkEventRecorder>()
         every { recorder.attach(any()) } throws RuntimeException("attach boom")
         val manager = managerWith()
         manager.onModelReplaced(enabledConfig(), ModelChangeTags.HYDRATE)
 
         manager.attachEventRecorder(recorder)
+
+        // The fault must not have dropped the hand-over: the next level change still attaches.
+        manager.onModelReplaced(enabledConfig(LogLevel.WARN), ModelChangeTags.HYDRATE)
+        verify(exactly = 2) { recorder.attach(any()) }
+    }
+
+    test("an enable retry after a partial failure attaches the event recorder once") {
+        var crashHandlerAttempts = 0
+        val recorder = mockk<ISdkEventRecorder>(relaxed = true)
+        val manager =
+            managerWith(
+                crashHandler = {
+                    if (crashHandlerAttempts++ == 0) throw RuntimeException("first crash handler boom")
+                    mockk(relaxed = true)
+                },
+            )
+        manager.attachEventRecorder(recorder)
+
+        manager.onModelReplaced(enabledConfig(), ModelChangeTags.HYDRATE)
+        manager.onModelReplaced(enabledConfig(), ModelChangeTags.HYDRATE)
+
+        crashHandlerAttempts shouldBe 2
+        verify(exactly = 1) { recorder.attach(any()) }
     }
 })
 

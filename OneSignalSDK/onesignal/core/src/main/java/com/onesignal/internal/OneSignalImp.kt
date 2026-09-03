@@ -420,8 +420,14 @@ internal class OneSignalImp : IOneSignal,
             // Now that the IoC container is ready, subscribe the observability lifecycle
             // manager to config store events so it reacts to fresh remote config.
             observabilityManager?.subscribeToConfigStore(services.getService<ConfigModelStore>())
-            // The event recorder is a container service, so it can only be handed over now.
-            observabilityManager?.attachEventRecorder(services.getService<ISdkEventRecorder>())
+            // The event recorder is a container service, so it can only be handed over now. Fail-open
+            // like the observability calls around it: telemetry must not be able to fail init.
+            val eventRecorder = services.getServiceOrNull<ISdkEventRecorder>()
+            if (eventRecorder != null) {
+                observabilityManager?.attachEventRecorder(eventRecorder)
+            } else {
+                Logging.warn("OneSignal: event recorder unavailable, named events will not ship")
+            }
 
             val result = resolveAppId(appId, configModel, preferencesService)
             if (result.failed) {
@@ -443,7 +449,7 @@ internal class OneSignalImp : IOneSignal,
             return true
         } catch (e: Exception) {
             // Any unchecked throw from initEssentials / bootstrapServices / subscribeToConfigStore /
-            // updateConfig / userSwitcher.initUser / startupService.scheduleStart would otherwise
+            // attachEventRecorder / updateConfig / userSwitcher.initUser / startupService.scheduleStart would otherwise
             // leave initState at IN_PROGRESS forever and `suspendCompletion` uncompleted —
             // accessors and re-entrant suspend callers (e.g. SyncJobService) would deadlock on
             // `await()`. Reach a terminal state via [completeInit] (atomic state+completion) and

@@ -13,6 +13,7 @@ import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.crash.ObservabilitySdkSupport
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.debug.internal.logging.logger.android.AndroidLogCrashHandler
+import com.onesignal.debug.internal.logging.logger.android.AndroidLogger
 import com.onesignal.logger.ILogAnrDetector
 import com.onesignal.logger.ILogFileStore
 import com.onesignal.logger.ILogHttpSender
@@ -20,6 +21,9 @@ import com.onesignal.logger.ILogTelemetry
 import com.onesignal.logger.ILogTelemetryRemote
 import com.onesignal.logger.ILoggerPlatformProvider
 import com.onesignal.logger.ISdkEventRecorder
+import com.onesignal.logger.LogRecord
+import com.onesignal.logger.LoggerFactory
+import com.onesignal.logger.SdkEvent
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
@@ -327,9 +331,61 @@ class LoggerLifecycleManagerTest : FunSpec({
 
         verifyOrder {
             recorder.attach(telemetry)
-            recorder.detach()
+            recorder.detach(telemetry)
             telemetry.shutdown()
         }
+    }
+
+    test("a different event recorder handed over later takes the live telemetry from the first") {
+        val telemetry = mockk<ILogTelemetryRemote>(relaxed = true)
+        val first = mockk<ISdkEventRecorder>(relaxed = true)
+        val second = mockk<ISdkEventRecorder>(relaxed = true)
+        val manager = mutedManager(remoteTelemetryFactory = { _, _ -> telemetry })
+        manager.attachEventRecorder(first)
+        manager.onModelReplaced(configWith(isEnabled = true, logLevel = LogLevel.ERROR), ModelChangeTags.HYDRATE)
+
+        manager.attachEventRecorder(second)
+
+        verifyOrder {
+            first.attach(telemetry)
+            first.detach(telemetry)
+            second.attach(telemetry)
+        }
+    }
+
+    test("handing over the same event recorder twice does not detach it") {
+        val telemetry = mockk<ILogTelemetryRemote>(relaxed = true)
+        val recorder = mockk<ISdkEventRecorder>(relaxed = true)
+        val manager = mutedManager(remoteTelemetryFactory = { _, _ -> telemetry })
+        manager.attachEventRecorder(recorder)
+        manager.onModelReplaced(configWith(isEnabled = true, logLevel = LogLevel.ERROR), ModelChangeTags.HYDRATE)
+
+        manager.attachEventRecorder(recorder)
+
+        verify(exactly = 0) { recorder.detach(any()) }
+        verify(exactly = 2) { recorder.attach(telemetry) }
+    }
+
+    test("an event recorded before HYDRATE ships through the telemetry HYDRATE installs, unlike an INFO log line") {
+        // The only Android-side proof of the composition until the gesture detector calls record:
+        // the real KMP recorder, wired the way CoreModule wires it, against a mocked telemetry.
+        val emitted = CompletableDeferred<LogRecord>()
+        val telemetry = mockk<ILogTelemetryRemote>(relaxed = true)
+        coEvery { telemetry.emit(any()) } answers { emitted.complete(firstArg()); Unit }
+        val recorder = LoggerFactory.createEventRecorder({ true }, AndroidLogger())
+        val manager = mutedManager(remoteTelemetryFactory = { _, _ -> telemetry })
+        manager.attachEventRecorder(recorder)
+
+        recorder.record(SdkEvent.DEVICE_GESTURE, mapOf("gesture.result" to "copied"))
+        manager.onModelReplaced(configWith(isEnabled = true, logLevel = LogLevel.ERROR), ModelChangeTags.HYDRATE)
+        Logging.info("filtered out at level ERROR")
+
+        val record = runBlocking { withTimeout(SINK_TIMEOUT_MS) { emitted.await() } }
+        record.body shouldBe "sdk.device_gesture"
+        record.attributes["event.name"] shouldBe "sdk.device_gesture"
+        record.attributes["gesture.result"] shouldBe "copied"
+        runBlocking { delay(SINK_QUIET_MS) }
+        coVerify(exactly = 1) { telemetry.emit(any()) }
     }
 
     test("a level change moves the event recorder to the replacement telemetry") {
