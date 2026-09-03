@@ -76,6 +76,8 @@ dependencies {
 
     // NOTE: firebase-messaging:24.0.0 requires customer's project to use
     //   compileSdkVersion 34 or higher.
+    // `require` is intentionally non-strict: this module compiles against the preferred 24.0.0,
+    //   while an app can select a newer version through Gradle conflict resolution.
     api('com.google.firebase:firebase-messaging') {
         version {
             require '[23.0.8, 24.0.99]'
