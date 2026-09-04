@@ -40,6 +40,7 @@ internal class PushRegistratorFCM(
     private val apiKey: String
 
     private var firebaseApp: FirebaseApp? = null
+    private var firebaseAppSenderId: String? = null
     override val providerName: String
         get() = "FCM"
 
@@ -58,7 +59,7 @@ internal class PushRegistratorFCM(
         return FCMTokenProvider.getToken(
             senderId = senderId,
             installationIdEnabled = ::installationIdEnabled,
-            legacyToken = { getLegacyToken(senderId, defaultApp) },
+            legacyToken = { getLegacyToken(senderId) },
             installationIdApiAvailable = { FCMTokenProvider.hasRegisterMethod(FirebaseMessaging::class.java) },
             installationIdRegistration = { defaultApp?.let(::installationIdRegistration) },
         )
@@ -67,15 +68,7 @@ internal class PushRegistratorFCM(
     override fun resolveSenderId(configuredSenderId: String?): String? =
         configuredSenderId ?: defaultFirebaseApp()?.let(::defaultSenderId)
 
-    private fun getLegacyToken(
-        senderId: String,
-        defaultApp: FirebaseApp?,
-    ): Task<String> {
-        val defaultSenderId = defaultApp?.let(::defaultSenderId)
-        if (defaultSenderId != null) {
-            FCMTokenProvider.validateSenderId(senderId, defaultSenderId)
-        }
-
+    private fun getLegacyToken(senderId: String): Task<String> {
         val app = initFirebaseApp(senderId)
         // We use the named app's FirebaseMessaging instance instead of FirebaseMessaging.getInstance()
         //   as the latter uses the default Firebase app. We need to use a custom Firebase app as
@@ -114,7 +107,12 @@ internal class PushRegistratorFCM(
         )
 
     private fun initFirebaseApp(senderId: String): FirebaseApp {
-        firebaseApp?.let { return it }
+        firebaseApp?.let {
+            if (firebaseAppSenderId == senderId) return it
+            it.delete()
+            firebaseApp = null
+            firebaseAppSenderId = null
+        }
         val firebaseOptions =
             FirebaseOptions
                 .Builder()
@@ -124,7 +122,10 @@ internal class PushRegistratorFCM(
                 .setProjectId(projectId)
                 .build()
         return FirebaseApp.initializeApp(_applicationService.appContext, firebaseOptions, FCM_APP_NAME)
-            .also { firebaseApp = it }
+            .also {
+                firebaseApp = it
+                firebaseAppSenderId = senderId
+            }
     }
 }
 
