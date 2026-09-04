@@ -18,6 +18,7 @@ internal data class FidEnvSnapshot(
     val googleServices: Boolean,
     val agpVersion: String?,
     val fidFlag: Boolean,
+    val fidRegisterApi: Boolean,
     val defaultFirebaseApp: Boolean,
     val firebaseInitProvider: Boolean,
     val minSdk: Int?,
@@ -29,6 +30,7 @@ internal data class FidEnvSnapshot(
             "gs=${googleServices.toBit()}",
             "agp=${agpVersion.sanitized()}",
             "flag=${fidFlag.toBit()}",
+            "reg=${fidRegisterApi.toBit()}",
             "def=${defaultFirebaseApp.toBit()}",
             "prov=${firebaseInitProvider.toBit()}",
             "min=${minSdk?.toString() ?: "-"}",
@@ -69,6 +71,16 @@ internal fun dashboardSenderForCensus(
 ): String? =
     if (hydrated && senderAppId == appId) sender else null
 
+@Suppress("TooGenericExceptionCaught")
+internal fun hasPublicNoArgMethod(className: String, methodName: String): Boolean {
+    return try {
+        Class.forName(className).getMethod(methodName)
+        true
+    } catch (_: Throwable) {
+        false
+    }
+}
+
 internal class AndroidFidEnvReader(
     private val context: Context,
 ) {
@@ -89,7 +101,8 @@ internal class AndroidFidEnvReader(
         return FidEnvSnapshot(
             googleServices = !googleAppId.isNullOrBlank(),
             agpVersion = readApkEntry(AGP_METADATA_PATH)?.let { parseAgpVersion(it) },
-            fidFlag = AndroidUtils.getManifestMetaBoolean(context, FID_FLAG),
+            fidFlag = fidFlagFromMetadata(),
+            fidRegisterApi = hasFirebaseMessagingRegisterApi(),
             defaultFirebaseApp = false,
             firebaseInitProvider = hasFirebaseInitProvider(),
             minSdk = minSdk(),
@@ -124,6 +137,24 @@ internal class AndroidFidEnvReader(
         ZipFile(sourceDir).use { zip ->
             val entry = zip.getEntry(path) ?: return null
             return zip.getInputStream(entry).bufferedReader().use { it.readText() }
+        }
+    }
+
+    // 25.1+ exposes register(); older libraries ignore the metadata and keep getToken().
+    private fun hasFirebaseMessagingRegisterApi(): Boolean =
+        hasPublicNoArgMethod(FIREBASE_MESSAGING, "register")
+
+    @Suppress("TooGenericExceptionCaught")
+    private fun fidFlagFromMetadata(): Boolean {
+        return try {
+            val meta =
+                context.packageManager.getApplicationInfo(
+                    context.packageName,
+                    PackageManager.GET_META_DATA,
+                ).metaData ?: return false
+            meta.containsKey(FID_FLAG) && meta.getBoolean(FID_FLAG)
+        } catch (_: Throwable) {
+            false
         }
     }
 
@@ -170,6 +201,7 @@ internal class AndroidFidEnvReader(
         private const val FIREBASE_INIT_PROVIDER = "com.google.firebase.provider.FirebaseInitProvider"
         private const val AGP_METADATA_PATH = "META-INF/com/android/build/gradle/app-metadata.properties"
         private const val FIREBASE_APP = "com.google.firebase.FirebaseApp"
+        private const val FIREBASE_MESSAGING = "com.google.firebase.messaging.FirebaseMessaging"
         private const val DEFAULT_APP_NAME = "[DEFAULT]"
     }
 }

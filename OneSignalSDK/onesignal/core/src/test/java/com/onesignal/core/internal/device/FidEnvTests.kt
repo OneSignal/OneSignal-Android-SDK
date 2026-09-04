@@ -2,6 +2,7 @@ package com.onesignal.core.internal.device
 
 import com.onesignal.core.internal.device.impl.FidEnvSnapshot
 import com.onesignal.core.internal.device.impl.dashboardSenderForCensus
+import com.onesignal.core.internal.device.impl.hasPublicNoArgMethod
 import com.onesignal.core.internal.device.impl.parseAgpVersion
 import com.onesignal.core.internal.device.impl.sanitizeToken
 import com.onesignal.core.internal.device.impl.senderMatch
@@ -15,6 +16,7 @@ class FidEnvTests : FunSpec({
                 googleServices = true,
                 agpVersion = "8.8.2",
                 fidFlag = false,
+                fidRegisterApi = true,
                 defaultFirebaseApp = true,
                 firebaseInitProvider = true,
                 minSdk = 24,
@@ -22,7 +24,7 @@ class FidEnvTests : FunSpec({
                 senderMatch = true,
             ).toHeaderValue()
 
-        header shouldBe "gs=1;agp=8.8.2;flag=0;def=1;prov=1;min=24;tgt=35;snd=1"
+        header shouldBe "gs=1;agp=8.8.2;flag=0;reg=1;def=1;prov=1;min=24;tgt=35;snd=1"
     }
 
     test("header uses dashes for unknown optional fields") {
@@ -31,6 +33,7 @@ class FidEnvTests : FunSpec({
                 googleServices = false,
                 agpVersion = null,
                 fidFlag = false,
+                fidRegisterApi = false,
                 defaultFirebaseApp = false,
                 firebaseInitProvider = false,
                 minSdk = null,
@@ -38,7 +41,7 @@ class FidEnvTests : FunSpec({
                 senderMatch = null,
             ).toHeaderValue()
 
-        header shouldBe "gs=0;agp=-;flag=0;def=0;prov=0;min=-;tgt=-;snd=-"
+        header shouldBe "gs=0;agp=-;flag=0;reg=0;def=0;prov=0;min=-;tgt=-;snd=-"
     }
 
     test("sanitizeToken strips header-unsafe characters and caps length") {
@@ -96,4 +99,25 @@ class FidEnvTests : FunSpec({
             sender = "111",
         ) shouldBe "111"
     }
+
+    test("hasPublicNoArgMethod is true when the class exposes the method") {
+        hasPublicNoArgMethod(DummyWithRegister::class.java.name, "register") shouldBe true
+    }
+
+    test("hasPublicNoArgMethod is false when the class or method is missing") {
+        hasPublicNoArgMethod(DummyWithoutRegister::class.java.name, "register") shouldBe false
+        hasPublicNoArgMethod(DummyWithRegisterArg::class.java.name, "register") shouldBe false
+        hasPublicNoArgMethod("com.onesignal.missing.FirebaseMessaging", "register") shouldBe false
+    }
 })
+
+private class DummyWithRegister {
+    fun register() {}
+}
+
+private class DummyWithRegisterArg {
+    @Suppress("UNUSED_PARAMETER")
+    fun register(unused: String) {}
+}
+
+private class DummyWithoutRegister
