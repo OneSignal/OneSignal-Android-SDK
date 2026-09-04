@@ -8,10 +8,14 @@ import androidx.test.core.app.ApplicationProvider
 import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
 import com.onesignal.core.internal.application.IApplicationLifecycleHandler
 import com.onesignal.core.internal.application.IApplicationService
+import com.onesignal.logger.ILogTelemetry
+import com.onesignal.logger.IObservabilityEventRecorder
+import com.onesignal.logger.ObservabilityEvent
 import com.onesignal.mocks.IOMockHelper
 import com.onesignal.mocks.IOMockHelper.awaitIO
 import com.onesignal.mocks.MockHelper
 import io.kotest.core.spec.style.FunSpec
+import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.shouldBe
 import io.mockk.every
 import io.mockk.mockk
@@ -19,6 +23,32 @@ import io.mockk.slot
 import org.robolectric.annotation.Config
 
 private const val SUBSCRIPTION_ID = "aaaabbbb-cccc-dddd-eeee-ffff00001111"
+
+/**
+ * Captures what the detector records so tests can assert the event and its attributes. The
+ * attach/detach/reset side belongs to the logger lifecycle and never reaches the detector.
+ */
+private class RecorderSpy : IObservabilityEventRecorder {
+    private val stored = mutableListOf<Pair<ObservabilityEvent, Map<String, String>>>()
+
+    val recorded: List<Pair<ObservabilityEvent, Map<String, String>>>
+        get() = synchronized(stored) { stored.toList() }
+
+    override fun record(
+        event: ObservabilityEvent,
+        attributes: Map<String, String>,
+    ) {
+        synchronized(stored) { stored.add(event to attributes) }
+    }
+
+    override fun record(event: ObservabilityEvent) = record(event, emptyMap())
+
+    override fun attach(telemetry: ILogTelemetry) = Unit
+
+    override fun detach(telemetry: ILogTelemetry) = Unit
+
+    override fun reset() = Unit
+}
 
 /**
  * Drives the detector through synthetic focus/unfocus sequences with a controlled clock and
@@ -36,6 +66,7 @@ private class Harness(
 
     val context: Context = ApplicationProvider.getApplicationContext()
     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+    val recorder = RecorderSpy()
 
     private val handlerSlot = slot<IApplicationLifecycleHandler>()
     val detector: DeviceGestureDetector
@@ -57,7 +88,7 @@ private class Harness(
                 it.consentRequired = consentRequired
                 it.consentGiven = consentGiven
             }
-        detector = DeviceGestureDetector(applicationService, configModelStore)
+        detector = DeviceGestureDetector(applicationService, configModelStore, recorder)
         detector.monotonicMillis = { nowMs }
         detector.start()
     }
@@ -225,5 +256,75 @@ class DeviceGestureDetectorTests : FunSpec({
         harness.cycle()
         awaitIO()
         harness.clipText() shouldBe harness.expectedClip
+    }
+
+    // ===== Observability event =====
+    // Every recognised gesture records DEVICE_GESTURE with its outcome, whether or not an ID was
+    // copied, so the backend can answer how often the gesture happens and how often it pays off.
+
+    test("a completed gesture records a copied event carrying the subscription ID") {
+        val harness = Harness()
+
+        // Progress is silent: the event fires on recognition, not per cycle.
+        repeat(5) { harness.cycle() }
+        awaitIO()
+        harness.recorder.recorded.shouldBeEmpty()
+
+        harness.cycle()
+        awaitIO()
+
+        harness.recorder.recorded shouldBe
+            listOf(
+                ObservabilityEvent.DEVICE_GESTURE to
+                    mapOf(
+                        "gesture.result" to "copied",
+                        "gesture.push_subscription_id" to SUBSCRIPTION_ID,
+                    ),
+            )
+    }
+
+    test("the remote kill switch records a disabled result without an ID") {
+        val harness = Harness(remoteFlags = listOf(DeviceGestureDetector.KILL_SWITCH_KEY))
+
+        repeat(6) { harness.cycle() }
+        awaitIO()
+
+        harness.recorder.recorded shouldBe
+            listOf(ObservabilityEvent.DEVICE_GESTURE to mapOf("gesture.result" to "disabled"))
+    }
+
+    test("a missing or local push subscription records a no_id result") {
+        // Both shapes mean the same thing to the backend: the gesture ran before the device had
+        // anything worth pasting.
+        listOf(null, "local-$SUBSCRIPTION_ID").forEach { subscriptionId ->
+            val harness = Harness(subscriptionId = subscriptionId)
+
+            repeat(6) { harness.cycle() }
+            awaitIO()
+
+            harness.recorder.recorded shouldBe
+                listOf(ObservabilityEvent.DEVICE_GESTURE to mapOf("gesture.result" to "no_id"))
+        }
+    }
+
+    test("withheld privacy consent records nothing") {
+        // The event would ship to the backend, and nothing may leave the device before consent.
+        val harness = Harness(consentRequired = true, consentGiven = null)
+
+        repeat(6) { harness.cycle() }
+        awaitIO()
+
+        harness.recorder.recorded.shouldBeEmpty()
+    }
+
+    test("each recognition records its own event") {
+        val harness = Harness()
+
+        repeat(12) { harness.cycle() }
+        awaitIO()
+
+        harness.recorder.recorded.map { it.first } shouldBe
+            listOf(ObservabilityEvent.DEVICE_GESTURE, ObservabilityEvent.DEVICE_GESTURE)
+        harness.recorder.recorded.map { it.second["gesture.result"] } shouldBe listOf("copied", "copied")
     }
 })

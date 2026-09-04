@@ -11,6 +11,8 @@ import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.startup.IStartableService
 import com.onesignal.debug.internal.logging.Logging
+import com.onesignal.logger.IObservabilityEventRecorder
+import com.onesignal.logger.ObservabilityEvent
 
 /**
  * Detects the test-device gesture: [REQUIRED_CYCLES] background/foreground cycles within
@@ -28,10 +30,14 @@ import com.onesignal.debug.internal.logging.Logging
  * [com.onesignal.core.internal.config.ConfigModel.sdkRemoteFeatureFlags] list because
  * [com.onesignal.core.internal.features.IFeatureManager] only resolves keys the KMP catalog
  * registers.
+ *
+ * Every recognised gesture also records [ObservabilityEvent.DEVICE_GESTURE], with its outcome
+ * and the copied ID, so the gesture's usage can be measured.
  */
 internal class DeviceGestureDetector(
     private val applicationService: IApplicationService,
     private val configModelStore: ConfigModelStore,
+    private val eventRecorder: IObservabilityEventRecorder,
 ) : IStartableService,
     IApplicationLifecycleHandler {
     /**
@@ -102,12 +108,17 @@ internal class DeviceGestureDetector(
         val config = configModelStore.model
         val subscriptionId = config.pushSubscriptionId
         when {
+            // Not recorded either: nothing about the device may ship before consent.
             config.consentRequired == true && config.consentGiven != true ->
                 Logging.debug("DeviceGestureDetector: gesture detected but privacy consent is not granted")
-            config.sdkRemoteFeatureFlags.any { it.equals(KILL_SWITCH_KEY, ignoreCase = true) } ->
+            config.sdkRemoteFeatureFlags.any { it.equals(KILL_SWITCH_KEY, ignoreCase = true) } -> {
                 Logging.debug("DeviceGestureDetector: gesture detected but disabled remotely")
-            subscriptionId.isNullOrEmpty() || IDManager.isLocalId(subscriptionId) ->
+                recordGesture(GestureResult.DISABLED)
+            }
+            subscriptionId.isNullOrEmpty() || IDManager.isLocalId(subscriptionId) -> {
                 Logging.info("DeviceGestureDetector: gesture detected before the push subscription exists, nothing copied")
+                recordGesture(GestureResult.NO_ID)
+            }
             else -> writeToClipboard(subscriptionId)
         }
     }
@@ -122,8 +133,28 @@ internal class DeviceGestureDetector(
                 // No EXTRA_IS_SENSITIVE: the Android 13+ copy preview is the person's confirmation.
                 clipboard.setPrimaryClip(ClipData.newPlainText(CLIP_LABEL, clipText(subscriptionId)))
                 Logging.info("DeviceGestureDetector: push subscription ID copied to clipboard")
+                recordGesture(GestureResult.COPIED, copiedId = subscriptionId)
             }
         }
+    }
+
+    /** Recorded once the outcome is known, so `copied` means the clip was actually set. */
+    private fun recordGesture(
+        result: GestureResult,
+        copiedId: String? = null,
+    ) {
+        val attributes = mutableMapOf(ATTRIBUTE_RESULT to result.wire)
+        if (copiedId != null) {
+            attributes[ATTRIBUTE_PUSH_SUBSCRIPTION_ID] = copiedId
+        }
+        eventRecorder.record(ObservabilityEvent.DEVICE_GESTURE, attributes)
+    }
+
+    /** Wire values of `gesture.result`, which backend queries match on. */
+    private enum class GestureResult(val wire: String) {
+        COPIED("copied"),
+        NO_ID("no_id"),
+        DISABLED("disabled"),
     }
 
     companion object {
@@ -135,6 +166,8 @@ internal class DeviceGestureDetector(
 
         internal const val KILL_SWITCH_KEY = "sdk_device_gesture_disabled"
         private const val CLIP_LABEL = "OneSignal subscription ID"
+        private const val ATTRIBUTE_RESULT = "gesture.result"
+        private const val ATTRIBUTE_PUSH_SUBSCRIPTION_ID = "gesture.push_subscription_id"
 
         /**
          * The `os:` prefix marks the value as a OneSignal ID, for the dashboard's paste target and
