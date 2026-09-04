@@ -98,6 +98,13 @@ Fire test notifications from the device via the OneSignal REST API:
 - **With Image** — includes a big picture
 - **Custom** — fully customizable title, body, and additional data
 
+All demo sends use the same explicit Android group (`demo-group`). Send two
+notifications to verify that OneSignal creates and manages the notification
+summary instead of relying on Android system auto-grouping. Verifying that
+tapping the summary supplies OneSignal notification click data requires testing
+on an Android device or emulator; the REST payload alone cannot verify tap
+behavior.
+
 ### In-App Messaging
 **Pause / resume** in-app message display.
 
