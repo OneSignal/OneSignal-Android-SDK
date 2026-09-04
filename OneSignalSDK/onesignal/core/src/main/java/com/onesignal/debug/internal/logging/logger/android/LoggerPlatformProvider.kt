@@ -15,9 +15,6 @@ import java.io.File
 // Use this to enable/disable local exporter diagnostics in debug builds.
 internal const val EXPORTER_LOGGING_ENABLED = false
 
-// First load of this file. Process.getStartUptimeMillis() is API 24.
-private val processStartUptimeMs = SystemClock.uptimeMillis()
-
 /** Configuration for [LoggerPlatformProvider]. */
 internal data class LoggerPlatformProviderConfig(
     val crashStoragePath: String,
@@ -35,6 +32,10 @@ internal class LoggerPlatformProvider(
     config: LoggerPlatformProviderConfig,
     private val featureManagerProvider: () -> IFeatureManager,
 ) : ILoggerPlatformProvider {
+    companion object {
+        // First class load. Same monotonic clock as Process.getStartUptimeMillis() (API 24).
+        private val processStartUptimeMs = SystemClock.uptimeMillis()
+    }
     override val appPackageId: String = config.appPackageId
     override val appVersion: String = config.appVersion
     private val context: Context? = config.context
@@ -117,7 +118,6 @@ internal class LoggerPlatformProvider(
             "unknown"
         }
 
-    // Same clock as Process.getStartUptimeMillis(), which is API 24. Class-load is first touch.
     override val processUptime: Long
         get() = SystemClock.uptimeMillis() - processStartUptimeMs
 
