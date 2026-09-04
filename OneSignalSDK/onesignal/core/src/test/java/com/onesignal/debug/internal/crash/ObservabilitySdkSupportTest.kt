@@ -14,7 +14,7 @@ class ObservabilitySdkSupportTest : FunSpec({
         ObservabilitySdkSupport.reset()
     }
 
-    test("isSupported is true on SDK >= 26") {
+    test("isSupported is true on SDK >= 21") {
         ObservabilitySdkSupport.reset()
         ObservabilitySdkSupport.isSupported shouldBe true
     }
@@ -32,7 +32,20 @@ class ObservabilitySdkSupportTest : FunSpec({
         ObservabilitySdkSupport.isSupported shouldBe true
     }
 
-    test("MIN_SDK_VERSION is 26") {
-        ObservabilitySdkSupport.MIN_SDK_VERSION shouldBe 26
+    test("MIN_SDK_VERSION is 21") {
+        ObservabilitySdkSupport.MIN_SDK_VERSION shouldBe 21
+    }
+})
+
+@RobolectricTest
+@Config(sdk = [21])
+class ObservabilitySdkSupportApi21Test : FunSpec({
+    afterEach {
+        ObservabilitySdkSupport.reset()
+    }
+
+    test("isSupported is true on API 21") {
+        ObservabilitySdkSupport.reset()
+        ObservabilitySdkSupport.isSupported shouldBe true
     }
 })

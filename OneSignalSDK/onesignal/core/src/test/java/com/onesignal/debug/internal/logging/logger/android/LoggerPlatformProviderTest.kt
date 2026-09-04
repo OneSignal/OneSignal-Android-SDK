@@ -437,11 +437,14 @@ class LoggerPlatformProviderTest : FunSpec({
         val provider = createAndroidLoggerPlatformProvider(appContext!!) { emptyFeatureManager() }
 
         // When
-        val result = provider.processUptime
+        val first = provider.processUptime
+        Thread.sleep(10)
+        val second = provider.processUptime
 
         // Then
-        (result >= 0) shouldBe true
-        (result < 1000000.0) shouldBe true // Reasonable upper bound
+        (first >= 0) shouldBe true
+        (first < 1_000_000) shouldBe true
+        (second >= first) shouldBe true
     }
 
     // ===== currentThreadName Tests =====
@@ -951,6 +954,19 @@ class LoggerPlatformProviderTest : FunSpec({
 
         // Then
         provider.appVersion shouldBe "unknown"
+    }
+})
+
+@RobolectricTest
+@Config(sdk = [21])
+class LoggerPlatformProviderApi21Test : FunSpec({
+    test("processUptime is readable on API 21") {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val provider = createAndroidLoggerPlatformProvider(context) {
+            mockk<IFeatureManager>().also { every { it.enabledFeatureKeys() } returns emptyList() }
+        }
+
+        (provider.processUptime >= 0) shouldBe true
     }
 })
 
