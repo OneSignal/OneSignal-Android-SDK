@@ -10,6 +10,7 @@ import com.onesignal.OneSignal
 import com.onesignal.common.AndroidUtils
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.notifications.internal.common.NotificationFormatHelper
+import com.onesignal.notifications.internal.common.NotificationRestoreReason
 import com.onesignal.notifications.internal.common.OSWorkManagerHelper
 import com.onesignal.notifications.internal.generation.INotificationGenerationProcessor
 import com.onesignal.notifications.internal.generation.INotificationGenerationWorkManager
@@ -24,7 +25,7 @@ internal class NotificationGenerationWorkManager : INotificationGenerationWorkMa
         androidNotificationId: Int,
         jsonPayload: JSONObject?,
         timestamp: Long,
-        isRestoring: Boolean,
+        restoreReason: NotificationRestoreReason?,
         isHighPriority: Boolean,
     ): Boolean {
         val id: String? = NotificationFormatHelper.getOSNotificationIdFromJson(jsonPayload)
@@ -46,7 +47,7 @@ internal class NotificationGenerationWorkManager : INotificationGenerationWorkMa
                 .putInt(ANDROID_NOTIF_ID_WORKER_DATA_PARAM, androidNotificationId)
                 .putString(JSON_PAYLOAD_WORKER_DATA_PARAM, jsonPayload.toString())
                 .putLong(TIMESTAMP_WORKER_DATA_PARAM, timestamp)
-                .putBoolean(IS_RESTORING_WORKER_DATA_PARAM, isRestoring)
+                .putString(RESTORE_REASON_WORKER_DATA_PARAM, restoreReason?.name)
                 .build()
         val workRequest =
             OneTimeWorkRequest.Builder(NotificationGenerationWorker::class.java)
@@ -82,13 +83,11 @@ internal class NotificationGenerationWorkManager : INotificationGenerationWorkMa
                         TIMESTAMP_WORKER_DATA_PARAM,
                         System.currentTimeMillis() / 1000L,
                     )
-                val isRestoring = inputData.getBoolean(IS_RESTORING_WORKER_DATA_PARAM, false)
-
                 notificationProcessor.processNotificationData(
                     applicationContext,
                     androidNotificationId,
                     jsonPayload,
-                    isRestoring,
+                    readRestoreReason(inputData),
                     timestamp,
                 )
                 Result.success()
@@ -106,9 +105,30 @@ internal class NotificationGenerationWorkManager : INotificationGenerationWorkMa
         private const val ANDROID_NOTIF_ID_WORKER_DATA_PARAM = "android_notif_id"
         private const val JSON_PAYLOAD_WORKER_DATA_PARAM = "json_payload"
         private const val TIMESTAMP_WORKER_DATA_PARAM = "timestamp"
-        private const val IS_RESTORING_WORKER_DATA_PARAM = "is_restoring"
+        private const val RESTORE_REASON_WORKER_DATA_PARAM = "restore_reason"
+        private const val LEGACY_IS_RESTORING_WORKER_DATA_PARAM = "is_restoring"
 
         private val notificationIds = ConcurrentHashMap<String, Boolean>()
+
+        internal fun readRestoreReason(inputData: Data): NotificationRestoreReason? {
+            val name = inputData.getString(RESTORE_REASON_WORKER_DATA_PARAM)
+            if (name != null) {
+                val reason = NotificationRestoreReason.values().firstOrNull { it.name == name }
+                if (reason == null) {
+                    // Only restores write a reason. An unknown name (work drained after a downgrade)
+                    // must stay quiet, so fail closed as a shade restore instead of a fresh push.
+                    Logging.warn("Unknown restore_reason \"$name\", treating it as SHADE_RESTORE")
+                }
+                return reason ?: NotificationRestoreReason.SHADE_RESTORE
+            }
+
+            // Older work only has the boolean, which always meant shade restore.
+            return if (inputData.getBoolean(LEGACY_IS_RESTORING_WORKER_DATA_PARAM, false)) {
+                NotificationRestoreReason.SHADE_RESTORE
+            } else {
+                null
+            }
+        }
 
         fun addNotificationIdProcessed(osNotificationId: String): Boolean {
             // Duplicate control

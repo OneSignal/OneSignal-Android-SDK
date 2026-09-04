@@ -33,14 +33,13 @@ class DemoNotificationServiceExtension : INotificationServiceExtension {
 
         val notification = event.notification
 
-        // TODO: [SDK-5011] log `event.restoring` here once it ships. Reading it next to the
-        // channel below is the whole diagnosis for a notification that re-alerts on reboot.
         DemoLog.d(
             TAG,
             "received androidNotificationId=${notification.androidNotificationId}" +
                 " notificationId=${notification.notificationId}" +
                 " sentTime=${notification.sentTime}" +
-                " title=${notification.title}",
+                " title=${notification.title}" +
+                " restoring=${event.restoring}",
         )
 
         if (options.discard) {

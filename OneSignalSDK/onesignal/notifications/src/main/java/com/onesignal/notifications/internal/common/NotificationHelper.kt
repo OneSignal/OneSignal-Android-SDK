@@ -43,6 +43,18 @@ object NotificationHelper {
     }
 
     /**
+     * Whether this notification is currently posted in the shade. Below Android M there is no
+     * API to ask, so it is assumed to still be posted.
+     */
+    fun isNotificationActive(
+        context: Context,
+        androidNotificationId: Int,
+    ): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return true
+        return getActiveNotifications(context).any { it.id == androidNotificationId }
+    }
+
+    /**
      * Iterate over all active notifications and count the groupless ones
      * and return the int count
      */

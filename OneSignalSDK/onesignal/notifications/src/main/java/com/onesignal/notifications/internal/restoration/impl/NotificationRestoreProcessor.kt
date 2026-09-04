@@ -5,6 +5,7 @@ import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.notifications.internal.badges.IBadgeCountUpdater
 import com.onesignal.notifications.internal.common.NotificationHelper
+import com.onesignal.notifications.internal.common.NotificationRestoreReason
 import com.onesignal.notifications.internal.data.INotificationRepository
 import com.onesignal.notifications.internal.generation.INotificationGenerationWorkManager
 import com.onesignal.notifications.internal.restoration.INotificationRestoreProcessor
@@ -25,7 +26,11 @@ internal class NotificationRestoreProcessor(
             var outstandingNotifications = _dataController.listNotificationsForOutstanding(excludeAndroidIds)
 
             for (notification in outstandingNotifications) {
-                processNotification(notification, DELAY_BETWEEN_NOTIFICATION_RESTORES_MS)
+                processNotification(
+                    notification,
+                    NotificationRestoreReason.SHADE_RESTORE,
+                    DELAY_BETWEEN_NOTIFICATION_RESTORES_MS,
+                )
             }
 
             _badgeCountUpdater.update()
@@ -36,6 +41,7 @@ internal class NotificationRestoreProcessor(
 
     override suspend fun processNotification(
         notification: INotificationRepository.NotificationData,
+        reason: NotificationRestoreReason,
         delay: Int,
     ) {
         _workManager.beginEnqueueingWork(
@@ -44,7 +50,7 @@ internal class NotificationRestoreProcessor(
             notification.androidId,
             JSONObject(notification.fullData),
             notification.createdAt,
-            true,
+            reason,
             false,
         )
 
