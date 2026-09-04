@@ -32,6 +32,11 @@ if (taskRequests.contains("huawei")) {
     apply(plugin = "com.huawei.agconnect")
 }
 
+// Firebase configuration is local so the demo must remain buildable without it.
+if (file("google-services.json").exists()) {
+    apply(plugin = "com.google.gms.google-services")
+}
+
 // OneSignal SDK version - can be overridden via gradle property SDK_VERSION
 val sdkVersion: String = rootProject.findProperty("SDK_VERSION") as? String ?: "5.6.1"
 
