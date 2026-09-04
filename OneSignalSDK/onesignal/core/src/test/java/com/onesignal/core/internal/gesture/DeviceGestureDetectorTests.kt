@@ -8,6 +8,8 @@ import androidx.test.core.app.ApplicationProvider
 import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
 import com.onesignal.core.internal.application.IApplicationLifecycleHandler
 import com.onesignal.core.internal.application.IApplicationService
+import com.onesignal.core.internal.features.IFeatureManager
+import com.onesignal.features.FeatureFlag
 import com.onesignal.logger.ILogTelemetry
 import com.onesignal.logger.IObservabilityEventRecorder
 import com.onesignal.logger.ObservabilityEvent
@@ -57,7 +59,7 @@ private class RecorderSpy : IObservabilityEventRecorder {
  */
 private class Harness(
     subscriptionId: String? = SUBSCRIPTION_ID,
-    remoteFlags: List<String> = emptyList(),
+    killSwitchOn: Boolean = false,
     consentRequired: Boolean? = null,
     consentGiven: Boolean? = null,
     fireOnSubscribe: Boolean = false,
@@ -84,11 +86,13 @@ private class Harness(
         val configModelStore =
             MockHelper.configModelStore {
                 it.pushSubscriptionId = subscriptionId
-                it.sdkRemoteFeatureFlags = remoteFlags
                 it.consentRequired = consentRequired
                 it.consentGiven = consentGiven
             }
-        detector = DeviceGestureDetector(applicationService, configModelStore, recorder)
+        // Strict mock: only the kill switch flag is answered, so asking for anything else fails the test.
+        val featureManager = mockk<IFeatureManager>()
+        every { featureManager.isEnabled(FeatureFlag.SDK_DEVICE_GESTURE_DISABLED) } returns killSwitchOn
+        detector = DeviceGestureDetector(applicationService, configModelStore, featureManager, recorder)
         detector.monotonicMillis = { nowMs }
         detector.start()
     }
@@ -187,8 +191,7 @@ class DeviceGestureDetectorTests : FunSpec({
     }
 
     test("the remote kill switch suppresses the copy") {
-        // Server casing is preserved in the stored list, so match case-insensitively.
-        val harness = Harness(remoteFlags = listOf("SDK_Device_Gesture_Disabled"))
+        val harness = Harness(killSwitchOn = true)
 
         repeat(6) { harness.cycle() }
         awaitIO()
@@ -285,7 +288,7 @@ class DeviceGestureDetectorTests : FunSpec({
     }
 
     test("the remote kill switch records a disabled result without an ID") {
-        val harness = Harness(remoteFlags = listOf(DeviceGestureDetector.KILL_SWITCH_KEY))
+        val harness = Harness(killSwitchOn = true)
 
         repeat(6) { harness.cycle() }
         awaitIO()
