@@ -71,6 +71,16 @@ internal fun dashboardSenderForCensus(
 ): String? =
     if (hydrated && senderAppId == appId) sender else null
 
+@Suppress("TooGenericExceptionCaught")
+internal fun hasPublicNoArgMethod(className: String, methodName: String): Boolean {
+    return try {
+        Class.forName(className).getMethod(methodName)
+        true
+    } catch (_: Throwable) {
+        false
+    }
+}
+
 internal class AndroidFidEnvReader(
     private val context: Context,
 ) {
@@ -131,15 +141,8 @@ internal class AndroidFidEnvReader(
     }
 
     // 25.1+ exposes register(); older libraries ignore the metadata and keep getToken().
-    @Suppress("TooGenericExceptionCaught")
-    private fun hasFirebaseMessagingRegisterApi(): Boolean {
-        return try {
-            Class.forName(FIREBASE_MESSAGING).getMethod("register")
-            true
-        } catch (_: Throwable) {
-            false
-        }
-    }
+    private fun hasFirebaseMessagingRegisterApi(): Boolean =
+        hasPublicNoArgMethod(FIREBASE_MESSAGING, "register")
 
     @Suppress("TooGenericExceptionCaught")
     private fun fidFlagFromMetadata(): Boolean {

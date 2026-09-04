@@ -2,6 +2,7 @@ package com.onesignal.core.internal.device
 
 import com.onesignal.core.internal.device.impl.FidEnvSnapshot
 import com.onesignal.core.internal.device.impl.dashboardSenderForCensus
+import com.onesignal.core.internal.device.impl.hasPublicNoArgMethod
 import com.onesignal.core.internal.device.impl.parseAgpVersion
 import com.onesignal.core.internal.device.impl.sanitizeToken
 import com.onesignal.core.internal.device.impl.senderMatch
@@ -98,4 +99,25 @@ class FidEnvTests : FunSpec({
             sender = "111",
         ) shouldBe "111"
     }
+
+    test("hasPublicNoArgMethod is true when the class exposes the method") {
+        hasPublicNoArgMethod(DummyWithRegister::class.java.name, "register") shouldBe true
+    }
+
+    test("hasPublicNoArgMethod is false when the class or method is missing") {
+        hasPublicNoArgMethod(DummyWithoutRegister::class.java.name, "register") shouldBe false
+        hasPublicNoArgMethod(DummyWithRegisterArg::class.java.name, "register") shouldBe false
+        hasPublicNoArgMethod("com.onesignal.missing.FirebaseMessaging", "register") shouldBe false
+    }
 })
+
+private class DummyWithRegister {
+    fun register() {}
+}
+
+private class DummyWithRegisterArg {
+    @Suppress("UNUSED_PARAMETER")
+    fun register(unused: String) {}
+}
+
+private class DummyWithoutRegister
