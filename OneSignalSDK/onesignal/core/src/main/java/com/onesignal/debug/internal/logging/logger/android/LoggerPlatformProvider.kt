@@ -3,6 +3,7 @@ package com.onesignal.debug.internal.logging.logger.android
 import android.app.ActivityManager
 import android.content.Context
 import android.os.Build
+import android.os.SystemClock
 import com.onesignal.common.OneSignalUtils
 import com.onesignal.common.OneSignalWrapper
 import com.onesignal.core.internal.features.IFeatureManager
@@ -13,6 +14,9 @@ import java.io.File
 
 // Use this to enable/disable local exporter diagnostics in debug builds.
 internal const val EXPORTER_LOGGING_ENABLED = false
+
+// First load of this file. Process.getStartUptimeMillis() is API 24.
+private val processStartUptimeMs = SystemClock.uptimeMillis()
 
 /** Configuration for [LoggerPlatformProvider]. */
 internal data class LoggerPlatformProviderConfig(
@@ -113,9 +117,9 @@ internal class LoggerPlatformProvider(
             "unknown"
         }
 
-    // https://opentelemetry.io/docs/specs/semconv/system/process-metrics/#metric-processuptime
+    // Same clock as Process.getStartUptimeMillis(), which is API 24. Class-load is first touch.
     override val processUptime: Long
-        get() = android.os.SystemClock.uptimeMillis() - android.os.Process.getStartUptimeMillis()
+        get() = SystemClock.uptimeMillis() - processStartUptimeMs
 
     // https://opentelemetry.io/docs/specs/semconv/general/attributes/#general-thread-attributes
     override val currentThreadName: String
