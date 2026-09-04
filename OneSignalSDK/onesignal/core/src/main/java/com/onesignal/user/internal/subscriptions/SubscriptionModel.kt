@@ -157,6 +157,16 @@ class SubscriptionModel : Model() {
             setIntProperty(::restApiDisabledReason.name, value)
         }
 
+    /**
+     * True from [IPushSubscription.optIn] until the server reports this subscription in any state
+     * other than a REST API disable. Every opt-in sends a subscription update, and a fetch that
+     * started before that update went out still reports the disable the opt-in cleared; while
+     * this is set, RefreshUser leaves [restApiDisabledReason] alone instead of recording that
+     * stale answer. Memory only, since a fresh process has no update in flight to protect.
+     */
+    @Volatile
+    var restApiDisableClearedByUser: Boolean = false
+
     var type: SubscriptionType
         get() = getEnumProperty(::type.name)
         set(value) {

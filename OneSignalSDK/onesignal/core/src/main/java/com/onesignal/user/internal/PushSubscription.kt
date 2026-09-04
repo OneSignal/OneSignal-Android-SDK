@@ -23,7 +23,9 @@ internal open class PushSubscription(
 
     override fun optIn() {
         // A deliberate opt-in overrides a REST API disable; clearing it with a NORMAL-tagged
-        // change drives a subscription update that re-enables it on the server.
+        // change drives a subscription update that re-enables it on the server. The flag keeps
+        // a fetch that started before that update went out from recording the disable again.
+        model.restApiDisableClearedByUser = true
         if (model.restApiDisabledReason != 0) {
             model.restApiDisabledReason = 0
         }

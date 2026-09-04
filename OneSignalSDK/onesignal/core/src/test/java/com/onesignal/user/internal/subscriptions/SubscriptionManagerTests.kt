@@ -861,8 +861,25 @@ class SubscriptionManagerTests : FunSpec({
 
         // Then
         pushSubscriptionModel.restApiDisabledReason shouldBe 0
+        pushSubscriptionModel.restApiDisableClearedByUser shouldBe true
         val (enabled, status) = SubscriptionModelStoreListener.getSubscriptionEnabledAndStatus(pushSubscriptionModel)
         enabled shouldBe true
         status shouldBe SubscriptionStatus.SUBSCRIBED
+    }
+
+    test("optIn takes precedence over a pending fetch even when no REST API disable was recorded") {
+        // Given a push subscription with no recorded REST API disable
+        val pushSubscriptionModel = SubscriptionModel()
+        pushSubscriptionModel.id = "subscription1"
+        pushSubscriptionModel.type = SubscriptionType.PUSH
+        pushSubscriptionModel.address = "pushToken"
+        pushSubscriptionModel.status = SubscriptionStatus.SUBSCRIBED
+        pushSubscriptionModel.optedIn = true
+
+        // When
+        PushSubscription(pushSubscriptionModel).optIn()
+
+        // Then the flag is set, since every opt-in sends an update a pending fetch may predate
+        pushSubscriptionModel.restApiDisableClearedByUser shouldBe true
     }
 })

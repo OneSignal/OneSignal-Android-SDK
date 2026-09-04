@@ -615,13 +615,37 @@ class RefreshUserOperationExecutorTests : FunSpec({
                 localAddress = onDevicePushToken,
             )
         cachedPushSubscriptionModel.restApiDisabledReason = SubscriptionStatus.DISABLED_FROM_REST_API.value
+        cachedPushSubscriptionModel.restApiDisableClearedByUser = true
 
         // When
         val response = executor.execute(listOf(RefreshUserOperation(appId, remoteOneSignalId, null)))
 
-        // Then
+        // Then the mirror clears and the opt-in's precedence over stale reports ends
         response.result shouldBe ExecutionResult.SUCCESS
         response.operations shouldBe null
         cachedPushSubscriptionModel.restApiDisabledReason shouldBe 0
+        cachedPushSubscriptionModel.restApiDisableClearedByUser shouldBe false
+    }
+
+    test("push refresh: keeps an opt-in over a fetch that still reports the REST API disable it cleared") {
+        // Given: optIn() ran while this fetch was pending, so the server still reports -31
+        val (executor, cachedPushSubscriptionModel, _) =
+            buildSelfHealHarness(
+                serverPushEnabled = false,
+                serverNotificationTypes = SubscriptionStatus.DISABLED_FROM_REST_API.value,
+                localOptedIn = true,
+                localStatus = SubscriptionStatus.SUBSCRIBED,
+                localAddress = onDevicePushToken,
+            )
+        cachedPushSubscriptionModel.restApiDisableClearedByUser = true
+
+        // When
+        val response = executor.execute(listOf(RefreshUserOperation(appId, remoteOneSignalId, null)))
+
+        // Then the stale disable is not recorded, the flag stays, and no self-heal fires
+        response.result shouldBe ExecutionResult.SUCCESS
+        response.operations shouldBe null
+        cachedPushSubscriptionModel.restApiDisabledReason shouldBe 0
+        cachedPushSubscriptionModel.restApiDisableClearedByUser shouldBe true
     }
 })

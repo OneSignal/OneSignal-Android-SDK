@@ -250,16 +250,25 @@ internal class RefreshUserOperationExecutor(
     /**
      * Records or clears the server's REST API disable state on the cached push model. Only that
      * state is server-owned; the device stays the source of truth for the rest of the push model,
-     * which is why push subscriptions are otherwise not hydrated from the backend.
+     * which is why push subscriptions are otherwise not hydrated from the backend. An opt-in whose
+     * update has not reached the server yet outranks a fetch that still reports the disable it cleared.
      */
     private fun hydrateRestApiDisableState(
         serverSubscription: SubscriptionObject,
         pushSubscriptionId: String,
     ) {
-        val cachedPushSubscriptionModel = _subscriptionsModelStore.get(pushSubscriptionId) ?: return
-        val serverTypes = serverSubscription.notificationTypes ?: return
+        val cachedPushSubscriptionModel = _subscriptionsModelStore.get(pushSubscriptionId)
+        val serverTypes = serverSubscription.notificationTypes
+        if (cachedPushSubscriptionModel == null || serverTypes == null) return
         // The recorded reason mirrors the server's field: -31 records, any other reported value clears.
         val target = if (SubscriptionStatus.isRestApiDisable(serverTypes)) serverTypes else 0
+        if (target == 0) {
+            cachedPushSubscriptionModel.restApiDisableClearedByUser = false
+        } else if (cachedPushSubscriptionModel.restApiDisableClearedByUser) {
+            // This fetch predates the opt-in's update, so it reports the state that update replaces.
+            Logging.debug("RefreshUserOperationExecutor: keeping an opt-in over a stale REST API disable report")
+            return
+        }
         if (cachedPushSubscriptionModel.restApiDisabledReason != target) {
             cachedPushSubscriptionModel.setIntProperty(
                 SubscriptionModel::restApiDisabledReason.name,
