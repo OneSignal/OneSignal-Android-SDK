@@ -5,7 +5,6 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.os.SystemClock
 import com.onesignal.common.IDManager
-import com.onesignal.common.threading.suspendifyOnMain
 import com.onesignal.core.internal.application.IApplicationLifecycleHandler
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.config.ConfigModelStore
@@ -26,7 +25,7 @@ import com.onesignal.logger.ObservabilityEvent
  * [MIN_BACKGROUND_DWELL_MS]; the floor filters the synthetic pair
  * [com.onesignal.core.internal.application.impl.ApplicationService.onOrientationChanged]
  * fires when an activity declaring orientation in `configChanges` rotates. The window is the
- * only rate rule; six cycles inside it takes sustained five-second round trips.
+ * only rate rule; six cycles fit inside it at round trips of five seconds or faster.
  *
  * [FeatureFlag.SDK_DEVICE_GESTURE_DISABLED] turns the gesture off. Absent means enabled, so a
  * device that has never fetched flags still has it.
@@ -42,12 +41,13 @@ internal class DeviceGestureDetector(
 ) : IStartableService,
     IApplicationLifecycleHandler {
     /**
-     * Monotonic clock, so wall-clock jumps from NTP or manual time changes cannot stretch or
-     * shrink the window. Test-only override; kept out of the constructor so the IoC's
-     * reflection-based resolver still picks the only constructor (see the class KDoc on
+     * Monotonic and keeps counting through deep sleep, so neither a wall-clock jump nor a doze
+     * can stretch or shrink the window; an awake-only clock would stop at each lock and stitch
+     * visits hours apart into one window. Test-only override; kept out of the constructor so the
+     * IoC's reflection-based resolver still picks the only constructor (see the class KDoc on
      * [com.onesignal.core.internal.config.impl.FeatureFlagsRefreshService]).
      */
-    internal var monotonicMillis: () -> Long = { SystemClock.uptimeMillis() }
+    internal var monotonicMillis: () -> Long = { SystemClock.elapsedRealtime() }
 
     private var lastUnfocusedAt: Long? = null
     private val cycleTimestamps = mutableListOf<Long>()
@@ -63,6 +63,8 @@ internal class DeviceGestureDetector(
             return
         }
         val now = monotonicMillis()
+        // Logged after the lock: Logging calls app listeners synchronously.
+        var progress: String? = null
         val completedGesture =
             synchronized(this) {
                 val backgroundedAt = lastUnfocusedAt
@@ -72,18 +74,15 @@ internal class DeviceGestureDetector(
                     backgroundedAt == null -> false
                     // Faster than any human app switch; rotation produces synthetic pairs like this.
                     now - backgroundedAt < MIN_BACKGROUND_DWELL_MS -> {
-                        Logging.verbose(
-                            "DeviceGestureDetector: ignored a ${now - backgroundedAt}ms background blip (rotation filter)",
-                        )
+                        progress = "ignored a ${now - backgroundedAt}ms background blip (rotation filter)"
                         false
                     }
                     else -> {
                         cycleTimestamps.add(now)
                         cycleTimestamps.removeAll { now - it > WINDOW_MS }
-                        Logging.verbose(
-                            "DeviceGestureDetector: cycle ${cycleTimestamps.size}/$REQUIRED_CYCLES within the window " +
-                                "(background ${now - backgroundedAt}ms)",
-                        )
+                        progress =
+                            "cycle ${cycleTimestamps.size}/$REQUIRED_CYCLES within the window " +
+                            "(background ${now - backgroundedAt}ms)"
                         if (cycleTimestamps.size >= REQUIRED_CYCLES) {
                             cycleTimestamps.clear()
                             true
@@ -93,6 +92,7 @@ internal class DeviceGestureDetector(
                     }
                 }
             }
+        progress?.let { Logging.verbose("DeviceGestureDetector: $it") }
         if (completedGesture) {
             copySubscriptionIdToClipboard()
         }
@@ -122,26 +122,39 @@ internal class DeviceGestureDetector(
         }
     }
 
+    /** Writes on the focus callback itself: the clipboard needs no particular thread, and a hop would only add a gap. */
+    @Suppress("TooGenericExceptionCaught")
     private fun writeToClipboard(
         text: String,
         result: GestureResult,
         copiedId: String? = null,
     ) {
-        suspendifyOnMain {
-            val context = applicationService.appContext
-            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
-            if (clipboard == null) {
-                Logging.warn("DeviceGestureDetector: clipboard service unavailable, nothing copied")
-            } else {
+        val context = applicationService.appContext
+        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+        if (clipboard == null) {
+            Logging.warn("DeviceGestureDetector: clipboard service unavailable, nothing copied")
+            return
+        }
+        val written =
+            try {
                 // No EXTRA_IS_SENSITIVE: the Android 13+ copy preview is the person's confirmation.
                 clipboard.setPrimaryClip(ClipData.newPlainText(CLIP_LABEL, text))
-                Logging.info("DeviceGestureDetector: clipboard set, gesture result ${result.wire}")
-                recordGesture(result, copiedId)
+                true
+            } catch (e: Exception) {
+                // A lifecycle callback must survive a misbehaving clipboard service.
+                Logging.warn("DeviceGestureDetector: clipboard write failed, nothing copied", e)
+                false
             }
+        if (written) {
+            Logging.info("DeviceGestureDetector: clipboard set, gesture result ${result.wire}")
+            recordGesture(result, copiedId)
         }
     }
 
-    /** Recorded once the clip is set, so a result never claims a clipboard change that did not happen. */
+    /**
+     * `copied` and `no_id` are recorded after the clip is set, so neither claims a change that
+     * did not happen. `disabled` is recorded at the decision, since nothing is written.
+     */
     private fun recordGesture(
         result: GestureResult,
         copiedId: String? = null,
