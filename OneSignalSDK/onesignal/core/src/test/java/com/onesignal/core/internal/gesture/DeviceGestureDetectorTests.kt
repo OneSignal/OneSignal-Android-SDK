@@ -3,6 +3,7 @@ package com.onesignal.core.internal.gesture
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.ContextWrapper
 import android.os.Build
 import androidx.test.core.app.ApplicationProvider
 import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
@@ -13,8 +14,6 @@ import com.onesignal.features.FeatureFlag
 import com.onesignal.logger.ILogTelemetry
 import com.onesignal.logger.IObservabilityEventRecorder
 import com.onesignal.logger.ObservabilityEvent
-import com.onesignal.mocks.IOMockHelper
-import com.onesignal.mocks.IOMockHelper.awaitIO
 import com.onesignal.mocks.MockHelper
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.collections.shouldBeEmpty
@@ -52,10 +51,17 @@ private class RecorderSpy : IObservabilityEventRecorder {
     override fun reset() = Unit
 }
 
+/** A context whose clipboard service is missing, which some stripped-down devices really lack. */
+private class NoClipboardContext(base: Context) : ContextWrapper(base) {
+    override fun getSystemService(name: String): Any? =
+        if (name == Context.CLIPBOARD_SERVICE) null else super.getSystemService(name)
+}
+
 /**
  * Drives the detector through synthetic focus/unfocus sequences with a controlled clock and
- * reads back the real (Robolectric) clipboard. Dwells are in milliseconds; the default cycle
- * takes 2s, so six of them sit well inside the 30s window.
+ * reads back the real (Robolectric) clipboard. The write happens on the focus callback itself,
+ * so every assertion can follow the cycles directly. Dwells are in milliseconds; the default
+ * cycle takes 2s, so six of them sit well inside the 30s window.
  */
 private class Harness(
     subscriptionId: String? = SUBSCRIPTION_ID,
@@ -63,6 +69,7 @@ private class Harness(
     consentRequired: Boolean? = null,
     consentGiven: Boolean? = null,
     fireOnSubscribe: Boolean = false,
+    clipboardAvailable: Boolean = true,
 ) {
     var nowMs = 100_000L
 
@@ -75,7 +82,7 @@ private class Harness(
 
     init {
         val applicationService = mockk<IApplicationService>()
-        every { applicationService.appContext } returns context
+        every { applicationService.appContext } returns if (clipboardAvailable) context else NoClipboardContext(context)
         every { applicationService.addApplicationLifecycleHandler(capture(handlerSlot)) } answers {
             // Mirrors ApplicationService.addApplicationLifecycleHandler when the app is
             // already foregrounded at subscribe time.
@@ -118,13 +125,10 @@ private class Harness(
 @RobolectricTest
 @Config(sdk = [Build.VERSION_CODES.O])
 class DeviceGestureDetectorTests : FunSpec({
-    listener(IOMockHelper)
-
     test("six rapid cycles copy the prefixed subscription ID to the clipboard") {
         val harness = Harness()
 
         repeat(6) { harness.cycle() }
-        awaitIO()
 
         harness.clipText() shouldBe "os: $SUBSCRIPTION_ID"
         harness.clipboard.primaryClip!!.description.label shouldBe "OneSignal subscription ID"
@@ -134,7 +138,6 @@ class DeviceGestureDetectorTests : FunSpec({
         val harness = Harness()
 
         repeat(5) { harness.cycle() }
-        awaitIO()
 
         harness.clipText() shouldBe null
     }
@@ -145,7 +148,6 @@ class DeviceGestureDetectorTests : FunSpec({
         // 7 seconds per round trip caps the window at five cycles, so a user who
         // backgrounds the app all day at a normal pace can never fire this.
         repeat(8) { harness.cycle(backgroundDwellMs = 3_000L, foregroundDwellMs = 4_000L) }
-        awaitIO()
 
         harness.clipText() shouldBe null
     }
@@ -157,7 +159,6 @@ class DeviceGestureDetectorTests : FunSpec({
         // A pause costs time, not accumulated cycles; all six still land inside the window.
         harness.cycle(foregroundDwellMs = 10_000L)
         repeat(2) { harness.cycle() }
-        awaitIO()
 
         harness.clipText() shouldBe harness.expectedClip
     }
@@ -169,11 +170,9 @@ class DeviceGestureDetectorTests : FunSpec({
         // Rotation with configChanges produces a synthetic pair this fast. It does not
         // count, so one more real cycle completes the gesture.
         harness.cycle(backgroundDwellMs = 1L)
-        awaitIO()
         harness.clipText() shouldBe null
 
         harness.cycle()
-        awaitIO()
         harness.clipText() shouldBe harness.expectedClip
     }
 
@@ -181,12 +180,10 @@ class DeviceGestureDetectorTests : FunSpec({
         val harness = Harness()
 
         repeat(6) { harness.cycle() }
-        awaitIO()
         harness.clipText() shouldBe harness.expectedClip
 
         harness.clipboard.setPrimaryClip(ClipData.newPlainText("other", "sentinel"))
         repeat(6) { harness.cycle() }
-        awaitIO()
         harness.clipText() shouldBe harness.expectedClip
     }
 
@@ -194,7 +191,6 @@ class DeviceGestureDetectorTests : FunSpec({
         val harness = Harness(killSwitchOn = true)
 
         repeat(6) { harness.cycle() }
-        awaitIO()
 
         harness.clipText() shouldBe null
     }
@@ -203,7 +199,6 @@ class DeviceGestureDetectorTests : FunSpec({
         val harness = Harness(consentRequired = true, consentGiven = null)
 
         repeat(6) { harness.cycle() }
-        awaitIO()
 
         harness.clipText() shouldBe null
     }
@@ -212,7 +207,6 @@ class DeviceGestureDetectorTests : FunSpec({
         val harness = Harness(consentRequired = true, consentGiven = true)
 
         repeat(6) { harness.cycle() }
-        awaitIO()
 
         harness.clipText() shouldBe harness.expectedClip
     }
@@ -222,7 +216,6 @@ class DeviceGestureDetectorTests : FunSpec({
         val harness = Harness(subscriptionId = null)
 
         repeat(6) { harness.cycle() }
-        awaitIO()
 
         harness.clipText() shouldBe "os: no subscription ID yet"
     }
@@ -231,7 +224,6 @@ class DeviceGestureDetectorTests : FunSpec({
         val harness = Harness(subscriptionId = "local-$SUBSCRIPTION_ID")
 
         repeat(6) { harness.cycle() }
-        awaitIO()
 
         harness.clipText() shouldBe "os: no subscription ID yet"
     }
@@ -240,11 +232,9 @@ class DeviceGestureDetectorTests : FunSpec({
         val harness = Harness(fireOnSubscribe = true)
 
         repeat(5) { harness.cycle() }
-        awaitIO()
         harness.clipText() shouldBe null
 
         harness.cycle()
-        awaitIO()
         harness.clipText() shouldBe harness.expectedClip
     }
 
@@ -254,12 +244,51 @@ class DeviceGestureDetectorTests : FunSpec({
         // Cold start: the app comes to the foreground with no background phase to pair with.
         harness.handler.onFocus(false)
         repeat(5) { harness.cycle() }
-        awaitIO()
         harness.clipText() shouldBe null
 
         harness.cycle()
-        awaitIO()
         harness.clipText() shouldBe harness.expectedClip
+    }
+
+    // ===== Boundaries and failure paths =====
+
+    test("a 249ms background is a blip and a 250ms one is a cycle") {
+        // The floor is inclusive: exactly the minimum counts. Six blips leave the window empty,
+        // so the six real cycles right after still need all six.
+        val harness = Harness()
+
+        repeat(6) { harness.cycle(backgroundDwellMs = 249L) }
+        harness.clipText() shouldBe null
+
+        repeat(6) { harness.cycle(backgroundDwellMs = 250L) }
+        harness.clipText() shouldBe harness.expectedClip
+    }
+
+    test("the window is inclusive at exactly 30 seconds") {
+        // Five 2s cycles complete at +2s..+10s. A sixth completing exactly 30s after the first
+        // still counts; one millisecond later the first has aged out and only five remain.
+        val exact = Harness()
+        repeat(5) { exact.cycle() }
+        exact.cycle(foregroundDwellMs = 21_000L, backgroundDwellMs = 1_000L)
+        exact.clipText() shouldBe exact.expectedClip
+
+        // Same real clipboard, so mark it before the second harness runs.
+        val late = Harness()
+        late.clipboard.setPrimaryClip(ClipData.newPlainText("other", "sentinel"))
+        repeat(5) { late.cycle() }
+        late.cycle(foregroundDwellMs = 21_001L, backgroundDwellMs = 1_000L)
+        late.clipText() shouldBe "sentinel"
+    }
+
+    test("a missing clipboard service copies nothing and records nothing") {
+        // The focus callback must survive a device without one, and the event must not claim
+        // a clip that was never set.
+        val harness = Harness(clipboardAvailable = false)
+
+        repeat(6) { harness.cycle() }
+
+        harness.clipText() shouldBe null
+        harness.recorder.recorded.shouldBeEmpty()
     }
 
     // ===== Observability event =====
@@ -271,11 +300,9 @@ class DeviceGestureDetectorTests : FunSpec({
 
         // Progress is silent: the event fires on recognition, not per cycle.
         repeat(5) { harness.cycle() }
-        awaitIO()
         harness.recorder.recorded.shouldBeEmpty()
 
         harness.cycle()
-        awaitIO()
 
         harness.recorder.recorded shouldBe
             listOf(
@@ -291,7 +318,6 @@ class DeviceGestureDetectorTests : FunSpec({
         val harness = Harness(killSwitchOn = true)
 
         repeat(6) { harness.cycle() }
-        awaitIO()
 
         harness.recorder.recorded shouldBe
             listOf(ObservabilityEvent.DEVICE_GESTURE to mapOf("gesture.result" to "disabled"))
@@ -304,7 +330,6 @@ class DeviceGestureDetectorTests : FunSpec({
             val harness = Harness(subscriptionId = subscriptionId)
 
             repeat(6) { harness.cycle() }
-            awaitIO()
 
             harness.recorder.recorded shouldBe
                 listOf(ObservabilityEvent.DEVICE_GESTURE to mapOf("gesture.result" to "no_id"))
@@ -316,7 +341,6 @@ class DeviceGestureDetectorTests : FunSpec({
         val harness = Harness(consentRequired = true, consentGiven = null)
 
         repeat(6) { harness.cycle() }
-        awaitIO()
 
         harness.recorder.recorded.shouldBeEmpty()
     }
@@ -325,7 +349,6 @@ class DeviceGestureDetectorTests : FunSpec({
         val harness = Harness()
 
         repeat(12) { harness.cycle() }
-        awaitIO()
 
         harness.recorder.recorded.map { it.first } shouldBe
             listOf(ObservabilityEvent.DEVICE_GESTURE, ObservabilityEvent.DEVICE_GESTURE)
