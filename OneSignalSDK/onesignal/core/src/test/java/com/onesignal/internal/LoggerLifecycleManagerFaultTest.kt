@@ -16,6 +16,7 @@ import com.onesignal.logger.ILogFileStore
 import com.onesignal.logger.ILogTelemetryRemote
 import com.onesignal.logger.ILogger
 import com.onesignal.logger.ILoggerPlatformProvider
+import com.onesignal.logger.IObservabilityEventRecorder
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.mockk.coEvery
@@ -540,6 +541,72 @@ class LoggerLifecycleManagerFaultTest : FunSpec({
         )
 
         manager.initializeFromCachedConfig()
+    }
+
+    // ===== The event recorder cannot take the pipeline down =====
+    // It rides the remote telemetry: a fault in it must not fail the level change, block the
+    // teardown, or reach the init path that hands it over.
+
+    test("event recorder attach and detach throw — the telemetry still comes up and is torn down") {
+        val telemetry = mockk<ILogTelemetryRemote>(relaxed = true)
+        val recorder = mockk<IObservabilityEventRecorder>()
+        every { recorder.attach(any()) } throws RuntimeException("attach boom")
+        every { recorder.detach(any()) } throws RuntimeException("detach boom")
+        val manager = managerWith(remoteTelemetry = { telemetry })
+        manager.attachEventRecorder(recorder)
+
+        manager.onModelReplaced(enabledConfig(), ModelChangeTags.HYDRATE)
+        manager.onModelReplaced(disabledConfig(), ModelChangeTags.HYDRATE)
+
+        verify { telemetry.shutdown() }
+    }
+
+    test("event recorder attach throws during a level change — the new telemetry is still adopted") {
+        val first = mockk<ILogTelemetryRemote>(relaxed = true)
+        val second = mockk<ILogTelemetryRemote>(relaxed = true)
+        var calls = 0
+        val recorder = mockk<IObservabilityEventRecorder>()
+        every { recorder.attach(any()) } throws RuntimeException("attach boom")
+        val manager = managerWith(remoteTelemetry = { if (calls++ == 0) first else second })
+        manager.attachEventRecorder(recorder)
+
+        manager.onModelReplaced(enabledConfig(LogLevel.ERROR), ModelChangeTags.HYDRATE)
+        manager.onModelReplaced(enabledConfig(LogLevel.WARN), ModelChangeTags.HYDRATE)
+
+        verify { first.shutdown() }
+        calls shouldBe 2
+    }
+
+    test("event recorder attach throws against live telemetry — attachEventRecorder does not propagate and the recorder is kept") {
+        val recorder = mockk<IObservabilityEventRecorder>()
+        every { recorder.attach(any()) } throws RuntimeException("attach boom")
+        val manager = managerWith()
+        manager.onModelReplaced(enabledConfig(), ModelChangeTags.HYDRATE)
+
+        manager.attachEventRecorder(recorder)
+
+        // The fault must not have dropped the hand-over: the next level change still attaches.
+        manager.onModelReplaced(enabledConfig(LogLevel.WARN), ModelChangeTags.HYDRATE)
+        verify(exactly = 2) { recorder.attach(any()) }
+    }
+
+    test("an enable retry after a partial failure attaches the event recorder once") {
+        var crashHandlerAttempts = 0
+        val recorder = mockk<IObservabilityEventRecorder>(relaxed = true)
+        val manager =
+            managerWith(
+                crashHandler = {
+                    if (crashHandlerAttempts++ == 0) throw RuntimeException("first crash handler boom")
+                    mockk(relaxed = true)
+                },
+            )
+        manager.attachEventRecorder(recorder)
+
+        manager.onModelReplaced(enabledConfig(), ModelChangeTags.HYDRATE)
+        manager.onModelReplaced(enabledConfig(), ModelChangeTags.HYDRATE)
+
+        crashHandlerAttempts shouldBe 2
+        verify(exactly = 1) { recorder.attach(any()) }
     }
 })
 

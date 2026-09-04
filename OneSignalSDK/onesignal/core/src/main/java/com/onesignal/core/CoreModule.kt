@@ -42,10 +42,13 @@ import com.onesignal.core.internal.startup.IStartableService
 import com.onesignal.core.internal.time.ITime
 import com.onesignal.core.internal.time.impl.Time
 import com.onesignal.debug.internal.crash.OneSignalCrashUploaderWrapper
+import com.onesignal.debug.internal.logging.logger.android.AndroidLogger
 import com.onesignal.inAppMessages.IInAppMessagesManager
 import com.onesignal.inAppMessages.internal.MisconfiguredIAMManager
 import com.onesignal.location.ILocationManager
 import com.onesignal.location.internal.MisconfiguredLocationManager
+import com.onesignal.logger.IObservabilityEventRecorder
+import com.onesignal.logger.LoggerFactory
 import com.onesignal.notifications.INotificationsManager
 import com.onesignal.notifications.internal.MisconfiguredNotificationsManager
 import com.onesignal.user.internal.jwt.JwtTokenStore
@@ -106,6 +109,15 @@ internal class CoreModule : IModule {
 
         // Crash Uploader (crash handler is initialized directly in OneSignalImp for early initialization)
         builder.register<OneSignalCrashUploaderWrapper>().provides<IStartableService>()
+
+        // Observability events; the observability lifecycle manager attaches the remote telemetry after bootstrap.
+        builder.register { provider ->
+            val featureManager = provider.getService(IFeatureManager::class.java)
+            LoggerFactory.createObservabilityEventRecorder(
+                flags = { flag -> featureManager.isEnabled(flag) },
+                logger = AndroidLogger(),
+            )
+        }.provides<IObservabilityEventRecorder>()
 
         // Register dummy services in the event they are not configured. These dummy services
         // will throw an error message if the associated functionality is attempted to be used.
