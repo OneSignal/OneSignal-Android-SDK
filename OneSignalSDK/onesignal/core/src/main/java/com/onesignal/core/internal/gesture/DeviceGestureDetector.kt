@@ -9,8 +9,10 @@ import com.onesignal.common.threading.suspendifyOnMain
 import com.onesignal.core.internal.application.IApplicationLifecycleHandler
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.config.ConfigModelStore
+import com.onesignal.core.internal.features.IFeatureManager
 import com.onesignal.core.internal.startup.IStartableService
 import com.onesignal.debug.internal.logging.Logging
+import com.onesignal.features.FeatureFlag
 import com.onesignal.logger.IObservabilityEventRecorder
 import com.onesignal.logger.ObservabilityEvent
 
@@ -26,11 +28,8 @@ import com.onesignal.logger.ObservabilityEvent
  * fires when an activity declaring orientation in `configChanges` rotates. The window is the
  * only rate rule; six cycles inside it takes sustained five-second round trips.
  *
- * Adding [KILL_SWITCH_KEY] to the app's enabled feature keys disables the gesture. Absent
- * means enabled, so a device that has never fetched flags still has it. Reads the raw
- * [com.onesignal.core.internal.config.ConfigModel.sdkRemoteFeatureFlags] list because
- * [com.onesignal.core.internal.features.IFeatureManager] only resolves keys the KMP catalog
- * registers.
+ * [FeatureFlag.SDK_DEVICE_GESTURE_DISABLED] turns the gesture off. Absent means enabled, so a
+ * device that has never fetched flags still has it.
  *
  * Every recognised gesture also records [ObservabilityEvent.DEVICE_GESTURE], with its outcome
  * and the copied ID, so the gesture's usage can be measured.
@@ -38,6 +37,7 @@ import com.onesignal.logger.ObservabilityEvent
 internal class DeviceGestureDetector(
     private val applicationService: IApplicationService,
     private val configModelStore: ConfigModelStore,
+    private val featureManager: IFeatureManager,
     private val eventRecorder: IObservabilityEventRecorder,
 ) : IStartableService,
     IApplicationLifecycleHandler {
@@ -112,7 +112,7 @@ internal class DeviceGestureDetector(
             // Not recorded either: nothing about the device may ship before consent.
             config.consentRequired == true && config.consentGiven != true ->
                 Logging.debug("DeviceGestureDetector: gesture detected but privacy consent is not granted")
-            config.sdkRemoteFeatureFlags.any { it.equals(KILL_SWITCH_KEY, ignoreCase = true) } -> {
+            featureManager.isEnabled(FeatureFlag.SDK_DEVICE_GESTURE_DISABLED) -> {
                 Logging.debug("DeviceGestureDetector: gesture detected but disabled remotely")
                 recordGesture(GestureResult.DISABLED)
             }
@@ -167,7 +167,6 @@ internal class DeviceGestureDetector(
         /** Shortest background phase a human can produce; anything faster is synthetic. */
         internal const val MIN_BACKGROUND_DWELL_MS = 250L
 
-        internal const val KILL_SWITCH_KEY = "sdk_device_gesture_disabled"
         private const val CLIP_LABEL = "OneSignal subscription ID"
         private const val CLIP_PREFIX = "os: "
         internal const val NO_SUBSCRIPTION_CLIP_TEXT = CLIP_PREFIX + "no subscription ID yet"
