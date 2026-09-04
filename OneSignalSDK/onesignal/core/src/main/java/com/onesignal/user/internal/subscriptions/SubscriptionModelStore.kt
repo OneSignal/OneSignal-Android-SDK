@@ -27,6 +27,7 @@ open class SubscriptionModelStore(prefs: IPreferencesService) : SimpleModelStore
                         model.carrier = existingPushModel.carrier
                         model.appVersion = existingPushModel.appVersion
                         model.status = existingPushModel.status
+                        model.restApiDisabledReason = existingPushModel.restApiDisabledReason
                     }
                     break
                 }

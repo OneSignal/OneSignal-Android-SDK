@@ -68,6 +68,7 @@ class UserSwitcher(
                 optedIn = currentPushSubscription?.optedIn ?: true
                 address = currentPushSubscription?.address ?: ""
                 status = currentPushSubscription?.status ?: SubscriptionStatus.NO_PERMISSION
+                restApiDisabledReason = currentPushSubscription?.restApiDisabledReason ?: 0
                 sdk = oneSignalUtils.sdkVersion
                 deviceOS = this@UserSwitcher.deviceOS ?: ""
                 carrier = carrierName ?: ""

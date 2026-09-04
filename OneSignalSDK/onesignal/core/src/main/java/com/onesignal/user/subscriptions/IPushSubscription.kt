@@ -15,7 +15,8 @@ interface IPushSubscription : ISubscription {
      *  Whether the user of this subscription is opted-in to received notifications. When true,
      *  the user is able to receive notifications through this subscription. Otherwise, the
      *  user will not receive notifications through this subscription (even when the user has
-     *  granted app permission).
+     *  granted app permission). This reflects the user's preference and app permission only; a
+     *  subscription the app owner disabled through the REST API still reports true here.
      */
     val optedIn: Boolean
 

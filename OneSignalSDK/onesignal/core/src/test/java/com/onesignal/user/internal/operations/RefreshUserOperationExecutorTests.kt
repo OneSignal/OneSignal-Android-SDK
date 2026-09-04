@@ -529,4 +529,123 @@ class RefreshUserOperationExecutorTests : FunSpec({
             mockUserBackendService.getUser(appId, IdentityConstants.ONESIGNAL_ID, remoteOneSignalId)
         }
     }
+
+    test("push self-heal: does NOT enqueue follow-up op when server was disabled through the REST API") {
+        // Given: server says push is disabled with the REST API code, local view says enabled
+        val (executor, cachedPushSubscriptionModel, _) =
+            buildSelfHealHarness(
+                serverPushEnabled = false,
+                serverNotificationTypes = SubscriptionStatus.DISABLED_FROM_REST_API.value,
+                localOptedIn = true,
+                localStatus = SubscriptionStatus.SUBSCRIBED,
+                localAddress = onDevicePushToken,
+            )
+
+        // When
+        val response = executor.execute(listOf(RefreshUserOperation(appId, remoteOneSignalId, null)))
+
+        // Then no follow-up op, and the disable is recorded on the cached push model
+        response.result shouldBe ExecutionResult.SUCCESS
+        response.operations shouldBe null
+        cachedPushSubscriptionModel.restApiDisabledReason shouldBe SubscriptionStatus.DISABLED_FROM_REST_API.value
+    }
+
+    test("push self-heal: still re-asserts local truth when the server reports another disabled code") {
+        // Any disabled code other than -31 stays device-recoverable
+        val (executor, cachedPushSubscriptionModel, _) =
+            buildSelfHealHarness(
+                serverPushEnabled = false,
+                serverNotificationTypes = -2,
+                localOptedIn = true,
+                localStatus = SubscriptionStatus.SUBSCRIBED,
+                localAddress = onDevicePushToken,
+            )
+
+        val originalLogLevel = Logging.logLevel
+        Logging.logLevel = LogLevel.NONE
+        try {
+            // When
+            val response = executor.execute(listOf(RefreshUserOperation(appId, remoteOneSignalId, null)))
+
+            // Then the self-heal op is emitted and nothing is recorded as a REST API disable
+            response.result shouldBe ExecutionResult.SUCCESS
+            response.operations?.count() shouldBe 1
+            (response.operations!![0] is UpdateSubscriptionOperation) shouldBe true
+            cachedPushSubscriptionModel.restApiDisabledReason shouldBe 0
+        } finally {
+            Logging.logLevel = originalLogLevel
+        }
+    }
+
+    test("push refresh: clears a recorded REST API disable when the server reports another code") {
+        // Given: -31 recorded locally, server now reports a different code
+        val (executor, cachedPushSubscriptionModel, _) =
+            buildSelfHealHarness(
+                serverPushEnabled = false,
+                serverNotificationTypes = -2,
+                localOptedIn = true,
+                localStatus = SubscriptionStatus.SUBSCRIBED,
+                localAddress = onDevicePushToken,
+            )
+        cachedPushSubscriptionModel.restApiDisabledReason = SubscriptionStatus.DISABLED_FROM_REST_API.value
+
+        val originalLogLevel = Logging.logLevel
+        Logging.logLevel = LogLevel.NONE
+        try {
+            // When
+            val response = executor.execute(listOf(RefreshUserOperation(appId, remoteOneSignalId, null)))
+
+            // Then the mirror clears and the self-heal still re-asserts local truth
+            response.result shouldBe ExecutionResult.SUCCESS
+            cachedPushSubscriptionModel.restApiDisabledReason shouldBe 0
+            response.operations?.count() shouldBe 1
+        } finally {
+            Logging.logLevel = originalLogLevel
+        }
+    }
+
+    test("push refresh: clears a recorded REST API disable when the server reports enabled again") {
+        // Given: a locally recorded REST API disable, server now reports the subscription enabled
+        val (executor, cachedPushSubscriptionModel, _) =
+            buildSelfHealHarness(
+                serverPushEnabled = true,
+                serverNotificationTypes = 1,
+                localOptedIn = true,
+                localStatus = SubscriptionStatus.SUBSCRIBED,
+                localAddress = onDevicePushToken,
+            )
+        cachedPushSubscriptionModel.restApiDisabledReason = SubscriptionStatus.DISABLED_FROM_REST_API.value
+        cachedPushSubscriptionModel.restApiDisableClearedByUser = true
+
+        // When
+        val response = executor.execute(listOf(RefreshUserOperation(appId, remoteOneSignalId, null)))
+
+        // Then the mirror clears and the opt-in's precedence over stale reports ends
+        response.result shouldBe ExecutionResult.SUCCESS
+        response.operations shouldBe null
+        cachedPushSubscriptionModel.restApiDisabledReason shouldBe 0
+        cachedPushSubscriptionModel.restApiDisableClearedByUser shouldBe false
+    }
+
+    test("push refresh: keeps an opt-in over a fetch that still reports the REST API disable it cleared") {
+        // Given: optIn() ran while this fetch was pending, so the server still reports -31
+        val (executor, cachedPushSubscriptionModel, _) =
+            buildSelfHealHarness(
+                serverPushEnabled = false,
+                serverNotificationTypes = SubscriptionStatus.DISABLED_FROM_REST_API.value,
+                localOptedIn = true,
+                localStatus = SubscriptionStatus.SUBSCRIBED,
+                localAddress = onDevicePushToken,
+            )
+        cachedPushSubscriptionModel.restApiDisableClearedByUser = true
+
+        // When
+        val response = executor.execute(listOf(RefreshUserOperation(appId, remoteOneSignalId, null)))
+
+        // Then the stale disable is not recorded, the flag stays, and no self-heal fires
+        response.result shouldBe ExecutionResult.SUCCESS
+        response.operations shouldBe null
+        cachedPushSubscriptionModel.restApiDisabledReason shouldBe 0
+        cachedPushSubscriptionModel.restApiDisableClearedByUser shouldBe true
+    }
 })

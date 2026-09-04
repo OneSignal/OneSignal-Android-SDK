@@ -31,9 +31,11 @@ import com.onesignal.user.internal.operations.CreateSubscriptionOperation
 import com.onesignal.user.internal.operations.DeleteSubscriptionOperation
 import com.onesignal.user.internal.operations.TransferSubscriptionOperation
 import com.onesignal.user.internal.operations.UpdateSubscriptionOperation
+import com.onesignal.user.internal.operations.impl.listeners.SubscriptionModelStoreListener
 import com.onesignal.user.internal.operations.impl.states.NewRecordsState
 import com.onesignal.user.internal.subscriptions.SubscriptionModel
 import com.onesignal.user.internal.subscriptions.SubscriptionModelStore
+import com.onesignal.user.internal.subscriptions.SubscriptionStatus
 import com.onesignal.user.internal.subscriptions.SubscriptionType
 
 internal class SubscriptionOperationExecutor(
@@ -265,11 +267,22 @@ internal class SubscriptionOperationExecutor(
                     // emitting Creates with the same subscriptionId, so they dedupe instead
                     // of producing two POST /users subscription rows. HYDRATE prevents the
                     // SubscriptionModelStoreListener from enqueuing follow-on operations.
-                    _subscriptionModelStore.get(staleSubscriptionId)?.setStringProperty(
+                    val recoveryModel = _subscriptionModelStore.get(staleSubscriptionId)
+                    recoveryModel?.setStringProperty(
                         SubscriptionModel::id.name,
                         recoveryLocalId,
                         ModelChangeTags.HYDRATE,
                     )
+                    // The stale record died with any recorded REST API disable; recreate from
+                    // device truth rather than the values frozen on the failed operation.
+                    recoveryModel?.setIntProperty(
+                        SubscriptionModel::restApiDisabledReason.name,
+                        0,
+                        ModelChangeTags.HYDRATE,
+                    )
+                    val (recoveryEnabled, recoveryStatus) =
+                        recoveryModel?.let { SubscriptionModelStoreListener.getSubscriptionEnabledAndStatus(it) }
+                            ?: freshStartWithoutDeadDisable(lastOperation)
                     if (_configModelStore.model.pushSubscriptionId == staleSubscriptionId) {
                         _configModelStore.model.pushSubscriptionId = recoveryLocalId
                     }
@@ -284,9 +297,9 @@ internal class SubscriptionOperationExecutor(
                                 lastOperation.externalId,
                                 recoveryLocalId,
                                 lastOperation.type,
-                                lastOperation.enabled,
+                                recoveryEnabled,
                                 lastOperation.address,
-                                lastOperation.status,
+                                recoveryStatus,
                             ),
                         ),
                     )
@@ -374,6 +387,15 @@ internal class SubscriptionOperationExecutor(
         }
 
         return ExecutionResponse(ExecutionResult.SUCCESS)
+    }
+
+    /** The failed op's enabled/status, minus a REST API disable that belonged to the dead record. */
+    private fun freshStartWithoutDeadDisable(operation: UpdateSubscriptionOperation): Pair<Boolean, SubscriptionStatus> {
+        return if (operation.status == SubscriptionStatus.DISABLED_FROM_REST_API) {
+            Pair(true, SubscriptionStatus.SUBSCRIBED)
+        } else {
+            Pair(operation.enabled, operation.status)
+        }
     }
 
     companion object {

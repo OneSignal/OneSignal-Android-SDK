@@ -125,7 +125,8 @@ internal class RefreshUserOperationExecutor(
                             SubscriptionType.PUSH
                         }
                     }
-                subscriptionModel.optedIn = subscriptionModel.status != SubscriptionStatus.UNSUBSCRIBE && subscriptionModel.status != SubscriptionStatus.DISABLED_FROM_REST_API_DEFAULT_REASON
+                subscriptionModel.optedIn = subscriptionModel.status != SubscriptionStatus.UNSUBSCRIBE &&
+                    subscriptionModel.status != SubscriptionStatus.DISABLED_FROM_REST_API
                 subscriptionModel.sdk = subscription.sdk ?: ""
                 subscriptionModel.deviceOS = subscription.deviceOS ?: ""
                 subscriptionModel.carrier = subscription.carrier ?: ""
@@ -136,6 +137,7 @@ internal class RefreshUserOperationExecutor(
                 if (subscriptionModel.type != SubscriptionType.PUSH) {
                     subscriptionModels.add(subscriptionModel)
                 } else if (subscription.id == pushSubscriptionIdFromConfig && pushSelfHealOperationForStuckSubscription == null) {
+                    hydrateRestApiDisableState(subscription, pushSubscriptionIdFromConfig)
                     // Self-heal for users stuck at "Never Subscribed". Older SDK builds dispatched
                     // the merged create-subscription + update-subscription(SUBSCRIBED) batch as a
                     // POST /subscriptions carrying the already-existing server-side id; the server
@@ -218,7 +220,10 @@ internal class RefreshUserOperationExecutor(
 
         val (localEnabled, localStatus) = SubscriptionModelStoreListener.getSubscriptionEnabledAndStatus(cachedPushSubscriptionModel)
         val serverEnabled = (serverSubscription.enabled == true) && ((serverSubscription.notificationTypes ?: 0) > 0)
-        val divergent = localEnabled && !serverEnabled
+        // A REST API disable is deliberate suppression, not the stuck-subscription drift this
+        // self-heal exists for; leave it in place.
+        val serverDisabledViaRestApi = SubscriptionStatus.isRestApiDisable(serverSubscription.notificationTypes)
+        val divergent = localEnabled && !serverEnabled && !serverDisabledViaRestApi
 
         return if (divergent) {
             Logging.info(
@@ -239,6 +244,37 @@ internal class RefreshUserOperationExecutor(
             )
         } else {
             null
+        }
+    }
+
+    /**
+     * Records or clears the server's REST API disable state on the cached push model. Only that
+     * state is server-owned; the device stays the source of truth for the rest of the push model,
+     * which is why push subscriptions are otherwise not hydrated from the backend. An opt-in whose
+     * update has not reached the server yet outranks a fetch that still reports the disable it cleared.
+     */
+    private fun hydrateRestApiDisableState(
+        serverSubscription: SubscriptionObject,
+        pushSubscriptionId: String,
+    ) {
+        val cachedPushSubscriptionModel = _subscriptionsModelStore.get(pushSubscriptionId)
+        val serverTypes = serverSubscription.notificationTypes
+        if (cachedPushSubscriptionModel == null || serverTypes == null) return
+        // The recorded reason mirrors the server's field: -31 records, any other reported value clears.
+        val target = if (SubscriptionStatus.isRestApiDisable(serverTypes)) serverTypes else 0
+        if (target == 0) {
+            cachedPushSubscriptionModel.restApiDisableClearedByUser = false
+        } else if (cachedPushSubscriptionModel.restApiDisableClearedByUser) {
+            // This fetch predates the opt-in's update, so it reports the state that update replaces.
+            Logging.debug("RefreshUserOperationExecutor: keeping an opt-in over a stale REST API disable report")
+            return
+        }
+        if (cachedPushSubscriptionModel.restApiDisabledReason != target) {
+            cachedPushSubscriptionModel.setIntProperty(
+                SubscriptionModel::restApiDisabledReason.name,
+                target,
+                ModelChangeTags.HYDRATE,
+            )
         }
     }
 

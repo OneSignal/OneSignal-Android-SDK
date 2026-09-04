@@ -73,7 +73,12 @@ internal class SubscriptionModelStoreListener(
             val status: SubscriptionStatus
             val enabled: Boolean
 
-            if (model.optedIn && model.status == SubscriptionStatus.SUBSCRIBED && model.address.isNotEmpty()) {
+            // A REST API disable is server-owned; report it back rather than the device state so
+            // subscription payloads don't re-enable a suppressed subscription.
+            if (SubscriptionStatus.isRestApiDisable(model.restApiDisabledReason)) {
+                enabled = false
+                status = SubscriptionStatus.DISABLED_FROM_REST_API
+            } else if (model.optedIn && model.status == SubscriptionStatus.SUBSCRIBED && model.address.isNotEmpty()) {
                 enabled = true
                 status = SubscriptionStatus.SUBSCRIBED
             } else {
