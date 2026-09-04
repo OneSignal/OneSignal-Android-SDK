@@ -12,7 +12,10 @@ import com.google.firebase.installations.FirebaseInstallations
 import com.google.firebase.messaging.FirebaseMessaging
 import com.onesignal.common.AndroidUtils
 import com.onesignal.core.internal.application.IApplicationService
+import com.onesignal.core.internal.config.ConfigModelStore
+import com.onesignal.core.internal.device.IDeviceService
 import com.onesignal.mocks.MockHelper
+import com.onesignal.user.internal.subscriptions.SubscriptionStatus
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
@@ -47,6 +50,8 @@ private fun defaultApp(
 private fun registrator(
     legacyToken: Task<String>,
     installedApps: List<FirebaseApp> = emptyList(),
+    configModelStore: ConfigModelStore = MockHelper.configModelStore(),
+    deviceService: IDeviceService = mockk(relaxed = true),
 ): PushRegistratorFCM {
     val messaging = mockk<FirebaseMessaging>()
     every { messaging.token } returns legacyToken
@@ -62,10 +67,10 @@ private fun registrator(
     every { applicationService.appContext } returns ApplicationProvider.getApplicationContext<Context>()
 
     return PushRegistratorFCM(
-        MockHelper.configModelStore(),
+        configModelStore,
         applicationService,
         mockk(relaxed = true),
-        mockk(relaxed = true),
+        deviceService,
     )
 }
 
@@ -81,6 +86,55 @@ class PushRegistratorFCMTests : FunSpec({
         val token = withContext(Dispatchers.IO) { registrator.getToken(SENDER_ID) }
 
         token shouldBe "fcm-token"
+    }
+
+    test("recreates OneSignal's FirebaseApp when the sender id changes") {
+        val firstMessaging = mockk<FirebaseMessaging>()
+        every { firstMessaging.token } returns Tasks.forResult("first-token")
+        val firstApp = mockk<FirebaseApp>(relaxed = true)
+        every { firstApp.get(FirebaseMessaging::class.java) } returns firstMessaging
+        val secondMessaging = mockk<FirebaseMessaging>()
+        every { secondMessaging.token } returns Tasks.forResult("second-token")
+        val secondApp = mockk<FirebaseApp>(relaxed = true)
+        every { secondApp.get(FirebaseMessaging::class.java) } returns secondMessaging
+        val initializedOptions = mutableListOf<FirebaseOptions>()
+        val registrator = registrator(legacyToken = Tasks.forResult("unused-token"))
+        every {
+            FirebaseApp.initializeApp(any(), capture(initializedOptions), any())
+        } returnsMany listOf(firstApp, secondApp)
+
+        val firstToken = withContext(Dispatchers.IO) { registrator.getToken(SENDER_ID) }
+        val secondToken = withContext(Dispatchers.IO) { registrator.getToken("999999999999") }
+
+        firstToken shouldBe "first-token"
+        secondToken shouldBe "second-token"
+        initializedOptions.map { it.gcmSenderId } shouldBe listOf(SENDER_ID, "999999999999")
+        verify(exactly = 1) { firstApp.delete() }
+    }
+
+    test("registers a legacy FCM token using the locally derived sender id before the dashboard provides one") {
+        val app = defaultApp(null)
+        val configModelStore =
+            MockHelper.configModelStore {
+                it.isInitializedWithRemote = true
+                it.googleProjectNumber = null
+            }
+        val deviceService = mockk<IDeviceService>()
+        every { deviceService.hasFCMLibrary } returns true
+        every { deviceService.isGMSInstalledAndEnabled } returns true
+        val registrator =
+            registrator(
+                legacyToken = Tasks.forResult("fcm-token"),
+                installedApps = listOf(app),
+                configModelStore = configModelStore,
+                deviceService = deviceService,
+            )
+
+        val result = withContext(Dispatchers.IO) { registrator.registerForPush() }
+
+        result.id shouldBe "fcm-token"
+        result.status shouldBe SubscriptionStatus.SUBSCRIBED
+        verify(exactly = 1) { FirebaseApp.initializeApp(any(), any<FirebaseOptions>(), any()) }
     }
 
     test("registers the installation id through the matching default FirebaseApp") {
@@ -110,6 +164,41 @@ class PushRegistratorFCMTests : FunSpec({
         verify(exactly = 0) { FirebaseApp.initializeApp(any(), any<FirebaseOptions>(), any()) }
     }
 
+    test("registers an installation id before the dashboard has a sender id") {
+        val metaData = Bundle().apply { putBoolean("firebase_messaging_installation_id_enabled", true) }
+        mockkObject(AndroidUtils)
+        every { AndroidUtils.getManifestMetaBundle(any()) } returns metaData
+        val messaging = mockk<FirebaseMessaging>()
+        val app = defaultApp(null, messaging)
+        val installations = mockk<FirebaseInstallations>()
+        every { installations.id } returns Tasks.forResult("installation-id")
+        mockkStatic(FirebaseInstallations::class)
+        every { FirebaseInstallations.getInstance(app) } returns installations
+        mockkObject(FCMTokenProvider)
+        every { FCMTokenProvider.hasRegisterMethod(FirebaseMessaging::class.java) } returns true
+        every { FCMTokenProvider.invokeRegister(messaging) } returns Tasks.forResult(null)
+        val configModelStore =
+            MockHelper.configModelStore {
+                it.isInitializedWithRemote = true
+                it.googleProjectNumber = null
+            }
+        val deviceService = mockk<IDeviceService>()
+        every { deviceService.hasFCMLibrary } returns true
+        every { deviceService.isGMSInstalledAndEnabled } returns true
+        val registrator =
+            registrator(
+                legacyToken = Tasks.forResult("unused-fcm-token"),
+                installedApps = listOf(app),
+                configModelStore = configModelStore,
+                deviceService = deviceService,
+            )
+
+        val result = withContext(Dispatchers.IO) { registrator.registerForPush() }
+
+        result.id shouldBe "installation-id"
+        result.status shouldBe SubscriptionStatus.SUBSCRIBED
+    }
+
     test("explains the problem when the app has no default FirebaseApp to register with") {
         val registrator = registrator(legacyToken = Tasks.forException(disabledLegacyApi))
 
@@ -135,5 +224,21 @@ class PushRegistratorFCMTests : FunSpec({
             }
 
         thrown.message!! shouldContain "sender id 999999999999"
+    }
+
+    test("uses OneSignal's FirebaseApp for a legacy token when the default app has a different sender id") {
+        val messaging = mockk<FirebaseMessaging>()
+        every { messaging.token } returns Tasks.forResult("wrong-project-token")
+        val registrator =
+            registrator(
+                legacyToken = Tasks.forResult("fcm-token"),
+                installedApps = listOf(defaultApp("999999999999", messaging)),
+            )
+
+        val token = withContext(Dispatchers.IO) { registrator.getToken(SENDER_ID) }
+
+        token shouldBe "fcm-token"
+        verify(exactly = 0) { messaging.token }
+        verify(exactly = 1) { FirebaseApp.initializeApp(any(), any<FirebaseOptions>(), any()) }
     }
 })
