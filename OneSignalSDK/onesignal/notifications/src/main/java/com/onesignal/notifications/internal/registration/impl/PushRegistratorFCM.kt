@@ -64,11 +64,11 @@ internal class PushRegistratorFCM(
     }
 
     private fun getLegacyToken(senderId: String): Task<String> {
-        initFirebaseApp(senderId)
-        // We use firebaseApp.get(FirebaseMessaging.class) instead of FirebaseMessaging.getInstance()
+        val app = initFirebaseApp(senderId)
+        // We use the named app's FirebaseMessaging instance instead of FirebaseMessaging.getInstance()
         //   as the latter uses the default Firebase app. We need to use a custom Firebase app as
         //   the senderId is provided at runtime.
-        return firebaseApp!!.get(FirebaseMessaging::class.java).token
+        return app.get(FirebaseMessaging::class.java).token
     }
 
     // Manifest merging means the flag can arrive from a dependency instead of the app's own
@@ -100,8 +100,8 @@ internal class PushRegistratorFCM(
         )
     }
 
-    private fun initFirebaseApp(senderId: String) {
-        if (firebaseApp != null) return
+    private fun initFirebaseApp(senderId: String): FirebaseApp {
+        firebaseApp?.let { return it }
         val firebaseOptions =
             FirebaseOptions
                 .Builder()
@@ -110,7 +110,8 @@ internal class PushRegistratorFCM(
                 .setApiKey(apiKey)
                 .setProjectId(projectId)
                 .build()
-        firebaseApp = FirebaseApp.initializeApp(_applicationService.appContext, firebaseOptions, FCM_APP_NAME)
+        return FirebaseApp.initializeApp(_applicationService.appContext, firebaseOptions, FCM_APP_NAME)
+            .also { firebaseApp = it }
     }
 }
 
