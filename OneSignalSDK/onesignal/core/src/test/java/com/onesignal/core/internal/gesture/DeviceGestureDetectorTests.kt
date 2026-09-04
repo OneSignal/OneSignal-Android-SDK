@@ -214,22 +214,23 @@ class DeviceGestureDetectorTests : FunSpec({
         harness.clipText() shouldBe harness.expectedClip
     }
 
-    test("a missing push subscription copies nothing") {
+    test("a missing push subscription copies the placeholder") {
+        // Someone following the docs gets a visible result that says why there is no ID.
         val harness = Harness(subscriptionId = null)
 
         repeat(6) { harness.cycle() }
         awaitIO()
 
-        harness.clipText() shouldBe null
+        harness.clipText() shouldBe "os: no subscription ID yet"
     }
 
-    test("a local not-yet-synced push subscription ID copies nothing") {
+    test("a local not-yet-synced push subscription ID copies the placeholder") {
         val harness = Harness(subscriptionId = "local-$SUBSCRIPTION_ID")
 
         repeat(6) { harness.cycle() }
         awaitIO()
 
-        harness.clipText() shouldBe null
+        harness.clipText() shouldBe "os: no subscription ID yet"
     }
 
     test("the subscribe-time focus replay does not count as a cycle") {

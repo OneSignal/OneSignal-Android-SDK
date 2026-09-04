@@ -17,7 +17,8 @@ import com.onesignal.logger.ObservabilityEvent
 /**
  * Detects the test-device gesture: [REQUIRED_CYCLES] background/foreground cycles within
  * [WINDOW_MS], then copies the push subscription ID to the clipboard, prefixed `os:` (see
- * [clipText]), so the person can paste it into the dashboard.
+ * [clipText]), so the person can paste it into the dashboard. Without a subscription it copies
+ * [NO_SUBSCRIPTION_CLIP_TEXT] instead, so someone following the docs can tell the gesture worked.
  *
  * A cycle is an unfocus/focus pair whose background phase lasts at least
  * [MIN_BACKGROUND_DWELL_MS]; the floor filters the synthetic pair
@@ -115,15 +116,17 @@ internal class DeviceGestureDetector(
                 Logging.debug("DeviceGestureDetector: gesture detected but disabled remotely")
                 recordGesture(GestureResult.DISABLED)
             }
-            subscriptionId.isNullOrEmpty() || IDManager.isLocalId(subscriptionId) -> {
-                Logging.info("DeviceGestureDetector: gesture detected before the push subscription exists, nothing copied")
-                recordGesture(GestureResult.NO_ID)
-            }
-            else -> writeToClipboard(subscriptionId)
+            subscriptionId.isNullOrEmpty() || IDManager.isLocalId(subscriptionId) ->
+                writeToClipboard(NO_SUBSCRIPTION_CLIP_TEXT, GestureResult.NO_ID)
+            else -> writeToClipboard(clipText(subscriptionId), GestureResult.COPIED, copiedId = subscriptionId)
         }
     }
 
-    private fun writeToClipboard(subscriptionId: String) {
+    private fun writeToClipboard(
+        text: String,
+        result: GestureResult,
+        copiedId: String? = null,
+    ) {
         suspendifyOnMain {
             val context = applicationService.appContext
             val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
@@ -131,14 +134,14 @@ internal class DeviceGestureDetector(
                 Logging.warn("DeviceGestureDetector: clipboard service unavailable, nothing copied")
             } else {
                 // No EXTRA_IS_SENSITIVE: the Android 13+ copy preview is the person's confirmation.
-                clipboard.setPrimaryClip(ClipData.newPlainText(CLIP_LABEL, clipText(subscriptionId)))
-                Logging.info("DeviceGestureDetector: push subscription ID copied to clipboard")
-                recordGesture(GestureResult.COPIED, copiedId = subscriptionId)
+                clipboard.setPrimaryClip(ClipData.newPlainText(CLIP_LABEL, text))
+                Logging.info("DeviceGestureDetector: clipboard set, gesture result ${result.wire}")
+                recordGesture(result, copiedId)
             }
         }
     }
 
-    /** Recorded once the outcome is known, so `copied` means the clip was actually set. */
+    /** Recorded once the clip is set, so a result never claims a clipboard change that did not happen. */
     private fun recordGesture(
         result: GestureResult,
         copiedId: String? = null,
@@ -166,6 +169,8 @@ internal class DeviceGestureDetector(
 
         internal const val KILL_SWITCH_KEY = "sdk_device_gesture_disabled"
         private const val CLIP_LABEL = "OneSignal subscription ID"
+        private const val CLIP_PREFIX = "os: "
+        internal const val NO_SUBSCRIPTION_CLIP_TEXT = CLIP_PREFIX + "no subscription ID yet"
         private const val ATTRIBUTE_RESULT = "gesture.result"
         private const val ATTRIBUTE_PUSH_SUBSCRIPTION_ID = "gesture.push_subscription_id"
 
@@ -173,6 +178,6 @@ internal class DeviceGestureDetector(
          * The `os:` prefix marks the value as a OneSignal ID, for the dashboard's paste target and
          * for anyone who copied it by accident.
          */
-        internal fun clipText(subscriptionId: String): String = "os: $subscriptionId"
+        internal fun clipText(subscriptionId: String): String = CLIP_PREFIX + subscriptionId
     }
 }
