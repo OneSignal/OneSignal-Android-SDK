@@ -114,7 +114,7 @@ internal class CoreModule : IModule {
         builder.register { provider ->
             val featureManager = provider.getService(IFeatureManager::class.java)
             LoggerFactory.createObservabilityEventRecorder(
-                gate = { event -> featureManager.isEnabled(event.flag) },
+                flags = { flag -> featureManager.isEnabled(flag) },
                 logger = AndroidLogger(),
             )
         }.provides<IObservabilityEventRecorder>()
