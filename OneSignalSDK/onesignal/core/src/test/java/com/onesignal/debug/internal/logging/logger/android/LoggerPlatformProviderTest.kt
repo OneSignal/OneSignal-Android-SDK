@@ -958,9 +958,9 @@ class LoggerPlatformProviderTest : FunSpec({
 })
 
 @RobolectricTest
-@Config(sdk = [23])
-class LoggerPlatformProviderApi23Test : FunSpec({
-    test("processUptime is readable on API 23") {
+@Config(sdk = [21])
+class LoggerPlatformProviderApi21Test : FunSpec({
+    test("processUptime is readable on API 21") {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val provider = createAndroidLoggerPlatformProvider(context) {
             mockk<IFeatureManager>().also { every { it.enabledFeatureKeys() } returns emptyList() }
