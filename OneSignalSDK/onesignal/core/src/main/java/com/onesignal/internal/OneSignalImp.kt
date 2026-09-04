@@ -420,8 +420,9 @@ internal class OneSignalImp : IOneSignal,
             // Now that the IoC container is ready, subscribe the observability lifecycle
             // manager to config store events so it reacts to fresh remote config.
             observabilityManager?.subscribeToConfigStore(services.getService<ConfigModelStore>())
-            // The event recorder is a container service, so it can only be handed over now. Fail-open
-            // like the observability calls around it: telemetry must not be able to fail init.
+            // The event recorder is a container service, so it can only be handed over now. The resolve
+            // cannot fail in practice (bootstrap already built the feature manager it needs), and the
+            // hand-over is fail-open inside the manager.
             val eventRecorder = services.getServiceOrNull<IObservabilityEventRecorder>()
             if (eventRecorder != null) {
                 observabilityManager?.attachEventRecorder(eventRecorder)
