@@ -54,16 +54,28 @@ internal class PushRegistratorFCM(
 
     @Throws(ExecutionException::class, InterruptedException::class)
     override suspend fun getToken(senderId: String): String {
+        val defaultApp = defaultFirebaseApp()
         return FCMTokenProvider.getToken(
             senderId = senderId,
             installationIdEnabled = ::installationIdEnabled,
-            legacyToken = { getLegacyToken(senderId) },
+            legacyToken = { getLegacyToken(senderId, defaultApp) },
             installationIdApiAvailable = { FCMTokenProvider.hasRegisterMethod(FirebaseMessaging::class.java) },
-            installationIdRegistration = ::defaultAppRegistration,
+            installationIdRegistration = { defaultApp?.let(::installationIdRegistration) },
         )
     }
 
-    private fun getLegacyToken(senderId: String): Task<String> {
+    override fun resolveSenderId(configuredSenderId: String?): String? =
+        configuredSenderId ?: defaultFirebaseApp()?.let(::defaultSenderId)
+
+    private fun getLegacyToken(
+        senderId: String,
+        defaultApp: FirebaseApp?,
+    ): Task<String> {
+        val defaultSenderId = defaultApp?.let(::defaultSenderId)
+        if (defaultSenderId != null) {
+            FCMTokenProvider.validateSenderId(senderId, defaultSenderId)
+        }
+
         val app = initFirebaseApp(senderId)
         // We use the named app's FirebaseMessaging instance instead of FirebaseMessaging.getInstance()
         //   as the latter uses the default Firebase app. We need to use a custom Firebase app as
@@ -82,23 +94,24 @@ internal class PushRegistratorFCM(
     // Installation ID registration is rejected unless the sender id, app id, and api key all belong
     //   to the same Firebase project. Our own FirebaseApp pairs the app's sender id with OneSignal's
     //   shared project credentials, so only the host app's default FirebaseApp can be used for it.
-    private fun defaultAppRegistration(): FCMTokenProvider.InstallationIdRegistration? {
-        val defaultApp =
-            FirebaseApp
-                .getApps(_applicationService.appContext)
-                .firstOrNull { it.name == FirebaseApp.DEFAULT_APP_NAME } ?: return null
-        val defaultSenderId =
-            FCMTokenProvider.defaultSenderId(
-                defaultApp.options.gcmSenderId,
-                defaultApp.options.applicationId,
-            )
-
+    private fun installationIdRegistration(defaultApp: FirebaseApp): FCMTokenProvider.InstallationIdRegistration {
         return FCMTokenProvider.InstallationIdRegistration(
-            senderId = defaultSenderId,
+            senderId = defaultSenderId(defaultApp),
             register = { FCMTokenProvider.invokeRegister(defaultApp.get(FirebaseMessaging::class.java)) },
             installationId = { FirebaseInstallations.getInstance(defaultApp).id },
         )
     }
+
+    private fun defaultFirebaseApp(): FirebaseApp? =
+        FirebaseApp
+            .getApps(_applicationService.appContext)
+            .firstOrNull { it.name == FirebaseApp.DEFAULT_APP_NAME }
+
+    private fun defaultSenderId(defaultApp: FirebaseApp): String? =
+        FCMTokenProvider.defaultSenderId(
+            defaultApp.options.gcmSenderId,
+            defaultApp.options.applicationId,
+        )
 
     private fun initFirebaseApp(senderId: String): FirebaseApp {
         firebaseApp?.let { return it }
@@ -178,18 +191,22 @@ internal object FCMTokenProvider {
             )
         }
 
-        if (registration.senderId != senderId) {
-            throw IllegalStateException(
-                "Firebase Installation ID registration is enabled ($optedIn) but the default " +
-                    "FirebaseApp uses sender id ${registration.senderId}, while OneSignal is " +
-                    "configured with sender id $senderId. Point both at the same Firebase project, " +
-                    "or set firebase_messaging_installation_id_enabled to false in your manifest " +
-                    "to keep using the legacy FCM token API.",
-            )
-        }
+        validateSenderId(senderId, registration.senderId)
 
         await(registration.register())
         return await(registration.installationId())
+    }
+
+    fun validateSenderId(
+        senderId: String,
+        defaultSenderId: String?,
+    ) {
+        if (defaultSenderId == senderId) return
+
+        throw IllegalStateException(
+            "The default FirebaseApp uses sender id $defaultSenderId, while OneSignal is " +
+                "configured with sender id $senderId. Point both at the same Firebase project.",
+        )
     }
 
     /**
