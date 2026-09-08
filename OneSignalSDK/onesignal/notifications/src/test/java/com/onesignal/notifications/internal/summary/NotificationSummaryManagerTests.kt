@@ -5,6 +5,8 @@ import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.mocks.AndroidMockHelper
 import com.onesignal.mocks.MockHelper
+import com.onesignal.notifications.internal.common.NotificationHelper
+import com.onesignal.notifications.internal.common.NotificationRestoreReason
 import com.onesignal.notifications.internal.data.INotificationRepository
 import com.onesignal.notifications.internal.display.ISummaryNotificationDisplayer
 import com.onesignal.notifications.internal.restoration.INotificationRestoreProcessor
@@ -14,9 +16,12 @@ import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
+import io.mockk.mockkObject
 import io.mockk.runs
+import io.mockk.unmockkObject
 import org.robolectric.annotation.Config
 
 @Config(
@@ -29,6 +34,10 @@ class NotificationSummaryManagerTests : FunSpec({
     beforeAny {
         Logging.logLevel = LogLevel.NONE
         ShadowRoboNotificationManager.reset()
+    }
+
+    afterAny {
+        unmockkObject(NotificationHelper)
     }
 
     test("updatePossibleDependentSummaryOnDismiss should take no action when dismissed notification is not part of a group") {
@@ -123,6 +132,9 @@ class NotificationSummaryManagerTests : FunSpec({
 
     test("updatePossibleDependentSummaryOnDismiss should restore summary notification when there is 1 notification in group") {
         // Given
+        // The remaining child is posted, so the regroup rebuild is what repairs its look.
+        mockkObject(NotificationHelper)
+        every { NotificationHelper.isNotificationActive(any(), any()) } returns true
         val mockNotificationRepository = mockk<INotificationRepository>()
         coEvery { mockNotificationRepository.getGroupId(1) } returns "groupId"
         coEvery { mockNotificationRepository.listNotificationsForGroup("groupId") } returns
@@ -132,7 +144,7 @@ class NotificationSummaryManagerTests : FunSpec({
         coEvery { mockNotificationRepository.getAndroidIdForGroup("groupId", true) } returns 99
         val mockSummaryNotificationDisplayer = mockk<ISummaryNotificationDisplayer>()
         val mockNotificationRestoreProcessor = mockk<INotificationRestoreProcessor>()
-        coEvery { mockNotificationRestoreProcessor.processNotification(any()) } just runs
+        coEvery { mockNotificationRestoreProcessor.processNotification(any(), any(), any()) } just runs
 
         val notificationSummaryManager =
             NotificationSummaryManager(
@@ -160,8 +172,46 @@ class NotificationSummaryManagerTests : FunSpec({
                     it.title shouldBe "title2"
                     it.message shouldBe "message2"
                 },
+                // Not a shade restore. The notification is still showing, so suppressing this
+                // rebuild must not dismiss or cancel it.
+                NotificationRestoreReason.GROUP_REGROUP,
+                any(),
             )
         }
+    }
+
+    test("updatePossibleDependentSummaryOnDismiss should not regroup the last notification when it is not posted") {
+        // The remaining child is mid shade-restore, its own work coming or in flight. A regroup
+        // enqueued now would steal that work, since unique work is keyed on the OS id alone, and
+        // a suppressed regroup would then strand the row.
+        // Given
+        mockkObject(NotificationHelper)
+        every { NotificationHelper.isNotificationActive(any(), any()) } returns false
+        val mockNotificationRepository = mockk<INotificationRepository>()
+        coEvery { mockNotificationRepository.getGroupId(1) } returns "groupId"
+        coEvery { mockNotificationRepository.listNotificationsForGroup("groupId") } returns
+            listOf(
+                INotificationRepository.NotificationData(2, "notificationId2", "{key: \"value2\"}", 1111, "title2", "message2"),
+            )
+        coEvery { mockNotificationRepository.getAndroidIdForGroup("groupId", true) } returns 99
+        val mockSummaryNotificationDisplayer = mockk<ISummaryNotificationDisplayer>()
+        val mockNotificationRestoreProcessor = mockk<INotificationRestoreProcessor>()
+
+        val notificationSummaryManager =
+            NotificationSummaryManager(
+                AndroidMockHelper.applicationService(),
+                mockNotificationRepository,
+                mockSummaryNotificationDisplayer,
+                MockHelper.configModelStore(),
+                mockNotificationRestoreProcessor,
+                MockHelper.time(111),
+            )
+
+        // When
+        notificationSummaryManager.updatePossibleDependentSummaryOnDismiss(1)
+
+        // Then
+        coVerify(exactly = 0) { mockNotificationRestoreProcessor.processNotification(any(), any(), any()) }
     }
 
     test("clearNotificationOnSummaryClick should do nothing when there is no notifications in group") {
