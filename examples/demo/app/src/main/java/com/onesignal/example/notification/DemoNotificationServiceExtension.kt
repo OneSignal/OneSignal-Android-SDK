@@ -34,7 +34,6 @@ class DemoNotificationServiceExtension : INotificationServiceExtension {
         val notification = event.notification
 
         DemoLog.d(
-            TAG,
             "received androidNotificationId=${notification.androidNotificationId}" +
                 " notificationId=${notification.notificationId}" +
                 " sentTime=${notification.sentTime}" +
@@ -43,7 +42,7 @@ class DemoNotificationServiceExtension : INotificationServiceExtension {
         )
 
         if (options.discard) {
-            DemoLog.d(TAG, "discarding androidNotificationId=${notification.androidNotificationId}")
+            DemoLog.d("discarding androidNotificationId=${notification.androidNotificationId}")
             event.preventDefault(true)
             return
         }
@@ -71,7 +70,6 @@ class DemoNotificationServiceExtension : INotificationServiceExtension {
         // `restored_OS_notifications` no matter what the payload asked for, and the payload
         // by itself never shows that.
         DemoLog.d(
-            TAG,
             "building androidNotificationId=${notification.androidNotificationId}" +
                 " channel=${NotificationCompat.getChannelId(builder.build())}",
         )
@@ -112,7 +110,6 @@ class DemoNotificationServiceExtension : INotificationServiceExtension {
     }
 
     private companion object {
-        const val TAG = "NSE"
         const val HIGH_IMPORTANCE_CHANNEL_ID = "demo_nse_high_importance"
 
         // Well under the SDK's 30 second wait for the extension, and long enough to watch the

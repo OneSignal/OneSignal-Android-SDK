@@ -3,32 +3,33 @@ package com.onesignal.example.util
 import android.util.Log
 
 /**
- * Logging for the demo app. Marks both halves of every line with `[Demo]`, so `logcat -s` can
- * filter on the tag and a line is still recognizable when only the message column is in view.
+ * Logging for the demo app. Marks every line with `[OneSignal]`.
  *
  * ```
- * DemoLog.d(TAG, "Sending notification: Simple")
- * // D/[Demo]MainViewModel: [Demo] Sending notification: Simple
+ * DemoLog.d("Sending notification: Simple")
+ * // D/OneSignalDemo: [OneSignal] Sending notification: Simple
  * ```
- *
- * Pass the plain class name as the tag. This adds the prefix.
  *
  * SDK output that MainApplication's log listener forwards does not come through here. Those
  * lines belong to the SDK, and marking them would bury the demo's own output when you grep.
  */
 object DemoLog {
-    private const val PREFIX = "[Demo]"
+    private const val TAG = "OneSignalDemo"
+    private const val MESSAGE_PREFIX = "[OneSignal]"
 
-    fun v(tag: String, message: String) = Log.v(PREFIX + tag, "$PREFIX $message")
+    fun v(message: String) = Log.v(TAG, formatMessage(message))
 
-    fun d(tag: String, message: String) = Log.d(PREFIX + tag, "$PREFIX $message")
+    fun d(message: String) = Log.d(TAG, formatMessage(message))
 
-    fun i(tag: String, message: String) = Log.i(PREFIX + tag, "$PREFIX $message")
+    fun i(message: String) = Log.i(TAG, formatMessage(message))
 
-    fun w(tag: String, message: String) = Log.w(PREFIX + tag, "$PREFIX $message")
+    fun w(message: String) = Log.w(TAG, formatMessage(message))
 
-    fun e(tag: String, message: String) = Log.e(PREFIX + tag, "$PREFIX $message")
+    fun e(message: String) = Log.e(TAG, formatMessage(message))
 
-    fun e(tag: String, message: String, throwable: Throwable) =
-        Log.e(PREFIX + tag, "$PREFIX $message", throwable)
+    fun e(message: String, throwable: Throwable) =
+        Log.e(TAG, formatMessage(message), throwable)
+
+    private fun formatMessage(message: String): String =
+        if (message.startsWith(MESSAGE_PREFIX)) message else "$MESSAGE_PREFIX $message"
 }
