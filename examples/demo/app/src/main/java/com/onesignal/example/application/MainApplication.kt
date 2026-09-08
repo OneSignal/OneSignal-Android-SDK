@@ -22,6 +22,7 @@ import com.onesignal.example.data.network.OneSignalService
 import com.onesignal.example.util.DemoLog
 import com.onesignal.example.util.SharedPreferenceUtil
 import com.onesignal.example.util.TooltipHelper
+import com.onesignal.example.util.toJson
 import com.onesignal.user.state.IUserStateObserver
 import com.onesignal.user.state.UserChangedState
 
@@ -106,8 +107,8 @@ class MainApplication : MultiDexApplication() {
             override fun onClick(event: INotificationClickEvent) {
                 DemoLog.d("Notification click: ${event.notification.title.orEmpty()}")
                 
-                // Uncomment to see the full event object.
-                // DemoLog.d("Event: $event")
+                // uncomment to see the full event object
+                // DemoLog.d("Event: ${event.toJson()}")
             }
         })
 
