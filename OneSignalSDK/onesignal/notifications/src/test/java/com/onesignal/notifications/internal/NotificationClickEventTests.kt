@@ -51,8 +51,11 @@ class NotificationClickEventTests : FunSpec({
         notificationJson.getString("body") shouldBe "Body"
         notificationJson.getJSONObject("additionalData").getString("customKey") shouldBe "customValue"
         notificationJson.getJSONArray("actionButtons").getJSONObject(0).getString("id") shouldBe "button-id"
-        notificationJson.getJSONArray("groupedNotifications").getJSONObject(0)
-            .getString("notificationId") shouldBe "grouped-id"
+        val groupedNotificationJson =
+            notificationJson.getJSONArray("groupedNotifications").getJSONObject(0)
+        groupedNotificationJson.getString("notificationId") shouldBe "grouped-id"
+        notificationJson.getJSONObject("rawPayload").getString("title") shouldBe "Opened"
+        groupedNotificationJson.getJSONObject("rawPayload").getString("title") shouldBe "Grouped"
         resultJson.getString("actionId") shouldBe "button-id"
         resultJson.getString("url") shouldBe "https://onesignal.com"
     }
