@@ -82,6 +82,24 @@ class PushTokenManagerTests : FunSpec({
         pushTokenStatus shouldBe SubscriptionStatus.SUBSCRIBED
     }
 
+    test("permanent configuration errors replace a previously successful token status") {
+        val mockPushRegistrator = mockk<IPushRegistrator>()
+        coEvery { mockPushRegistrator.registerForPush() } returns
+            IPushRegistrator.RegisterResult("host-fid", SubscriptionStatus.SUBSCRIBED) andThen
+            IPushRegistrator.RegisterResult(null, SubscriptionStatus.INVALID_FCM_SENDER_ID)
+        val mockDeviceService = MockHelper.deviceService()
+        every { mockDeviceService.jetpackLibraryStatus } returns IDeviceService.JetpackLibraryStatus.OK
+        val pushTokenManager = PushTokenManager(mockPushRegistrator, mockDeviceService)
+
+        pushTokenManager.retrievePushToken()
+        val response = pushTokenManager.retrievePushToken()
+
+        response.token shouldBe null
+        response.status shouldBe SubscriptionStatus.INVALID_FCM_SENDER_ID
+        pushTokenManager.pushToken shouldBe null
+        pushTokenManager.pushTokenStatus shouldBe SubscriptionStatus.INVALID_FCM_SENDER_ID
+    }
+
     test("retrievePushToken should fail with failure status from push registrator with config-type error") {
         // Given
         val mockPushRegistrator = mockk<IPushRegistrator>()

@@ -211,19 +211,27 @@ class PushRegistratorFCMTests : FunSpec({
         thrown.message!! shouldContain "firebase_messaging_installation_id_enabled=not set"
     }
 
-    test("does not register against a default FirebaseApp with a different sender id") {
+    test("reports an invalid sender id when FID registration would use a different Firebase project") {
+        val configModelStore =
+            MockHelper.configModelStore {
+                it.isInitializedWithRemote = true
+                it.googleProjectNumber = SENDER_ID
+            }
+        val deviceService = mockk<IDeviceService>()
+        every { deviceService.hasFCMLibrary } returns true
+        every { deviceService.isGMSInstalledAndEnabled } returns true
         val registrator =
             registrator(
                 legacyToken = Tasks.forException(disabledLegacyApi),
                 installedApps = listOf(defaultApp("999999999999")),
+                configModelStore = configModelStore,
+                deviceService = deviceService,
             )
 
-        val thrown =
-            withContext(Dispatchers.IO) {
-                shouldThrow<IllegalStateException> { registrator.getToken(SENDER_ID) }
-            }
+        val result = withContext(Dispatchers.IO) { registrator.registerForPush() }
 
-        thrown.message!! shouldContain "sender id 999999999999"
+        result.id shouldBe null
+        result.status shouldBe SubscriptionStatus.INVALID_FCM_SENDER_ID
     }
 
     test("uses OneSignal's FirebaseApp for a legacy token when the default app has a different sender id") {

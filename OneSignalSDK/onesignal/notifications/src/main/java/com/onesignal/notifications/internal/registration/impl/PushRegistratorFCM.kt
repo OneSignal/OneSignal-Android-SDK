@@ -133,6 +133,8 @@ internal class PushRegistratorFCM(
     }
 }
 
+internal class FCMSenderIdMismatchException(message: String) : IllegalStateException(message)
+
 internal object FCMTokenProvider {
     fun firebaseAppSenderId(
         senderId: String?,
@@ -208,7 +210,7 @@ internal object FCMTokenProvider {
     ) {
         if (firebaseAppSenderId == senderId) return
 
-        throw IllegalStateException(
+        throw FCMSenderIdMismatchException(
             "The default FirebaseApp uses sender id $firebaseAppSenderId, while OneSignal is " +
                 "configured with sender id $senderId. Point both at the same Firebase project.",
         )

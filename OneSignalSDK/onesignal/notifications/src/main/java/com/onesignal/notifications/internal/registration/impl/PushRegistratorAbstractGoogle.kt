@@ -134,6 +134,8 @@ internal abstract class PushRegistratorAbstractGoogle(
                 registrationId,
                 SubscriptionStatus.SUBSCRIBED,
             )
+        } catch (e: FCMSenderIdMismatchException) {
+            return invalidSenderIdResult(e)
         } catch (e: IOException) {
             val pushStatus: SubscriptionStatus = pushStatusFromThrowable(e)
             val exceptionMessage: String? = AndroidUtils.getRootCauseMessage(e)
@@ -168,6 +170,14 @@ internal abstract class PushRegistratorAbstractGoogle(
         }
 
         return null
+    }
+
+    private fun invalidSenderIdResult(exception: FCMSenderIdMismatchException): IPushRegistrator.RegisterResult {
+        Logging.warn("FCM sender ID mismatch", exception)
+        return IPushRegistrator.RegisterResult(
+            null,
+            SubscriptionStatus.INVALID_FCM_SENDER_ID,
+        )
     }
 
     private fun pushStatusFromThrowable(throwable: Throwable): SubscriptionStatus {
