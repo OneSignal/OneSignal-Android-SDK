@@ -30,28 +30,44 @@ class LoginData internal constructor(
     val onesignalId: String,
     /** The external ID that was logged in. */
     val externalId: String,
+    /** The email subscription created by this login, when the profile included an email. */
+    val emailSubscriptionId: String? = null,
+    /** The SMS subscription created by this login, when the profile included a phone number. */
+    val smsSubscriptionId: String? = null,
 ) : OneSignalResultData {
     override fun toMap(): Map<String, Any?> =
-        mapOf(
-            KEY_ONESIGNAL_ID to onesignalId,
-            KEY_EXTERNAL_ID to externalId,
-        )
+        buildMap {
+            put(KEY_ONESIGNAL_ID, onesignalId)
+            put(KEY_EXTERNAL_ID, externalId)
+            emailSubscriptionId?.let { put(KEY_EMAIL_SUBSCRIPTION_ID, it) }
+            smsSubscriptionId?.let { put(KEY_SMS_SUBSCRIPTION_ID, it) }
+        }
 
-    override fun toString(): String = "LoginData(onesignalId=$onesignalId, externalId=$externalId)"
+    override fun toString(): String =
+        "LoginData(onesignalId=$onesignalId, externalId=$externalId, emailSubscriptionId=$emailSubscriptionId, smsSubscriptionId=$smsSubscriptionId)"
 
     internal companion object {
         // Private because `const val` in an internal companion still compiles to a public static
         // field, which would leak the wire keys into the customer-facing API surface.
         private const val KEY_ONESIGNAL_ID = "onesignalId"
         private const val KEY_EXTERNAL_ID = "externalId"
+        private const val KEY_EMAIL_SUBSCRIPTION_ID = "emailSubscriptionId"
+        private const val KEY_SMS_SUBSCRIPTION_ID = "smsSubscriptionId"
 
         /** Null when [onesignalId] or [externalId] is missing, empty, or not a string. */
         fun fromMap(map: Map<*, *>): LoginData? {
             val onesignalId = map[KEY_ONESIGNAL_ID] as? String
             val externalId = map[KEY_EXTERNAL_ID] as? String
             if (onesignalId.isNullOrEmpty() || externalId.isNullOrEmpty()) return null
-            return LoginData(onesignalId, externalId)
+            return LoginData(
+                onesignalId,
+                externalId,
+                emailSubscriptionId = optionalString(map[KEY_EMAIL_SUBSCRIPTION_ID]),
+                smsSubscriptionId = optionalString(map[KEY_SMS_SUBSCRIPTION_ID]),
+            )
         }
+
+        private fun optionalString(value: Any?): String? = (value as? String)?.takeIf { it.isNotEmpty() }
     }
 }
 

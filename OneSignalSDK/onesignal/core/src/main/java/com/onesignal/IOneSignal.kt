@@ -251,6 +251,15 @@ interface IOneSignal {
     )
 
     /**
+     * Login with [externalId] plus [profile]. Email/SMS are additive; an alias owned by another user fails the request; email/phone already on another user transfers (JWT must include that address under IV). One malformed field fails the whole login.
+     */
+    suspend fun login(
+        externalId: String,
+        profile: OneSignalUserProfile,
+        jwtBearerToken: String? = null,
+    ): OneSignalResult<LoginData>
+
+    /**
      * Logout the current user (suspend version).
      */
     suspend fun logoutSuspend()

@@ -58,6 +58,7 @@ public abstract interface class com/onesignal/IOneSignal {
 	public abstract fun initWithContextSuspend (Landroid/content/Context;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public abstract fun isInitialized ()Z
 	public abstract fun login (Ljava/lang/String;)V
+	public abstract fun login (Ljava/lang/String;Lcom/onesignal/OneSignalUserProfile;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public abstract fun login (Ljava/lang/String;Ljava/lang/String;)V
 	public abstract fun loginSuspend (Ljava/lang/String;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public abstract fun logout ()V
@@ -76,6 +77,7 @@ public abstract interface class com/onesignal/IOneSignal {
 public final class com/onesignal/IOneSignal$DefaultImpls {
 	public static synthetic fun initWithContextSuspend$default (Lcom/onesignal/IOneSignal;Landroid/content/Context;Ljava/lang/String;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public static fun login (Lcom/onesignal/IOneSignal;Ljava/lang/String;)V
+	public static synthetic fun login$default (Lcom/onesignal/IOneSignal;Ljava/lang/String;Lcom/onesignal/OneSignalUserProfile;Ljava/lang/String;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public static synthetic fun login$default (Lcom/onesignal/IOneSignal;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)V
 	public static synthetic fun loginSuspend$default (Lcom/onesignal/IOneSignal;Ljava/lang/String;Ljava/lang/String;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 }
@@ -90,8 +92,10 @@ public final class com/onesignal/InitData : com/onesignal/OneSignalResultData {
 }
 
 public final class com/onesignal/LoginData : com/onesignal/OneSignalResultData {
+	public final fun getEmailSubscriptionId ()Ljava/lang/String;
 	public final fun getExternalId ()Ljava/lang/String;
 	public final fun getOnesignalId ()Ljava/lang/String;
+	public final fun getSmsSubscriptionId ()Ljava/lang/String;
 	public fun toMap ()Ljava/util/Map;
 	public fun toString ()Ljava/lang/String;
 }
@@ -129,7 +133,10 @@ public final class com/onesignal/OneSignal {
 	public static synthetic fun initWithContextSuspend$default (Landroid/content/Context;Ljava/lang/String;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public static final fun isInitialized ()Z
 	public static final fun login (Ljava/lang/String;)V
+	public static final fun login (Ljava/lang/String;Lcom/onesignal/OneSignalUserProfile;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static final fun login (Ljava/lang/String;Lcom/onesignal/OneSignalUserProfile;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public static final fun login (Ljava/lang/String;Ljava/lang/String;)V
+	public static synthetic fun login$default (Ljava/lang/String;Lcom/onesignal/OneSignalUserProfile;Ljava/lang/String;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public static synthetic fun login$default (Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)V
 	public static final fun loginSuspend (Ljava/lang/String;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public static synthetic fun loginSuspend$default (Ljava/lang/String;Ljava/lang/String;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
@@ -182,6 +189,40 @@ public final class com/onesignal/OneSignalResult {
 
 public abstract interface class com/onesignal/OneSignalResultData {
 	public abstract fun toMap ()Ljava/util/Map;
+}
+
+public final class com/onesignal/OneSignalUserProfile {
+	public static final field Companion Lcom/onesignal/OneSignalUserProfile$Companion;
+	public fun <init> ()V
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/util/Map;Ljava/util/Map;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/util/Map;Ljava/util/Map;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public static final fun builder ()Lcom/onesignal/OneSignalUserProfile$Builder;
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Ljava/util/Map;
+	public final fun component4 ()Ljava/util/Map;
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;Ljava/util/Map;Ljava/util/Map;)Lcom/onesignal/OneSignalUserProfile;
+	public static synthetic fun copy$default (Lcom/onesignal/OneSignalUserProfile;Ljava/lang/String;Ljava/lang/String;Ljava/util/Map;Ljava/util/Map;ILjava/lang/Object;)Lcom/onesignal/OneSignalUserProfile;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAliases ()Ljava/util/Map;
+	public final fun getEmail ()Ljava/lang/String;
+	public final fun getPhoneNumber ()Ljava/lang/String;
+	public final fun getTags ()Ljava/util/Map;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/onesignal/OneSignalUserProfile$Builder {
+	public fun <init> ()V
+	public final fun build ()Lcom/onesignal/OneSignalUserProfile;
+	public final fun setAliases (Ljava/util/Map;)Lcom/onesignal/OneSignalUserProfile$Builder;
+	public final fun setEmail (Ljava/lang/String;)Lcom/onesignal/OneSignalUserProfile$Builder;
+	public final fun setPhoneNumber (Ljava/lang/String;)Lcom/onesignal/OneSignalUserProfile$Builder;
+	public final fun setTags (Ljava/util/Map;)Lcom/onesignal/OneSignalUserProfile$Builder;
+}
+
+public final class com/onesignal/OneSignalUserProfile$Companion {
+	public final fun builder ()Lcom/onesignal/OneSignalUserProfile$Builder;
 }
 
 public final class com/onesignal/SyncJobService : android/app/job/JobService {
@@ -1214,8 +1255,10 @@ public abstract interface annotation class com/onesignal/core/internal/minificat
 }
 
 public final class com/onesignal/core/internal/operations/ExecutionResponse {
-	public fun <init> (Lcom/onesignal/core/internal/operations/ExecutionResult;Ljava/util/Map;Ljava/util/List;Ljava/lang/Integer;)V
-	public synthetic fun <init> (Lcom/onesignal/core/internal/operations/ExecutionResult;Ljava/util/Map;Ljava/util/List;Ljava/lang/Integer;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Lcom/onesignal/core/internal/operations/ExecutionResult;Ljava/util/Map;Ljava/util/List;Ljava/lang/Integer;Ljava/lang/Integer;Ljava/lang/String;)V
+	public synthetic fun <init> (Lcom/onesignal/core/internal/operations/ExecutionResult;Ljava/util/Map;Ljava/util/List;Ljava/lang/Integer;Ljava/lang/Integer;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun getHttpResponse ()Ljava/lang/String;
+	public final fun getHttpStatusCode ()Ljava/lang/Integer;
 	public final fun getIdTranslations ()Ljava/util/Map;
 	public final fun getOperations ()Ljava/util/List;
 	public final fun getResult ()Lcom/onesignal/core/internal/operations/ExecutionResult;
@@ -1253,12 +1296,15 @@ public abstract interface class com/onesignal/core/internal/operations/IOperatio
 	public abstract fun awaitInitialized (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public abstract fun containsInstanceOf (Lkotlin/reflect/KClass;)Z
 	public abstract fun enqueue (Lcom/onesignal/core/internal/operations/Operation;Z)V
+	public abstract fun enqueueAndAwaitResult (Lcom/onesignal/core/internal/operations/Operation;ZLkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public abstract fun enqueueAndWait (Lcom/onesignal/core/internal/operations/Operation;ZLkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public abstract fun forceExecuteOperations ()V
 }
 
 public final class com/onesignal/core/internal/operations/IOperationRepo$DefaultImpls {
 	public static synthetic fun enqueue$default (Lcom/onesignal/core/internal/operations/IOperationRepo;Lcom/onesignal/core/internal/operations/Operation;ZILjava/lang/Object;)V
+	public static synthetic fun enqueueAndAwaitResult$default (Lcom/onesignal/core/internal/operations/IOperationRepo;Lcom/onesignal/core/internal/operations/Operation;ZLkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+	public static fun enqueueAndWait (Lcom/onesignal/core/internal/operations/IOperationRepo;Lcom/onesignal/core/internal/operations/Operation;ZLkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public static synthetic fun enqueueAndWait$default (Lcom/onesignal/core/internal/operations/IOperationRepo;Lcom/onesignal/core/internal/operations/Operation;ZLkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 }
 
@@ -1274,6 +1320,14 @@ public abstract class com/onesignal/core/internal/operations/Operation : com/one
 	public fun getRequiresJwt ()Z
 	public fun toString ()Ljava/lang/String;
 	public fun translateIds (Ljava/util/Map;)V
+}
+
+public final class com/onesignal/core/internal/operations/OperationWaitResult {
+	public fun <init> (ZLjava/lang/Integer;Ljava/lang/String;)V
+	public synthetic fun <init> (ZLjava/lang/Integer;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun getHttpResponse ()Ljava/lang/String;
+	public final fun getHttpStatusCode ()Ljava/lang/Integer;
+	public final fun getSuccess ()Z
 }
 
 public final class com/onesignal/core/internal/permissions/AlertDialogPrepromptForAndroidSettings {
@@ -2168,8 +2222,8 @@ public final class com/onesignal/user/internal/operations/LoginUserFromSubscript
 
 public final class com/onesignal/user/internal/operations/LoginUserOperation : com/onesignal/core/internal/operations/Operation {
 	public fun <init> ()V
-	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
-	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lcom/onesignal/OneSignalUserProfile;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lcom/onesignal/OneSignalUserProfile;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun getAppId ()Ljava/lang/String;
 	public fun getApplyToRecordId ()Ljava/lang/String;
 	public fun getCanStartExecute ()Z

@@ -5,11 +5,13 @@ import com.onesignal.common.threading.WaiterWithValue
 import com.onesignal.common.threading.suspendifyOnIO
 import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.config.impl.IdentityVerificationService
+import com.onesignal.core.internal.operations.ExecutionResponse
 import com.onesignal.core.internal.operations.ExecutionResult
 import com.onesignal.core.internal.operations.GroupComparisonType
 import com.onesignal.core.internal.operations.IOperationExecutor
 import com.onesignal.core.internal.operations.IOperationRepo
 import com.onesignal.core.internal.operations.Operation
+import com.onesignal.core.internal.operations.OperationWaitResult
 import com.onesignal.core.internal.startup.IStartableService
 import com.onesignal.core.internal.time.ITime
 import com.onesignal.debug.LogLevel
@@ -40,7 +42,7 @@ internal class OperationRepo(
 
     internal class OperationQueueItem(
         val operation: Operation,
-        var waiter: WaiterWithValue<Boolean>? = null, // waiter may transfer during operation de-dupe
+        var waiter: WaiterWithValue<OperationWaitResult>? = null,
         val bucket: Int,
         var retries: Int = 0,
     ) {
@@ -145,16 +147,16 @@ internal class OperationRepo(
         }
     }
 
-    override suspend fun enqueueAndWait(
+    override suspend fun enqueueAndAwaitResult(
         operation: Operation,
         flush: Boolean,
-    ): Boolean {
-        if (shouldSuppressAnonymousOp(operation)) return false
+    ): OperationWaitResult {
+        if (shouldSuppressAnonymousOp(operation)) return OperationWaitResult(false)
 
         Logging.log(LogLevel.DEBUG, "OperationRepo.enqueueAndWait(operation: $operation, force: $flush)")
 
         operation.id = UUID.randomUUID().toString()
-        val waiter = WaiterWithValue<Boolean>()
+        val waiter = WaiterWithValue<OperationWaitResult>()
         scope.launch {
             internalEnqueue(OperationQueueItem(operation, waiter, bucket = enqueueIntoBucket), flush, true)
         }
@@ -222,11 +224,12 @@ internal class OperationRepo(
                     } else {
                         Logging.debug("OperationRepo: internalEnqueue - LoginUserOperation for onesignalId: ${op.onesignalId} already exists in the queue.")
                     }
+                    existingOp.mergeProfileFrom(op)
                     // Transfer the waiter so enqueueAndWait callers see the queued op's real execution result.
                     if (queueItem.waiter != null && existing.waiter == null) {
                         existing.waiter = queueItem.waiter
                     } else {
-                        queueItem.waiter?.wake(true)
+                        queueItem.waiter?.wake(OperationWaitResult(true))
                     }
                     if (!addToStore) {
                         _operationModelStore.remove(queueItem.operation.id)
@@ -294,7 +297,7 @@ internal class OperationRepo(
         val removedIds: List<String> =
             synchronized(queue) {
                 val anonymous = queue.filter { it.operation.externalId == null }
-                anonymous.forEach { it.waiter?.wake(false) }
+                anonymous.forEach { it.waiter?.wake(OperationWaitResult(false)) }
                 queue.removeAll(anonymous)
                 // IV=ON never transfers anonymous state; clear existingOnesignalId so the
                 // executor takes the createUser (upsert) path. The merge-anon-into-identified
@@ -390,7 +393,7 @@ internal class OperationRepo(
                 ExecutionResult.SUCCESS -> {
                     // on success we remove the operation from the store and wake any waiters
                     ops.forEach { _operationModelStore.remove(it.operation.id) }
-                    ops.forEach { it.waiter?.wake(true) }
+                    ops.forEach { it.waiter?.wake(response.toWaitResult(true)) }
                 }
                 ExecutionResult.FAIL_UNAUTHORIZED -> {
                     // Outer gate: dispatch to IV extension only on new code paths.
@@ -401,24 +404,25 @@ internal class OperationRepo(
                                 ops,
                                 _jwtTokenStore,
                                 _identityVerificationService.ivBehaviorActive,
+                                response,
                             )
                     if (!handled) {
                         // IV inactive or anon op: drop and wake waiters, matching FAIL_NORETRY.
                         Logging.warn("Operation execution failed without retry: $operations")
-                        dropAndWake(ops)
+                        dropAndWake(ops, response)
                     }
                 }
                 ExecutionResult.FAIL_NORETRY,
                 ExecutionResult.FAIL_CONFLICT,
                 -> {
                     Logging.warn("Operation execution failed without retry: $operations")
-                    dropAndWake(ops)
+                    dropAndWake(ops, response)
                 }
                 ExecutionResult.SUCCESS_STARTING_ONLY -> {
                     // remove the starting operation from the store and wake any waiters, then
                     // add back all but the starting op to the front of the queue to be re-executed
                     _operationModelStore.remove(startingOp.operation.id)
-                    startingOp.waiter?.wake(true)
+                    startingOp.waiter?.wake(response.toWaitResult(true))
                     synchronized(queue) {
                         ops.filter { it != startingOp }.reversed().forEach { queue.add(0, it) }
                     }
@@ -440,7 +444,7 @@ internal class OperationRepo(
                     // keep the failed operation and pause the operation repo from executing
                     paused = true
                     // Unblock any enqueueAndWait callers so loginSuspend doesn't hang.
-                    ops.forEach { it.waiter?.wake(false) }
+                    ops.forEach { it.waiter?.wake(response.toWaitResult(false)) }
                     // Re-queue with waiter = null: the operation is preserved for retry
                     // on next cold start, but the original waiter is detached since it
                     // was already woken above.
@@ -476,10 +480,13 @@ internal class OperationRepo(
         }
     }
 
-    /** Drop ops from the persistent store and wake any waiters with `false` (failure). */
-    private fun dropAndWake(ops: List<OperationQueueItem>) {
+    /** Drop ops from the persistent store and wake any waiters with failure. */
+    private fun dropAndWake(
+        ops: List<OperationQueueItem>,
+        response: ExecutionResponse? = null,
+    ) {
         ops.forEach { _operationModelStore.remove(it.operation.id) }
-        ops.forEach { it.waiter?.wake(false) }
+        ops.forEach { it.waiter?.wake(response.toWaitResult(false)) }
     }
 
     /**

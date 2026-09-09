@@ -23,7 +23,7 @@ interface IUserBackendService {
         appId: String,
         identities: Map<String, String>,
         subscriptions: List<SubscriptionObject>,
-        properties: Map<String, String>,
+        properties: Map<String, Any?>,
         jwt: String? = null,
     ): CreateUserResponse
     // TODO: Change to send only the push subscription, optimally
