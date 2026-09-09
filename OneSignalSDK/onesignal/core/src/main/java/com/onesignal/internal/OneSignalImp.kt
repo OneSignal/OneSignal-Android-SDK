@@ -2,8 +2,12 @@ package com.onesignal.internal
 
 import android.content.Context
 import android.os.Build
+import com.onesignal.ErrorCode
 import com.onesignal.IOneSignal
 import com.onesignal.IUserJwtInvalidatedListener
+import com.onesignal.LoginData
+import com.onesignal.OneSignalResult
+import com.onesignal.OneSignalUserProfile
 import com.onesignal.common.AndroidUtils
 import com.onesignal.common.DeviceUtils
 import com.onesignal.common.OneSignalUtils
@@ -21,6 +25,7 @@ import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.config.impl.IdentityVerificationService
 import com.onesignal.core.internal.features.IFeatureManager
 import com.onesignal.core.internal.operations.IOperationRepo
+import com.onesignal.core.internal.operations.OperationWaitResult
 import com.onesignal.core.internal.preferences.IPreferencesService
 import com.onesignal.core.internal.preferences.PreferenceStoreFix
 import com.onesignal.core.internal.startup.StartupService
@@ -43,7 +48,9 @@ import com.onesignal.user.internal.identity.IdentityModelStore
 import com.onesignal.user.internal.jwt.JwtTokenStore
 import com.onesignal.user.internal.properties.PropertiesModelStore
 import com.onesignal.user.internal.resolveAppId
+import com.onesignal.user.internal.subscriptions.SubscriptionModel
 import com.onesignal.user.internal.subscriptions.SubscriptionModelStore
+import com.onesignal.user.internal.subscriptions.SubscriptionType
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.runBlocking
@@ -801,6 +808,65 @@ internal class OneSignalImp : IOneSignal,
 
         val context = loginHelper.switchUser(externalId, jwtBearerToken) ?: return@withContext
         loginHelper.enqueueLogin(context)
+    }
+
+    override suspend fun login(
+        externalId: String,
+        profile: OneSignalUserProfile,
+        jwtBearerToken: String?,
+    ): OneSignalResult<LoginData> =
+        withContext(ioDispatcher) {
+            Logging.log(LogLevel.DEBUG, "login(externalId: $externalId, profile: $profile, jwtBearerToken: ...${jwtBearerToken?.takeLast(8)})")
+
+            suspendUntilInit(operationName = "login")
+
+            val context =
+                loginHelper.switchUser(externalId, jwtBearerToken)
+                    ?: if (profileHasFields(profile)) loginHelper.contextForCurrentUser(externalId) else null
+            if (context != null) {
+                val completed = loginHelper.enqueueLogin(context, profile)
+                if (!completed.success) {
+                    return@withContext OneSignalResult.failure(
+                        ErrorCode.BACKEND_ERROR,
+                        loginFailureMessage(completed),
+                        backendCode = completed.httpStatusCode,
+                    )
+                }
+            }
+            OneSignalResult.success(loginDataFromStores(externalId, profile))
+        }
+
+    private fun profileHasFields(profile: OneSignalUserProfile): Boolean =
+        !profile.email.isNullOrBlank() ||
+            !profile.phoneNumber.isNullOrBlank() ||
+            profile.tags.isNotEmpty() ||
+            profile.aliases.isNotEmpty()
+
+    private fun loginFailureMessage(wait: OperationWaitResult): String {
+        val body = wait.httpResponse?.takeIf { it.isNotBlank() }
+        return body ?: wait.httpStatusCode?.let { "Login did not complete (HTTP $it)." } ?: "Login did not complete."
+    }
+
+    private fun loginDataFromStores(
+        externalId: String,
+        profile: OneSignalUserProfile,
+    ): LoginData {
+        val subscriptions = subscriptionModelStore.list()
+        return LoginData(
+            onesignalId = identityModelStore.model.onesignalId,
+            externalId = externalId,
+            emailSubscriptionId = subscriptionId(subscriptions, SubscriptionType.EMAIL, profile.email),
+            smsSubscriptionId = subscriptionId(subscriptions, SubscriptionType.SMS, profile.phoneNumber),
+        )
+    }
+
+    private fun subscriptionId(
+        subscriptions: Collection<SubscriptionModel>,
+        type: SubscriptionType,
+        address: String?,
+    ): String? {
+        if (address.isNullOrBlank()) return null
+        return subscriptions.firstOrNull { it.type == type && it.address == address }?.id
     }
 
     override suspend fun updateUserJwtSuspend(

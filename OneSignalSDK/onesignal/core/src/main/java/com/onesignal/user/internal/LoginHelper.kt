@@ -1,7 +1,9 @@
 package com.onesignal.user.internal
 
+import com.onesignal.OneSignalUserProfile
 import com.onesignal.core.internal.config.ConfigModel
 import com.onesignal.core.internal.operations.IOperationRepo
+import com.onesignal.core.internal.operations.OperationWaitResult
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.user.internal.identity.IdentityModelStore
 import com.onesignal.user.internal.jwt.JwtRequirement
@@ -77,19 +79,32 @@ internal class LoginHelper(
     /**
      * Enqueues the [LoginUserOperation] and suspends until it completes.
      */
-    internal suspend fun enqueueLogin(context: LoginEnqueueContext) {
+    internal suspend fun enqueueLogin(
+        context: LoginEnqueueContext,
+        profile: OneSignalUserProfile? = null,
+    ): OperationWaitResult {
         val result =
-            operationRepo.enqueueAndWait(
+            operationRepo.enqueueAndAwaitResult(
                 LoginUserOperation(
                     context.appId,
                     context.newIdentityOneSignalId,
                     context.externalId,
                     context.existingOneSignalId,
+                    profile,
                 ),
             )
 
-        if (!result) {
-            Logging.warn("Could not login user")
+        if (!result.success) {
+            Logging.warn("Could not login user: HTTP ${result.httpStatusCode} ${result.httpResponse}")
         }
+        return result
     }
+
+    internal fun contextForCurrentUser(externalId: String): LoginEnqueueContext =
+        LoginEnqueueContext(
+            appId = configModel.appId,
+            newIdentityOneSignalId = identityModelStore.model.onesignalId,
+            externalId = externalId,
+            existingOneSignalId = null,
+        )
 }

@@ -35,10 +35,12 @@ import com.onesignal.user.internal.operations.RefreshUserOperation
 import com.onesignal.user.internal.operations.SetAliasOperation
 import com.onesignal.user.internal.operations.TransferSubscriptionOperation
 import com.onesignal.user.internal.operations.UpdateSubscriptionOperation
+import com.onesignal.user.internal.operations.reservedLoginAliasLabel
 import com.onesignal.user.internal.properties.PropertiesModel
 import com.onesignal.user.internal.properties.PropertiesModelStore
 import com.onesignal.user.internal.subscriptions.SubscriptionModel
 import com.onesignal.user.internal.subscriptions.SubscriptionModelStore
+import com.onesignal.user.internal.subscriptions.SubscriptionStatus
 import com.onesignal.user.internal.subscriptions.SubscriptionType
 
 internal class LoginUserOperationExecutor(
@@ -81,9 +83,7 @@ internal class LoginUserOperationExecutor(
         if (!containsSubscriptionOperation && loginUserOp.externalId == null) {
             return ExecutionResponse(ExecutionResult.FAIL_NORETRY)
         }
-        if (loginUserOp.existingOnesignalId == null || loginUserOp.externalId == null ||
-            _identityVerificationService.ivBehaviorActive
-        ) {
+        if (shouldCreateUserDirectly(loginUserOp)) {
             // When there is no existing user to attempt to associate with the externalId provided, we go right to
             // createUser.  If there is no externalId provided this is an insert, if there is this will be an
             // "upsert with retrieval" as the user may already exist.
@@ -159,16 +159,22 @@ internal class LoginUserOperationExecutor(
         createUserOperation: LoginUserOperation,
         operations: List<Operation>,
     ): ExecutionResponse {
-        var identities = mapOf<String, String>()
+        val identities = mutableMapOf<String, String>()
         var subscriptions = mapOf<String, SubscriptionObject>()
-        val properties = mutableMapOf<String, String>()
+        val properties = mutableMapOf<String, Any?>()
         properties["timezone_id"] = TimeUtils.getTimeZoneId()
         properties["language"] = _languageContext.language
+        if (createUserOperation.tags.isNotEmpty()) {
+            properties["tags"] = createUserOperation.tags
+        }
 
         if (createUserOperation.externalId != null) {
-            val mutableIdentities = identities.toMutableMap()
-            mutableIdentities[IdentityConstants.EXTERNAL_ID] = createUserOperation.externalId!!
-            identities = mutableIdentities
+            identities[IdentityConstants.EXTERNAL_ID] = createUserOperation.externalId!!
+        }
+        for ((label, id) in createUserOperation.aliases) {
+            if (!reservedLoginAliasLabel(label)) {
+                identities[label] = id
+            }
         }
 
         // go through the operations grouped with this create user and apply them to the appropriate objects.
@@ -181,6 +187,7 @@ internal class LoginUserOperationExecutor(
                 else -> throw Exception("Unrecognized operation: $operation")
             }
         }
+        subscriptions = addProfileSubscriptions(createUserOperation, subscriptions)
 
         try {
             val subscriptionList = subscriptions.toList()
@@ -222,14 +229,24 @@ internal class LoginUserOperationExecutor(
                 }
 
                 if (backendSubscription != null) {
-                    idTranslations[pair.first] = backendSubscription.id!!
+                    if (!isProfileSubscriptionKey(pair.first)) {
+                        idTranslations[pair.first] = backendSubscription.id!!
+                    }
 
                     if (_configModelStore.model.pushSubscriptionId == pair.first) {
                         _configModelStore.model.pushSubscriptionId = backendSubscription.id
                     }
 
                     val subscriptionModel = _subscriptionsModelStore.get(pair.first)
-                    subscriptionModel?.setStringProperty(SubscriptionModel::id.name, backendSubscription.id!!, ModelChangeTags.HYDRATE)
+                    if (subscriptionModel != null) {
+                        subscriptionModel.setStringProperty(SubscriptionModel::id.name, backendSubscription.id!!, ModelChangeTags.HYDRATE)
+                    } else if (isProfileSubscriptionKey(pair.first)) {
+                        if (_identityModelStore.model.onesignalId == backendOneSignalId) {
+                            persistProfileSubscription(backendSubscription)
+                        }
+                    } else {
+                        Logging.error("LoginUserOperationExecutor.createUser response is missing a local subscription model for ${pair.first}")
+                    }
                 } else {
                     Logging.error("LoginUserOperationExecutor.createUser response is missing subscription data for ${pair.first}")
                 }
@@ -248,6 +265,10 @@ internal class LoginUserOperationExecutor(
                 }
             }
 
+            if (_identityModelStore.model.onesignalId == backendOneSignalId) {
+                hydrateProfile(createUserOperation)
+            }
+
             val wasPossiblyAnUpsert = identities.isNotEmpty()
             val followUpOperations =
                 if (wasPossiblyAnUpsert) {
@@ -258,15 +279,24 @@ internal class LoginUserOperationExecutor(
 
             return ExecutionResponse(ExecutionResult.SUCCESS, idTranslations, followUpOperations)
         } catch (ex: BackendException) {
+            Logging.error("LoginUserOperationExecutor.createUser failed: HTTP ${ex.statusCode} ${ex.response}")
             val responseType = NetworkUtils.getResponseStatusType(ex.statusCode)
 
             return when (responseType) {
                 NetworkUtils.ResponseStatusType.RETRYABLE ->
-                    ExecutionResponse(ExecutionResult.FAIL_RETRY, retryAfterSeconds = ex.retryAfterSeconds)
+                    backendExecutionResponse(ExecutionResult.FAIL_RETRY, ex)
                 NetworkUtils.ResponseStatusType.UNAUTHORIZED ->
-                    ExecutionResponse(ExecutionResult.FAIL_UNAUTHORIZED, retryAfterSeconds = ex.retryAfterSeconds)
+                    backendExecutionResponse(ExecutionResult.FAIL_UNAUTHORIZED, ex)
+                NetworkUtils.ResponseStatusType.INVALID,
+                NetworkUtils.ResponseStatusType.CONFLICT,
+                ->
+                    if (createUserOperation.hasProfileFields()) {
+                        backendExecutionResponse(ExecutionResult.FAIL_NORETRY, ex)
+                    } else {
+                        backendExecutionResponse(ExecutionResult.FAIL_PAUSE_OPREPO, ex)
+                    }
                 else ->
-                    ExecutionResponse(ExecutionResult.FAIL_PAUSE_OPREPO)
+                    backendExecutionResponse(ExecutionResult.FAIL_PAUSE_OPREPO, ex)
             }
         }
     }
@@ -371,7 +401,90 @@ internal class LoginUserOperationExecutor(
         return mutableSubscriptions
     }
 
+    private fun addProfileSubscriptions(
+        op: LoginUserOperation,
+        subscriptions: Map<String, SubscriptionObject>,
+    ): Map<String, SubscriptionObject> {
+        val mutable = subscriptions.toMutableMap()
+        val email = op.email?.takeIf { it.isNotBlank() }
+        if (email != null && mutable.values.none { it.type == SubscriptionObjectType.EMAIL && it.token == email }) {
+            mutable[PROFILE_EMAIL_KEY] =
+                SubscriptionObject(
+                    type = SubscriptionObjectType.EMAIL,
+                    token = email,
+                )
+        }
+        val phone = op.phoneNumber?.takeIf { it.isNotBlank() }
+        if (phone != null && mutable.values.none { it.type == SubscriptionObjectType.SMS && it.token == phone }) {
+            mutable[PROFILE_SMS_KEY] =
+                SubscriptionObject(
+                    type = SubscriptionObjectType.SMS,
+                    token = phone,
+                )
+        }
+        return mutable
+    }
+
+    private fun hydrateProfile(op: LoginUserOperation) {
+        val identityModel = _identityModelStore.model
+        for ((label, id) in op.aliases) {
+            if (!reservedLoginAliasLabel(label)) {
+                identityModel.setStringProperty(label, id, ModelChangeTags.HYDRATE)
+            }
+        }
+        val tagsModel = _propertiesModelStore.model.tags
+        for ((key, value) in op.tags) {
+            tagsModel.setStringProperty(key, value, ModelChangeTags.HYDRATE)
+        }
+    }
+
+    private fun persistProfileSubscription(backend: SubscriptionObject) {
+        val id = backend.id
+        val token = backend.token
+        val type = profileSubscriptionType(backend.type)
+        if (id == null || token == null || type == null) return
+
+        val existing = _subscriptionsModelStore.list().firstOrNull { it.type == type && it.address == token }
+        if (existing != null) {
+            existing.setStringProperty(SubscriptionModel::id.name, id, ModelChangeTags.HYDRATE)
+            return
+        }
+        val model = SubscriptionModel()
+        model.id = id
+        model.type = type
+        model.address = token
+        model.status = SubscriptionStatus.SUBSCRIBED
+        model.optedIn = true
+        _subscriptionsModelStore.add(model, ModelChangeTags.HYDRATE)
+    }
+
+    private fun shouldCreateUserDirectly(op: LoginUserOperation): Boolean {
+        if (op.hasProfileFields() || _identityVerificationService.ivBehaviorActive) return true
+        return op.existingOnesignalId == null || op.externalId == null
+    }
+
+    private fun profileSubscriptionType(type: SubscriptionObjectType?): SubscriptionType? =
+        when (type) {
+            SubscriptionObjectType.EMAIL -> SubscriptionType.EMAIL
+            SubscriptionObjectType.SMS -> SubscriptionType.SMS
+            else -> null
+        }
+
+    private fun backendExecutionResponse(
+        result: ExecutionResult,
+        ex: BackendException,
+    ) = ExecutionResponse(
+        result,
+        retryAfterSeconds = ex.retryAfterSeconds,
+        httpStatusCode = ex.statusCode,
+        httpResponse = ex.response,
+    )
+
     companion object {
         const val LOGIN_USER = "login-user"
+        private const val PROFILE_EMAIL_KEY = "__profile_email"
+        private const val PROFILE_SMS_KEY = "__profile_sms"
+
+        private fun isProfileSubscriptionKey(key: String): Boolean = key == PROFILE_EMAIL_KEY || key == PROFILE_SMS_KEY
     }
 }

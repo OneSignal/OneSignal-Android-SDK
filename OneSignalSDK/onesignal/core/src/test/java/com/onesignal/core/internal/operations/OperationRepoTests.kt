@@ -1,5 +1,6 @@
 package com.onesignal.core.internal.operations
 
+import com.onesignal.OneSignalUserProfile
 import com.onesignal.common.threading.Waiter
 import com.onesignal.common.threading.WaiterWithValue
 import com.onesignal.core.internal.operations.impl.OperationModelStore
@@ -186,6 +187,37 @@ class OperationRepoTests : FunSpec({
         val merged = operationRepo.queue.first().operation as LoginUserOperation
         merged.onesignalId shouldBe "local-new"
         merged.existingOnesignalId shouldBe "anon-uuid"
+    }
+
+    test("enqueue dedupes LoginUserOperation for same onesignalId and merges profile fields") {
+        val mocks = Mocks()
+        val operationRepo = mocks.operationRepo
+
+        val queuedOp = LoginUserOperation("appId", "local-new", "alice", null)
+        queuedOp.id = UUID.randomUUID().toString()
+        synchronized(operationRepo.queue) {
+            operationRepo.queue.add(OperationQueueItem(queuedOp, bucket = 0))
+        }
+
+        val incomingOp =
+            LoginUserOperation(
+                "appId",
+                "local-new",
+                "alice",
+                null,
+                OneSignalUserProfile(
+                    email = "a@b.com",
+                    tags = mapOf("plan" to "pro"),
+                ),
+            )
+
+        operationRepo.enqueue(incomingOp)
+        mocks.waitForInternalEnqueue()
+
+        operationRepo.queue.size shouldBe 1
+        val merged = operationRepo.queue.first().operation as LoginUserOperation
+        merged.email shouldBe "a@b.com"
+        merged.tags shouldBe mapOf("plan" to "pro")
     }
 
     test("enqueue dedupe does not merge a local existingOnesignalId onto the queued op") {
@@ -1132,6 +1164,28 @@ class OperationRepoTests : FunSpec({
         verify(exactly = 0) { mocks.operationModelStore.remove(opId) }
     }
 
+    test("FAIL_NORETRY wakes enqueueAndAwaitResult with HTTP status and body") {
+        val mocks = Mocks()
+        coEvery { mocks.executor.execute(any()) } returns
+            ExecutionResponse(
+                ExecutionResult.FAIL_NORETRY,
+                httpStatusCode = 400,
+                httpResponse = """{"errors":["invalid phone"]}""",
+            )
+
+        mocks.operationRepo.start()
+        val result =
+            runBlocking {
+                withTimeout(2_000) {
+                    mocks.operationRepo.enqueueAndAwaitResult(mockOperation())
+                }
+            }
+
+        result.success shouldBe false
+        result.httpStatusCode shouldBe 400
+        result.httpResponse shouldBe """{"errors":["invalid phone"]}"""
+    }
+
     test("FAIL_UNAUTHORIZED with IV inactive falls back to default drop-on-fail") {
         val mocks = Mocks()
         mocks.identityVerificationService = CoreInternalMocks.identityVerificationService(
@@ -1197,7 +1251,9 @@ class OperationRepoTests : FunSpec({
             val executeWaiter = WaiterWithValue<Boolean>()
             coEvery { opRepo.executeOperations(any()) } coAnswers {
                 executeWaiter.wake(true)
-                firstArg<List<OperationRepo.OperationQueueItem>>().forEach { it.waiter?.wake(true) }
+                firstArg<List<OperationRepo.OperationQueueItem>>().forEach {
+                    it.waiter?.wake(OperationWaitResult(true))
+                }
             }
             return executeWaiter
         }

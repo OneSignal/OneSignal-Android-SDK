@@ -42,6 +42,8 @@ class ExecutionResponse(
      * The module handing this should delay any future requests by this time.
      */
     val retryAfterSeconds: Int? = null,
+    val httpStatusCode: Int? = null,
+    val httpResponse: String? = null,
 )
 
 enum class ExecutionResult {
