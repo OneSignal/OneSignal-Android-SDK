@@ -1,5 +1,6 @@
 package com.onesignal.user.internal.backend.impl
 
+import com.onesignal.common.JSONUtils
 import com.onesignal.common.consistency.RywData
 import com.onesignal.common.exceptions.BackendException
 import com.onesignal.common.putMap
@@ -36,7 +37,7 @@ internal class UserBackendService(
         }
 
         if (properties.isNotEmpty()) {
-            requestJSON.put("properties", propertiesToJson(properties))
+            requestJSON.put("properties", JSONUtils.mapToJson(properties))
         }
 
         requestJSON.put("refresh_device_metadata", true)
@@ -102,19 +103,5 @@ internal class UserBackendService(
         }
 
         return JSONConverter.convertToCreateUserResponse(JSONObject(response.payload))
-    }
-
-    private fun propertiesToJson(properties: Map<String, Any?>): JSONObject {
-        val json = JSONObject()
-        for ((key, value) in properties) {
-            when (value) {
-                is Map<*, *> -> {
-                    @Suppress("UNCHECKED_CAST")
-                    json.put(key, JSONObject().putMap(value as Map<String, Any?>))
-                }
-                else -> json.put(key, value ?: JSONObject.NULL)
-            }
-        }
-        return json
     }
 }

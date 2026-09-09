@@ -1,5 +1,6 @@
 package com.onesignal.user.internal
 
+import com.onesignal.LoginData
 import com.onesignal.OneSignalUserProfile
 import com.onesignal.core.internal.config.ConfigModel
 import com.onesignal.core.internal.operations.IOperationRepo
@@ -9,6 +10,9 @@ import com.onesignal.user.internal.identity.IdentityModelStore
 import com.onesignal.user.internal.jwt.JwtRequirement
 import com.onesignal.user.internal.jwt.JwtTokenStore
 import com.onesignal.user.internal.operations.LoginUserOperation
+import com.onesignal.user.internal.subscriptions.SubscriptionModel
+import com.onesignal.user.internal.subscriptions.SubscriptionModelStore
+import com.onesignal.user.internal.subscriptions.SubscriptionType
 
 internal class LoginHelper(
     private val identityModelStore: IdentityModelStore,
@@ -17,6 +21,7 @@ internal class LoginHelper(
     private val configModel: ConfigModel,
     private val jwtTokenStore: JwtTokenStore,
     private val lock: Any,
+    private val subscriptionModelStore: SubscriptionModelStore,
 ) {
     internal data class LoginEnqueueContext(
         val appId: String,
@@ -107,4 +112,26 @@ internal class LoginHelper(
             externalId = externalId,
             existingOneSignalId = null,
         )
+
+    internal fun loginDataFromStores(
+        externalId: String,
+        profile: OneSignalUserProfile,
+    ): LoginData {
+        val subscriptions = subscriptionModelStore.list()
+        return LoginData(
+            onesignalId = identityModelStore.model.onesignalId,
+            externalId = externalId,
+            emailSubscriptionId = subscriptionId(subscriptions, SubscriptionType.EMAIL, profile.email),
+            smsSubscriptionId = subscriptionId(subscriptions, SubscriptionType.SMS, profile.phoneNumber),
+        )
+    }
+
+    private fun subscriptionId(
+        subscriptions: Collection<SubscriptionModel>,
+        type: SubscriptionType,
+        address: String?,
+    ): String? {
+        if (address.isNullOrBlank()) return null
+        return subscriptions.firstOrNull { it.type == type && it.address == address }?.id
+    }
 }

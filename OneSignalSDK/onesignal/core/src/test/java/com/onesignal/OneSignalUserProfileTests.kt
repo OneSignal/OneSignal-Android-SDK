@@ -13,6 +13,7 @@ class OneSignalUserProfileTests : FunSpec({
         profile.phoneNumber.shouldBeNull()
         profile.tags shouldBe emptyMap()
         profile.aliases shouldBe emptyMap()
+        profile.hasFields shouldBe false
     }
 
     test("Kotlin named args set only the fields that were passed") {
@@ -26,6 +27,7 @@ class OneSignalUserProfileTests : FunSpec({
         profile.phoneNumber.shouldBeNull()
         profile.tags shouldBe mapOf("plan" to "pro")
         profile.aliases shouldBe emptyMap()
+        profile.hasFields shouldBe true
     }
 
     test("Java builder can set email without a phone number") {
@@ -61,5 +63,9 @@ class OneSignalUserProfileTests : FunSpec({
         tags["plan"] = "changed"
 
         profile.tags shouldBe mapOf("plan" to "pro")
+    }
+
+    test("blank email and phone do not count as fields") {
+        OneSignalUserProfile(email = "  ", phoneNumber = "").hasFields shouldBe false
     }
 })

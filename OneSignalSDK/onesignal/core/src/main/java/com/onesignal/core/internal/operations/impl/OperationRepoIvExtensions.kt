@@ -1,7 +1,6 @@
 package com.onesignal.core.internal.operations.impl
 
 import com.onesignal.core.internal.operations.ExecutionResponse
-import com.onesignal.core.internal.operations.OperationWaitResult
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.user.internal.jwt.JwtTokenStore
 
@@ -62,7 +61,7 @@ internal fun OperationRepo.handleFailUnauthorized(
     // Wake enqueueAndWait callers; re-queue with waiter = null because the original waiter
     // is already woken.
     ops.forEach {
-        it.waiter?.wake(OperationWaitResult(false, response.httpStatusCode, response.httpResponse))
+        it.waiter?.wake(response.toWaitResult(false))
     }
     synchronized(queue) {
         ops.reversed().forEach {

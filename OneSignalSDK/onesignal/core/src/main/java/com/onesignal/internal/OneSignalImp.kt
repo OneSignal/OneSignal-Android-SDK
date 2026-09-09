@@ -48,9 +48,7 @@ import com.onesignal.user.internal.identity.IdentityModelStore
 import com.onesignal.user.internal.jwt.JwtTokenStore
 import com.onesignal.user.internal.properties.PropertiesModelStore
 import com.onesignal.user.internal.resolveAppId
-import com.onesignal.user.internal.subscriptions.SubscriptionModel
 import com.onesignal.user.internal.subscriptions.SubscriptionModelStore
-import com.onesignal.user.internal.subscriptions.SubscriptionType
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.runBlocking
@@ -228,6 +226,7 @@ internal class OneSignalImp : IOneSignal,
             configModel = configModel,
             jwtTokenStore = jwtTokenStore,
             lock = loginLogoutLock,
+            subscriptionModelStore = subscriptionModelStore,
         )
     }
 
@@ -822,7 +821,7 @@ internal class OneSignalImp : IOneSignal,
 
             val context =
                 loginHelper.switchUser(externalId, jwtBearerToken)
-                    ?: if (profileHasFields(profile)) loginHelper.contextForCurrentUser(externalId) else null
+                    ?: if (profile.hasFields) loginHelper.contextForCurrentUser(externalId) else null
             if (context != null) {
                 val completed = loginHelper.enqueueLogin(context, profile)
                 if (!completed.success) {
@@ -833,40 +832,12 @@ internal class OneSignalImp : IOneSignal,
                     )
                 }
             }
-            OneSignalResult.success(loginDataFromStores(externalId, profile))
+            OneSignalResult.success(loginHelper.loginDataFromStores(externalId, profile))
         }
-
-    private fun profileHasFields(profile: OneSignalUserProfile): Boolean =
-        !profile.email.isNullOrBlank() ||
-            !profile.phoneNumber.isNullOrBlank() ||
-            profile.tags.isNotEmpty() ||
-            profile.aliases.isNotEmpty()
 
     private fun loginFailureMessage(wait: OperationWaitResult): String {
         val body = wait.httpResponse?.takeIf { it.isNotBlank() }
         return body ?: wait.httpStatusCode?.let { "Login did not complete (HTTP $it)." } ?: "Login did not complete."
-    }
-
-    private fun loginDataFromStores(
-        externalId: String,
-        profile: OneSignalUserProfile,
-    ): LoginData {
-        val subscriptions = subscriptionModelStore.list()
-        return LoginData(
-            onesignalId = identityModelStore.model.onesignalId,
-            externalId = externalId,
-            emailSubscriptionId = subscriptionId(subscriptions, SubscriptionType.EMAIL, profile.email),
-            smsSubscriptionId = subscriptionId(subscriptions, SubscriptionType.SMS, profile.phoneNumber),
-        )
-    }
-
-    private fun subscriptionId(
-        subscriptions: Collection<SubscriptionModel>,
-        type: SubscriptionType,
-        address: String?,
-    ): String? {
-        if (address.isNullOrBlank()) return null
-        return subscriptions.firstOrNull { it.type == type && it.address == address }?.id
     }
 
     override suspend fun updateUserJwtSuspend(

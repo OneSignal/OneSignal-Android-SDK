@@ -10,6 +10,13 @@ data class OneSignalUserProfile(
     val tags: Map<String, String> = emptyMap(),
     val aliases: Map<String, String> = emptyMap(),
 ) {
+    internal val hasFields: Boolean
+        get() =
+            !email.isNullOrBlank() ||
+                !phoneNumber.isNullOrBlank() ||
+                tags.isNotEmpty() ||
+                aliases.isNotEmpty()
+
     /** Java builder. Use this instead of the constructor when only some fields are set. */
     class Builder {
         private var email: String? = null

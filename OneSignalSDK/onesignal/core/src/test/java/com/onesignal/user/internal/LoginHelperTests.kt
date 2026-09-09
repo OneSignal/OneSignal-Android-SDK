@@ -13,6 +13,9 @@ import com.onesignal.user.internal.jwt.JwtRequirement
 import com.onesignal.user.internal.jwt.JwtTokenStore
 import com.onesignal.user.internal.operations.LoginUserOperation
 import com.onesignal.user.internal.properties.PropertiesModel
+import com.onesignal.user.internal.subscriptions.SubscriptionModel
+import com.onesignal.user.internal.subscriptions.SubscriptionModelStore
+import com.onesignal.user.internal.subscriptions.SubscriptionType
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.mockk.coEvery
@@ -64,6 +67,7 @@ class LoginHelperTests : FunSpec({
                 configModel = mockConfigModel,
                 jwtTokenStore = JwtTokenStore(MockPreferencesService()),
                 lock = loginLock,
+                subscriptionModelStore = mockk(relaxed = true),
             )
 
         // When
@@ -119,6 +123,7 @@ class LoginHelperTests : FunSpec({
                 configModel = mockConfigModel,
                 jwtTokenStore = JwtTokenStore(MockPreferencesService()),
                 lock = loginLock,
+                subscriptionModelStore = mockk(relaxed = true),
             )
 
         // When
@@ -187,6 +192,7 @@ class LoginHelperTests : FunSpec({
                 configModel = mockConfigModel,
                 jwtTokenStore = JwtTokenStore(MockPreferencesService()),
                 lock = loginLock,
+                subscriptionModelStore = mockk(relaxed = true),
             )
 
         // When
@@ -251,6 +257,7 @@ class LoginHelperTests : FunSpec({
                 configModel = mockConfigModel,
                 jwtTokenStore = JwtTokenStore(MockPreferencesService()),
                 lock = Any(),
+                subscriptionModelStore = mockk(relaxed = true),
             )
 
         // When
@@ -314,6 +321,7 @@ class LoginHelperTests : FunSpec({
                 configModel = mockConfigModel,
                 jwtTokenStore = JwtTokenStore(MockPreferencesService()),
                 lock = loginLock,
+                subscriptionModelStore = mockk(relaxed = true),
             )
 
         // When
@@ -364,6 +372,7 @@ class LoginHelperTests : FunSpec({
                 configModel = mockConfigModel,
                 jwtTokenStore = jwtTokenStore,
                 lock = Any(),
+                subscriptionModelStore = mockk(relaxed = true),
             )
 
         // When
@@ -399,6 +408,7 @@ class LoginHelperTests : FunSpec({
                 configModel = mockConfigModel,
                 jwtTokenStore = jwtTokenStore,
                 lock = Any(),
+                subscriptionModelStore = mockk(relaxed = true),
             )
 
         // When: login with same externalId but new JWT
@@ -450,6 +460,7 @@ class LoginHelperTests : FunSpec({
                 configModel = mockConfigModel,
                 jwtTokenStore = JwtTokenStore(MockPreferencesService()),
                 lock = Any(),
+                subscriptionModelStore = mockk(relaxed = true),
             )
 
         runBlocking {
@@ -489,6 +500,7 @@ class LoginHelperTests : FunSpec({
                 configModel = mockConfigModel,
                 jwtTokenStore = JwtTokenStore(MockPreferencesService()),
                 lock = Any(),
+                subscriptionModelStore = mockk(relaxed = true),
             )
 
         runBlocking {
@@ -509,5 +521,50 @@ class LoginHelperTests : FunSpec({
                 },
             )
         }
+    }
+
+    test("loginDataFromStores fills email and SMS ids from matching addresses") {
+        val identityStore =
+            MockHelper.identityModelStore { model ->
+                model.externalId = currentExternalId
+                model.onesignalId = currentOneSignalId
+            }
+        val subscriptions = SubscriptionModelStore(MockPreferencesService())
+        subscriptions.add(
+            SubscriptionModel().apply {
+                id = "email-id"
+                type = SubscriptionType.EMAIL
+                address = "a@b.com"
+            },
+        )
+        subscriptions.add(
+            SubscriptionModel().apply {
+                id = "sms-id"
+                type = SubscriptionType.SMS
+                address = "+15555550100"
+            },
+        )
+        val loginHelper =
+            LoginHelper(
+                identityModelStore = identityStore,
+                userSwitcher = mockk(relaxed = true),
+                operationRepo = mockk(relaxed = true),
+                configModel = mockk(relaxed = true),
+                jwtTokenStore = JwtTokenStore(MockPreferencesService()),
+                lock = Any(),
+                subscriptionModelStore = subscriptions,
+            )
+
+        val data =
+            loginHelper.loginDataFromStores(
+                currentExternalId,
+                OneSignalUserProfile(email = "a@b.com", phoneNumber = "+15555550100"),
+            )
+
+        data.onesignalId shouldBe currentOneSignalId
+        data.externalId shouldBe currentExternalId
+        data.emailSubscriptionId shouldBe "email-id"
+        data.smsSubscriptionId shouldBe "sms-id"
+        loginHelper.loginDataFromStores(currentExternalId, OneSignalUserProfile()).emailSubscriptionId shouldBe null
     }
 })

@@ -393,7 +393,7 @@ internal class OperationRepo(
                 ExecutionResult.SUCCESS -> {
                     // on success we remove the operation from the store and wake any waiters
                     ops.forEach { _operationModelStore.remove(it.operation.id) }
-                    ops.forEach { it.waiter?.wake(waitResult(true, response)) }
+                    ops.forEach { it.waiter?.wake(response.toWaitResult(true)) }
                 }
                 ExecutionResult.FAIL_UNAUTHORIZED -> {
                     // Outer gate: dispatch to IV extension only on new code paths.
@@ -422,7 +422,7 @@ internal class OperationRepo(
                     // remove the starting operation from the store and wake any waiters, then
                     // add back all but the starting op to the front of the queue to be re-executed
                     _operationModelStore.remove(startingOp.operation.id)
-                    startingOp.waiter?.wake(waitResult(true, response))
+                    startingOp.waiter?.wake(response.toWaitResult(true))
                     synchronized(queue) {
                         ops.filter { it != startingOp }.reversed().forEach { queue.add(0, it) }
                     }
@@ -444,7 +444,7 @@ internal class OperationRepo(
                     // keep the failed operation and pause the operation repo from executing
                     paused = true
                     // Unblock any enqueueAndWait callers so loginSuspend doesn't hang.
-                    ops.forEach { it.waiter?.wake(waitResult(false, response)) }
+                    ops.forEach { it.waiter?.wake(response.toWaitResult(false)) }
                     // Re-queue with waiter = null: the operation is preserved for retry
                     // on next cold start, but the original waiter is detached since it
                     // was already woken above.
@@ -486,13 +486,8 @@ internal class OperationRepo(
         response: ExecutionResponse? = null,
     ) {
         ops.forEach { _operationModelStore.remove(it.operation.id) }
-        ops.forEach { it.waiter?.wake(waitResult(false, response)) }
+        ops.forEach { it.waiter?.wake(response.toWaitResult(false)) }
     }
-
-    private fun waitResult(
-        success: Boolean,
-        response: ExecutionResponse? = null,
-    ) = OperationWaitResult(success, response?.httpStatusCode, response?.httpResponse)
 
     /**
      * Wait which ever is longer, retryAfterSeconds returned by the server,
