@@ -106,6 +106,10 @@ internal class PushRegistratorFCM(
             hostApp.options.applicationId,
         )
 
+    /**
+     * @param resolvedSenderId sender ID from the dashboard configuration, or the host Firebase app
+     * sender ID when the dashboard has not provided one.
+     */
     private fun initFirebaseApp(resolvedSenderId: String): FirebaseApp {
         firebaseApp?.let {
             if (firebaseAppSenderId == resolvedSenderId) return it
