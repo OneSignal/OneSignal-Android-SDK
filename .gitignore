@@ -9,6 +9,9 @@ OneSignalSDK/local.properties
 examples/demo/local.properties
 google-services.json
 
+# Google services
+google-services.json
+
 # macOS
 .DS_Store
 

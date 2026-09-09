@@ -1,10 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- Override the logger module's minSdk requirement (26) since we have runtime checks -->
-    <!-- That module is only used on SDK 26+, so this is safe -->
-    <uses-sdk tools:overrideLibrary="com.onesignal.logger" />
-
     <!-- Required so the device can access the internet. -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />

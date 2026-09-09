@@ -72,7 +72,7 @@ object TooltipHelper {
                 }
             } catch (e: Exception) {
                 // Tooltips are non-critical; log and continue
-                DemoLog.w("TooltipHelper", "Failed to fetch tooltip content: ${e.message}")
+                DemoLog.w("Failed to fetch tooltip content: ${e.message}")
             }
         }
     }

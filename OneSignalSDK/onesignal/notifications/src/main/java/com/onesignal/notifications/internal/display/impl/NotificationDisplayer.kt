@@ -111,6 +111,11 @@ internal class NotificationDisplayer(
 
         // Keeps notification from playing sound + vibrating again
         if (notificationJob.isRestoring) {
+            // An extender may have changed the channel, and the channel controls alerting on O+.
+            oneSignalNotificationBuilder.channelId?.let {
+                Logging.verbose("Restoring notification $notificationId on channel $it")
+                notifBuilder?.setChannelId(it)
+            }
             _notificationDisplayBuilder.removeNotifyOptions(notifBuilder)
         }
 
@@ -200,7 +205,6 @@ internal class NotificationDisplayer(
                 NotificationCompat.Builder::class.java.getDeclaredField("mNotification")
             mNotificationField.isAccessible = true
             var mNotification = mNotificationField[notificationBuilder] as Notification
-            notificationJob.orgFlags = mNotification.flags
             notificationJob.orgSound = mNotification.sound
             notificationBuilder!!.extend(notificationJob.notification!!.notificationExtender!!)
             mNotification = mNotificationField[notificationBuilder] as Notification

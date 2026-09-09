@@ -107,6 +107,15 @@ internal interface INotificationRepository {
      */
     suspend fun markAsDismissed(androidId: Int): Boolean
 
+    /**
+     * Mark as dismissed without cancelling the notification from the shade.
+     *
+     * @param androidId The notification's Android ID
+     *
+     * @return true if a notification was marked as dismissed, false otherwise.
+     */
+    suspend fun markAsDismissedWithoutCancel(androidId: Int): Boolean
+
     suspend fun markAsDismissedForGroup(group: String)
 
     suspend fun markAsDismissedForOutstanding()

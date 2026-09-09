@@ -22,9 +22,9 @@ import java.net.URLEncoder
  */
 object OneSignalService {
     
-    private const val TAG = "OneSignalService"
     private const val ONESIGNAL_API_URL = "https://onesignal.com/api/v1/notifications"
     private const val ONESIGNAL_API_BASE_URL = "https://api.onesignal.com"
+    private const val DEMO_ANDROID_GROUP = "demo-group"
     
     private var appId: String = ""
 
@@ -41,13 +41,13 @@ object OneSignalService {
         val subscription = OneSignal.User.pushSubscription
         
         if (!subscription.optedIn) {
-            DemoLog.w(TAG, "Cannot send notification - user not opted in")
+            DemoLog.w("Cannot send notification - user not opted in")
             return@withContext false
         }
         
         val subscriptionId = subscription.id
         if (subscriptionId.isNullOrEmpty()) {
-            DemoLog.w(TAG, "Cannot send notification - no subscription ID")
+            DemoLog.w("Cannot send notification - no subscription ID")
             return@withContext false
         }
 
@@ -57,21 +57,21 @@ object OneSignalService {
                 put("include_subscription_ids", org.json.JSONArray().put(subscriptionId))
                 put("headings", JSONObject().put("en", type.notificationTitle))
                 put("contents", JSONObject().put("en", type.notificationBody))
-                put("android_group", type.title)
+                put("android_group", DEMO_ANDROID_GROUP)
                 put("android_led_color", "FF595CF2")
                 put("android_accent_color", "FF595CF2")
                 type.largeIcon?.let {
                     put("large_icon", it)
-                    DemoLog.d(TAG, "Adding large_icon: $it")
+                    DemoLog.d("Adding large_icon: $it")
                 }
                 type.bigPicture?.let {
                     put("big_picture", it)
-                    DemoLog.d(TAG, "Adding big_picture: $it")
+                    DemoLog.d("Adding big_picture: $it")
                 }
                 type.sound?.let {
                     put("android_sound", it)
                     put("android_channel_id", BuildConfig.ONESIGNAL_ANDROID_CHANNEL_ID)
-                    DemoLog.d(TAG, "Adding android_sound: $it (channel: ${BuildConfig.ONESIGNAL_ANDROID_CHANNEL_ID})")
+                    DemoLog.d("Adding android_sound: $it (channel: ${BuildConfig.ONESIGNAL_ANDROID_CHANNEL_ID})")
                 }
             }
             
@@ -79,7 +79,7 @@ object OneSignalService {
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            DemoLog.e(TAG, "Error sending notification", e)
+            DemoLog.e("Error sending notification", e)
             return@withContext false
         }
     }
@@ -91,13 +91,13 @@ object OneSignalService {
         val subscription = OneSignal.User.pushSubscription
         
         if (!subscription.optedIn) {
-            DemoLog.w(TAG, "Cannot send notification - user not opted in")
+            DemoLog.w("Cannot send notification - user not opted in")
             return@withContext false
         }
         
         val subscriptionId = subscription.id
         if (subscriptionId.isNullOrEmpty()) {
-            DemoLog.w(TAG, "Cannot send notification - no subscription ID")
+            DemoLog.w("Cannot send notification - no subscription ID")
             return@withContext false
         }
         
@@ -107,6 +107,7 @@ object OneSignalService {
                 put("include_subscription_ids", org.json.JSONArray().put(subscriptionId))
                 put("headings", JSONObject().put("en", title))
                 put("contents", JSONObject().put("en", body))
+                put("android_group", DEMO_ANDROID_GROUP)
                 put("android_led_color", "FF595CF2")
                 put("android_accent_color", "FF595CF2")
             }
@@ -115,7 +116,7 @@ object OneSignalService {
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            DemoLog.e(TAG, "Error sending custom notification", e)
+            DemoLog.e("Error sending custom notification", e)
             return@withContext false
         }
     }
@@ -157,7 +158,7 @@ object OneSignalService {
                 }
 
                 if (responseCode !in 200..299) {
-                    DemoLog.e(TAG, "Send $label failed: $response")
+                    DemoLog.e("Send $label failed: $response")
                     return false
                 }
 
@@ -166,7 +167,7 @@ object OneSignalService {
                         delay(backoffMs(attempt))
                         continue
                     }
-                    DemoLog.e(TAG, "Send $label failed: $response")
+                    DemoLog.e("Send $label failed: $response")
                     return false
                 }
 
@@ -176,7 +177,7 @@ object OneSignalService {
                 // teardown while `delay` is suspending between retries).
                 throw e
             } catch (e: Exception) {
-                DemoLog.e(TAG, "Send $label error: ${e.message}")
+                DemoLog.e("Send $label error: ${e.message}")
                 return false
             } finally {
                 connection.disconnect()
@@ -213,12 +214,12 @@ object OneSignalService {
      */
     suspend fun fetchUser(aliasLabel: String, aliasValue: String, jwt: String? = null): UserData? = withContext(Dispatchers.IO) {
         if (aliasValue.isEmpty()) {
-            DemoLog.w(TAG, "Cannot fetch user - aliasValue is empty")
+            DemoLog.w("Cannot fetch user - aliasValue is empty")
             return@withContext null
         }
         
         if (appId.isEmpty()) {
-            DemoLog.w(TAG, "Cannot fetch user - appId not set")
+            DemoLog.w("Cannot fetch user - appId not set")
             return@withContext null
         }
 
@@ -229,7 +230,7 @@ object OneSignalService {
             // space as `+`; swap to %20 since `+` is treated as a literal in paths.
             val encodedAliasValue = URLEncoder.encode(aliasValue, "UTF-8").replace("+", "%20")
             val url = "$ONESIGNAL_API_BASE_URL/apps/$appId/users/by/$aliasLabel/$encodedAliasValue"
-            DemoLog.d(TAG, "Fetching user data from: $url")
+            DemoLog.d("Fetching user data from: $url")
             
             val connection = (URL(url).openConnection() as HttpURLConnection).apply {
                 useCaches = false
@@ -246,24 +247,24 @@ object OneSignalService {
             
             if (responseCode == HttpURLConnection.HTTP_OK) {
                 val response = connection.inputStream.bufferedReader().use { it.readText() }
-                DemoLog.d(TAG, "User data fetched successfully, parsing response...")
+                DemoLog.d("User data fetched successfully, parsing response...")
                 try {
                     val userData = parseUserResponse(response)
-                    DemoLog.d(TAG, "Parsed user data: aliases=${userData.aliases.size}, tags=${userData.tags.size}, emails=${userData.emails.size}, sms=${userData.smsNumbers.size}")
+                    DemoLog.d("Parsed user data: aliases=${userData.aliases.size}, tags=${userData.tags.size}, emails=${userData.emails.size}, sms=${userData.smsNumbers.size}")
                     return@withContext userData
                 } catch (e: Exception) {
-                    DemoLog.e(TAG, "Error parsing user response", e)
+                    DemoLog.e("Error parsing user response", e)
                     return@withContext null
                 }
             } else {
                 val errorResponse = connection.errorStream?.bufferedReader()?.use { it.readText() } ?: "Unknown error"
-                DemoLog.e(TAG, "Failed to fetch user (HTTP $responseCode): $errorResponse")
+                DemoLog.e("Failed to fetch user (HTTP $responseCode): $errorResponse")
                 return@withContext null
             }
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            DemoLog.e(TAG, "Error fetching user", e)
+            DemoLog.e("Error fetching user", e)
             return@withContext null
         }
     }

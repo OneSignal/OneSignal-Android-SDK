@@ -3,6 +3,7 @@ package com.onesignal.debug.internal.logging.logger.android
 import android.app.ActivityManager
 import android.content.Context
 import android.os.Build
+import android.os.SystemClock
 import com.onesignal.common.OneSignalUtils
 import com.onesignal.common.OneSignalWrapper
 import com.onesignal.core.internal.features.IFeatureManager
@@ -31,6 +32,10 @@ internal class LoggerPlatformProvider(
     config: LoggerPlatformProviderConfig,
     private val featureManagerProvider: () -> IFeatureManager,
 ) : ILoggerPlatformProvider {
+    companion object {
+        // First class load. Same monotonic clock as Process.getStartUptimeMillis() (API 24).
+        private val processStartUptimeMs = SystemClock.uptimeMillis()
+    }
     override val appPackageId: String = config.appPackageId
     override val appVersion: String = config.appVersion
     private val context: Context? = config.context
@@ -113,9 +118,8 @@ internal class LoggerPlatformProvider(
             "unknown"
         }
 
-    // https://opentelemetry.io/docs/specs/semconv/system/process-metrics/#metric-processuptime
     override val processUptime: Long
-        get() = android.os.SystemClock.uptimeMillis() - android.os.Process.getStartUptimeMillis()
+        get() = SystemClock.uptimeMillis() - processStartUptimeMs
 
     // https://opentelemetry.io/docs/specs/semconv/general/attributes/#general-thread-attributes
     override val currentThreadName: String
