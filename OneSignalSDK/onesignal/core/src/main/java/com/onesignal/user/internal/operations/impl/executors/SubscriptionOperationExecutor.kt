@@ -273,10 +273,10 @@ internal class SubscriptionOperationExecutor(
                         recoveryLocalId,
                         ModelChangeTags.HYDRATE,
                     )
-                    // The stale record died with any recorded REST API disable; recreate from
+                    // The stale record died with any recorded remote disable; recreate from
                     // device truth rather than the values frozen on the failed operation.
                     recoveryModel?.setIntProperty(
-                        SubscriptionModel::restApiDisabledReason.name,
+                        SubscriptionModel::remoteDisabledReason.name,
                         0,
                         ModelChangeTags.HYDRATE,
                     )
@@ -389,9 +389,9 @@ internal class SubscriptionOperationExecutor(
         return ExecutionResponse(ExecutionResult.SUCCESS)
     }
 
-    /** The failed op's enabled/status, minus a REST API disable that belonged to the dead record. */
+    /** The failed op's enabled/status, minus a remote disable that belonged to the dead record. */
     private fun freshStartWithoutDeadDisable(operation: UpdateSubscriptionOperation): Pair<Boolean, SubscriptionStatus> {
-        return if (operation.status == SubscriptionStatus.DISABLED_FROM_REST_API) {
+        return if (SubscriptionStatus.isRemoteDisable(operation.status.value)) {
             Pair(true, SubscriptionStatus.SUBSCRIBED)
         } else {
             Pair(operation.enabled, operation.status)

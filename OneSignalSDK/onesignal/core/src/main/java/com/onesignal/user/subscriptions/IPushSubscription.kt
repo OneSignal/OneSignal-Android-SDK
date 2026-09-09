@@ -16,7 +16,8 @@ interface IPushSubscription : ISubscription {
      *  the user is able to receive notifications through this subscription. Otherwise, the
      *  user will not receive notifications through this subscription (even when the user has
      *  granted app permission). This reflects the user's preference and app permission only; a
-     *  subscription the app owner disabled through the REST API still reports true here.
+     *  subscription the app owner disabled remotely, from the dashboard or the REST API, still
+     *  reports true here.
      */
     val optedIn: Boolean
 

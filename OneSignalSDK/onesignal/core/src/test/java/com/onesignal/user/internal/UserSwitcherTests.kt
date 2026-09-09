@@ -258,7 +258,9 @@ class UserSwitcherTests : FunSpec({
         verify(exactly = 1) { mockSubscriptionModelStore.add(any(), ModelChangeTags.NO_PROPOGATE) }
     }
 
-    test("createAndSwitchToNewUser carries a REST API disable onto the new push model") {
+    test("createAndSwitchToNewUser carries a remote disable onto the new push model") {
+        // Uses -22 rather than -31 so the assertions below also prove the exact recorded code
+        // survives the switch instead of every remote disable collapsing to one status.
         // Given
         val mocks = Mocks()
         val userSwitcher = mocks.createUserSwitcher()
@@ -268,7 +270,7 @@ class UserSwitcherTests : FunSpec({
                 type = SubscriptionType.PUSH
                 address = "test-token"
                 optedIn = true
-                restApiDisabledReason = SubscriptionStatus.DISABLED_FROM_REST_API.value
+                remoteDisabledReason = SubscriptionStatus.MANUALLY_UNSUBSCRIBED.value
             }
         mocks.subscriptionModelStore!!.add(disabledPushModel, ModelChangeTags.NO_PROPOGATE)
 
@@ -277,10 +279,10 @@ class UserSwitcherTests : FunSpec({
 
         // Then the login create for the new user still reports the subscription disabled
         val newPushModel = mocks.subscriptionModelStore!!.list().first { it.type == SubscriptionType.PUSH }
-        newPushModel.restApiDisabledReason shouldBe SubscriptionStatus.DISABLED_FROM_REST_API.value
+        newPushModel.remoteDisabledReason shouldBe SubscriptionStatus.MANUALLY_UNSUBSCRIBED.value
         val (enabled, status) = SubscriptionModelStoreListener.getSubscriptionEnabledAndStatus(newPushModel)
         enabled shouldBe false
-        status shouldBe SubscriptionStatus.DISABLED_FROM_REST_API
+        status shouldBe SubscriptionStatus.MANUALLY_UNSUBSCRIBED
     }
 
     test("initUser with forceCreateUser creates new user") {

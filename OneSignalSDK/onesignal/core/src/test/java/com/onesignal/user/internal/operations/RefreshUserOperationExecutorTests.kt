@@ -530,28 +530,36 @@ class RefreshUserOperationExecutorTests : FunSpec({
         }
     }
 
-    test("push self-heal: does NOT enqueue follow-up op when server was disabled through the REST API") {
-        // Given: server says push is disabled with the REST API code, local view says enabled
-        val (executor, cachedPushSubscriptionModel, _) =
-            buildSelfHealHarness(
-                serverPushEnabled = false,
-                serverNotificationTypes = SubscriptionStatus.DISABLED_FROM_REST_API.value,
-                localOptedIn = true,
-                localStatus = SubscriptionStatus.SUBSCRIBED,
-                localAddress = onDevicePushToken,
-            )
+    // Both remote-disable codes mean "the app owner turned this off", so both suppress the
+    // self-heal, and each is recorded verbatim so the payload echoes back the code the server sent
+    // rather than a single collapsed one.
+    listOf(
+        SubscriptionStatus.MANUALLY_UNSUBSCRIBED,
+        SubscriptionStatus.DISABLED_FROM_REST_API,
+    ).forEach { remoteDisable ->
+        test("push self-heal: does NOT enqueue follow-up op when the server reports ${remoteDisable.value}") {
+            // Given: server says push is disabled with a remote-disable code, local view says enabled
+            val (executor, cachedPushSubscriptionModel, _) =
+                buildSelfHealHarness(
+                    serverPushEnabled = false,
+                    serverNotificationTypes = remoteDisable.value,
+                    localOptedIn = true,
+                    localStatus = SubscriptionStatus.SUBSCRIBED,
+                    localAddress = onDevicePushToken,
+                )
 
-        // When
-        val response = executor.execute(listOf(RefreshUserOperation(appId, remoteOneSignalId, null)))
+            // When
+            val response = executor.execute(listOf(RefreshUserOperation(appId, remoteOneSignalId, null)))
 
-        // Then no follow-up op, and the disable is recorded on the cached push model
-        response.result shouldBe ExecutionResult.SUCCESS
-        response.operations shouldBe null
-        cachedPushSubscriptionModel.restApiDisabledReason shouldBe SubscriptionStatus.DISABLED_FROM_REST_API.value
+            // Then no follow-up op, and that exact code is recorded on the cached push model
+            response.result shouldBe ExecutionResult.SUCCESS
+            response.operations shouldBe null
+            cachedPushSubscriptionModel.remoteDisabledReason shouldBe remoteDisable.value
+        }
     }
 
     test("push self-heal: still re-asserts local truth when the server reports another disabled code") {
-        // Any disabled code other than -31 stays device-recoverable
+        // Any disabled code other than the remote-disable codes (-22, -31) stays device-recoverable
         val (executor, cachedPushSubscriptionModel, _) =
             buildSelfHealHarness(
                 serverPushEnabled = false,
@@ -567,17 +575,17 @@ class RefreshUserOperationExecutorTests : FunSpec({
             // When
             val response = executor.execute(listOf(RefreshUserOperation(appId, remoteOneSignalId, null)))
 
-            // Then the self-heal op is emitted and nothing is recorded as a REST API disable
+            // Then the self-heal op is emitted and nothing is recorded as a remote disable
             response.result shouldBe ExecutionResult.SUCCESS
             response.operations?.count() shouldBe 1
             (response.operations!![0] is UpdateSubscriptionOperation) shouldBe true
-            cachedPushSubscriptionModel.restApiDisabledReason shouldBe 0
+            cachedPushSubscriptionModel.remoteDisabledReason shouldBe 0
         } finally {
             Logging.logLevel = originalLogLevel
         }
     }
 
-    test("push refresh: clears a recorded REST API disable when the server reports another code") {
+    test("push refresh: clears a recorded remote disable when the server reports another code") {
         // Given: -31 recorded locally, server now reports a different code
         val (executor, cachedPushSubscriptionModel, _) =
             buildSelfHealHarness(
@@ -587,7 +595,7 @@ class RefreshUserOperationExecutorTests : FunSpec({
                 localStatus = SubscriptionStatus.SUBSCRIBED,
                 localAddress = onDevicePushToken,
             )
-        cachedPushSubscriptionModel.restApiDisabledReason = SubscriptionStatus.DISABLED_FROM_REST_API.value
+        cachedPushSubscriptionModel.remoteDisabledReason = SubscriptionStatus.DISABLED_FROM_REST_API.value
 
         val originalLogLevel = Logging.logLevel
         Logging.logLevel = LogLevel.NONE
@@ -597,15 +605,15 @@ class RefreshUserOperationExecutorTests : FunSpec({
 
             // Then the mirror clears and the self-heal still re-asserts local truth
             response.result shouldBe ExecutionResult.SUCCESS
-            cachedPushSubscriptionModel.restApiDisabledReason shouldBe 0
+            cachedPushSubscriptionModel.remoteDisabledReason shouldBe 0
             response.operations?.count() shouldBe 1
         } finally {
             Logging.logLevel = originalLogLevel
         }
     }
 
-    test("push refresh: clears a recorded REST API disable when the server reports enabled again") {
-        // Given: a locally recorded REST API disable, server now reports the subscription enabled
+    test("push refresh: clears a recorded remote disable when the server reports enabled again") {
+        // Given: a locally recorded remote disable, server now reports the subscription enabled
         val (executor, cachedPushSubscriptionModel, _) =
             buildSelfHealHarness(
                 serverPushEnabled = true,
@@ -614,8 +622,8 @@ class RefreshUserOperationExecutorTests : FunSpec({
                 localStatus = SubscriptionStatus.SUBSCRIBED,
                 localAddress = onDevicePushToken,
             )
-        cachedPushSubscriptionModel.restApiDisabledReason = SubscriptionStatus.DISABLED_FROM_REST_API.value
-        cachedPushSubscriptionModel.restApiDisableClearedByUser = true
+        cachedPushSubscriptionModel.remoteDisabledReason = SubscriptionStatus.DISABLED_FROM_REST_API.value
+        cachedPushSubscriptionModel.remoteDisableClearedByUser = true
 
         // When
         val response = executor.execute(listOf(RefreshUserOperation(appId, remoteOneSignalId, null)))
@@ -623,11 +631,11 @@ class RefreshUserOperationExecutorTests : FunSpec({
         // Then the mirror clears and the opt-in's precedence over stale reports ends
         response.result shouldBe ExecutionResult.SUCCESS
         response.operations shouldBe null
-        cachedPushSubscriptionModel.restApiDisabledReason shouldBe 0
-        cachedPushSubscriptionModel.restApiDisableClearedByUser shouldBe false
+        cachedPushSubscriptionModel.remoteDisabledReason shouldBe 0
+        cachedPushSubscriptionModel.remoteDisableClearedByUser shouldBe false
     }
 
-    test("push refresh: keeps an opt-in over a fetch that still reports the REST API disable it cleared") {
+    test("push refresh: keeps an opt-in over a fetch that still reports the remote disable it cleared") {
         // Given: optIn() ran while this fetch was pending, so the server still reports -31
         val (executor, cachedPushSubscriptionModel, _) =
             buildSelfHealHarness(
@@ -637,7 +645,7 @@ class RefreshUserOperationExecutorTests : FunSpec({
                 localStatus = SubscriptionStatus.SUBSCRIBED,
                 localAddress = onDevicePushToken,
             )
-        cachedPushSubscriptionModel.restApiDisableClearedByUser = true
+        cachedPushSubscriptionModel.remoteDisableClearedByUser = true
 
         // When
         val response = executor.execute(listOf(RefreshUserOperation(appId, remoteOneSignalId, null)))
@@ -645,7 +653,7 @@ class RefreshUserOperationExecutorTests : FunSpec({
         // Then the stale disable is not recorded, the flag stays, and no self-heal fires
         response.result shouldBe ExecutionResult.SUCCESS
         response.operations shouldBe null
-        cachedPushSubscriptionModel.restApiDisabledReason shouldBe 0
-        cachedPushSubscriptionModel.restApiDisableClearedByUser shouldBe true
+        cachedPushSubscriptionModel.remoteDisabledReason shouldBe 0
+        cachedPushSubscriptionModel.remoteDisableClearedByUser shouldBe true
     }
 })

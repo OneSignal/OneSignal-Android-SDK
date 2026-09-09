@@ -715,8 +715,8 @@ class SubscriptionOperationExecutorTests :
             configModelStore.model.pushSubscriptionId shouldBe recovery.subscriptionId
         }
 
-        test("update subscription 404 recovery recreates from device truth, not the dead record's REST API disable") {
-            // Given: the cached model carries a recorded REST API disable for the record that 404s
+        test("update subscription 404 recovery recreates from device truth, not the dead record's remote disable") {
+            // Given: the cached model carries a recorded remote disable for the record that 404s
             val mockSubscriptionBackendService = mockk<ISubscriptionBackendService>()
             coEvery { mockSubscriptionBackendService.updateSubscription(any(), any(), any()) } throws BackendException(404)
 
@@ -727,7 +727,7 @@ class SubscriptionOperationExecutorTests :
                     type = SubscriptionType.PUSH
                     address = "pushToken2"
                     optedIn = true
-                    restApiDisabledReason = SubscriptionStatus.DISABLED_FROM_REST_API.value
+                    remoteDisabledReason = SubscriptionStatus.DISABLED_FROM_REST_API.value
                 }
             every { mockSubscriptionsModelStore.get(remoteSubscriptionId) } returns cachedSubscriptionModel
 
@@ -770,7 +770,7 @@ class SubscriptionOperationExecutorTests :
             val recovery = response.operations!!.first() as CreateSubscriptionOperation
             recovery.enabled shouldBe true
             recovery.status shouldBe SubscriptionStatus.SUBSCRIBED
-            cachedSubscriptionModel.restApiDisabledReason shouldBe 0
+            cachedSubscriptionModel.remoteDisabledReason shouldBe 0
         }
 
         test("update subscription fails with retry when the backend returns MISSING, when isInMissingRetryWindow") {

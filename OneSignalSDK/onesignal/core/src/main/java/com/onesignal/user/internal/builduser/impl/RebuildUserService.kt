@@ -56,7 +56,7 @@ class RebuildUserService(
         return operations
     }
 
-    // The server records this rebuild recreates no longer exist, so a recorded REST API
+    // The server records this rebuild recreates no longer exist, so a recorded remote
     // disable died with them; clear it and recreate from device truth.
     private fun buildPushRecoveryOperation(
         appId: String,
@@ -65,11 +65,11 @@ class RebuildUserService(
         pushSubscription: SubscriptionModel,
     ): CreateSubscriptionOperation {
         _subscriptionsModelStore.get(pushSubscription.id)?.setIntProperty(
-            SubscriptionModel::restApiDisabledReason.name,
+            SubscriptionModel::remoteDisabledReason.name,
             0,
             ModelChangeTags.HYDRATE,
         )
-        pushSubscription.restApiDisabledReason = 0
+        pushSubscription.remoteDisabledReason = 0
         val (enabled, status) = SubscriptionModelStoreListener.getSubscriptionEnabledAndStatus(pushSubscription)
         return CreateSubscriptionOperation(
             appId,

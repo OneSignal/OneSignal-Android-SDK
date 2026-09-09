@@ -802,6 +802,7 @@ class SubscriptionManagerTests : FunSpec({
             SubscriptionStatus.INVALID_FCM_SENDER_ID,
             SubscriptionStatus.OUTDATED_GOOGLE_PLAY_SERVICES_APP,
             SubscriptionStatus.HMS_ARGUMENTS_INVALID,
+            SubscriptionStatus.MANUALLY_UNSUBSCRIBED,
             SubscriptionStatus.DISABLED_FROM_REST_API,
             SubscriptionStatus.ERROR,
         ).forEach { it.isRetryableTokenError shouldBe false }
@@ -828,47 +829,68 @@ class SubscriptionManagerTests : FunSpec({
         operation.status shouldBe SubscriptionStatus.SUBSCRIBED
     }
 
-    test("getSubscriptionEnabledAndStatus reports a REST API disable back to the server") {
-        // Given a push subscription the server disabled through the REST API
-        val pushSubscription = SubscriptionModel()
-        pushSubscription.id = "subscription1"
-        pushSubscription.type = SubscriptionType.PUSH
-        pushSubscription.address = "pushToken"
-        pushSubscription.status = SubscriptionStatus.SUBSCRIBED
-        pushSubscription.optedIn = true
-        pushSubscription.restApiDisabledReason = SubscriptionStatus.DISABLED_FROM_REST_API.value
-
-        // When
-        val (enabled, status) = SubscriptionModelStoreListener.getSubscriptionEnabledAndStatus(pushSubscription)
-
-        // Then
-        enabled shouldBe false
-        status shouldBe SubscriptionStatus.DISABLED_FROM_REST_API
+    test("SubscriptionStatus.isRemoteDisable is true only for the two server-owned disable codes") {
+        // -22 (unsubscribed by hand from the dashboard) and -31 (disabled through the REST API) are
+        // the only codes the app owner sets remotely. Every other negative code describes a device
+        // or delivery problem the device recovers from by re-asserting its own state, so widening
+        // this predicate would make the SDK stop re-enabling those subscriptions.
+        SubscriptionStatus.values().forEach {
+            SubscriptionStatus.isRemoteDisable(it.value) shouldBe
+                (it == SubscriptionStatus.MANUALLY_UNSUBSCRIBED || it == SubscriptionStatus.DISABLED_FROM_REST_API)
+        }
+        // 0 is the "nothing recorded" sentinel for remoteDisabledReason, not a disable.
+        SubscriptionStatus.isRemoteDisable(0) shouldBe false
+        SubscriptionStatus.isRemoteDisable(null) shouldBe false
     }
 
-    test("optIn clears a REST API disable so the update re-enables the subscription") {
-        // Given a push subscription the server disabled through the REST API
-        val pushSubscriptionModel = SubscriptionModel()
-        pushSubscriptionModel.id = "subscription1"
-        pushSubscriptionModel.type = SubscriptionType.PUSH
-        pushSubscriptionModel.address = "pushToken"
-        pushSubscriptionModel.status = SubscriptionStatus.SUBSCRIBED
-        pushSubscriptionModel.optedIn = true
-        pushSubscriptionModel.restApiDisabledReason = SubscriptionStatus.DISABLED_FROM_REST_API.value
+    // Both codes are treated the same but recorded separately, so the payload reports back the
+    // exact code the server sent instead of collapsing -22 into -31.
+    listOf(
+        SubscriptionStatus.MANUALLY_UNSUBSCRIBED,
+        SubscriptionStatus.DISABLED_FROM_REST_API,
+    ).forEach { remoteDisable ->
+        test("getSubscriptionEnabledAndStatus reports a ${remoteDisable.value} disable back to the server") {
+            // Given a push subscription the app owner disabled remotely
+            val pushSubscription = SubscriptionModel()
+            pushSubscription.id = "subscription1"
+            pushSubscription.type = SubscriptionType.PUSH
+            pushSubscription.address = "pushToken"
+            pushSubscription.status = SubscriptionStatus.SUBSCRIBED
+            pushSubscription.optedIn = true
+            pushSubscription.remoteDisabledReason = remoteDisable.value
 
-        // When
-        PushSubscription(pushSubscriptionModel).optIn()
+            // When
+            val (enabled, status) = SubscriptionModelStoreListener.getSubscriptionEnabledAndStatus(pushSubscription)
 
-        // Then
-        pushSubscriptionModel.restApiDisabledReason shouldBe 0
-        pushSubscriptionModel.restApiDisableClearedByUser shouldBe true
-        val (enabled, status) = SubscriptionModelStoreListener.getSubscriptionEnabledAndStatus(pushSubscriptionModel)
-        enabled shouldBe true
-        status shouldBe SubscriptionStatus.SUBSCRIBED
+            // Then the recorded code round-trips rather than being reported as the other one
+            enabled shouldBe false
+            status shouldBe remoteDisable
+        }
+
+        test("optIn clears a ${remoteDisable.value} disable so the update re-enables the subscription") {
+            // Given a push subscription the app owner disabled remotely
+            val pushSubscriptionModel = SubscriptionModel()
+            pushSubscriptionModel.id = "subscription1"
+            pushSubscriptionModel.type = SubscriptionType.PUSH
+            pushSubscriptionModel.address = "pushToken"
+            pushSubscriptionModel.status = SubscriptionStatus.SUBSCRIBED
+            pushSubscriptionModel.optedIn = true
+            pushSubscriptionModel.remoteDisabledReason = remoteDisable.value
+
+            // When
+            PushSubscription(pushSubscriptionModel).optIn()
+
+            // Then
+            pushSubscriptionModel.remoteDisabledReason shouldBe 0
+            pushSubscriptionModel.remoteDisableClearedByUser shouldBe true
+            val (enabled, status) = SubscriptionModelStoreListener.getSubscriptionEnabledAndStatus(pushSubscriptionModel)
+            enabled shouldBe true
+            status shouldBe SubscriptionStatus.SUBSCRIBED
+        }
     }
 
-    test("optIn takes precedence over a pending fetch even when no REST API disable was recorded") {
-        // Given a push subscription with no recorded REST API disable
+    test("optIn takes precedence over a pending fetch even when no remote disable was recorded") {
+        // Given a push subscription with no recorded remote disable
         val pushSubscriptionModel = SubscriptionModel()
         pushSubscriptionModel.id = "subscription1"
         pushSubscriptionModel.type = SubscriptionType.PUSH
@@ -880,6 +902,6 @@ class SubscriptionManagerTests : FunSpec({
         PushSubscription(pushSubscriptionModel).optIn()
 
         // Then the flag is set, since every opt-in sends an update a pending fetch may predate
-        pushSubscriptionModel.restApiDisableClearedByUser shouldBe true
+        pushSubscriptionModel.remoteDisableClearedByUser shouldBe true
     }
 })

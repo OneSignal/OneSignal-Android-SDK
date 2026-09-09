@@ -47,7 +47,10 @@ enum class SubscriptionStatus(val value: Int) {
     /** The subscription is not enabled due to any other FCM Exception, this can be retried */
     FIREBASE_FCM_ERROR_MISC_EXCEPTION(-12),
 
-    // -13 to -24 reserved for other platforms
+    // -13 to -21, -23, and -24 reserved for other platforms
+
+    /** The subscription is not enabled because it was unsubscribed by hand from the dashboard */
+    MANUALLY_UNSUBSCRIBED(-22),
 
     /** The subscription is not enabled due the an HMS timeout, this can be retried */
     HMS_TOKEN_TIMEOUT(-25),
@@ -102,12 +105,31 @@ enum class SubscriptionStatus(val value: Int) {
             )
 
         /**
-         * True when [value] is the code the server uses for a subscription disabled through the
-         * REST API, which is only -31. The SDK never derives it from device state, and
-         * server-reported error codes stay device-recoverable.
+         * The codes the server owns, meaning the app owner turned this subscription off remotely.
+         * The SDK never derives either from device state, and every other server-reported error
+         * code stays device-recoverable.
          */
-        fun isRestApiDisable(value: Int?): Boolean {
-            return value == DISABLED_FROM_REST_API.value
+        private val REMOTE_DISABLES =
+            setOf(
+                MANUALLY_UNSUBSCRIBED, // -22
+                DISABLED_FROM_REST_API, // -31
+            )
+
+        /**
+         * The status for a remote-disable code, or `null` when [value] is not one. The two codes
+         * stay distinct in [SubscriptionModel.remoteDisabledReason] and on the wire, so callers
+         * report back the exact code the server sent rather than collapsing them.
+         */
+        fun remoteDisableStatus(value: Int?): SubscriptionStatus? {
+            return REMOTE_DISABLES.firstOrNull { it.value == value }
+        }
+
+        /**
+         * True when [value] is one of the codes for a subscription the app owner disabled
+         * remotely. The SDK treats them the same because both mean the server turned this off.
+         */
+        fun isRemoteDisable(value: Int?): Boolean {
+            return remoteDisableStatus(value) != null
         }
 
         fun fromInt(value: Int): SubscriptionStatus? {
@@ -145,27 +167,30 @@ class SubscriptionModel : Model() {
         }
 
     /**
-     * The server's REST API disable code (-31), or 0 when the server has not disabled this
-     * subscription. Hydrated by RefreshUser and never derived from device state; while set,
-     * [SubscriptionModelStoreListener] reports `enabled = false` with this status so subscription
-     * payloads don't re-enable a suppressed subscription. Cleared when the server reports any
-     * other state, or by [IPushSubscription.optIn].
+     * The code for a subscription the app owner turned off remotely, either by hand from the
+     * dashboard ([SubscriptionStatus.MANUALLY_UNSUBSCRIBED], -22) or through the REST API
+     * ([SubscriptionStatus.DISABLED_FROM_REST_API], -31), or 0 when the server has not disabled
+     * this subscription. Both codes mean the same thing to the SDK but are recorded separately, so
+     * payloads echo back the one the server sent. Hydrated by RefreshUser and never derived from
+     * device state; while set, [SubscriptionModelStoreListener] reports `enabled = false` with the
+     * matching status so subscription payloads don't re-enable a suppressed subscription. Cleared
+     * when the server reports any other state, or by [IPushSubscription.optIn].
      */
-    var restApiDisabledReason: Int
-        get() = getIntProperty(::restApiDisabledReason.name) { 0 }
+    var remoteDisabledReason: Int
+        get() = getIntProperty(::remoteDisabledReason.name) { 0 }
         set(value) {
-            setIntProperty(::restApiDisabledReason.name, value)
+            setIntProperty(::remoteDisabledReason.name, value)
         }
 
     /**
      * True from [IPushSubscription.optIn] until the server reports this subscription in any state
-     * other than a REST API disable. Every opt-in sends a subscription update, and a fetch that
+     * other than a remote disable. Every opt-in sends a subscription update, and a fetch that
      * started before that update went out still reports the disable the opt-in cleared; while
-     * this is set, RefreshUser leaves [restApiDisabledReason] alone instead of recording that
+     * this is set, RefreshUser leaves [remoteDisabledReason] alone instead of recording that
      * stale answer. Memory only, since a fresh process has no update in flight to protect.
      */
     @Volatile
-    var restApiDisableClearedByUser: Boolean = false
+    var remoteDisableClearedByUser: Boolean = false
 
     var type: SubscriptionType
         get() = getEnumProperty(::type.name)

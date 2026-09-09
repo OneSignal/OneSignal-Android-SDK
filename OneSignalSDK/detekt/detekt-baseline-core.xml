@@ -269,6 +269,7 @@
     <ID>MagicNumber:SubscriptionModel.kt$SubscriptionStatus.HMS_ARGUMENTS_INVALID$26</ID>
     <ID>MagicNumber:SubscriptionModel.kt$SubscriptionStatus.HMS_TOKEN_TIMEOUT$25</ID>
     <ID>MagicNumber:SubscriptionModel.kt$SubscriptionStatus.INVALID_FCM_SENDER_ID$6</ID>
+    <ID>MagicNumber:SubscriptionModel.kt$SubscriptionStatus.MANUALLY_UNSUBSCRIBED$22</ID>
     <ID>MagicNumber:SubscriptionModel.kt$SubscriptionStatus.MISSING_FIREBASE_FCM_LIBRARY$4</ID>
     <ID>MagicNumber:SubscriptionModel.kt$SubscriptionStatus.MISSING_HMS_PUSHKIT_LIBRARY$28</ID>
     <ID>MagicNumber:SubscriptionModel.kt$SubscriptionStatus.MISSING_JETPACK_LIBRARY$3</ID>

@@ -31,7 +31,7 @@ class RebuildUserServiceTests : FunSpec({
         )
     }
 
-    test("rebuild recreates a REST-API-disabled push subscription from device truth") {
+    test("rebuild recreates a remotely disabled push subscription from device truth") {
         // Given: the records being rebuilt are gone, so the recorded disable goes with them
         val pushModel =
             SubscriptionModel().apply {
@@ -40,7 +40,7 @@ class RebuildUserServiceTests : FunSpec({
                 address = "pushToken"
                 optedIn = true
                 status = SubscriptionStatus.SUBSCRIBED
-                restApiDisabledReason = SubscriptionStatus.DISABLED_FROM_REST_API.value
+                remoteDisabledReason = SubscriptionStatus.DISABLED_FROM_REST_API.value
             }
         val service = buildService(pushModel)
 
@@ -54,7 +54,7 @@ class RebuildUserServiceTests : FunSpec({
         create.enabled shouldBe true
         create.status shouldBe SubscriptionStatus.SUBSCRIBED
         (operations[2] is RefreshUserOperation) shouldBe true
-        pushModel.restApiDisabledReason shouldBe 0
+        pushModel.remoteDisabledReason shouldBe 0
     }
 
     test("rebuild without a push subscription emits only the login and refresh") {
