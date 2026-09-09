@@ -33,19 +33,10 @@ internal class PushTokenManager(
                 if (registerResult.status.value == SubscriptionStatus.SUBSCRIBED.value) {
                     pushTokenStatus = registerResult.status
                 } else if (registerResult.status.value < SubscriptionStatus.SUBSCRIBED.value) {
-                    // Only allow errored statuses if we have never gotten a token. This ensures the
-                    // device will not later be marked unsubscribed due to any inconsistencies returned
-                    // by Google Play services. Also do not override a config error status if we got a
-                    // runtime error
-                    if (pushToken == null &&
-                        (
-                            pushTokenStatus == SubscriptionStatus.NO_PERMISSION ||
-                                pushStatusRuntimeError(pushTokenStatus)
-                            )
-                    ) {
+                    if (shouldUpdateErrorStatus(registerResult.status)) {
                         pushTokenStatus = registerResult.status
                     }
-                } else if (pushStatusRuntimeError(pushTokenStatus)) {
+                } else if (pushTokenStatus.isRetryableTokenError) {
                     pushTokenStatus = registerResult.status
                 }
 
@@ -56,7 +47,10 @@ internal class PushTokenManager(
         return PushTokenResponse(pushToken, pushTokenStatus)
     }
 
-    private fun pushStatusRuntimeError(status: SubscriptionStatus): Boolean {
-        return status.value < -6
-    }
+    private fun shouldUpdateErrorStatus(newStatus: SubscriptionStatus): Boolean =
+        when {
+            !newStatus.isRetryableTokenError -> true
+            pushToken != null -> false
+            else -> pushTokenStatus == SubscriptionStatus.NO_PERMISSION || pushTokenStatus.isRetryableTokenError
+        }
 }

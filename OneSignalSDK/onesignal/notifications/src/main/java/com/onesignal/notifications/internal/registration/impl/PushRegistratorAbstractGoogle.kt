@@ -51,6 +51,8 @@ internal abstract class PushRegistratorAbstractGoogle(
     @Throws(ExecutionException::class, InterruptedException::class, IOException::class)
     abstract suspend fun getToken(senderId: String): String
 
+    protected open fun resolveSenderId(configuredSenderId: String?): String? = configuredSenderId
+
     override suspend fun registerForPush(): IPushRegistrator.RegisterResult {
         if (!_configModelStore.model.isInitializedWithRemote) {
             return IPushRegistrator.RegisterResult(null, SubscriptionStatus.FIREBASE_FCM_INIT_ERROR)
@@ -61,7 +63,8 @@ internal abstract class PushRegistratorAbstractGoogle(
             return IPushRegistrator.RegisterResult(null, SubscriptionStatus.MISSING_FIREBASE_FCM_LIBRARY)
         }
 
-        return if (!isValidProjectNumber(_configModelStore.model.googleProjectNumber)) {
+        val senderId = resolveSenderId(_configModelStore.model.googleProjectNumber)
+        return if (senderId == null || !isValidProjectNumber(senderId)) {
             Logging.warn(
                 "Missing Google Project number!\nPlease enter a Google Project number / Sender ID on under App Settings > Android > Configuration on the OneSignal dashboard.",
             )
@@ -70,7 +73,7 @@ internal abstract class PushRegistratorAbstractGoogle(
                 SubscriptionStatus.INVALID_FCM_SENDER_ID,
             )
         } else {
-            internalRegisterForPush(_configModelStore.model.googleProjectNumber!!)
+            internalRegisterForPush(senderId)
         }
     }
 
@@ -131,6 +134,8 @@ internal abstract class PushRegistratorAbstractGoogle(
                 registrationId,
                 SubscriptionStatus.SUBSCRIBED,
             )
+        } catch (e: FCMSenderIdMismatchException) {
+            return invalidSenderIdResult(e)
         } catch (e: IOException) {
             val pushStatus: SubscriptionStatus = pushStatusFromThrowable(e)
             val exceptionMessage: String? = AndroidUtils.getRootCauseMessage(e)
@@ -167,6 +172,14 @@ internal abstract class PushRegistratorAbstractGoogle(
         return null
     }
 
+    private fun invalidSenderIdResult(exception: FCMSenderIdMismatchException): IPushRegistrator.RegisterResult {
+        Logging.warn("FCM sender ID mismatch", exception)
+        return IPushRegistrator.RegisterResult(
+            null,
+            SubscriptionStatus.INVALID_FCM_SENDER_ID,
+        )
+    }
+
     private fun pushStatusFromThrowable(throwable: Throwable): SubscriptionStatus {
         val exceptionMessage: String? = AndroidUtils.getRootCauseMessage(throwable)
         return if (throwable is IOException) {
@@ -180,21 +193,7 @@ internal abstract class PushRegistratorAbstractGoogle(
         }
     }
 
-    private fun isValidProjectNumber(senderId: String?): Boolean {
-        val isProjectNumberValidFormat: Boolean =
-            try {
-                senderId!!.toFloat()
-                true
-            } catch (t: Throwable) {
-                false
-            }
-
-        if (!isProjectNumberValidFormat) {
-            return false
-        }
-
-        return true
-    }
+    private fun isValidProjectNumber(senderId: String): Boolean = senderId.toFloatOrNull() != null
 
     companion object {
         private const val REGISTRATION_RETRY_COUNT = 5

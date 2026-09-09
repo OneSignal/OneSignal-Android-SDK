@@ -38,11 +38,11 @@ private class WithoutRegister
 class FCMTokenProviderTests : FunSpec({
     val disabledLegacyApi = IllegalStateException("API disabled. Please use {@link #register()} instead.")
 
-    test("derives the default sender id the same way as Firebase Messaging") {
-        FCMTokenProvider.defaultSenderId(SENDER_ID, "ignored") shouldBe SENDER_ID
-        FCMTokenProvider.defaultSenderId(null, "1:$SENDER_ID:android:abc") shouldBe SENDER_ID
-        FCMTokenProvider.defaultSenderId(null, "legacy-application-id") shouldBe "legacy-application-id"
-        FCMTokenProvider.defaultSenderId(null, "1::android:abc") shouldBe null
+    test("derives the Firebase app sender id the same way as Firebase Messaging") {
+        FCMTokenProvider.firebaseAppSenderId(SENDER_ID, "ignored") shouldBe SENDER_ID
+        FCMTokenProvider.firebaseAppSenderId(null, "1:$SENDER_ID:android:abc") shouldBe SENDER_ID
+        FCMTokenProvider.firebaseAppSenderId(null, "legacy-application-id") shouldBe "legacy-application-id"
+        FCMTokenProvider.firebaseAppSenderId(null, "1::android:abc") shouldBe null
     }
 
     test("returns the legacy FCM token when installation id registration is unavailable") {

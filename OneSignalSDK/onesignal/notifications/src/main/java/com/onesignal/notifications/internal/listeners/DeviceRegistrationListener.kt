@@ -16,6 +16,8 @@ import com.onesignal.user.internal.subscriptions.ISubscriptionManager
 import com.onesignal.user.internal.subscriptions.SubscriptionModel
 import com.onesignal.user.internal.subscriptions.SubscriptionStatus
 import com.onesignal.user.subscriptions.ISubscription
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 /**
  * The device registration listener will subscribe to events and at the appropriate time will
@@ -33,6 +35,8 @@ internal class DeviceRegistrationListener(
     ISingletonModelStoreChangeHandler<ConfigModel>,
     IPermissionObserver,
     ISubscriptionChangedHandler {
+    private val pushTokenMutex = Mutex()
+
     override fun start() {
         _configModelStore.subscribe(this)
         _notificationsManager.addPermissionObserver(this)
@@ -94,12 +98,14 @@ internal class DeviceRegistrationListener(
         val pushSubscription = _subscriptionManager.subscriptions.push
 
         suspendifyOnIO {
-            val pushTokenAndStatus = _pushTokenManager.retrievePushToken()
-            val permission = _notificationsManager.permission
-            _subscriptionManager.addOrUpdatePushSubscriptionToken(
-                pushTokenAndStatus.token,
-                if (permission) pushTokenAndStatus.status else SubscriptionStatus.NO_PERMISSION,
-            )
+            pushTokenMutex.withLock {
+                val pushTokenAndStatus = _pushTokenManager.retrievePushToken()
+                val permission = _notificationsManager.permission
+                _subscriptionManager.addOrUpdatePushSubscriptionToken(
+                    pushTokenAndStatus.token,
+                    if (permission) pushTokenAndStatus.status else SubscriptionStatus.NO_PERMISSION,
+                )
+            }
         }
     }
 
