@@ -168,9 +168,7 @@ internal class LoginUserOperationExecutor(
             properties["tags"] = createUserOperation.tags
         }
 
-        if (createUserOperation.externalId != null) {
-            identities[IdentityConstants.EXTERNAL_ID] = createUserOperation.externalId!!
-        }
+        createUserOperation.externalId?.let { identities[IdentityConstants.EXTERNAL_ID] = it }
         for ((label, id) in createUserOperation.aliases) {
             if (!reservedLoginAliasLabel(label)) {
                 identities[label] = id
