@@ -271,6 +271,13 @@ internal class RefreshUserOperationExecutor(
             return
         }
         if (cachedPushSubscriptionModel.remoteDisabledReason != target) {
+            Logging.debug(
+                if (target != 0) {
+                    "RefreshUserOperationExecutor: recording remote disable $target for push subscription $pushSubscriptionId"
+                } else {
+                    "RefreshUserOperationExecutor: clearing remote disable ${cachedPushSubscriptionModel.remoteDisabledReason} for push subscription $pushSubscriptionId"
+                },
+            )
             cachedPushSubscriptionModel.setIntProperty(
                 SubscriptionModel::remoteDisabledReason.name,
                 target,
