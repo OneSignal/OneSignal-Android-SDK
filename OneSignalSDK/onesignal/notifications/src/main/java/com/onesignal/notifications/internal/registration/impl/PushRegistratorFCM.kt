@@ -106,9 +106,9 @@ internal class PushRegistratorFCM(
             hostApp.options.applicationId,
         )
 
-    private fun initFirebaseApp(senderId: String): FirebaseApp {
+    private fun initFirebaseApp(resolvedSenderId: String): FirebaseApp {
         firebaseApp?.let {
-            if (firebaseAppSenderId == senderId) return it
+            if (firebaseAppSenderId == resolvedSenderId) return it
             it.delete()
             firebaseApp = null
             firebaseAppSenderId = null
@@ -116,7 +116,7 @@ internal class PushRegistratorFCM(
         val firebaseOptions =
             FirebaseOptions
                 .Builder()
-                .setGcmSenderId(senderId)
+                .setGcmSenderId(resolvedSenderId)
                 .setApplicationId(appId)
                 .setApiKey(apiKey)
                 .setProjectId(projectId)
@@ -124,7 +124,7 @@ internal class PushRegistratorFCM(
         return FirebaseApp.initializeApp(_applicationService.appContext, firebaseOptions, FCM_APP_NAME)
             .also {
                 firebaseApp = it
-                firebaseAppSenderId = senderId
+                firebaseAppSenderId = resolvedSenderId
             }
     }
 }
