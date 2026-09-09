@@ -22,7 +22,8 @@ class PushSubscriptionState(
      *  Whether the user of this subscription is opted-in to received notifications. When true,
      *  the user is able to receive notifications through this subscription. Otherwise, the
      *  user will not receive notifications through this subscription (even when the user has
-     *  granted app permission).
+     *  granted app permission). This is false while the app owner has the subscription disabled
+     *  remotely, from the dashboard or the REST API.
      */
     val optedIn: Boolean,
 ) {

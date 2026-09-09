@@ -19,7 +19,12 @@ internal open class PushSubscription(
         get() = model.address
 
     override val optedIn: Boolean
-        get() = model.optedIn && model.status != SubscriptionStatus.NO_PERMISSION
+        // A remote disable suppresses delivery just as surely as a missing permission or an
+        // opt-out, so it belongs in the same answer. Reported through the model's recorded reason
+        // rather than its status, which stays device-owned.
+        get() = model.optedIn &&
+            model.status != SubscriptionStatus.NO_PERMISSION &&
+            model.remoteDisabledReason == 0
 
     override fun optIn() {
         // A deliberate opt-in overrides a remote disable; clearing it with a NORMAL-tagged

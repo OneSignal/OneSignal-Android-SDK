@@ -867,6 +867,49 @@ class SubscriptionManagerTests : FunSpec({
             status shouldBe remoteDisable
         }
 
+        test("optedIn reports false while a ${remoteDisable.value} disable is recorded") {
+            // A remote disable suppresses delivery, so the property clients read to decide whether
+            // push works must say so. Before this, a preference center showed "subscribed" on a
+            // device the app owner had turned off, and nothing in the public API revealed why.
+            val pushSubscriptionModel = SubscriptionModel()
+            pushSubscriptionModel.id = "subscription1"
+            pushSubscriptionModel.type = SubscriptionType.PUSH
+            pushSubscriptionModel.address = "pushToken"
+            pushSubscriptionModel.status = SubscriptionStatus.SUBSCRIBED
+            pushSubscriptionModel.optedIn = true
+
+            val pushSubscription = PushSubscription(pushSubscriptionModel)
+            pushSubscription.optedIn shouldBe true
+
+            // When the server's disable is recorded
+            pushSubscriptionModel.remoteDisabledReason = remoteDisable.value
+
+            // Then
+            pushSubscription.optedIn shouldBe false
+        }
+
+        test("refreshState carries a ${remoteDisable.value} disable into the observer payload") {
+            // The observer already fires on the hydration write; this pins the payload it carries,
+            // since the previous/current pair is built from refreshState.
+            val pushSubscriptionModel = SubscriptionModel()
+            pushSubscriptionModel.id = "subscription1"
+            pushSubscriptionModel.type = SubscriptionType.PUSH
+            pushSubscriptionModel.address = "pushToken"
+            pushSubscriptionModel.status = SubscriptionStatus.SUBSCRIBED
+            pushSubscriptionModel.optedIn = true
+
+            val pushSubscription = PushSubscription(pushSubscriptionModel)
+            val previousState = pushSubscription.savedState
+
+            // When
+            pushSubscriptionModel.remoteDisabledReason = remoteDisable.value
+            val currentState = pushSubscription.refreshState()
+
+            // Then the observer sees a real transition rather than an unchanged pair
+            previousState.optedIn shouldBe true
+            currentState.optedIn shouldBe false
+        }
+
         test("optIn clears a ${remoteDisable.value} disable so the update re-enables the subscription") {
             // Given a push subscription the app owner disabled remotely
             val pushSubscriptionModel = SubscriptionModel()
@@ -883,10 +926,26 @@ class SubscriptionManagerTests : FunSpec({
             // Then
             pushSubscriptionModel.remoteDisabledReason shouldBe 0
             pushSubscriptionModel.remoteDisableClearedByUser shouldBe true
+            // The toggle a client drives off is not a dead end: opting in reports true again.
+            PushSubscription(pushSubscriptionModel).optedIn shouldBe true
             val (enabled, status) = SubscriptionModelStoreListener.getSubscriptionEnabledAndStatus(pushSubscriptionModel)
             enabled shouldBe true
             status shouldBe SubscriptionStatus.SUBSCRIBED
         }
+    }
+
+    test("optedIn ignores a device-recoverable error status") {
+        // Only the two server-owned codes reach optedIn, and they arrive through
+        // remoteDisabledReason rather than status. A device-side delivery error is recoverable by
+        // re-asserting local state, so it must not read as an opt-out to the app.
+        val pushSubscriptionModel = SubscriptionModel()
+        pushSubscriptionModel.id = "subscription1"
+        pushSubscriptionModel.type = SubscriptionType.PUSH
+        pushSubscriptionModel.address = "pushToken"
+        pushSubscriptionModel.optedIn = true
+        pushSubscriptionModel.status = SubscriptionStatus.FIREBASE_FCM_ERROR_IOEXCEPTION_SERVICE_NOT_AVAILABLE
+
+        PushSubscription(pushSubscriptionModel).optedIn shouldBe true
     }
 
     test("optIn takes precedence over a pending fetch even when no remote disable was recorded") {
