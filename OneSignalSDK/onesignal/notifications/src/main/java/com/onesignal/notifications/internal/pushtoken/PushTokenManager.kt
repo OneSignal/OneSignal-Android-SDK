@@ -30,17 +30,18 @@ internal class PushTokenManager(
             else -> {
                 val registerResult = _pushRegistrator.registerForPush()
 
-                if (registerResult.status.value == SubscriptionStatus.SUBSCRIBED.value) {
-                    pushTokenStatus = registerResult.status
-                } else if (registerResult.status.value < SubscriptionStatus.SUBSCRIBED.value) {
-                    if (shouldUpdateErrorStatus(registerResult.status)) {
-                        pushTokenStatus = registerResult.status
+                val shouldUpdate =
+                    when {
+                        registerResult.status.value == SubscriptionStatus.SUBSCRIBED.value -> true
+                        registerResult.status.value < SubscriptionStatus.SUBSCRIBED.value ->
+                            shouldUpdateErrorStatus(registerResult.status)
+                        else -> pushTokenStatus.isRetryableTokenError
                     }
-                } else if (pushTokenStatus.isRetryableTokenError) {
-                    pushTokenStatus = registerResult.status
-                }
 
-                pushToken = registerResult.id
+                if (shouldUpdate) {
+                    pushTokenStatus = registerResult.status
+                    pushToken = registerResult.id
+                }
             }
         }
 
@@ -49,8 +50,9 @@ internal class PushTokenManager(
 
     private fun shouldUpdateErrorStatus(newStatus: SubscriptionStatus): Boolean =
         when {
-            !newStatus.isRetryableTokenError -> true
+            newStatus == SubscriptionStatus.INVALID_FCM_SENDER_ID -> true
             pushToken != null -> false
+            !newStatus.isRetryableTokenError -> true
             else -> pushTokenStatus == SubscriptionStatus.NO_PERMISSION || pushTokenStatus.isRetryableTokenError
         }
 }
