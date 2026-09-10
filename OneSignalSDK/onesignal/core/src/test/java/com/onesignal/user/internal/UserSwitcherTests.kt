@@ -285,6 +285,31 @@ class UserSwitcherTests : FunSpec({
         status shouldBe SubscriptionStatus.MANUALLY_UNSUBSCRIBED
     }
 
+    test("createAndSwitchToNewUser carries the opt-in guard onto the new push model") {
+        // The guard lives in memory rather than as a model property, so it is not carried by the
+        // copy of the reason beside it. Without it, a login landing between an opt-in and its write
+        // lets a fetch issued before that write record the disable the opt-in just cleared.
+        // Given
+        val mocks = Mocks()
+        val userSwitcher = mocks.createUserSwitcher()
+        val optedInPushModel =
+            SubscriptionModel().apply {
+                id = mocks.testSubscriptionId
+                type = SubscriptionType.PUSH
+                address = "test-token"
+                optedIn = true
+                remoteDisableClearedByUser = true
+            }
+        mocks.subscriptionModelStore!!.add(optedInPushModel, ModelChangeTags.NO_PROPOGATE)
+
+        // When
+        userSwitcher.createAndSwitchToNewUser()
+
+        // Then
+        val newPushModel = mocks.subscriptionModelStore!!.list().first { it.type == SubscriptionType.PUSH }
+        newPushModel.remoteDisableClearedByUser shouldBe true
+    }
+
     test("initUser with forceCreateUser creates new user") {
         // Given
         val mocks = Mocks()
