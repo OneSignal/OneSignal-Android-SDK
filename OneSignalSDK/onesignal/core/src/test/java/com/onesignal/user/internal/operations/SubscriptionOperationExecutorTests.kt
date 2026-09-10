@@ -59,6 +59,8 @@ class SubscriptionOperationExecutorTests :
             val subscriptionModel1 = SubscriptionModel()
             subscriptionModel1.id = localSubscriptionId
             every { mockSubscriptionsModelStore.get(localSubscriptionId) } returns subscriptionModel1
+            // A successful create moves the model to the backend's id, where the guard settles.
+            every { mockSubscriptionsModelStore.get(remoteSubscriptionId) } returns subscriptionModel1
 
             val mockBuildUserService = mockk<IRebuildUserService>()
 
@@ -239,6 +241,8 @@ class SubscriptionOperationExecutorTests :
             coEvery { mockSubscriptionBackendService.createSubscription(any(), any(), any(), any()) } throws BackendException(404)
 
             val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
+            // This store holds no model, so the guard settle finds nothing to clear.
+            every { mockSubscriptionsModelStore.get(localSubscriptionId) } returns null
             val mockBuildUserService = mockk<IRebuildUserService>()
             every { mockBuildUserService.getRebuildOperationsIfCurrentUser(any(), any()) } answers { null }
 
@@ -389,6 +393,8 @@ class SubscriptionOperationExecutorTests :
             val subscriptionModel1 = SubscriptionModel()
             subscriptionModel1.id = localSubscriptionId
             every { mockSubscriptionsModelStore.get(localSubscriptionId) } returns subscriptionModel1
+            // A successful create moves the model to the backend's id, where the guard settles.
+            every { mockSubscriptionsModelStore.get(remoteSubscriptionId) } returns subscriptionModel1
 
             val mockBuildUserService = mockk<IRebuildUserService>()
 
@@ -771,6 +777,195 @@ class SubscriptionOperationExecutorTests :
             recovery.enabled shouldBe true
             recovery.status shouldBe SubscriptionStatus.SUBSCRIBED
             cachedSubscriptionModel.remoteDisabledReason shouldBe 0
+        }
+
+        test("update subscription sends the corrective remote disable over the stale enabled it follows") {
+            // This is the batch the session-start race produces. A device-metadata update was
+            // queued before the fetch reported the disable, so it carries enabled=true, and the
+            // hydration that recorded the disable then enqueued a corrective update behind it.
+            // Both share modifyComparisonKey for this subscription, so the op repo merges them and
+            // one PATCH goes out. What that PATCH carries is the whole point of recording a remote
+            // disable under NORMAL rather than HYDRATE, and nothing else asserts it: the executor
+            // reads operations.last(), so a change to the merge order or to the enqueue order would
+            // re-open the hole while every other test still passed.
+            // Given
+            val mockSubscriptionBackendService = mockk<ISubscriptionBackendService>()
+            coEvery { mockSubscriptionBackendService.updateSubscription(any(), any(), any()) } returns rywData
+
+            val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
+            val subscriptionModel =
+                SubscriptionModel().apply {
+                    id = remoteSubscriptionId
+                    type = SubscriptionType.PUSH
+                    address = "pushToken1"
+                    optedIn = true
+                    remoteDisabledReason = SubscriptionStatus.MANUALLY_UNSUBSCRIBED.value
+                }
+            every { mockSubscriptionsModelStore.get(remoteSubscriptionId) } returns subscriptionModel
+
+            val subscriptionOperationExecutor =
+                SubscriptionOperationExecutor(
+                    mockSubscriptionBackendService,
+                    MockHelper.deviceService(),
+                    AndroidMockHelper.applicationService(),
+                    mockSubscriptionsModelStore,
+                    MockHelper.configModelStore(),
+                    mockk<IRebuildUserService>(),
+                    getNewRecordState(),
+                    mockConsistencyManager,
+                    getJwtTokenStore(), getIdentityVerificationService(),
+                )
+
+            val operations =
+                listOf<Operation>(
+                    // Queued at session start, built while the disable was still unknown.
+                    UpdateSubscriptionOperation(
+                        appId,
+                        remoteOneSignalId,
+                        null,
+                        remoteSubscriptionId,
+                        SubscriptionType.PUSH,
+                        true,
+                        "pushToken1",
+                        SubscriptionStatus.SUBSCRIBED,
+                    ),
+                    // Enqueued by the hydration that recorded the disable.
+                    UpdateSubscriptionOperation(
+                        appId,
+                        remoteOneSignalId,
+                        null,
+                        remoteSubscriptionId,
+                        SubscriptionType.PUSH,
+                        false,
+                        "pushToken1",
+                        SubscriptionStatus.MANUALLY_UNSUBSCRIBED,
+                    ),
+                )
+
+            // When
+            val response = subscriptionOperationExecutor.execute(operations)
+
+            // Then one PATCH goes out and it leaves the subscription disabled, not re-enabled
+            response.result shouldBe ExecutionResult.SUCCESS
+            coVerify(exactly = 1) {
+                mockSubscriptionBackendService.updateSubscription(
+                    appId,
+                    remoteSubscriptionId,
+                    withArg {
+                        it.enabled shouldBe false
+                        it.notificationTypes shouldBe SubscriptionStatus.MANUALLY_UNSUBSCRIBED.value
+                    },
+                )
+            }
+        }
+
+        test("update subscription settles the opt-in guard once the write reaches the server") {
+            // The guard exists for one race, a fetch issued before the opt-in's write reached the
+            // server, which still reports the disable that write clears. Once the write has gone
+            // out, a later fetch was issued after it, so a disable it reports is current and has to
+            // be recorded. A guard that never comes down ignores every disable for the rest of the
+            // process instead.
+            // Given
+            val mockSubscriptionBackendService = mockk<ISubscriptionBackendService>()
+            coEvery { mockSubscriptionBackendService.updateSubscription(any(), any(), any()) } returns rywData
+
+            val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
+            val subscriptionModel =
+                SubscriptionModel().apply {
+                    id = remoteSubscriptionId
+                    type = SubscriptionType.PUSH
+                    address = "pushToken1"
+                    optedIn = true
+                    remoteDisableClearedByUser = true
+                }
+            every { mockSubscriptionsModelStore.get(remoteSubscriptionId) } returns subscriptionModel
+
+            val subscriptionOperationExecutor =
+                SubscriptionOperationExecutor(
+                    mockSubscriptionBackendService,
+                    MockHelper.deviceService(),
+                    AndroidMockHelper.applicationService(),
+                    mockSubscriptionsModelStore,
+                    MockHelper.configModelStore(),
+                    mockk<IRebuildUserService>(),
+                    getNewRecordState(),
+                    mockConsistencyManager,
+                    getJwtTokenStore(), getIdentityVerificationService(),
+                )
+
+            val operations =
+                listOf<Operation>(
+                    UpdateSubscriptionOperation(
+                        appId,
+                        remoteOneSignalId,
+                        null,
+                        remoteSubscriptionId,
+                        SubscriptionType.PUSH,
+                        true,
+                        "pushToken1",
+                        SubscriptionStatus.SUBSCRIBED,
+                    ),
+                )
+
+            // When
+            val response = subscriptionOperationExecutor.execute(operations)
+
+            // Then
+            response.result shouldBe ExecutionResult.SUCCESS
+            subscriptionModel.remoteDisableClearedByUser shouldBe false
+        }
+
+        test("update subscription keeps the opt-in guard armed while the write is still queued") {
+            // A retry means the server has not been told yet, so a fetch can still report the
+            // disable the opt-in cleared and the guard has to stay.
+            // Given
+            val mockSubscriptionBackendService = mockk<ISubscriptionBackendService>()
+            coEvery { mockSubscriptionBackendService.updateSubscription(any(), any(), any()) } throws BackendException(500)
+
+            val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
+            val subscriptionModel =
+                SubscriptionModel().apply {
+                    id = remoteSubscriptionId
+                    type = SubscriptionType.PUSH
+                    address = "pushToken1"
+                    optedIn = true
+                    remoteDisableClearedByUser = true
+                }
+            every { mockSubscriptionsModelStore.get(remoteSubscriptionId) } returns subscriptionModel
+
+            val subscriptionOperationExecutor =
+                SubscriptionOperationExecutor(
+                    mockSubscriptionBackendService,
+                    MockHelper.deviceService(),
+                    AndroidMockHelper.applicationService(),
+                    mockSubscriptionsModelStore,
+                    MockHelper.configModelStore(),
+                    mockk<IRebuildUserService>(),
+                    getNewRecordState(),
+                    mockConsistencyManager,
+                    getJwtTokenStore(), getIdentityVerificationService(),
+                )
+
+            val operations =
+                listOf<Operation>(
+                    UpdateSubscriptionOperation(
+                        appId,
+                        remoteOneSignalId,
+                        null,
+                        remoteSubscriptionId,
+                        SubscriptionType.PUSH,
+                        true,
+                        "pushToken1",
+                        SubscriptionStatus.SUBSCRIBED,
+                    ),
+                )
+
+            // When
+            val response = subscriptionOperationExecutor.execute(operations)
+
+            // Then
+            response.result shouldBe ExecutionResult.FAIL_RETRY
+            subscriptionModel.remoteDisableClearedByUser shouldBe true
         }
 
         test("update subscription fails with retry when the backend returns MISSING, when isInMissingRetryWindow") {
