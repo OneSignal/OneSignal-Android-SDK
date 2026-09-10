@@ -11,6 +11,7 @@ import com.onesignal.common.AndroidUtils
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.device.IDeviceService
+import java.io.IOException
 import java.lang.reflect.InvocationTargetException
 import java.util.concurrent.ExecutionException
 
@@ -58,7 +59,7 @@ internal class PushRegistratorFCM(
         val hostApp = hostFirebaseApp()
         return FCMTokenProvider.getToken(
             senderId = senderId,
-            installationIdEnabled = ::installationIdEnabled,
+            installationIdFlag = ::installationIdFlag,
             legacyToken = { getLegacyToken(senderId) },
             installationIdApiAvailable = { FCMTokenProvider.hasRegisterMethod(FirebaseMessaging::class.java) },
             installationIdRegistration = { hostApp?.let(::installationIdRegistration) },
@@ -76,12 +77,12 @@ internal class PushRegistratorFCM(
         return app.get(FirebaseMessaging::class.java).token
     }
 
-    // Manifest merging means the flag can arrive from a dependency instead of the app's own
-    //   manifest, so report what the app actually resolved to. Read as a raw value because a
-    //   string "true" reads as false when asked for a boolean.
-    private fun installationIdEnabled(): String {
+    private fun installationIdFlag(): FCMTokenProvider.InstallationIdFlag {
         val metaData = AndroidUtils.getManifestMetaBundle(_applicationService.appContext)
-        return metaData?.get(INSTALLATION_ID_ENABLED_METADATA)?.toString() ?: "not set"
+        return FCMTokenProvider.InstallationIdFlag(
+            enabled = metaData?.getBoolean(INSTALLATION_ID_ENABLED_METADATA) ?: false,
+            value = metaData?.get(INSTALLATION_ID_ENABLED_METADATA)?.toString() ?: "not set",
+        )
     }
 
     // Installation ID registration is rejected unless the sender id, app id, and api key all belong
@@ -206,6 +207,11 @@ internal object FCMTokenProvider {
         val installationId: () -> Task<String>,
     )
 
+    class InstallationIdFlag(
+        val enabled: Boolean,
+        val value: String,
+    )
+
     /**
      * Retrieves an FCM token for [senderId]. When the host app has opted into Firebase Installation
      * ID registration and that API is available, it is used directly because opting in disables the
@@ -213,18 +219,18 @@ internal object FCMTokenProvider {
      */
     fun getToken(
         senderId: String,
-        installationIdEnabled: () -> String,
+        installationIdFlag: () -> InstallationIdFlag,
         legacyToken: () -> Task<String>,
         installationIdApiAvailable: () -> Boolean = { false },
         installationIdRegistration: () -> InstallationIdRegistration?,
     ): String {
-        val installationIdEnabledValue = installationIdEnabled()
+        val flag = installationIdFlag()
         val registerApiAvailable = installationIdApiAvailable()
-        if (installationIdEnabledValue.equals("true", ignoreCase = true) && registerApiAvailable) {
+        if (flag.enabled && registerApiAvailable) {
             return registerInstallationId(
                 senderId,
                 FCMInstallationIdDiagnostics(
-                    installationIdEnabledValue,
+                    flag.value,
                     installationIdRegistration(),
                     registerApiAvailable,
                 ),
@@ -240,7 +246,7 @@ internal object FCMTokenProvider {
             registerInstallationId(
                 senderId,
                 FCMInstallationIdDiagnostics(
-                    installationIdEnabledValue,
+                    flag.value,
                     registration,
                     registerApiAvailable,
                 ),
@@ -268,6 +274,8 @@ internal object FCMTokenProvider {
             await(registration.register())
             await(registration.installationId())
         } catch (e: FCMInstallationIdException) {
+            throw e
+        } catch (e: IOException) {
             throw e
         } catch (e: Exception) {
             throw FCMInstallationIdException(

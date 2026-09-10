@@ -80,9 +80,10 @@ value in the application manifest:
 </manifest>
 ```
 
-The merged manifest in Android Studio shows which dependency contributed the value. Missing
-Firebase configuration, incompatible `minSdk`, and dependency-version errors occur during the
-Gradle build and cannot be reported by OneSignal at runtime.
+The merged manifest in Android Studio shows which dependency contributed the value. Gradle
+dependency-resolution and incompatible `minSdk` errors occur before the app runs and cannot be
+reported by OneSignal. If the app builds without a default Firebase configuration, OneSignal
+reports the missing `FirebaseApp` when Installation ID registration runs.
 
 ### `build.gradle.kts` essentials
 
