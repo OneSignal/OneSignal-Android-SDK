@@ -37,3 +37,12 @@
 
 # Fallback "misconfigured" managers are reflectively constructed when an optional module is absent.
 -keepclassmembers @com.onesignal.core.internal.minification.KeepStub class * { <init>(...); }
+
+# FidEnv looks these up by name. Core has no compile-time call, so R8 would strip them.
+-keepclassmembers class com.google.firebase.messaging.FirebaseMessaging {
+    *** register();
+}
+-keepclassmembers class com.google.firebase.FirebaseApp {
+    *** getApps(android.content.Context);
+    *** getName();
+}

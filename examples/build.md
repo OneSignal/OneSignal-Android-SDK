@@ -231,13 +231,13 @@ Every behavior is off until switched on in that section, so the notifications th
 
 | Toggle | testTag | What it does |
 | --- | --- | --- |
-| Enable Extension | `nse_enabled_toggle` | Master switch. Off means `onNotificationReceived` returns before touching anything. On logs id, sent time, and the channel the SDK resolved, under the `[Demo]NSE` tag. |
+| Enable Extension | `nse_enabled_toggle` | Master switch. Off means `onNotificationReceived` returns before touching anything. On logs id, sent time, `restoring`, and the channel the SDK resolved, under the `[Demo]NSE` tag. |
 | Apply Extender | `nse_extender_toggle` | Prefixes the title with `[NSE]` through a `NotificationCompat.Extender`. |
 | Force High Importance Channel | `nse_high_importance_toggle` | Moves the notification onto an app-owned `IMPORTANCE_HIGH` channel. |
 | Delay Display | `nse_delay_toggle` | `preventDefault()`, then `display()` five seconds later. |
 | Discard | `nse_discard_toggle` | `preventDefault(true)`. Takes precedence over the other switches. |
 
-The channel readout comes from `NotificationCompat.getChannelId(builder.build())` inside the extender, the only place an extension can see the SDK's choice. A restored notification lands on `restored_OS_notifications` no matter what the payload asked for, which the payload alone never shows. `event.restoring` is not on `INotificationReceivedEvent` yet; see the TODO in the class and SDK-5011.
+The channel readout comes from `NotificationCompat.getChannelId(builder.build())` inside the extender, the only place an extension can see the SDK's choice. A restored notification lands on `restored_OS_notifications` no matter what the payload asked for, which the payload alone never shows. `event.restoring` marks those restores, and the extension logs it in its received line, so the flag and the channel sit together in logcat, the whole diagnosis for a notification that re-alerts on reboot.
 
 The class sets an extender on every notification it handles, because the channel readout is only reachable from inside `extend(builder)`. That costs nothing: an extender cannot change what displays. `NotificationGenerationProcessor.shouldDisplayNotification` does read `hasExtender()`, but `processHandlerResponse` has already dropped a push with an empty body on `canDisplay` by the time it runs.
 

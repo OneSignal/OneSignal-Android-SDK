@@ -1,6 +1,7 @@
 package com.onesignal.notifications.internal.generation
 
 import android.content.Context
+import com.onesignal.notifications.internal.common.NotificationRestoreReason
 import org.json.JSONObject
 
 internal interface INotificationGenerationProcessor {
@@ -8,7 +9,7 @@ internal interface INotificationGenerationProcessor {
         context: Context,
         androidNotificationId: Int,
         jsonPayload: JSONObject,
-        isRestoring: Boolean,
+        restoreReason: NotificationRestoreReason?,
         timestamp: Long,
     )
 }

@@ -2,6 +2,7 @@ package com.onesignal.core.internal.device
 
 import android.content.Context
 import android.os.Build
+import android.os.Bundle
 import androidx.test.core.app.ApplicationProvider
 import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
 import com.onesignal.common.AndroidUtils
@@ -34,6 +35,7 @@ class FidEnvReaderTests : FunSpec({
 
         snapshot.googleServices shouldBe false
         snapshot.fidFlag shouldBe false
+        snapshot.fidRegisterApi shouldBe false
         snapshot.defaultFirebaseApp shouldBe false
         snapshot.firebaseInitProvider shouldBe false
         snapshot.senderMatch shouldBe null
@@ -42,11 +44,20 @@ class FidEnvReaderTests : FunSpec({
         snapshot.agpVersion shouldBe null
     }
 
+    test("manifest flag and register API are reported independently") {
+        val info = context.applicationInfo
+        if (info.metaData == null) info.metaData = Bundle()
+        info.metaData.putBoolean("firebase_messaging_installation_id_enabled", true)
+
+        val snapshot = AndroidFidEnvReader(context).collect(null)
+        snapshot.fidFlag shouldBe true
+        snapshot.fidRegisterApi shouldBe false
+    }
+
     test("gs and sender match follow google-services string resources") {
         mockkObject(AndroidUtils)
         every { AndroidUtils.getResourceString(context, "google_app_id", null) } returns "1:388536902528:android:abc"
         every { AndroidUtils.getResourceString(context, "gcm_defaultSenderId", null) } returns "388536902528"
-        every { AndroidUtils.getManifestMetaBoolean(context, any()) } returns false
 
         val snapshot = AndroidFidEnvReader(context).collect("388536902528")
 
@@ -58,7 +69,6 @@ class FidEnvReaderTests : FunSpec({
         mockkObject(AndroidUtils)
         every { AndroidUtils.getResourceString(context, "google_app_id", null) } returns "1:1:android:abc"
         every { AndroidUtils.getResourceString(context, "gcm_defaultSenderId", null) } returns "111"
-        every { AndroidUtils.getManifestMetaBoolean(context, any()) } returns false
 
         val snapshot = AndroidFidEnvReader(context).collect("999")
 

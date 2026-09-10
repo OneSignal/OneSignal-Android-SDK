@@ -3,8 +3,10 @@ package com.onesignal.notifications.internal.summary.impl
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.time.ITime
+import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.notifications.internal.common.NotificationGenerationJob
 import com.onesignal.notifications.internal.common.NotificationHelper
+import com.onesignal.notifications.internal.common.NotificationRestoreReason
 import com.onesignal.notifications.internal.data.INotificationRepository
 import com.onesignal.notifications.internal.display.ISummaryNotificationDisplayer
 import com.onesignal.notifications.internal.restoration.INotificationRestoreProcessor
@@ -86,8 +88,19 @@ internal class NotificationSummaryManager(
 
     private suspend fun restoreSummary(group: String) {
         val notifications = _dataController.listNotificationsForGroup(group)
-        for (notification in notifications)
-            _notificationRestoreProcessor.processNotification(notification)
+        for (notification in notifications) {
+            // A child that is not posted has its own shade restore coming or in flight. A regroup
+            // enqueued now would steal that work, since unique work is keyed on the OS id alone.
+            // Leave it to the restore pass.
+            if (!NotificationHelper.isNotificationActive(_applicationService.appContext, notification.androidId)) {
+                Logging.debug("restoreSummary skipped notification ${notification.androidId}, not posted so its own restore handles it")
+                continue
+            }
+            _notificationRestoreProcessor.processNotification(
+                notification,
+                NotificationRestoreReason.GROUP_REGROUP,
+            )
+        }
     }
 
     /**
