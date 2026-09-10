@@ -695,6 +695,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
     private fun logDebug(message: String) = DemoLog.d(TAG, message)
 
     override fun onPushSubscriptionChange(state: PushSubscriptionChangedState) {
+        DemoLog.i(TAG, "onPushSubscriptionChange: ${state.toJSONObject()}")
         _pushSubscriptionId.postValue(state.current.id)
         _pushEnabled.postValue(state.current.optedIn)
     }
