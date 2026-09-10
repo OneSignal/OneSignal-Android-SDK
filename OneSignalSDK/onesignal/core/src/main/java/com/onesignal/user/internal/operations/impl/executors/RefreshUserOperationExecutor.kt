@@ -278,10 +278,13 @@ internal class RefreshUserOperationExecutor(
                     "RefreshUserOperationExecutor: clearing remote disable ${cachedPushSubscriptionModel.remoteDisabledReason} for push subscription $pushSubscriptionId"
                 },
             )
+            // NORMAL so this generates a subscription update of its own. An update queued before
+            // this fetch still carries the enabled it was built with. Without a correction it
+            // re-enables the subscription, and the next fetch clears this record to match.
             cachedPushSubscriptionModel.setIntProperty(
                 SubscriptionModel::remoteDisabledReason.name,
                 target,
-                ModelChangeTags.HYDRATE,
+                ModelChangeTags.NORMAL,
             )
         }
     }
