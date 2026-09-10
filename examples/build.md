@@ -43,10 +43,46 @@ Two flavors are declared on the `default` dimension:
 
 | Flavor | Use case |
 |--------|----------|
-| `gms`  | Google Play Services / FCM — pulls `play-services-location`. OneSignal initializes its own Firebase app, so no Google Services plugin or `google-services.json` is needed. |
+| `gms`  | Google Play Services / FCM — pulls `play-services-location`. The legacy FCM token path uses OneSignal's Firebase app and does not require the Google Services plugin. Firebase Installation ID registration requires the host app configuration described below. |
 | `huawei` | Huawei HMS — applies `com.huawei.agconnect`, excludes the GMS transitive deps from the OneSignal artifact, and pulls `com.huawei.hms:push` + `com.huawei.hms:location`. |
 
 The Huawei plugin is selected at configuration time by inspecting `gradle.startParameter.taskRequests` so a clean `./gradlew tasks` doesn't require Huawei configuration.
+
+### Firebase Installation ID registration
+
+Firebase Messaging can enable Installation ID registration through the merged
+`firebase_messaging_installation_id_enabled` manifest value. The value may come from another
+dependency even when the application does not declare it.
+
+When the resolved value is `true`, the application must:
+
+- Use `com.google.firebase:firebase-messaging:25.1.0` or newer. Firebase Messaging 25.x requires
+  `minSdk` 23; apps that must support API 21 or 22 should keep using the legacy token path.
+- Use `compileSdk` 34 or newer.
+- Add the Firebase project's `google-services.json` to the app module and apply the
+  `com.google.gms.google-services` Gradle plugin so Firebase creates the default `FirebaseApp`.
+- Configure that Firebase project with the same sender ID as the OneSignal Android app.
+- Preserve `FirebaseMessaging.register()` during minification. OneSignal publishes the required
+  consumer ProGuard rules, so ensure dependency consumer rules are not disabled or discarded.
+
+To keep using the legacy FCM token path when a dependency enables the flag, override the merged
+value in the application manifest:
+
+```xml
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <application>
+        <meta-data
+            android:name="firebase_messaging_installation_id_enabled"
+            android:value="false"
+            tools:replace="android:value" />
+    </application>
+</manifest>
+```
+
+The merged manifest in Android Studio shows which dependency contributed the value. Missing
+Firebase configuration, incompatible `minSdk`, and dependency-version errors occur during the
+Gradle build and cannot be reported by OneSignal at runtime.
 
 ### `build.gradle.kts` essentials
 

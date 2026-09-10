@@ -123,6 +123,7 @@ internal abstract class PushRegistratorAbstractGoogle(
         )
     }
 
+    @Suppress("LongMethod", "NestedBlockDepth", "ReturnCount")
     private suspend fun attemptRegistration(
         senderId: String,
         currentRetry: Int,
@@ -136,6 +137,8 @@ internal abstract class PushRegistratorAbstractGoogle(
             )
         } catch (e: FCMSenderIdMismatchException) {
             return invalidSenderIdResult(e)
+        } catch (e: FCMInstallationIdException) {
+            return installationIdErrorResult(e)
         } catch (e: IOException) {
             val pushStatus: SubscriptionStatus = pushStatusFromThrowable(e)
             val exceptionMessage: String? = AndroidUtils.getRootCauseMessage(e)
@@ -199,4 +202,12 @@ internal abstract class PushRegistratorAbstractGoogle(
         private const val REGISTRATION_RETRY_COUNT = 5
         private const val REGISTRATION_RETRY_BACKOFF_MS = 10000
     }
+}
+
+private fun installationIdErrorResult(exception: FCMInstallationIdException): IPushRegistrator.RegisterResult {
+    Logging.warn(exception.message ?: "Firebase Installation ID registration failed", exception)
+    return IPushRegistrator.RegisterResult(
+        null,
+        SubscriptionStatus.FIREBASE_FCM_ERROR_MISC_EXCEPTION,
+    )
 }

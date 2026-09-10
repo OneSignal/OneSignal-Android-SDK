@@ -80,12 +80,20 @@ class FCMTokenProviderTests : FunSpec({
         var registered = false
         val token =
             withContext(Dispatchers.IO) {
-                FCMTokenProvider.getToken(SENDER_ID, { "true" }, { Tasks.forException(disabledLegacyApi) }) {
-                    registration(register = {
-                        registered = true
-                        completedTask()
-                    })
-                }
+                FCMTokenProvider.getToken(
+                    SENDER_ID,
+                    { "true" },
+                    { Tasks.forException(disabledLegacyApi) },
+                    installationIdApiAvailable = { true },
+                    installationIdRegistration = {
+                        registration(
+                            register = {
+                                registered = true
+                                completedTask()
+                            },
+                        )
+                    },
+                )
             }
 
         token shouldBe "installation-id"
@@ -110,19 +118,36 @@ class FCMTokenProviderTests : FunSpec({
     test("explains the problem when there is no default FirebaseApp to register with") {
         val thrown =
             withContext(Dispatchers.IO) {
-                shouldThrow<IllegalStateException> {
-                    FCMTokenProvider.getToken(SENDER_ID, { "true" }, { Tasks.forException(disabledLegacyApi) }) { null }
+                shouldThrow<FCMInstallationIdException> {
+                    FCMTokenProvider.getToken(
+                        SENDER_ID,
+                        { "true" },
+                        { Tasks.forException(disabledLegacyApi) },
+                        installationIdApiAvailable = { true },
+                        installationIdRegistration = { null },
+                    )
                 }
             }
 
         thrown.message!! shouldContain "no default FirebaseApp"
+        thrown.message!! shouldContain "google-services.json"
+        thrown.message!! shouldContain "com.google.gms.google-services"
+        thrown.message!! shouldContain "manifest merging"
+        thrown.message!! shouldContain "defaultFirebaseApp=false"
+        thrown.reason shouldBe FCMInstallationIdFailureReason.NO_DEFAULT_FIREBASE_APP
     }
 
     test("reports the manifest flag value it resolved, including when the app never set it") {
         val thrown =
             withContext(Dispatchers.IO) {
-                shouldThrow<IllegalStateException> {
-                    FCMTokenProvider.getToken(SENDER_ID, { "not set" }, { Tasks.forException(disabledLegacyApi) }) { null }
+                shouldThrow<FCMInstallationIdException> {
+                    FCMTokenProvider.getToken(
+                        SENDER_ID,
+                        { "not set" },
+                        { Tasks.forException(disabledLegacyApi) },
+                        installationIdApiAvailable = { true },
+                        installationIdRegistration = { null },
+                    )
                 }
             }
 
@@ -150,17 +175,69 @@ class FCMTokenProviderTests : FunSpec({
 
         val thrown =
             withContext(Dispatchers.IO) {
-                shouldThrow<IllegalStateException> {
-                    FCMTokenProvider.getToken(SENDER_ID, { "true" }, { Tasks.forException(disabledLegacyApi) }) {
-                        registration(
-                            register = { failedTask(registrationFailure) },
-                            installationId = { throw AssertionError("should not run after registration fails") },
-                        )
-                    }
+                shouldThrow<FCMInstallationIdException> {
+                    FCMTokenProvider.getToken(
+                        SENDER_ID,
+                        { "true" },
+                        { Tasks.forException(disabledLegacyApi) },
+                        installationIdApiAvailable = { true },
+                        installationIdRegistration = {
+                            registration(
+                                register = { failedTask(registrationFailure) },
+                                installationId = { throw AssertionError("should not run after registration fails") },
+                            )
+                        },
+                    )
                 }
             }
 
-        thrown shouldBe registrationFailure
+        thrown.reason shouldBe FCMInstallationIdFailureReason.REGISTRATION_FAILED
+        thrown.cause shouldBe registrationFailure
+        thrown.message!! shouldContain "google-services.json"
+    }
+
+    test("explains installation id retrieval failures") {
+        val retrievalFailure = IllegalStateException("Installation ID failed")
+
+        val thrown =
+            withContext(Dispatchers.IO) {
+                shouldThrow<FCMInstallationIdException> {
+                    FCMTokenProvider.getToken(
+                        SENDER_ID,
+                        { "true" },
+                        { Tasks.forException(disabledLegacyApi) },
+                        installationIdApiAvailable = { true },
+                        installationIdRegistration = {
+                            registration(installationId = { Tasks.forException(retrievalFailure) })
+                        },
+                    )
+                }
+            }
+
+        thrown.reason shouldBe FCMInstallationIdFailureReason.REGISTRATION_FAILED
+        thrown.cause shouldBe retrievalFailure
+        thrown.message!! shouldContain "default Firebase project"
+    }
+
+    test("explains when the register API is unavailable") {
+        val thrown =
+            withContext(Dispatchers.IO) {
+                shouldThrow<FCMInstallationIdException> {
+                    FCMTokenProvider.getToken(
+                        SENDER_ID,
+                        { "true" },
+                        { Tasks.forException(disabledLegacyApi) },
+                        installationIdApiAvailable = { false },
+                        installationIdRegistration = { registration() },
+                    )
+                }
+            }
+
+        thrown.reason shouldBe FCMInstallationIdFailureReason.REGISTER_API_UNAVAILABLE
+        thrown.message!! shouldContain "25.1.0 or newer"
+        thrown.message!! shouldContain "ProGuard"
+        thrown.message!! shouldContain "manifest merging"
+        thrown.message!! shouldContain "registerApi=false"
     }
 
     test("invokes register reflectively") {

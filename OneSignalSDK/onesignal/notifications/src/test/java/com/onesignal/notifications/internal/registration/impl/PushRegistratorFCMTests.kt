@@ -204,11 +204,35 @@ class PushRegistratorFCMTests : FunSpec({
 
         val thrown =
             withContext(Dispatchers.IO) {
-                shouldThrow<IllegalStateException> { registrator.getToken(SENDER_ID) }
+                shouldThrow<FCMInstallationIdException> { registrator.getToken(SENDER_ID) }
             }
 
         thrown.message!! shouldContain "no default FirebaseApp"
         thrown.message!! shouldContain "firebase_messaging_installation_id_enabled=not set"
+        thrown.message!! shouldContain "com.google.gms.google-services"
+        thrown.message!! shouldContain "manifest merging"
+    }
+
+    test("reports FID configuration failures through the push registration status") {
+        val configModelStore =
+            MockHelper.configModelStore {
+                it.isInitializedWithRemote = true
+                it.googleProjectNumber = SENDER_ID
+            }
+        val deviceService = mockk<IDeviceService>()
+        every { deviceService.hasFCMLibrary } returns true
+        every { deviceService.isGMSInstalledAndEnabled } returns true
+        val registrator =
+            registrator(
+                legacyToken = Tasks.forException(disabledLegacyApi),
+                configModelStore = configModelStore,
+                deviceService = deviceService,
+            )
+
+        val result = withContext(Dispatchers.IO) { registrator.registerForPush() }
+
+        result.id shouldBe null
+        result.status shouldBe SubscriptionStatus.FIREBASE_FCM_ERROR_MISC_EXCEPTION
     }
 
     test("reports an invalid sender id when FID registration would use a different Firebase project") {

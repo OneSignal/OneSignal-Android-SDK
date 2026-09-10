@@ -1,10 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <application>
         <meta-data
             android:name="firebase_messaging_installation_id_enabled"
-            android:value="false" />
+            android:value="false"
+            tools:replace="android:value" />
     </application>
 
 </manifest>
