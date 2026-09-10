@@ -66,15 +66,12 @@ internal class SummaryNotificationDisplayer(
         notificationJob: NotificationGenerationJob,
         notifBuilder: NotificationCompat.Builder?,
     ): Notification {
-        // Includes Android 4.3 through 6.0.1. Android 7.1 handles this correctly without this.
-        // Android 4.2 and older just post the summary only.
+        // Needed on Android 5.0 through 6.0.1. Android 7.0 handles this correctly without this.
         val singleNotifWorkArounds =
-            Build.VERSION.SDK_INT > Build.VERSION_CODES.JELLY_BEAN_MR1 && Build.VERSION.SDK_INT < Build.VERSION_CODES.N && !notificationJob.isRestoring
+            Build.VERSION.SDK_INT < Build.VERSION_CODES.N && !notificationJob.isRestoring
         if (singleNotifWorkArounds) {
-            if ((notificationJob.overriddenSound != null) &&
-                !notificationJob.overriddenSound!!
-                    .equals(notificationJob.orgSound)
-            ) {
+            val overriddenSound = notificationJob.overriddenSound
+            if (overriddenSound != null && overriddenSound != notificationJob.orgSound) {
                 notifBuilder!!.setSound(null)
             }
         }
