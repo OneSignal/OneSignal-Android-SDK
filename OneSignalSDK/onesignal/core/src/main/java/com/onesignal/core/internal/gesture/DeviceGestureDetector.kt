@@ -4,6 +4,7 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.os.SystemClock
+import com.onesignal.common.AndroidUtils
 import com.onesignal.common.IDManager
 import com.onesignal.core.internal.application.IApplicationLifecycleHandler
 import com.onesignal.core.internal.application.IApplicationService
@@ -28,7 +29,9 @@ import com.onesignal.logger.ObservabilityEvent
  * only rate rule; six cycles fit inside it at round trips of five seconds or faster.
  *
  * [FeatureFlag.SDK_DEVICE_GESTURE_DISABLED] turns the gesture off. Absent means enabled, so a
- * device that has never fetched flags still has it.
+ * device that has never fetched flags still has it. An app can also opt out for good with the
+ * manifest meta-data [MANIFEST_DISABLED_KEY]; then the detector never starts, so nothing is
+ * counted or recorded.
  *
  * Every recognised gesture also records [ObservabilityEvent.DEVICE_GESTURE], with its outcome
  * and the copied ID, so the gesture's usage can be measured.
@@ -53,6 +56,11 @@ internal class DeviceGestureDetector(
     private val cycleTimestamps = mutableListOf<Long>()
 
     override fun start() {
+        // The app owner's opt-out.
+        if (AndroidUtils.getManifestMetaBoolean(applicationService.appContext, MANIFEST_DISABLED_KEY)) {
+            Logging.info("DeviceGestureDetector: disabled by $MANIFEST_DISABLED_KEY in the manifest, not starting")
+            return
+        }
         applicationService.addApplicationLifecycleHandler(this)
     }
 
@@ -180,6 +188,7 @@ internal class DeviceGestureDetector(
         /** Shortest background phase a human can produce; anything faster is synthetic. */
         internal const val MIN_BACKGROUND_DWELL_MS = 250L
 
+        private const val MANIFEST_DISABLED_KEY = "com.onesignal.subscriptionIdCopyDisabled"
         private const val CLIP_LABEL = "OneSignal subscription ID"
         private const val CLIP_PREFIX = "os: "
         internal const val NO_SUBSCRIPTION_CLIP_TEXT = CLIP_PREFIX + "no subscription ID yet"

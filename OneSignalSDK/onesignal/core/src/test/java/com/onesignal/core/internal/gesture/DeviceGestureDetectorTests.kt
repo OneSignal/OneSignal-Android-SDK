@@ -7,6 +7,7 @@ import android.content.ContextWrapper
 import android.os.Build
 import androidx.test.core.app.ApplicationProvider
 import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
+import com.onesignal.common.AndroidUtils
 import com.onesignal.core.internal.application.IApplicationLifecycleHandler
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.features.IFeatureManager
@@ -20,7 +21,10 @@ import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.shouldBe
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.mockkObject
 import io.mockk.slot
+import io.mockk.unmockkObject
+import io.mockk.verify
 import org.robolectric.annotation.Config
 
 private const val SUBSCRIPTION_ID = "aaaabbbb-cccc-dddd-eeee-ffff00001111"
@@ -76,12 +80,12 @@ private class Harness(
     val context: Context = ApplicationProvider.getApplicationContext()
     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
     val recorder = RecorderSpy()
+    val applicationService: IApplicationService = mockk()
 
     private val handlerSlot = slot<IApplicationLifecycleHandler>()
     val detector: DeviceGestureDetector
 
     init {
-        val applicationService = mockk<IApplicationService>()
         every { applicationService.appContext } returns if (clipboardAvailable) context else NoClipboardContext(context)
         every { applicationService.addApplicationLifecycleHandler(capture(handlerSlot)) } answers {
             // Mirrors ApplicationService.addApplicationLifecycleHandler when the app is
@@ -251,6 +255,27 @@ class DeviceGestureDetectorTests : FunSpec({
     }
 
     // ===== Boundaries and failure paths =====
+
+    test("the manifest opt-out keeps the detector from starting") {
+        // The app owner said no: no lifecycle handler is registered, so nothing is counted,
+        // copied or recorded, and the only trace is one INFO line at start.
+        // The key is spelled out rather than read from the detector's constant because the
+        // string is the whole contract an app has. A typo in the constant then misses this stub,
+        // the real read finds no meta-data, and the handler gets added, so the test fails.
+        mockkObject(AndroidUtils)
+        try {
+            every {
+                AndroidUtils.getManifestMetaBoolean(any(), "com.onesignal.subscriptionIdCopyDisabled")
+            } returns true
+            val harness = Harness()
+
+            verify(exactly = 0) { harness.applicationService.addApplicationLifecycleHandler(any()) }
+            harness.clipText() shouldBe null
+            harness.recorder.recorded.shouldBeEmpty()
+        } finally {
+            unmockkObject(AndroidUtils)
+        }
+    }
 
     test("a 249ms background is a blip and a 250ms one is a cycle") {
         // The floor is inclusive: exactly the minimum counts. Six blips leave the window empty,
