@@ -30,27 +30,29 @@ internal class PushTokenManager(
             else -> {
                 val registerResult = _pushRegistrator.registerForPush()
 
-                if (registerResult.status.value == SubscriptionStatus.SUBSCRIBED.value) {
-                    pushTokenStatus = registerResult.status
-                } else if (registerResult.status.value < SubscriptionStatus.SUBSCRIBED.value) {
-                    if (shouldUpdateErrorStatus(registerResult.status)) {
-                        pushTokenStatus = registerResult.status
+                val shouldUpdate =
+                    when {
+                        registerResult.status.value == SubscriptionStatus.SUBSCRIBED.value -> true
+                        registerResult.status.value < SubscriptionStatus.SUBSCRIBED.value ->
+                            shouldUpdateErrorStatus(registerResult)
+                        else -> pushTokenStatus.isRetryableTokenError
                     }
-                } else if (pushTokenStatus.isRetryableTokenError) {
-                    pushTokenStatus = registerResult.status
-                }
 
-                pushToken = registerResult.id
+                if (shouldUpdate) {
+                    pushTokenStatus = registerResult.status
+                    pushToken = registerResult.id
+                }
             }
         }
 
         return PushTokenResponse(pushToken, pushTokenStatus)
     }
 
-    private fun shouldUpdateErrorStatus(newStatus: SubscriptionStatus): Boolean =
+    private fun shouldUpdateErrorStatus(registerResult: IPushRegistrator.RegisterResult): Boolean =
         when {
-            !newStatus.isRetryableTokenError -> true
+            registerResult.isExistingTokenInvalid -> true
             pushToken != null -> false
+            !registerResult.status.isRetryableTokenError -> true
             else -> pushTokenStatus == SubscriptionStatus.NO_PERMISSION || pushTokenStatus.isRetryableTokenError
         }
 }

@@ -11,6 +11,7 @@ import io.kotest.matchers.string.shouldContain
 import io.kotest.matchers.types.shouldBeInstanceOf
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.io.IOException
 
 private const val SENDER_ID = "123456789012"
 
@@ -24,6 +25,11 @@ private fun registration(
     register: () -> Task<*> = { completedTask() },
     installationId: () -> Task<String> = { Tasks.forResult("installation-id") },
 ) = FCMTokenProvider.InstallationIdRegistration(senderId, register, installationId)
+
+private fun installationIdFlag(
+    value: String = "true",
+    enabled: Boolean = value == "true",
+) = FCMTokenProvider.InstallationIdFlag(enabled, value)
 
 private class Registrar(private val exception: Exception? = null) {
     fun register(): Task<Void> {
@@ -48,9 +54,26 @@ class FCMTokenProviderTests : FunSpec({
     test("returns the legacy FCM token when installation id registration is unavailable") {
         val token =
             withContext(Dispatchers.IO) {
-                FCMTokenProvider.getToken(SENDER_ID, { "true" }, { Tasks.forResult("fcm-token") }) {
+                FCMTokenProvider.getToken(SENDER_ID, { installationIdFlag() }, { Tasks.forResult("fcm-token") }) {
                     throw AssertionError("should not fall back to installation id registration")
                 }
+            }
+
+        token shouldBe "fcm-token"
+    }
+
+    test("uses Firebase boolean semantics when the raw manifest flag is a string") {
+        val token =
+            withContext(Dispatchers.IO) {
+                FCMTokenProvider.getToken(
+                    SENDER_ID,
+                    { installationIdFlag(value = "true", enabled = false) },
+                    { Tasks.forResult("fcm-token") },
+                    installationIdApiAvailable = { true },
+                    installationIdRegistration = {
+                        throw AssertionError("Firebase does not enable installation id registration for a string value")
+                    },
+                )
             }
 
         token shouldBe "fcm-token"
@@ -62,7 +85,7 @@ class FCMTokenProviderTests : FunSpec({
             withContext(Dispatchers.IO) {
                 FCMTokenProvider.getToken(
                     senderId = SENDER_ID,
-                    installationIdEnabled = { "true" },
+                    installationIdFlag = { installationIdFlag() },
                     legacyToken = {
                         legacyTokenRequested = true
                         Tasks.forResult("fcm-token")
@@ -80,12 +103,20 @@ class FCMTokenProviderTests : FunSpec({
         var registered = false
         val token =
             withContext(Dispatchers.IO) {
-                FCMTokenProvider.getToken(SENDER_ID, { "true" }, { Tasks.forException(disabledLegacyApi) }) {
-                    registration(register = {
-                        registered = true
-                        completedTask()
-                    })
-                }
+                FCMTokenProvider.getToken(
+                    SENDER_ID,
+                    { installationIdFlag() },
+                    { Tasks.forException(disabledLegacyApi) },
+                    installationIdApiAvailable = { true },
+                    installationIdRegistration = {
+                        registration(
+                            register = {
+                                registered = true
+                                completedTask()
+                            },
+                        )
+                    },
+                )
             }
 
         token shouldBe "installation-id"
@@ -98,7 +129,7 @@ class FCMTokenProviderTests : FunSpec({
         val thrown =
             withContext(Dispatchers.IO) {
                 shouldThrow<IllegalStateException> {
-                    FCMTokenProvider.getToken(SENDER_ID, { "true" }, { Tasks.forException(unrelated) }) {
+                    FCMTokenProvider.getToken(SENDER_ID, { installationIdFlag() }, { Tasks.forException(unrelated) }) {
                         throw AssertionError("should not fall back to installation id registration")
                     }
                 }
@@ -110,19 +141,36 @@ class FCMTokenProviderTests : FunSpec({
     test("explains the problem when there is no default FirebaseApp to register with") {
         val thrown =
             withContext(Dispatchers.IO) {
-                shouldThrow<IllegalStateException> {
-                    FCMTokenProvider.getToken(SENDER_ID, { "true" }, { Tasks.forException(disabledLegacyApi) }) { null }
+                shouldThrow<FCMInstallationIdException> {
+                    FCMTokenProvider.getToken(
+                        SENDER_ID,
+                        { installationIdFlag() },
+                        { Tasks.forException(disabledLegacyApi) },
+                        installationIdApiAvailable = { true },
+                        installationIdRegistration = { null },
+                    )
                 }
             }
 
         thrown.message!! shouldContain "no default FirebaseApp"
+        thrown.message!! shouldContain "google-services.json"
+        thrown.message!! shouldContain "com.google.gms.google-services"
+        thrown.message!! shouldContain "manifest merging"
+        thrown.message!! shouldContain "defaultFirebaseApp=false"
+        thrown.reason shouldBe FCMInstallationIdFailureReason.NO_DEFAULT_FIREBASE_APP
     }
 
     test("reports the manifest flag value it resolved, including when the app never set it") {
         val thrown =
             withContext(Dispatchers.IO) {
-                shouldThrow<IllegalStateException> {
-                    FCMTokenProvider.getToken(SENDER_ID, { "not set" }, { Tasks.forException(disabledLegacyApi) }) { null }
+                shouldThrow<FCMInstallationIdException> {
+                    FCMTokenProvider.getToken(
+                        SENDER_ID,
+                        { installationIdFlag("not set") },
+                        { Tasks.forException(disabledLegacyApi) },
+                        installationIdApiAvailable = { true },
+                        installationIdRegistration = { null },
+                    )
                 }
             }
 
@@ -133,7 +181,7 @@ class FCMTokenProviderTests : FunSpec({
         val thrown =
             withContext(Dispatchers.IO) {
                 shouldThrow<IllegalStateException> {
-                    FCMTokenProvider.getToken(SENDER_ID, { "true" }, { Tasks.forException(disabledLegacyApi) }) {
+                    FCMTokenProvider.getToken(SENDER_ID, { installationIdFlag() }, { Tasks.forException(disabledLegacyApi) }) {
                         registration(
                             senderId = "999999999999",
                             register = { throw AssertionError("should not register on a sender id mismatch") },
@@ -150,17 +198,90 @@ class FCMTokenProviderTests : FunSpec({
 
         val thrown =
             withContext(Dispatchers.IO) {
-                shouldThrow<IllegalStateException> {
-                    FCMTokenProvider.getToken(SENDER_ID, { "true" }, { Tasks.forException(disabledLegacyApi) }) {
-                        registration(
-                            register = { failedTask(registrationFailure) },
-                            installationId = { throw AssertionError("should not run after registration fails") },
-                        )
-                    }
+                shouldThrow<FCMInstallationIdException> {
+                    FCMTokenProvider.getToken(
+                        SENDER_ID,
+                        { installationIdFlag() },
+                        { Tasks.forException(disabledLegacyApi) },
+                        installationIdApiAvailable = { true },
+                        installationIdRegistration = {
+                            registration(
+                                register = { failedTask(registrationFailure) },
+                                installationId = { throw AssertionError("should not run after registration fails") },
+                            )
+                        },
+                    )
+                }
+            }
+
+        thrown.reason shouldBe FCMInstallationIdFailureReason.REGISTRATION_FAILED
+        thrown.cause shouldBe registrationFailure
+        thrown.message!! shouldContain "google-services.json"
+    }
+
+    test("explains installation id retrieval failures") {
+        val retrievalFailure = IllegalStateException("Installation ID failed")
+
+        val thrown =
+            withContext(Dispatchers.IO) {
+                shouldThrow<FCMInstallationIdException> {
+                    FCMTokenProvider.getToken(
+                        SENDER_ID,
+                        { installationIdFlag() },
+                        { Tasks.forException(disabledLegacyApi) },
+                        installationIdApiAvailable = { true },
+                        installationIdRegistration = {
+                            registration(installationId = { Tasks.forException(retrievalFailure) })
+                        },
+                    )
+                }
+            }
+
+        thrown.reason shouldBe FCMInstallationIdFailureReason.REGISTRATION_FAILED
+        thrown.cause shouldBe retrievalFailure
+        thrown.message!! shouldContain "default Firebase project"
+    }
+
+    test("preserves IOExceptions for the existing FCM retry handling") {
+        val registrationFailure = IOException("SERVICE_NOT_AVAILABLE")
+
+        val thrown =
+            withContext(Dispatchers.IO) {
+                shouldThrow<IOException> {
+                    FCMTokenProvider.getToken(
+                        SENDER_ID,
+                        { installationIdFlag() },
+                        { Tasks.forException(disabledLegacyApi) },
+                        installationIdApiAvailable = { true },
+                        installationIdRegistration = {
+                            registration(register = { failedTask(registrationFailure) })
+                        },
+                    )
                 }
             }
 
         thrown shouldBe registrationFailure
+    }
+
+    test("explains when the register API is unavailable") {
+        val thrown =
+            withContext(Dispatchers.IO) {
+                shouldThrow<FCMInstallationIdException> {
+                    FCMTokenProvider.getToken(
+                        SENDER_ID,
+                        { installationIdFlag() },
+                        { Tasks.forException(disabledLegacyApi) },
+                        installationIdApiAvailable = { false },
+                        installationIdRegistration = { registration() },
+                    )
+                }
+            }
+
+        thrown.reason shouldBe FCMInstallationIdFailureReason.REGISTER_API_UNAVAILABLE
+        thrown.message!! shouldContain "25.1.0 or newer"
+        thrown.message!! shouldContain "ProGuard"
+        thrown.message!! shouldContain "manifest merging"
+        thrown.message!! shouldContain "registerApi=false"
     }
 
     test("invokes register reflectively") {

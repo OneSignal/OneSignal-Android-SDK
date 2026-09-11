@@ -11,6 +11,7 @@ import com.onesignal.common.AndroidUtils
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.device.IDeviceService
+import java.io.IOException
 import java.lang.reflect.InvocationTargetException
 import java.util.concurrent.ExecutionException
 
@@ -58,7 +59,7 @@ internal class PushRegistratorFCM(
         val hostApp = hostFirebaseApp()
         return FCMTokenProvider.getToken(
             senderId = senderId,
-            installationIdEnabled = ::installationIdEnabled,
+            installationIdFlag = ::installationIdFlag,
             legacyToken = { getLegacyToken(senderId) },
             installationIdApiAvailable = { FCMTokenProvider.hasRegisterMethod(FirebaseMessaging::class.java) },
             installationIdRegistration = { hostApp?.let(::installationIdRegistration) },
@@ -76,12 +77,12 @@ internal class PushRegistratorFCM(
         return app.get(FirebaseMessaging::class.java).token
     }
 
-    // Manifest merging means the flag can arrive from a dependency instead of the app's own
-    //   manifest, so report what the app actually resolved to. Read as a raw value because a
-    //   string "true" reads as false when asked for a boolean.
-    private fun installationIdEnabled(): String {
+    private fun installationIdFlag(): FCMTokenProvider.InstallationIdFlag {
         val metaData = AndroidUtils.getManifestMetaBundle(_applicationService.appContext)
-        return metaData?.get(INSTALLATION_ID_ENABLED_METADATA)?.toString() ?: "not set"
+        return FCMTokenProvider.InstallationIdFlag(
+            enabled = metaData?.getBoolean(INSTALLATION_ID_ENABLED_METADATA) ?: false,
+            value = metaData?.get(INSTALLATION_ID_ENABLED_METADATA)?.toString() ?: "not set",
+        )
     }
 
     // Installation ID registration is rejected unless the sender id, app id, and api key all belong
@@ -135,6 +136,56 @@ internal class PushRegistratorFCM(
 
 internal class FCMSenderIdMismatchException(message: String) : IllegalStateException(message)
 
+internal enum class FCMInstallationIdFailureReason {
+    NO_DEFAULT_FIREBASE_APP,
+    REGISTER_API_UNAVAILABLE,
+    REGISTRATION_FAILED,
+}
+
+internal class FCMInstallationIdException(
+    val reason: FCMInstallationIdFailureReason,
+    message: String,
+    cause: Throwable? = null,
+) : IllegalStateException(message, cause)
+
+private class FCMInstallationIdDiagnostics(
+    val flagValue: String,
+    val registration: FCMTokenProvider.InstallationIdRegistration?,
+    val registerApiAvailable: Boolean,
+) {
+    fun summary(): String =
+        "firebase_messaging_installation_id_enabled=$flagValue, " +
+            "defaultFirebaseApp=${registration != null}, " +
+            "registerApi=$registerApiAvailable"
+}
+
+private fun requireInstallationIdRegistration(
+    diagnostics: FCMInstallationIdDiagnostics,
+): FCMTokenProvider.InstallationIdRegistration =
+    diagnostics.registration
+        ?: throw FCMInstallationIdException(
+            FCMInstallationIdFailureReason.NO_DEFAULT_FIREBASE_APP,
+            "Firebase Installation ID registration cannot start because this app has no " +
+                "default FirebaseApp (${diagnostics.summary()}). Add google-services.json and " +
+                "apply the com.google.gms.google-services Gradle plugin. If another dependency " +
+                "enabled firebase_messaging_installation_id_enabled through manifest merging, " +
+                "override it to false in your application manifest to use the legacy FCM token API.",
+        )
+
+private fun requireInstallationIdRegisterApi(diagnostics: FCMInstallationIdDiagnostics) {
+    if (!diagnostics.registerApiAvailable) {
+        throw FCMInstallationIdException(
+            FCMInstallationIdFailureReason.REGISTER_API_UNAVAILABLE,
+            "Firebase Installation ID registration cannot start because " +
+                "FirebaseMessaging.register() is unavailable (${diagnostics.summary()}). " +
+                "Use firebase-messaging 25.1.0 or newer and ensure OneSignal's consumer " +
+                "ProGuard rules are applied. If another dependency enabled " +
+                "firebase_messaging_installation_id_enabled through manifest merging, " +
+                "override it to false in your application manifest to use the legacy FCM token API.",
+        )
+    }
+}
+
 internal object FCMTokenProvider {
     fun firebaseAppSenderId(
         senderId: String?,
@@ -156,6 +207,11 @@ internal object FCMTokenProvider {
         val installationId: () -> Task<String>,
     )
 
+    class InstallationIdFlag(
+        val enabled: Boolean,
+        val value: String,
+    )
+
     /**
      * Retrieves an FCM token for [senderId]. When the host app has opted into Firebase Installation
      * ID registration and that API is available, it is used directly because opting in disables the
@@ -163,14 +219,22 @@ internal object FCMTokenProvider {
      */
     fun getToken(
         senderId: String,
-        installationIdEnabled: () -> String,
+        installationIdFlag: () -> InstallationIdFlag,
         legacyToken: () -> Task<String>,
         installationIdApiAvailable: () -> Boolean = { false },
         installationIdRegistration: () -> InstallationIdRegistration?,
     ): String {
-        val installationIdEnabledValue = installationIdEnabled()
-        if (installationIdEnabledValue.equals("true", ignoreCase = true) && installationIdApiAvailable()) {
-            return registerInstallationId(senderId, installationIdEnabledValue, installationIdRegistration())
+        val flag = installationIdFlag()
+        val registerApiAvailable = installationIdApiAvailable()
+        if (flag.enabled && registerApiAvailable) {
+            return registerInstallationId(
+                senderId,
+                FCMInstallationIdDiagnostics(
+                    flag.value,
+                    installationIdRegistration(),
+                    registerApiAvailable,
+                ),
+            )
         }
 
         return try {
@@ -178,31 +242,50 @@ internal object FCMTokenProvider {
         } catch (e: IllegalStateException) {
             if (!isLegacyTokenApiDisabled(e)) throw e
 
-            registerInstallationId(senderId, installationIdEnabledValue, installationIdRegistration())
+            val registration = installationIdRegistration()
+            registerInstallationId(
+                senderId,
+                FCMInstallationIdDiagnostics(
+                    flag.value,
+                    registration,
+                    registerApiAvailable,
+                ),
+            )
         }
     }
 
     private fun registerInstallationId(
         senderId: String,
-        installationIdEnabled: String,
-        registration: InstallationIdRegistration?,
+        diagnostics: FCMInstallationIdDiagnostics,
     ): String {
-        val optedIn = "firebase_messaging_installation_id_enabled=$installationIdEnabled"
-
-        if (registration == null) {
-            throw IllegalStateException(
-                "Firebase Installation ID registration is enabled ($optedIn) but this app has no " +
-                    "default FirebaseApp to register with. Add your Firebase configuration " +
-                    "(google-services.json), or set firebase_messaging_installation_id_enabled to " +
-                    "false in your manifest to keep using the legacy FCM token API.",
-            )
-        }
+        val registration = requireInstallationIdRegistration(diagnostics)
 
         validateSenderId(senderId, registration.senderId)
-
-        await(registration.register())
-        return await(registration.installationId())
+        requireInstallationIdRegisterApi(diagnostics)
+        return retrieveInstallationId(registration, diagnostics)
     }
+
+    @Suppress("TooGenericExceptionCaught")
+    private fun retrieveInstallationId(
+        registration: InstallationIdRegistration,
+        diagnostics: FCMInstallationIdDiagnostics,
+    ): String =
+        try {
+            await(registration.register())
+            await(registration.installationId())
+        } catch (e: FCMInstallationIdException) {
+            throw e
+        } catch (e: IOException) {
+            throw e
+        } catch (e: Exception) {
+            throw FCMInstallationIdException(
+                FCMInstallationIdFailureReason.REGISTRATION_FAILED,
+                "Firebase Installation ID registration failed (${diagnostics.summary()}). Verify " +
+                    "google-services.json, the com.google.gms.google-services Gradle plugin, and " +
+                    "that the default Firebase project matches the OneSignal Android configuration.",
+                e,
+            )
+        }
 
     fun validateSenderId(
         senderId: String,
@@ -234,7 +317,8 @@ internal object FCMTokenProvider {
             try {
                 target.javaClass.getMethod("register")
             } catch (e: NoSuchMethodException) {
-                throw IllegalStateException(
+                throw FCMInstallationIdException(
+                    FCMInstallationIdFailureReason.REGISTER_API_UNAVAILABLE,
                     "Firebase Installation ID registration is enabled but " +
                         "FirebaseMessaging.register() was not found. It requires firebase-messaging " +
                         "25.1.0 or newer, and has to survive minification, so check that OneSignal's " +
