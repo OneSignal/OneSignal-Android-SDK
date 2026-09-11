@@ -31,6 +31,7 @@ import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.debug.internal.logging.logger.android.getCrashStoragePath
 import com.onesignal.inAppMessages.IInAppMessagesManager
 import com.onesignal.location.ILocationManager
+import com.onesignal.logger.IObservabilityEventRecorder
 import com.onesignal.notifications.INotificationsManager
 import com.onesignal.session.ISessionManager
 import com.onesignal.session.SessionModule
@@ -419,6 +420,15 @@ internal class OneSignalImp : IOneSignal,
             // Now that the IoC container is ready, subscribe the observability lifecycle
             // manager to config store events so it reacts to fresh remote config.
             observabilityManager?.subscribeToConfigStore(services.getService<ConfigModelStore>())
+            // The event recorder is a container service, so it can only be handed over now. The resolve
+            // cannot fail in practice (bootstrap already built the feature manager it needs), and the
+            // hand-over is fail-open inside the manager.
+            val eventRecorder = services.getServiceOrNull<IObservabilityEventRecorder>()
+            if (eventRecorder != null) {
+                observabilityManager?.attachEventRecorder(eventRecorder)
+            } else {
+                Logging.warn("OneSignal: event recorder unavailable, observability events will not ship")
+            }
 
             val result = resolveAppId(appId, configModel, preferencesService)
             if (result.failed) {
@@ -440,7 +450,7 @@ internal class OneSignalImp : IOneSignal,
             return true
         } catch (e: Exception) {
             // Any unchecked throw from initEssentials / bootstrapServices / subscribeToConfigStore /
-            // updateConfig / userSwitcher.initUser / startupService.scheduleStart would otherwise
+            // attachEventRecorder / updateConfig / userSwitcher.initUser / startupService.scheduleStart would otherwise
             // leave initState at IN_PROGRESS forever and `suspendCompletion` uncompleted —
             // accessors and re-entrant suspend callers (e.g. SyncJobService) would deadlock on
             // `await()`. Reach a terminal state via [completeInit] (atomic state+completion) and

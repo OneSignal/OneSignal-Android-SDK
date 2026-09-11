@@ -13,18 +13,30 @@ import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.crash.ObservabilitySdkSupport
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.debug.internal.logging.logger.android.AndroidLogCrashHandler
+import com.onesignal.debug.internal.logging.logger.android.AndroidLogger
 import com.onesignal.logger.ILogAnrDetector
 import com.onesignal.logger.ILogFileStore
+import com.onesignal.logger.ILogHttpSender
+import com.onesignal.logger.ILogTelemetry
 import com.onesignal.logger.ILogTelemetryRemote
+import com.onesignal.logger.ILoggerPlatformProvider
+import com.onesignal.logger.IObservabilityEventRecorder
+import com.onesignal.logger.LogRecord
+import com.onesignal.logger.LoggerFactory
+import com.onesignal.logger.ObservabilityEvent
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.types.shouldBeInstanceOf
+import io.mockk.Runs
 import io.mockk.clearMocks
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
+import io.mockk.just
 import io.mockk.mockk
 import io.mockk.verify
+import io.mockk.verifyOrder
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
@@ -257,6 +269,160 @@ class LoggerLifecycleManagerTest : FunSpec({
         Logging.error("dropped after disable")
         runBlocking { delay(SINK_QUIET_MS) }
         coVerify(exactly = 0) { telemetry.emit(any()) }
+    }
+
+    // ===== Observability events ride the remote telemetry =====
+    // The recorder is handed over after bootstrap and has to follow every telemetry swap, so an
+    // event recorded before HYDRATE leaves through the telemetry HYDRATE installs.
+
+    /** Every collaborator mocked, so only the hand-over and the telemetry swaps are observable. */
+    fun mutedManager(
+        platformProvider: ILoggerPlatformProvider = mockk(relaxed = true),
+        remoteTelemetryFactory: (ILoggerPlatformProvider, ILogHttpSender) -> ILogTelemetryRemote =
+            { _, _ -> mockk(relaxed = true) },
+    ): LoggerLifecycleManager =
+        LoggerLifecycleManager(
+            context = context,
+            featureManagerProvider = { featureManager },
+            platformProviderFactory = { _, _ -> platformProvider },
+            logger = mockk(relaxed = true),
+            fileStoreFactory = { mockk<ILogFileStore>(relaxed = true) },
+            crashHandlerFactory = { _, _, _ -> mockk(relaxed = true) },
+            anrDetectorFactory = { _, _, _ -> mockk(relaxed = true) },
+            remoteTelemetryFactory = remoteTelemetryFactory,
+        )
+
+    test("the event recorder waits for remote telemetry and attaches to the one HYDRATE installs") {
+        val telemetry = mockk<ILogTelemetryRemote>(relaxed = true)
+        val recorder = mockk<IObservabilityEventRecorder>(relaxed = true)
+        val manager = mutedManager(remoteTelemetryFactory = { _, _ -> telemetry })
+        manager.initializeFromCachedConfig()
+
+        manager.attachEventRecorder(recorder)
+        verify(exactly = 0) { recorder.attach(any()) }
+
+        manager.onModelReplaced(configWith(isEnabled = true, logLevel = LogLevel.ERROR), ModelChangeTags.HYDRATE)
+
+        verify(exactly = 1) { recorder.attach(telemetry) }
+    }
+
+    test("the event recorder attaches at once when the cached-config telemetry is already live") {
+        val telemetry = mockk<ILogTelemetryRemote>(relaxed = true)
+        val recorder = mockk<IObservabilityEventRecorder>(relaxed = true)
+        val cachedProvider = mockk<ILoggerPlatformProvider>(relaxed = true)
+        every { cachedProvider.isRemoteLoggingEnabled } returns true
+        every { cachedProvider.remoteLogLevel } returns "ERROR"
+        val manager = mutedManager(platformProvider = cachedProvider, remoteTelemetryFactory = { _, _ -> telemetry })
+        manager.initializeFromCachedConfig()
+
+        manager.attachEventRecorder(recorder)
+
+        verify(exactly = 1) { recorder.attach(telemetry) }
+    }
+
+    test("disabling detaches the event recorder before the telemetry shuts down") {
+        val telemetry = mockk<ILogTelemetryRemote>(relaxed = true)
+        val recorder = mockk<IObservabilityEventRecorder>(relaxed = true)
+        val manager = mutedManager(remoteTelemetryFactory = { _, _ -> telemetry })
+        manager.attachEventRecorder(recorder)
+        manager.onModelReplaced(configWith(isEnabled = true, logLevel = LogLevel.ERROR), ModelChangeTags.HYDRATE)
+
+        manager.onModelReplaced(configWith(isEnabled = false, logLevel = null), ModelChangeTags.HYDRATE)
+
+        verifyOrder {
+            recorder.attach(telemetry)
+            recorder.detach(telemetry)
+            telemetry.shutdown()
+        }
+    }
+
+    test("a different event recorder handed over later takes the live telemetry from the first") {
+        val telemetry = mockk<ILogTelemetryRemote>(relaxed = true)
+        val first = mockk<IObservabilityEventRecorder>(relaxed = true)
+        val second = mockk<IObservabilityEventRecorder>(relaxed = true)
+        val manager = mutedManager(remoteTelemetryFactory = { _, _ -> telemetry })
+        manager.attachEventRecorder(first)
+        manager.onModelReplaced(configWith(isEnabled = true, logLevel = LogLevel.ERROR), ModelChangeTags.HYDRATE)
+
+        manager.attachEventRecorder(second)
+
+        verifyOrder {
+            first.attach(telemetry)
+            first.detach(telemetry)
+            second.attach(telemetry)
+        }
+    }
+
+    test("handing over the same event recorder twice does not detach it") {
+        val telemetry = mockk<ILogTelemetryRemote>(relaxed = true)
+        val recorder = mockk<IObservabilityEventRecorder>(relaxed = true)
+        val manager = mutedManager(remoteTelemetryFactory = { _, _ -> telemetry })
+        manager.attachEventRecorder(recorder)
+        manager.onModelReplaced(configWith(isEnabled = true, logLevel = LogLevel.ERROR), ModelChangeTags.HYDRATE)
+
+        manager.attachEventRecorder(recorder)
+
+        verify(exactly = 0) { recorder.detach(any()) }
+        verify(exactly = 2) { recorder.attach(telemetry) }
+    }
+
+    test("an event recorded before HYDRATE ships through the telemetry HYDRATE installs, unlike an INFO log line") {
+        // The only Android-side proof of the composition until the gesture detector calls record:
+        // the real KMP recorder, wired the way CoreModule wires it, against a mocked telemetry.
+        val emitted = CompletableDeferred<LogRecord>()
+        val telemetry = mockk<ILogTelemetryRemote>(relaxed = true)
+        coEvery { telemetry.emit(any()) } answers { emitted.complete(firstArg()); Unit }
+        val recorder = LoggerFactory.createObservabilityEventRecorder({ true }, AndroidLogger())
+        val manager = mutedManager(remoteTelemetryFactory = { _, _ -> telemetry })
+        manager.attachEventRecorder(recorder)
+
+        recorder.record(ObservabilityEvent.DEVICE_GESTURE, mapOf("gesture.result" to "copied"))
+        manager.onModelReplaced(configWith(isEnabled = true, logLevel = LogLevel.ERROR), ModelChangeTags.HYDRATE)
+        Logging.info("filtered out at level ERROR")
+
+        val record = runBlocking { withTimeout(SINK_TIMEOUT_MS) { emitted.await() } }
+        record.body shouldBe "sdk.device_gesture"
+        record.attributes["event.name"] shouldBe "sdk.device_gesture"
+        record.attributes["gesture.result"] shouldBe "copied"
+        runBlocking { delay(SINK_QUIET_MS) }
+        coVerify(exactly = 1) { telemetry.emit(any()) }
+    }
+
+    test("a level change moves the event recorder to the replacement telemetry") {
+        val recorder = mockk<IObservabilityEventRecorder>(relaxed = true)
+        val attached = mutableListOf<ILogTelemetry>()
+        every { recorder.attach(capture(attached)) } just Runs
+        val manager = mutedManager()
+        manager.attachEventRecorder(recorder)
+        manager.onModelReplaced(configWith(isEnabled = true, logLevel = LogLevel.ERROR), ModelChangeTags.HYDRATE)
+
+        manager.onModelReplaced(configWith(isEnabled = true, logLevel = LogLevel.WARN), ModelChangeTags.HYDRATE)
+
+        attached.size shouldBe 2
+        attached[0] shouldNotBe attached[1]
+    }
+
+    test("repeating the same config does not re-attach the event recorder") {
+        val recorder = mockk<IObservabilityEventRecorder>(relaxed = true)
+        val manager = mutedManager()
+        manager.attachEventRecorder(recorder)
+
+        manager.onModelReplaced(configWith(isEnabled = true, logLevel = LogLevel.ERROR), ModelChangeTags.HYDRATE)
+        manager.onModelReplaced(configWith(isEnabled = true, logLevel = LogLevel.ERROR), ModelChangeTags.HYDRATE)
+
+        verify(exactly = 1) { recorder.attach(any()) }
+    }
+
+    test("the event recorder never attaches when the SDK level is unsupported") {
+        ObservabilitySdkSupport.isSupported = false
+        val recorder = mockk<IObservabilityEventRecorder>(relaxed = true)
+        val manager = mutedManager()
+        manager.initializeFromCachedConfig()
+        manager.attachEventRecorder(recorder)
+
+        manager.onModelReplaced(configWith(isEnabled = true, logLevel = LogLevel.ERROR), ModelChangeTags.HYDRATE)
+
+        verify(exactly = 0) { recorder.attach(any()) }
     }
 })
 

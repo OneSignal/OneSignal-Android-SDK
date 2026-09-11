@@ -25,6 +25,7 @@ import com.onesignal.logger.ILogHttpSender
 import com.onesignal.logger.ILogTelemetryRemote
 import com.onesignal.logger.ILogger
 import com.onesignal.logger.ILoggerPlatformProvider
+import com.onesignal.logger.IObservabilityEventRecorder
 import com.onesignal.logger.LoggerFactory
 
 /** Shared by the crash-handler and ANR-detector defaults, which each report through their own reporter. */
@@ -81,6 +82,7 @@ internal class LoggerLifecycleManager(
     private var crashHandler: ILogCrashHandler? = null
     private var anrDetector: ILogAnrDetector? = null
     private var remoteTelemetry: ILogTelemetryRemote? = null
+    private var eventRecorder: IObservabilityEventRecorder? = null
     private var currentConfig: ObservabilityConfig? = null
 
     /** Level the live sink is actually filtering at, which is not always [currentConfig]'s level. */
@@ -105,6 +107,35 @@ internal class LoggerLifecycleManager(
 
     override fun subscribeToConfigStore(configModelStore: ConfigModelStore) {
         configModelStore.subscribe(this)
+    }
+
+    /**
+     * The cached-config remote telemetry may already be live from [initializeFromCachedConfig],
+     * so attach at once when it is. A different recorder arriving later takes over, and the one
+     * it replaces is detached so it is not left pointing at telemetry this manager will shut down.
+     */
+    @Suppress("TooGenericExceptionCaught")
+    override fun attachEventRecorder(recorder: IObservabilityEventRecorder) {
+        synchronized(lock) {
+            val previous = eventRecorder
+            eventRecorder = recorder
+            val telemetry = remoteTelemetry
+            Logging.debug("OneSignal: event recorder handed over, remote telemetry is ${if (telemetry == null) "not live yet" else "already live"}")
+            if (telemetry == null) return
+            if (previous != null && previous !== recorder) {
+                try {
+                    previous.detach(telemetry)
+                } catch (t: Throwable) {
+                    Logging.warn("OneSignal: Error detaching the replaced event recorder: ${t.message}", t)
+                }
+            }
+            try {
+                recorder.attach(telemetry)
+                Logging.info("OneSignal: event recorder attached to the live remote telemetry")
+            } catch (t: Throwable) {
+                Logging.warn("OneSignal: Failed to attach the event recorder to the live remote telemetry: ${t.message}", t)
+            }
+        }
     }
 
     @Suppress("TooGenericExceptionCaught")
@@ -218,6 +249,7 @@ internal class LoggerLifecycleManager(
         Logging.info("OneSignal: Disabling logger module features")
         // Clear each reference before the teardown call: a collaborator that throws on the way
         // down would otherwise leave its field set, and the start guards would treat it as live.
+        // The event recorder is the exception: it is kept so the next enable re-attaches it.
         try {
             val detector = anrDetector
             anrDetector = null
@@ -231,6 +263,16 @@ internal class LoggerLifecycleManager(
             handler?.unregister()
         } catch (t: Throwable) {
             Logging.warn("OneSignal: Error unregistering logger crash handler: ${t.message}", t)
+        }
+        try {
+            val recorder = eventRecorder
+            val telemetry = remoteTelemetry
+            if (recorder != null && telemetry != null) {
+                recorder.detach(telemetry)
+                Logging.info("OneSignal: event recorder detached from the remote telemetry")
+            }
+        } catch (t: Throwable) {
+            Logging.warn("OneSignal: Error detaching the event recorder: ${t.message}", t)
         }
         try {
             val telemetry = remoteTelemetry
@@ -310,6 +352,16 @@ internal class LoggerLifecycleManager(
         remoteTelemetry = telemetry
         activeLogLevel = logLevel
         Logging.setLoggerTelemetry(telemetry, shouldSend)
+        // Isolated like the shutdown below: the telemetry is already live, so a recorder fault
+        // must not fail the level change.
+        try {
+            eventRecorder?.let {
+                it.attach(telemetry)
+                Logging.info("OneSignal: event recorder attached to the remote telemetry at level $logLevel")
+            }
+        } catch (t: Throwable) {
+            Logging.warn("OneSignal: Failed to attach the event recorder: ${t.message}", t)
+        }
         try {
             previous?.shutdown()
         } catch (t: Throwable) {
