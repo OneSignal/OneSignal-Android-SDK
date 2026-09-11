@@ -73,7 +73,14 @@ internal class SubscriptionModelStoreListener(
             val status: SubscriptionStatus
             val enabled: Boolean
 
-            if (model.optedIn && model.status == SubscriptionStatus.SUBSCRIBED && model.address.isNotEmpty()) {
+            // A remote disable is server-owned; report the recorded code back rather than the
+            // device state so subscription payloads don't re-enable a suppressed subscription.
+            val remoteDisabledStatus = SubscriptionStatus.remoteDisableStatus(model.remoteDisabledReason)
+
+            if (remoteDisabledStatus != null) {
+                enabled = false
+                status = remoteDisabledStatus
+            } else if (model.optedIn && model.status == SubscriptionStatus.SUBSCRIBED && model.address.isNotEmpty()) {
                 enabled = true
                 status = SubscriptionStatus.SUBSCRIBED
             } else {
