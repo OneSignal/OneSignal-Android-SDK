@@ -56,7 +56,7 @@ internal class DeviceGestureDetector(
     private val cycleTimestamps = mutableListOf<Long>()
 
     override fun start() {
-        // The app owner's opt-out. Logged so a developer can confirm the key took.
+        // The app owner's opt-out.
         if (AndroidUtils.getManifestMetaBoolean(applicationService.appContext, MANIFEST_DISABLED_KEY)) {
             Logging.info("DeviceGestureDetector: disabled by $MANIFEST_DISABLED_KEY in the manifest, not starting")
             return
@@ -188,7 +188,7 @@ internal class DeviceGestureDetector(
         /** Shortest background phase a human can produce; anything faster is synthetic. */
         internal const val MIN_BACKGROUND_DWELL_MS = 250L
 
-        internal const val MANIFEST_DISABLED_KEY = "com.onesignal.subscriptionIdCopyDisabled"
+        private const val MANIFEST_DISABLED_KEY = "com.onesignal.subscriptionIdCopyDisabled"
         private const val CLIP_LABEL = "OneSignal subscription ID"
         private const val CLIP_PREFIX = "os: "
         internal const val NO_SUBSCRIPTION_CLIP_TEXT = CLIP_PREFIX + "no subscription ID yet"

@@ -259,10 +259,13 @@ class DeviceGestureDetectorTests : FunSpec({
     test("the manifest opt-out keeps the detector from starting") {
         // The app owner said no: no lifecycle handler is registered, so nothing is counted,
         // copied or recorded, and the only trace is one INFO line at start.
+        // The key is spelled out rather than read from the detector's constant because the
+        // string is the whole contract an app has. A typo in the constant then misses this stub,
+        // the real read finds no meta-data, and the handler gets added, so the test fails.
         mockkObject(AndroidUtils)
         try {
             every {
-                AndroidUtils.getManifestMetaBoolean(any(), DeviceGestureDetector.MANIFEST_DISABLED_KEY)
+                AndroidUtils.getManifestMetaBoolean(any(), "com.onesignal.subscriptionIdCopyDisabled")
             } returns true
             val harness = Harness()
 
