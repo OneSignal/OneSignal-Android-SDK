@@ -164,6 +164,20 @@ class PushRegistratorFCMTests : FunSpec({
         verify(exactly = 0) { FirebaseApp.initializeApp(any(), any<FirebaseOptions>(), any()) }
     }
 
+    test("uses the legacy token when the manifest flag is a string true") {
+        val metaData = Bundle().apply { putString("firebase_messaging_installation_id_enabled", "true") }
+        mockkObject(AndroidUtils)
+        every { AndroidUtils.getManifestMetaBundle(any()) } returns metaData
+        mockkObject(FCMTokenProvider)
+        every { FCMTokenProvider.hasRegisterMethod(FirebaseMessaging::class.java) } returns true
+        val registrator = registrator(legacyToken = Tasks.forResult("fcm-token"))
+
+        val token = withContext(Dispatchers.IO) { registrator.getToken(SENDER_ID) }
+
+        token shouldBe "fcm-token"
+        verify(exactly = 1) { FirebaseApp.initializeApp(any(), any<FirebaseOptions>(), any()) }
+    }
+
     test("registers an installation id before the dashboard has a sender id") {
         val metaData = Bundle().apply { putBoolean("firebase_messaging_installation_id_enabled", true) }
         mockkObject(AndroidUtils)
@@ -256,6 +270,7 @@ class PushRegistratorFCMTests : FunSpec({
 
         result.id shouldBe null
         result.status shouldBe SubscriptionStatus.INVALID_FCM_SENDER_ID
+        result.isExistingTokenInvalid shouldBe true
     }
 
     test("uses OneSignal's FirebaseApp for a legacy token when the default app has a different sender id") {

@@ -86,7 +86,11 @@ class PushTokenManagerTests : FunSpec({
         val mockPushRegistrator = mockk<IPushRegistrator>()
         coEvery { mockPushRegistrator.registerForPush() } returns
             IPushRegistrator.RegisterResult("host-fid", SubscriptionStatus.SUBSCRIBED) andThen
-            IPushRegistrator.RegisterResult(null, SubscriptionStatus.INVALID_FCM_SENDER_ID)
+            IPushRegistrator.RegisterResult(
+                null,
+                SubscriptionStatus.INVALID_FCM_SENDER_ID,
+                isExistingTokenInvalid = true,
+            )
         val mockDeviceService = MockHelper.deviceService()
         every { mockDeviceService.jetpackLibraryStatus } returns IDeviceService.JetpackLibraryStatus.OK
         val pushTokenManager = PushTokenManager(mockPushRegistrator, mockDeviceService)
@@ -98,6 +102,24 @@ class PushTokenManagerTests : FunSpec({
         response.status shouldBe SubscriptionStatus.INVALID_FCM_SENDER_ID
         pushTokenManager.pushToken shouldBe null
         pushTokenManager.pushTokenStatus shouldBe SubscriptionStatus.INVALID_FCM_SENDER_ID
+    }
+
+    test("missing sender id preserves a previously successful token") {
+        val mockPushRegistrator = mockk<IPushRegistrator>()
+        coEvery { mockPushRegistrator.registerForPush() } returns
+            IPushRegistrator.RegisterResult("push-token", SubscriptionStatus.SUBSCRIBED) andThen
+            IPushRegistrator.RegisterResult(null, SubscriptionStatus.INVALID_FCM_SENDER_ID)
+        val mockDeviceService = MockHelper.deviceService()
+        every { mockDeviceService.jetpackLibraryStatus } returns IDeviceService.JetpackLibraryStatus.OK
+        val pushTokenManager = PushTokenManager(mockPushRegistrator, mockDeviceService)
+
+        pushTokenManager.retrievePushToken()
+        val response = pushTokenManager.retrievePushToken()
+
+        response.token shouldBe "push-token"
+        response.status shouldBe SubscriptionStatus.SUBSCRIBED
+        pushTokenManager.pushToken shouldBe "push-token"
+        pushTokenManager.pushTokenStatus shouldBe SubscriptionStatus.SUBSCRIBED
     }
 
     test("unrelated permanent errors preserve a previously successful token") {

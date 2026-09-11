@@ -34,7 +34,7 @@ internal class PushTokenManager(
                     when {
                         registerResult.status.value == SubscriptionStatus.SUBSCRIBED.value -> true
                         registerResult.status.value < SubscriptionStatus.SUBSCRIBED.value ->
-                            shouldUpdateErrorStatus(registerResult.status)
+                            shouldUpdateErrorStatus(registerResult)
                         else -> pushTokenStatus.isRetryableTokenError
                     }
 
@@ -48,11 +48,11 @@ internal class PushTokenManager(
         return PushTokenResponse(pushToken, pushTokenStatus)
     }
 
-    private fun shouldUpdateErrorStatus(newStatus: SubscriptionStatus): Boolean =
+    private fun shouldUpdateErrorStatus(registerResult: IPushRegistrator.RegisterResult): Boolean =
         when {
-            newStatus == SubscriptionStatus.INVALID_FCM_SENDER_ID -> true
+            registerResult.isExistingTokenInvalid -> true
             pushToken != null -> false
-            !newStatus.isRetryableTokenError -> true
+            !registerResult.status.isRetryableTokenError -> true
             else -> pushTokenStatus == SubscriptionStatus.NO_PERMISSION || pushTokenStatus.isRetryableTokenError
         }
 }

@@ -176,10 +176,11 @@ internal abstract class PushRegistratorAbstractGoogle(
     }
 
     private fun invalidSenderIdResult(exception: FCMSenderIdMismatchException): IPushRegistrator.RegisterResult {
-        Logging.warn("FCM sender ID mismatch", exception)
+        Logging.warn(exception.message ?: "FCM sender ID mismatch", exception)
         return IPushRegistrator.RegisterResult(
             null,
             SubscriptionStatus.INVALID_FCM_SENDER_ID,
+            isExistingTokenInvalid = true,
         )
     }
 
