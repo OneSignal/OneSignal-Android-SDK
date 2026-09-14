@@ -20,9 +20,9 @@ import com.onesignal.core.internal.language.ILanguageContext
 import com.onesignal.core.internal.operations.ExecutionResponse
 import com.onesignal.core.internal.operations.ExecutionResult
 import com.onesignal.core.internal.operations.IOperationExecutor
+import com.onesignal.core.internal.operations.LoginWaitMetadata
 import com.onesignal.core.internal.operations.Operation
 import com.onesignal.debug.internal.logging.Logging
-import com.onesignal.user.internal.LoginWaitMetadata
 import com.onesignal.user.internal.backend.IUserBackendService
 import com.onesignal.user.internal.backend.IdentityConstants
 import com.onesignal.user.internal.backend.SubscriptionObject

@@ -5,11 +5,11 @@ import com.onesignal.OneSignalUserProfile
 import com.onesignal.common.exceptions.BackendException
 import com.onesignal.core.internal.operations.ExecutionResponse
 import com.onesignal.core.internal.operations.ExecutionResult
+import com.onesignal.core.internal.operations.LoginWaitMetadata
 import com.onesignal.core.internal.operations.Operation
 import com.onesignal.mocks.AndroidMockHelper
 import com.onesignal.mocks.MockHelper
 import com.onesignal.mocks.MockPreferencesService
-import com.onesignal.user.internal.LoginWaitMetadata
 import com.onesignal.user.internal.backend.CreateUserResponse
 import com.onesignal.user.internal.backend.IUserBackendService
 import com.onesignal.user.internal.backend.IdentityConstants

@@ -5,6 +5,7 @@ import com.onesignal.OneSignalUserProfile
 import com.onesignal.common.IDManager
 import com.onesignal.core.internal.config.ConfigModel
 import com.onesignal.core.internal.operations.IOperationRepo
+import com.onesignal.core.internal.operations.LoginWaitMetadata
 import com.onesignal.core.internal.operations.OperationWaitResult
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.user.internal.identity.IdentityModelStore
@@ -14,12 +15,6 @@ import com.onesignal.user.internal.operations.LoginUserOperation
 import com.onesignal.user.internal.subscriptions.SubscriptionModel
 import com.onesignal.user.internal.subscriptions.SubscriptionModelStore
 import com.onesignal.user.internal.subscriptions.SubscriptionType
-
-internal data class LoginWaitMetadata(
-    val onesignalId: String,
-    val emailSubscriptionId: String? = null,
-    val smsSubscriptionId: String? = null,
-)
 
 internal class LoginHelper(
     private val identityModelStore: IdentityModelStore,
@@ -97,9 +92,9 @@ internal class LoginHelper(
     internal suspend fun enqueueLogin(
         context: LoginEnqueueContext,
         profile: OneSignalUserProfile? = null,
-    ): OperationWaitResult<LoginWaitMetadata> {
+    ): OperationWaitResult {
         val result =
-            operationRepo.enqueueAndAwaitResult<LoginWaitMetadata>(
+            operationRepo.enqueueAndAwaitResult(
                 LoginUserOperation(
                     context.appId,
                     context.newIdentityOneSignalId,
@@ -118,16 +113,17 @@ internal class LoginHelper(
     internal fun loginData(
         externalId: String,
         profile: OneSignalUserProfile,
-        wait: OperationWaitResult<LoginWaitMetadata>? = null,
+        wait: OperationWaitResult? = null,
         fallbackOnesignalId: String? = null,
     ): LoginData {
         val subscriptions = subscriptionModelStore.list()
+        val meta = wait?.metadata as? LoginWaitMetadata
         return LoginData(
-            onesignalId = wait?.metadata?.onesignalId ?: fallbackOnesignalId ?: identityModelStore.model.onesignalId,
+            onesignalId = meta?.onesignalId ?: fallbackOnesignalId ?: identityModelStore.model.onesignalId,
             externalId = externalId,
-            emailSubscriptionId = wait?.metadata?.emailSubscriptionId
+            emailSubscriptionId = meta?.emailSubscriptionId
                 ?: subscriptionId(subscriptions, SubscriptionType.EMAIL, profile.email),
-            smsSubscriptionId = wait?.metadata?.smsSubscriptionId
+            smsSubscriptionId = meta?.smsSubscriptionId
                 ?: subscriptionId(subscriptions, SubscriptionType.SMS, profile.phoneNumber),
         )
     }

@@ -42,17 +42,17 @@ internal class OperationRepo(
 
     internal class OperationQueueItem(
         val operation: Operation,
-        waiter: WaiterWithValue<OperationWaitResult<*>>? = null,
+        waiter: WaiterWithValue<OperationWaitResult>? = null,
         val bucket: Int,
         var retries: Int = 0,
     ) {
-        val waiters = mutableListOf<WaiterWithValue<OperationWaitResult<*>>>()
+        val waiters = mutableListOf<WaiterWithValue<OperationWaitResult>>()
 
         init {
             if (waiter != null) waiters.add(waiter)
         }
 
-        fun wakeWaiters(result: OperationWaitResult<*>) {
+        fun wakeWaiters(result: OperationWaitResult) {
             waiters.forEach { it.wake(result) }
             waiters.clear()
         }
@@ -158,21 +158,20 @@ internal class OperationRepo(
         }
     }
 
-    override suspend fun <T> enqueueAndAwaitResult(
+    override suspend fun enqueueAndAwaitResult(
         operation: Operation,
         flush: Boolean,
-    ): OperationWaitResult<T> {
-        if (shouldSuppressAnonymousOp(operation)) return OperationWaitResult<T>(false)
+    ): OperationWaitResult {
+        if (shouldSuppressAnonymousOp(operation)) return OperationWaitResult(false)
 
         Logging.log(LogLevel.DEBUG, "OperationRepo.enqueueAndWait(operation: $operation, force: $flush)")
 
         operation.id = UUID.randomUUID().toString()
-        val waiter = WaiterWithValue<OperationWaitResult<*>>()
+        val waiter = WaiterWithValue<OperationWaitResult>()
         scope.launch {
             internalEnqueue(OperationQueueItem(operation, waiter, bucket = enqueueIntoBucket), flush, true)
         }
-        @Suppress("UNCHECKED_CAST")
-        return waiter.waitForWake() as OperationWaitResult<T>
+        return waiter.waitForWake()
     }
 
     /**
@@ -304,7 +303,7 @@ internal class OperationRepo(
         val removedIds: List<String> =
             synchronized(queue) {
                 val anonymous = queue.filter { it.operation.externalId == null }
-                anonymous.forEach { it.wakeWaiters(OperationWaitResult<Any?>(false)) }
+                anonymous.forEach { it.wakeWaiters(OperationWaitResult(false)) }
                 queue.removeAll(anonymous)
                 // IV=ON never transfers anonymous state; clear existingOnesignalId so the
                 // executor takes the createUser (upsert) path. The merge-anon-into-identified

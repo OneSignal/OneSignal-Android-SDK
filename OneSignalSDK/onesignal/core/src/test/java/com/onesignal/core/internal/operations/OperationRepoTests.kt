@@ -315,20 +315,20 @@ class OperationRepoTests : FunSpec({
     test("enqueue dedupe wakes both waiters with the real FAIL_NORETRY result") {
         val mocks = Mocks()
         val opRepo = mocks.operationRepo
-        val executeOperationsCall = mockExecuteOperations(opRepo, OperationWaitResult<Any?>(false, 400, "bad phone"))
+        val executeOperationsCall = mockExecuteOperations(opRepo, OperationWaitResult(false, 400, "bad phone"))
 
         val queuedOp = LoginUserOperation("appId", "alice", "ext", null, OneSignalUserProfile(phoneNumber = "+1"))
         val incomingOp = LoginUserOperation("appId", "alice", "ext", null, OneSignalUserProfile(email = "a@b.com"))
 
-        val queuedDone = WaiterWithValue<OperationWaitResult<*>>()
+        val queuedDone = WaiterWithValue<OperationWaitResult>()
         launch(start = CoroutineStart.UNDISPATCHED) {
-            queuedDone.wake(opRepo.enqueueAndAwaitResult<Any?>(queuedOp))
+            queuedDone.wake(opRepo.enqueueAndAwaitResult(queuedOp))
         }
         mocks.waitForInternalEnqueue()
 
-        val incomingDone = WaiterWithValue<OperationWaitResult<*>>()
+        val incomingDone = WaiterWithValue<OperationWaitResult>()
         launch(start = CoroutineStart.UNDISPATCHED) {
-            incomingDone.wake(opRepo.enqueueAndAwaitResult<Any?>(incomingOp))
+            incomingDone.wake(opRepo.enqueueAndAwaitResult(incomingOp))
         }
         mocks.waitForInternalEnqueue()
 
@@ -1236,7 +1236,7 @@ class OperationRepoTests : FunSpec({
         val result =
             runBlocking {
                 withTimeout(2_000) {
-                    mocks.operationRepo.enqueueAndAwaitResult<Any?>(mockOperation())
+                    mocks.operationRepo.enqueueAndAwaitResult(mockOperation())
                 }
             }
 
@@ -1308,7 +1308,7 @@ class OperationRepoTests : FunSpec({
 
         private fun mockExecuteOperations(
             opRepo: OperationRepo,
-            waitResult: OperationWaitResult<*> = OperationWaitResult<Any?>(true),
+            waitResult: OperationWaitResult = OperationWaitResult(true),
         ): WaiterWithValue<Boolean> {
             val executeWaiter = WaiterWithValue<Boolean>()
             coEvery { opRepo.executeOperations(any()) } coAnswers {

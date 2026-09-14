@@ -836,7 +836,7 @@ internal class OneSignalImp : IOneSignal,
             OneSignalResult.success(loginHelper.loginData(externalId, profile, fallbackOnesignalId = switched.onesignalId))
         }
 
-    private fun loginFailureMessage(wait: OperationWaitResult<*>): String {
+    private fun loginFailureMessage(wait: OperationWaitResult): String {
         val body = wait.httpResponse?.takeIf { it.isNotBlank() }
         return body ?: wait.httpStatusCode?.let { "Login did not complete (HTTP $it)." } ?: "Login did not complete."
     }
