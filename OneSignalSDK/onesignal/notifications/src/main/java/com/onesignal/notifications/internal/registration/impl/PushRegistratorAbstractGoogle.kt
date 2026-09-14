@@ -207,8 +207,17 @@ internal abstract class PushRegistratorAbstractGoogle(
 
 private fun installationIdErrorResult(exception: FCMInstallationIdException): IPushRegistrator.RegisterResult {
     Logging.warn(exception.message ?: "Firebase Installation ID registration failed", exception)
+    val status =
+        when (exception.reason) {
+            FCMInstallationIdFailureReason.NO_DEFAULT_FIREBASE_APP ->
+                SubscriptionStatus.FIREBASE_FCM_FID_DEFAULT_APP_MISSING
+            FCMInstallationIdFailureReason.REGISTER_API_UNAVAILABLE ->
+                SubscriptionStatus.FIREBASE_FCM_FID_REGISTER_API_UNAVAILABLE
+            FCMInstallationIdFailureReason.REGISTRATION_FAILED ->
+                SubscriptionStatus.FIREBASE_FCM_FID_REGISTRATION_FAILED
+        }
     return IPushRegistrator.RegisterResult(
         null,
-        SubscriptionStatus.FIREBASE_FCM_ERROR_MISC_EXCEPTION,
+        status,
     )
 }
