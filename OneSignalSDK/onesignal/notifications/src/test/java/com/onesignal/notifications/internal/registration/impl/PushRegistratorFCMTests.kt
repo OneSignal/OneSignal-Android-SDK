@@ -290,7 +290,7 @@ class PushRegistratorFCMTests : FunSpec({
         every { FCMTokenProvider.hasRegisterMethod(FirebaseMessaging::class.java) } returns true
         every {
             FCMTokenProvider.invokeRegister(messaging)
-        } returns Tasks.forException(IllegalStateException("registration failed"))
+        } returns Tasks.forException<Void>(IllegalStateException("registration failed"))
         val configModelStore =
             MockHelper.configModelStore {
                 it.isInitializedWithRemote = true
