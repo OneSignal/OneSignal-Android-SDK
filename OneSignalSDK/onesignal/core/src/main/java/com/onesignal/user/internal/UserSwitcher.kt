@@ -108,7 +108,7 @@ class UserSwitcher(
                     notificationTypes != SubscriptionStatus.UNSUBSCRIBE.value
                 address = legacyUserSyncJSON.safeString("identifier") ?: ""
                 status =
-                    notificationTypes?.let(SubscriptionStatus::fromNotificationTypes)
+                    notificationTypes?.let { SubscriptionStatus.fromNotificationTypes(it) }
                         ?: SubscriptionStatus.SUBSCRIBED
                 sdk = OneSignalUtils.sdkVersion
                 deviceOS = this@UserSwitcher.deviceOS ?: ""
