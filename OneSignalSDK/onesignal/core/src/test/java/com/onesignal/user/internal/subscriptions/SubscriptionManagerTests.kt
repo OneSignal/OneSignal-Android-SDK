@@ -9,7 +9,10 @@ import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.session.internal.session.ISessionService
+import com.onesignal.user.internal.PushSubscription
 import com.onesignal.user.internal.Subscription
+import com.onesignal.user.internal.operations.UpdateSubscriptionOperation
+import com.onesignal.user.internal.operations.impl.listeners.SubscriptionModelStoreListener
 import com.onesignal.user.internal.subscriptions.impl.SubscriptionManager
 import com.onesignal.user.subscriptions.ISmsSubscription
 import io.kotest.core.spec.style.FunSpec
@@ -24,6 +27,7 @@ import io.mockk.mockk
 import io.mockk.runs
 import io.mockk.spyk
 import io.mockk.verify
+import org.json.JSONObject
 
 class SubscriptionManagerTests : FunSpec({
 
@@ -681,7 +685,6 @@ class SubscriptionManagerTests : FunSpec({
             listOf(
                 SubscriptionStatus.NO_PERMISSION,
                 SubscriptionStatus.UNSUBSCRIBE,
-                SubscriptionStatus.DISABLED_FROM_REST_API_DEFAULT_REASON,
             )
 
         for (status in nonRetryableStatuses) {
@@ -799,8 +802,165 @@ class SubscriptionManagerTests : FunSpec({
             SubscriptionStatus.INVALID_FCM_SENDER_ID,
             SubscriptionStatus.OUTDATED_GOOGLE_PLAY_SERVICES_APP,
             SubscriptionStatus.HMS_ARGUMENTS_INVALID,
-            SubscriptionStatus.DISABLED_FROM_REST_API_DEFAULT_REASON,
+            SubscriptionStatus.MANUALLY_UNSUBSCRIBED,
+            SubscriptionStatus.DISABLED_FROM_REST_API,
             SubscriptionStatus.ERROR,
         ).forEach { it.isRetryableTokenError shouldBe false }
+    }
+
+    test("status persisted under an unknown enum name reads as SUBSCRIBED instead of throwing") {
+        // Models persist enum properties by name; a cached model written under an enum case this
+        // version does not have must still load.
+        val model = SubscriptionModel()
+        model.initializeFromJson(
+            JSONObject()
+                .put("id", "subscription1")
+                .put("status", "STATUS_UNKNOWN_TO_THIS_VERSION"),
+        )
+
+        model.status shouldBe SubscriptionStatus.SUBSCRIBED
+    }
+
+    test("operation status persisted under an unknown enum name reads as SUBSCRIBED instead of throwing") {
+        // Operation batches persist by enum name like models; an unknown name must not drop the batch.
+        val operation = UpdateSubscriptionOperation()
+        operation.initializeFromJson(JSONObject().put("status", "STATUS_UNKNOWN_TO_THIS_VERSION"))
+
+        operation.status shouldBe SubscriptionStatus.SUBSCRIBED
+    }
+
+    test("SubscriptionStatus.isRemoteDisable is true only for the two server-owned disable codes") {
+        // -22 (unsubscribed by hand from the dashboard) and -31 (disabled through the REST API) are
+        // the only codes the app owner sets remotely. Every other negative code describes a device
+        // or delivery problem the device recovers from by re-asserting its own state, so widening
+        // this predicate would make the SDK stop re-enabling those subscriptions.
+        SubscriptionStatus.values().forEach {
+            SubscriptionStatus.isRemoteDisable(it.value) shouldBe
+                (it == SubscriptionStatus.MANUALLY_UNSUBSCRIBED || it == SubscriptionStatus.DISABLED_FROM_REST_API)
+        }
+        // 0 is the "nothing recorded" sentinel for remoteDisabledReason, not a disable.
+        SubscriptionStatus.isRemoteDisable(0) shouldBe false
+        SubscriptionStatus.isRemoteDisable(null) shouldBe false
+    }
+
+    // Both codes are treated the same but recorded separately, so the payload reports back the
+    // exact code the server sent instead of collapsing -22 into -31.
+    listOf(
+        SubscriptionStatus.MANUALLY_UNSUBSCRIBED,
+        SubscriptionStatus.DISABLED_FROM_REST_API,
+    ).forEach { remoteDisable ->
+        test("getSubscriptionEnabledAndStatus reports a ${remoteDisable.value} disable back to the server") {
+            // Given a push subscription the app owner disabled remotely
+            val pushSubscription = SubscriptionModel()
+            pushSubscription.id = "subscription1"
+            pushSubscription.type = SubscriptionType.PUSH
+            pushSubscription.address = "pushToken"
+            pushSubscription.status = SubscriptionStatus.SUBSCRIBED
+            pushSubscription.optedIn = true
+            pushSubscription.remoteDisabledReason = remoteDisable.value
+
+            // When
+            val (enabled, status) = SubscriptionModelStoreListener.getSubscriptionEnabledAndStatus(pushSubscription)
+
+            // Then the recorded code round-trips rather than being reported as the other one
+            enabled shouldBe false
+            status shouldBe remoteDisable
+        }
+
+        test("optedIn reports false while a ${remoteDisable.value} disable is recorded") {
+            // A remote disable suppresses delivery, so the property clients read to decide whether
+            // push works must say so. Before this, a preference center showed "subscribed" on a
+            // device the app owner had turned off, and nothing in the public API revealed why.
+            val pushSubscriptionModel = SubscriptionModel()
+            pushSubscriptionModel.id = "subscription1"
+            pushSubscriptionModel.type = SubscriptionType.PUSH
+            pushSubscriptionModel.address = "pushToken"
+            pushSubscriptionModel.status = SubscriptionStatus.SUBSCRIBED
+            pushSubscriptionModel.optedIn = true
+
+            val pushSubscription = PushSubscription(pushSubscriptionModel)
+            pushSubscription.optedIn shouldBe true
+
+            // When the server's disable is recorded
+            pushSubscriptionModel.remoteDisabledReason = remoteDisable.value
+
+            // Then
+            pushSubscription.optedIn shouldBe false
+        }
+
+        test("refreshState carries a ${remoteDisable.value} disable into the observer payload") {
+            // The observer already fires on the hydration write; this pins the payload it carries,
+            // since the previous/current pair is built from refreshState.
+            val pushSubscriptionModel = SubscriptionModel()
+            pushSubscriptionModel.id = "subscription1"
+            pushSubscriptionModel.type = SubscriptionType.PUSH
+            pushSubscriptionModel.address = "pushToken"
+            pushSubscriptionModel.status = SubscriptionStatus.SUBSCRIBED
+            pushSubscriptionModel.optedIn = true
+
+            val pushSubscription = PushSubscription(pushSubscriptionModel)
+            val previousState = pushSubscription.savedState
+
+            // When
+            pushSubscriptionModel.remoteDisabledReason = remoteDisable.value
+            val currentState = pushSubscription.refreshState()
+
+            // Then the observer sees a real transition rather than an unchanged pair
+            previousState.optedIn shouldBe true
+            currentState.optedIn shouldBe false
+        }
+
+        test("optIn clears a ${remoteDisable.value} disable so the update re-enables the subscription") {
+            // Given a push subscription the app owner disabled remotely
+            val pushSubscriptionModel = SubscriptionModel()
+            pushSubscriptionModel.id = "subscription1"
+            pushSubscriptionModel.type = SubscriptionType.PUSH
+            pushSubscriptionModel.address = "pushToken"
+            pushSubscriptionModel.status = SubscriptionStatus.SUBSCRIBED
+            pushSubscriptionModel.optedIn = true
+            pushSubscriptionModel.remoteDisabledReason = remoteDisable.value
+
+            // When
+            PushSubscription(pushSubscriptionModel).optIn()
+
+            // Then
+            pushSubscriptionModel.remoteDisabledReason shouldBe 0
+            pushSubscriptionModel.remoteDisableClearedByUser shouldBe true
+            // The toggle a client drives off is not a dead end: opting in reports true again.
+            PushSubscription(pushSubscriptionModel).optedIn shouldBe true
+            val (enabled, status) = SubscriptionModelStoreListener.getSubscriptionEnabledAndStatus(pushSubscriptionModel)
+            enabled shouldBe true
+            status shouldBe SubscriptionStatus.SUBSCRIBED
+        }
+    }
+
+    test("optedIn ignores a device-recoverable error status") {
+        // Only the two server-owned codes reach optedIn, and they arrive through
+        // remoteDisabledReason rather than status. A device-side delivery error is recoverable by
+        // re-asserting local state, so it must not read as an opt-out to the app.
+        val pushSubscriptionModel = SubscriptionModel()
+        pushSubscriptionModel.id = "subscription1"
+        pushSubscriptionModel.type = SubscriptionType.PUSH
+        pushSubscriptionModel.address = "pushToken"
+        pushSubscriptionModel.optedIn = true
+        pushSubscriptionModel.status = SubscriptionStatus.FIREBASE_FCM_ERROR_IOEXCEPTION_SERVICE_NOT_AVAILABLE
+
+        PushSubscription(pushSubscriptionModel).optedIn shouldBe true
+    }
+
+    test("optIn takes precedence over a pending fetch even when no remote disable was recorded") {
+        // Given a push subscription with no recorded remote disable
+        val pushSubscriptionModel = SubscriptionModel()
+        pushSubscriptionModel.id = "subscription1"
+        pushSubscriptionModel.type = SubscriptionType.PUSH
+        pushSubscriptionModel.address = "pushToken"
+        pushSubscriptionModel.status = SubscriptionStatus.SUBSCRIBED
+        pushSubscriptionModel.optedIn = true
+
+        // When
+        PushSubscription(pushSubscriptionModel).optIn()
+
+        // Then the flag is set, since every opt-in sends an update a pending fetch may predate
+        pushSubscriptionModel.remoteDisableClearedByUser shouldBe true
     }
 })

@@ -68,6 +68,9 @@ class UserSwitcher(
                 optedIn = currentPushSubscription?.optedIn ?: true
                 address = currentPushSubscription?.address ?: ""
                 status = currentPushSubscription?.status ?: SubscriptionStatus.NO_PERMISSION
+                remoteDisabledReason = currentPushSubscription?.remoteDisabledReason ?: 0
+                // In memory and not a model property, so it does not travel with the copy above.
+                remoteDisableClearedByUser = currentPushSubscription?.remoteDisableClearedByUser ?: false
                 sdk = oneSignalUtils.sdkVersion
                 deviceOS = this@UserSwitcher.deviceOS ?: ""
                 carrier = carrierName ?: ""

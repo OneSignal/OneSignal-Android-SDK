@@ -31,9 +31,11 @@ import com.onesignal.user.internal.operations.CreateSubscriptionOperation
 import com.onesignal.user.internal.operations.DeleteSubscriptionOperation
 import com.onesignal.user.internal.operations.TransferSubscriptionOperation
 import com.onesignal.user.internal.operations.UpdateSubscriptionOperation
+import com.onesignal.user.internal.operations.impl.listeners.SubscriptionModelStoreListener
 import com.onesignal.user.internal.operations.impl.states.NewRecordsState
 import com.onesignal.user.internal.subscriptions.SubscriptionModel
 import com.onesignal.user.internal.subscriptions.SubscriptionModelStore
+import com.onesignal.user.internal.subscriptions.SubscriptionStatus
 import com.onesignal.user.internal.subscriptions.SubscriptionType
 
 internal class SubscriptionOperationExecutor(
@@ -52,9 +54,46 @@ internal class SubscriptionOperationExecutor(
         get() = listOf(CREATE_SUBSCRIPTION, UPDATE_SUBSCRIPTION, DELETE_SUBSCRIPTION, TRANSFER_SUBSCRIPTION)
 
     override suspend fun execute(operations: List<Operation>): ExecutionResponse {
-        Logging.log(LogLevel.DEBUG, "SubscriptionOperationExecutor(operations: $operations)")
-
         val startingOp = operations.first()
+        return executeSubscriptionOperation(startingOp, operations)
+            .also { settleOptInGuard(startingOp, it) }
+    }
+
+    /**
+     * Clears [SubscriptionModel.remoteDisableClearedByUser] once the opt-in's write has gone out.
+     * The operation repo runs one batch at a time, so a fetch after that point was issued after the
+     * write, and a disable it reports is current. A queued result means the write is still coming.
+     */
+    private fun settleOptInGuard(
+        operation: Operation,
+        response: ExecutionResponse,
+    ) {
+        val operationSubscriptionId =
+            when (operation) {
+                is CreateSubscriptionOperation -> operation.subscriptionId
+                is UpdateSubscriptionOperation -> operation.subscriptionId
+                else -> return
+            }
+
+        val writeStillPending =
+            response.result == ExecutionResult.FAIL_RETRY ||
+                response.result == ExecutionResult.FAIL_UNAUTHORIZED ||
+                response.result == ExecutionResult.FAIL_PAUSE_OPREPO
+        if (writeStillPending) return
+
+        // A successful create moved the model to the id the backend assigned.
+        val subscriptionId = response.idTranslations?.get(operationSubscriptionId) ?: operationSubscriptionId
+        _subscriptionModelStore.get(subscriptionId)?.remoteDisableClearedByUser = false
+    }
+
+    // execute() wraps this so every exit settles the opt-in guard. The throws are guard clauses
+    // for operation combinations that should never reach here.
+    @Suppress("ThrowsCount")
+    private suspend fun executeSubscriptionOperation(
+        startingOp: Operation,
+        operations: List<Operation>,
+    ): ExecutionResponse {
+        Logging.log(LogLevel.DEBUG, "SubscriptionOperationExecutor(operations: $operations)")
 
         return if (startingOp is CreateSubscriptionOperation) {
             // If the subscription already exists on the backend (non-local id), POSTing
@@ -265,11 +304,22 @@ internal class SubscriptionOperationExecutor(
                     // emitting Creates with the same subscriptionId, so they dedupe instead
                     // of producing two POST /users subscription rows. HYDRATE prevents the
                     // SubscriptionModelStoreListener from enqueuing follow-on operations.
-                    _subscriptionModelStore.get(staleSubscriptionId)?.setStringProperty(
+                    val recoveryModel = _subscriptionModelStore.get(staleSubscriptionId)
+                    recoveryModel?.setStringProperty(
                         SubscriptionModel::id.name,
                         recoveryLocalId,
                         ModelChangeTags.HYDRATE,
                     )
+                    // The stale record died with any recorded remote disable; recreate from
+                    // device truth rather than the values frozen on the failed operation.
+                    recoveryModel?.setIntProperty(
+                        SubscriptionModel::remoteDisabledReason.name,
+                        0,
+                        ModelChangeTags.HYDRATE,
+                    )
+                    val (recoveryEnabled, recoveryStatus) =
+                        recoveryModel?.let { SubscriptionModelStoreListener.getSubscriptionEnabledAndStatus(it) }
+                            ?: freshStartWithoutDeadDisable(lastOperation)
                     if (_configModelStore.model.pushSubscriptionId == staleSubscriptionId) {
                         _configModelStore.model.pushSubscriptionId = recoveryLocalId
                     }
@@ -284,9 +334,9 @@ internal class SubscriptionOperationExecutor(
                                 lastOperation.externalId,
                                 recoveryLocalId,
                                 lastOperation.type,
-                                lastOperation.enabled,
+                                recoveryEnabled,
                                 lastOperation.address,
-                                lastOperation.status,
+                                recoveryStatus,
                             ),
                         ),
                     )
@@ -374,6 +424,15 @@ internal class SubscriptionOperationExecutor(
         }
 
         return ExecutionResponse(ExecutionResult.SUCCESS)
+    }
+
+    /** The failed op's enabled/status, minus a remote disable that belonged to the dead record. */
+    private fun freshStartWithoutDeadDisable(operation: UpdateSubscriptionOperation): Pair<Boolean, SubscriptionStatus> {
+        return if (SubscriptionStatus.isRemoteDisable(operation.status.value)) {
+            Pair(true, SubscriptionStatus.SUBSCRIBED)
+        } else {
+            Pair(operation.enabled, operation.status)
+        }
     }
 
     companion object {

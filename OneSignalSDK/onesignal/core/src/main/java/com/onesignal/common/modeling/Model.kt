@@ -544,7 +544,9 @@ open class Model(
         val value = getOptAnyProperty(name) ?: return null
 
         if (value is T) return value
-        if (value is String) return enumValueOf<T>(value)
+        // Enum properties persist by name; a name this build's enum lacks (a removed case, or a
+        // downgrade from a newer SDK) must read as null rather than throw at model load.
+        if (value is String) return enumValues<T>().firstOrNull { it.name == value }
         return value as T
     }
 

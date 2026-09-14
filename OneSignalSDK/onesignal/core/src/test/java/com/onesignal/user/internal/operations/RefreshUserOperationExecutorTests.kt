@@ -4,10 +4,12 @@ import com.onesignal.common.TimeUtils
 import com.onesignal.common.exceptions.BackendException
 import com.onesignal.common.modeling.ModelChangeTags
 import com.onesignal.core.internal.operations.ExecutionResult
+import com.onesignal.core.internal.operations.IOperationRepo
 import com.onesignal.core.internal.operations.Operation
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.mocks.MockHelper
+import com.onesignal.mocks.MockPreferencesService
 import com.onesignal.user.internal.backend.CreateUserResponse
 import com.onesignal.user.internal.backend.IUserBackendService
 import com.onesignal.user.internal.backend.IdentityConstants
@@ -21,6 +23,7 @@ import com.onesignal.user.internal.operations.ExecutorMocks.Companion.getJwtToke
 import com.onesignal.user.internal.operations.ExecutorMocks.Companion.getNewRecordState
 import com.onesignal.user.internal.operations.impl.executors.RefreshUserOperationExecutor
 import com.onesignal.user.internal.operations.impl.executors.SubscriptionOperationExecutor
+import com.onesignal.user.internal.operations.impl.listeners.SubscriptionModelStoreListener
 import com.onesignal.user.internal.properties.PropertiesModel
 import com.onesignal.user.internal.subscriptions.SubscriptionModel
 import com.onesignal.user.internal.subscriptions.SubscriptionModelStore
@@ -397,6 +400,86 @@ class RefreshUserOperationExecutorTests : FunSpec({
         return Triple(executor, cachedPushSubscriptionModel, mockUserBackendService)
     }
 
+    /**
+     * The same fetch as [buildSelfHealHarness], but against a real store with the real model store
+     * listener attached, so a test sees the operations a hydration actually produces rather than
+     * only the model it leaves behind.
+     */
+    fun buildCorrectiveUpdateHarness(
+        serverPushEnabled: Boolean,
+        serverNotificationTypes: Int?,
+        localOptedIn: Boolean,
+        localRemoteDisabledReason: Int,
+    ): Triple<RefreshUserOperationExecutor, SubscriptionModel, MutableList<Operation>> {
+        val mockUserBackendService = mockk<IUserBackendService>()
+        coEvery { mockUserBackendService.getUser(appId, IdentityConstants.ONESIGNAL_ID, remoteOneSignalId) } returns
+            CreateUserResponse(
+                mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId),
+                PropertiesObject(),
+                listOf(
+                    SubscriptionObject(
+                        existingSubscriptionId1,
+                        SubscriptionObjectType.ANDROID_PUSH,
+                        enabled = serverPushEnabled,
+                        notificationTypes = serverNotificationTypes,
+                        token = "on-backend-push-token",
+                    ),
+                ),
+            )
+
+        val mockIdentityModelStore = MockHelper.identityModelStore()
+        val identityModel = IdentityModel()
+        identityModel.onesignalId = remoteOneSignalId
+        every { mockIdentityModelStore.model } returns identityModel
+        every { mockIdentityModelStore.replace(any(), any()) } just runs
+
+        val mockPropertiesModelStore = MockHelper.propertiesModelStore()
+        val propertiesModel = PropertiesModel()
+        propertiesModel.onesignalId = remoteOneSignalId
+        every { mockPropertiesModelStore.model } returns propertiesModel
+        every { mockPropertiesModelStore.replace(any(), any()) } just runs
+
+        val subscriptionModelStore = SubscriptionModelStore(MockPreferencesService())
+        val cachedPushSubscriptionModel =
+            SubscriptionModel().apply {
+                id = existingSubscriptionId1
+                type = SubscriptionType.PUSH
+                address = onDevicePushToken
+                status = SubscriptionStatus.SUBSCRIBED
+                optedIn = localOptedIn
+                remoteDisabledReason = localRemoteDisabledReason
+            }
+        // NO_PROPOGATE so seeding the store does not enqueue a create.
+        subscriptionModelStore.add(cachedPushSubscriptionModel, ModelChangeTags.NO_PROPOGATE)
+
+        val enqueued = mutableListOf<Operation>()
+        val mockOpRepo = mockk<IOperationRepo>(relaxed = true)
+        every { mockOpRepo.enqueue(capture(enqueued), any()) } just runs
+
+        val configModelStore = MockHelper.configModelStore { it.pushSubscriptionId = existingSubscriptionId1 }
+
+        SubscriptionModelStoreListener(
+            subscriptionModelStore,
+            mockOpRepo,
+            mockIdentityModelStore,
+            configModelStore,
+        ).bootstrap()
+
+        val executor =
+            RefreshUserOperationExecutor(
+                mockUserBackendService,
+                mockIdentityModelStore,
+                mockPropertiesModelStore,
+                subscriptionModelStore,
+                configModelStore,
+                mockk<IRebuildUserService>(),
+                getNewRecordState(),
+                getJwtTokenStore(), getIdentityVerificationService(),
+            )
+
+        return Triple(executor, cachedPushSubscriptionModel, enqueued)
+    }
+
     test("push self-heal: enqueues follow-up update-subscription op when server is stuck-disabled but local is enabled") {
         // Given: server view says push is disabled (the stuck state), local view says enabled
         val (executor, _, _) =
@@ -528,5 +611,180 @@ class RefreshUserOperationExecutorTests : FunSpec({
         coVerify(exactly = 1) {
             mockUserBackendService.getUser(appId, IdentityConstants.ONESIGNAL_ID, remoteOneSignalId)
         }
+    }
+
+    // Both remote-disable codes mean "the app owner turned this off", so both suppress the
+    // self-heal, and each is recorded verbatim so the payload echoes back the code the server sent
+    // rather than a single collapsed one.
+    listOf(
+        SubscriptionStatus.MANUALLY_UNSUBSCRIBED,
+        SubscriptionStatus.DISABLED_FROM_REST_API,
+    ).forEach { remoteDisable ->
+        test("push self-heal: does NOT enqueue follow-up op when the server reports ${remoteDisable.value}") {
+            // Given: server says push is disabled with a remote-disable code, local view says enabled
+            val (executor, cachedPushSubscriptionModel, _) =
+                buildSelfHealHarness(
+                    serverPushEnabled = false,
+                    serverNotificationTypes = remoteDisable.value,
+                    localOptedIn = true,
+                    localStatus = SubscriptionStatus.SUBSCRIBED,
+                    localAddress = onDevicePushToken,
+                )
+
+            // When
+            val response = executor.execute(listOf(RefreshUserOperation(appId, remoteOneSignalId, null)))
+
+            // Then no follow-up op, and that exact code is recorded on the cached push model
+            response.result shouldBe ExecutionResult.SUCCESS
+            response.operations shouldBe null
+            cachedPushSubscriptionModel.remoteDisabledReason shouldBe remoteDisable.value
+        }
+    }
+
+    test("push self-heal: still re-asserts local truth when the server reports another disabled code") {
+        // Any disabled code other than the remote-disable codes (-22, -31) stays device-recoverable
+        val (executor, cachedPushSubscriptionModel, _) =
+            buildSelfHealHarness(
+                serverPushEnabled = false,
+                serverNotificationTypes = -2,
+                localOptedIn = true,
+                localStatus = SubscriptionStatus.SUBSCRIBED,
+                localAddress = onDevicePushToken,
+            )
+
+        val originalLogLevel = Logging.logLevel
+        Logging.logLevel = LogLevel.NONE
+        try {
+            // When
+            val response = executor.execute(listOf(RefreshUserOperation(appId, remoteOneSignalId, null)))
+
+            // Then the self-heal op is emitted and nothing is recorded as a remote disable
+            response.result shouldBe ExecutionResult.SUCCESS
+            response.operations?.count() shouldBe 1
+            (response.operations!![0] is UpdateSubscriptionOperation) shouldBe true
+            cachedPushSubscriptionModel.remoteDisabledReason shouldBe 0
+        } finally {
+            Logging.logLevel = originalLogLevel
+        }
+    }
+
+    test("push refresh: clears a recorded remote disable when the server reports another code") {
+        // Given: -31 recorded locally, server now reports a different code
+        val (executor, cachedPushSubscriptionModel, _) =
+            buildSelfHealHarness(
+                serverPushEnabled = false,
+                serverNotificationTypes = -2,
+                localOptedIn = true,
+                localStatus = SubscriptionStatus.SUBSCRIBED,
+                localAddress = onDevicePushToken,
+            )
+        cachedPushSubscriptionModel.remoteDisabledReason = SubscriptionStatus.DISABLED_FROM_REST_API.value
+
+        val originalLogLevel = Logging.logLevel
+        Logging.logLevel = LogLevel.NONE
+        try {
+            // When
+            val response = executor.execute(listOf(RefreshUserOperation(appId, remoteOneSignalId, null)))
+
+            // Then the mirror clears and the self-heal still re-asserts local truth
+            response.result shouldBe ExecutionResult.SUCCESS
+            cachedPushSubscriptionModel.remoteDisabledReason shouldBe 0
+            response.operations?.count() shouldBe 1
+        } finally {
+            Logging.logLevel = originalLogLevel
+        }
+    }
+
+    test("push refresh: clears a recorded remote disable when the server reports enabled again") {
+        // Given: a locally recorded remote disable, server now reports the subscription enabled
+        val (executor, cachedPushSubscriptionModel, _) =
+            buildSelfHealHarness(
+                serverPushEnabled = true,
+                serverNotificationTypes = 1,
+                localOptedIn = true,
+                localStatus = SubscriptionStatus.SUBSCRIBED,
+                localAddress = onDevicePushToken,
+            )
+        cachedPushSubscriptionModel.remoteDisabledReason = SubscriptionStatus.DISABLED_FROM_REST_API.value
+        cachedPushSubscriptionModel.remoteDisableClearedByUser = true
+
+        // When
+        val response = executor.execute(listOf(RefreshUserOperation(appId, remoteOneSignalId, null)))
+
+        // Then the mirror clears and the opt-in's precedence over stale reports ends
+        response.result shouldBe ExecutionResult.SUCCESS
+        response.operations shouldBe null
+        cachedPushSubscriptionModel.remoteDisabledReason shouldBe 0
+        cachedPushSubscriptionModel.remoteDisableClearedByUser shouldBe false
+    }
+
+    test("push refresh: keeps an opt-in over a fetch that still reports the remote disable it cleared") {
+        // Given: optIn() ran while this fetch was pending, so the server still reports -31
+        val (executor, cachedPushSubscriptionModel, _) =
+            buildSelfHealHarness(
+                serverPushEnabled = false,
+                serverNotificationTypes = SubscriptionStatus.DISABLED_FROM_REST_API.value,
+                localOptedIn = true,
+                localStatus = SubscriptionStatus.SUBSCRIBED,
+                localAddress = onDevicePushToken,
+            )
+        cachedPushSubscriptionModel.remoteDisableClearedByUser = true
+
+        // When
+        val response = executor.execute(listOf(RefreshUserOperation(appId, remoteOneSignalId, null)))
+
+        // Then the stale disable is not recorded, the flag stays, and no self-heal fires
+        response.result shouldBe ExecutionResult.SUCCESS
+        response.operations shouldBe null
+        cachedPushSubscriptionModel.remoteDisabledReason shouldBe 0
+        cachedPushSubscriptionModel.remoteDisableClearedByUser shouldBe true
+    }
+
+    test("push refresh: recording a remote disable enqueues the update that re-applies it") {
+        // A device-metadata update queued earlier in the session carries the enabled it was built
+        // with, from before the disable was known. On its own it re-enables the subscription, and
+        // the next fetch then reports it as enabled and clears the local record, so neither the
+        // device nor the server is left holding the disable. The update this hydration produces is
+        // what replaces the stale one, or puts the state back if it already went out.
+        val (executor, cachedPushSubscriptionModel, enqueued) =
+            buildCorrectiveUpdateHarness(
+                serverPushEnabled = false,
+                serverNotificationTypes = SubscriptionStatus.MANUALLY_UNSUBSCRIBED.value,
+                localOptedIn = true,
+                localRemoteDisabledReason = 0,
+            )
+
+        // When
+        val response = executor.execute(listOf(RefreshUserOperation(appId, remoteOneSignalId, null)))
+
+        // Then
+        response.result shouldBe ExecutionResult.SUCCESS
+        cachedPushSubscriptionModel.remoteDisabledReason shouldBe SubscriptionStatus.MANUALLY_UNSUBSCRIBED.value
+        val corrective = enqueued.filterIsInstance<UpdateSubscriptionOperation>().last()
+        corrective.subscriptionId shouldBe existingSubscriptionId1
+        corrective.enabled shouldBe false
+        corrective.status shouldBe SubscriptionStatus.MANUALLY_UNSUBSCRIBED
+    }
+
+    test("push refresh: clearing a remote disable sends the opt-out the device could not send") {
+        // While a disable is recorded every payload reports it, so an opt-out made during the
+        // suppression never reaches the server. Clearing the record is the first chance to send it.
+        val (executor, cachedPushSubscriptionModel, enqueued) =
+            buildCorrectiveUpdateHarness(
+                serverPushEnabled = true,
+                serverNotificationTypes = 1,
+                localOptedIn = false,
+                localRemoteDisabledReason = SubscriptionStatus.DISABLED_FROM_REST_API.value,
+            )
+
+        // When
+        val response = executor.execute(listOf(RefreshUserOperation(appId, remoteOneSignalId, null)))
+
+        // Then
+        response.result shouldBe ExecutionResult.SUCCESS
+        cachedPushSubscriptionModel.remoteDisabledReason shouldBe 0
+        val corrective = enqueued.filterIsInstance<UpdateSubscriptionOperation>().last()
+        corrective.enabled shouldBe false
+        corrective.status shouldBe SubscriptionStatus.UNSUBSCRIBE
     }
 })
