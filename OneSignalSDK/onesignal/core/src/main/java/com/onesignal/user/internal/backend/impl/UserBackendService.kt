@@ -1,6 +1,5 @@
 package com.onesignal.user.internal.backend.impl
 
-import com.onesignal.common.JSONUtils
 import com.onesignal.common.consistency.RywData
 import com.onesignal.common.exceptions.BackendException
 import com.onesignal.common.putMap
@@ -22,7 +21,7 @@ internal class UserBackendService(
         appId: String,
         identities: Map<String, String>,
         subscriptions: List<SubscriptionObject>,
-        properties: Map<String, Any?>,
+        properties: PropertiesObject,
         jwt: String?,
     ): CreateUserResponse {
         val requestJSON = JSONObject()
@@ -36,8 +35,8 @@ internal class UserBackendService(
                 .put("subscriptions", JSONConverter.convertToJSON(subscriptions))
         }
 
-        if (properties.isNotEmpty()) {
-            requestJSON.put("properties", JSONUtils.mapToJson(properties))
+        if (properties.hasAtLeastOnePropertySet) {
+            requestJSON.put("properties", JSONConverter.convertToJSON(properties))
         }
 
         requestJSON.put("refresh_device_metadata", true)

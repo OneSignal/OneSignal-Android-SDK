@@ -1045,7 +1045,7 @@ class LoginUserOperationExecutorTests : FunSpec({
                 mapOf(IdentityConstants.EXTERNAL_ID to "externalId"),
                 any(),
                 withArg { props ->
-                    props["tags"] shouldBe mapOf("plan" to "pro")
+                    props.tags shouldBe mapOf("plan" to "pro")
                 },
             )
         }

@@ -25,6 +25,7 @@ import com.onesignal.core.internal.operations.Operation
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.user.internal.backend.IUserBackendService
 import com.onesignal.user.internal.backend.IdentityConstants
+import com.onesignal.user.internal.backend.PropertiesObject
 import com.onesignal.user.internal.backend.SubscriptionObject
 import com.onesignal.user.internal.backend.SubscriptionObjectType
 import com.onesignal.user.internal.identity.IdentityModelStore
@@ -165,12 +166,12 @@ internal class LoginUserOperationExecutor(
     ): ExecutionResponse {
         val identities = mutableMapOf<String, String>()
         var subscriptions = mapOf<String, SubscriptionObject>()
-        val properties = mutableMapOf<String, Any?>()
-        properties["timezone_id"] = TimeUtils.getTimeZoneId()
-        properties["language"] = _languageContext.language
-        if (createUserOperation.tags.isNotEmpty()) {
-            properties["tags"] = createUserOperation.tags
-        }
+        val properties =
+            PropertiesObject(
+                tags = createUserOperation.tags.takeIf { it.isNotEmpty() },
+                language = _languageContext.language,
+                timezoneId = TimeUtils.getTimeZoneId(),
+            )
 
         createUserOperation.externalId?.let { identities[IdentityConstants.EXTERNAL_ID] = it }
         for ((label, id) in createUserOperation.aliases) {

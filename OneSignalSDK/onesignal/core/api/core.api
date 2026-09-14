@@ -1941,13 +1941,13 @@ public final class com/onesignal/user/internal/backend/ISubscriptionBackendServi
 }
 
 public abstract interface class com/onesignal/user/internal/backend/IUserBackendService {
-	public abstract fun createUser (Ljava/lang/String;Ljava/util/Map;Ljava/util/List;Ljava/util/Map;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun createUser (Ljava/lang/String;Ljava/util/Map;Ljava/util/List;Lcom/onesignal/user/internal/backend/PropertiesObject;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public abstract fun getUser (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public abstract fun updateUser (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lcom/onesignal/user/internal/backend/PropertiesObject;ZLcom/onesignal/user/internal/backend/PropertiesDeltasObject;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 }
 
 public final class com/onesignal/user/internal/backend/IUserBackendService$DefaultImpls {
-	public static synthetic fun createUser$default (Lcom/onesignal/user/internal/backend/IUserBackendService;Ljava/lang/String;Ljava/util/Map;Ljava/util/List;Ljava/util/Map;Ljava/lang/String;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+	public static synthetic fun createUser$default (Lcom/onesignal/user/internal/backend/IUserBackendService;Ljava/lang/String;Ljava/util/Map;Ljava/util/List;Lcom/onesignal/user/internal/backend/PropertiesObject;Ljava/lang/String;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public static synthetic fun getUser$default (Lcom/onesignal/user/internal/backend/IUserBackendService;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public static synthetic fun updateUser$default (Lcom/onesignal/user/internal/backend/IUserBackendService;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lcom/onesignal/user/internal/backend/PropertiesObject;ZLcom/onesignal/user/internal/backend/PropertiesDeltasObject;Ljava/lang/String;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 }

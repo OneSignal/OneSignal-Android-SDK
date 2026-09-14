@@ -25,7 +25,7 @@ class UserBackendServiceTests : FunSpec({
         coEvery { spyHttpClient.post(any(), any(), any()) } returns HttpResponse(403, "FORBIDDEN")
         val userBackendService = UserBackendService(spyHttpClient)
         val identities = mapOf<String, String>()
-        val properties = mapOf<String, String>()
+        val properties = PropertiesObject()
         val subscriptions = listOf<SubscriptionObject>()
 
         // When
@@ -48,7 +48,7 @@ class UserBackendServiceTests : FunSpec({
         } returns HttpResponse(202, "{identity:{onesignal_id: \"$osId\", aliasLabel1: \"aliasValue1\"}, properties:{timezone_id: \"testTimeZone\", language: \"testLanguage\"}}")
         val userBackendService = UserBackendService(spyHttpClient)
         val identities = mapOf("aliasLabel1" to "aliasValue1")
-        val properties = mapOf("timezone_id" to "testTimeZone", "language" to "testLanguage")
+        val properties = PropertiesObject(timezoneId = "testTimeZone", language = "testLanguage")
         val subscriptions = listOf<SubscriptionObject>()
 
         // When
@@ -88,7 +88,7 @@ class UserBackendServiceTests : FunSpec({
             "appId",
             mapOf("external_id" to "user-1"),
             listOf(),
-            mapOf("timezone_id" to "testTimeZone", "tags" to mapOf("plan" to "pro")),
+            PropertiesObject(timezoneId = "testTimeZone", tags = mapOf("plan" to "pro")),
         )
 
         coVerify {
@@ -113,7 +113,7 @@ class UserBackendServiceTests : FunSpec({
         val userBackendService = UserBackendService(spyHttpClient)
         val identities = mapOf<String, String>()
         val subscriptions = mutableListOf<SubscriptionObject>()
-        val properties = mapOf("timezone_id" to "testTimeZone", "language" to "testLanguage")
+        val properties = PropertiesObject(timezoneId = "testTimeZone", language = "testLanguage")
         subscriptions.add(SubscriptionObject("SHOULDNOTUSE", SubscriptionObjectType.ANDROID_PUSH))
 
         // When
