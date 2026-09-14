@@ -9,6 +9,7 @@ import com.onesignal.core.internal.operations.Operation
 import com.onesignal.mocks.AndroidMockHelper
 import com.onesignal.mocks.MockHelper
 import com.onesignal.mocks.MockPreferencesService
+import com.onesignal.user.internal.LoginWaitMetadata
 import com.onesignal.user.internal.backend.CreateUserResponse
 import com.onesignal.user.internal.backend.IUserBackendService
 import com.onesignal.user.internal.backend.IdentityConstants
@@ -20,7 +21,6 @@ import com.onesignal.user.internal.identity.IdentityModelStore
 import com.onesignal.user.internal.operations.ExecutorMocks.Companion.getIdentityVerificationService
 import com.onesignal.user.internal.operations.ExecutorMocks.Companion.getJwtTokenStore
 import com.onesignal.user.internal.operations.impl.executors.IdentityOperationExecutor
-import com.onesignal.user.internal.LoginWaitMetadata
 import com.onesignal.user.internal.operations.impl.executors.LoginUserOperationExecutor
 import com.onesignal.user.internal.properties.PropertiesModel
 import com.onesignal.user.internal.properties.PropertiesModelStore

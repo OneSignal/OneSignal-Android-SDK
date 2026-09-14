@@ -22,6 +22,7 @@ import com.onesignal.core.internal.operations.ExecutionResult
 import com.onesignal.core.internal.operations.IOperationExecutor
 import com.onesignal.core.internal.operations.Operation
 import com.onesignal.debug.internal.logging.Logging
+import com.onesignal.user.internal.LoginWaitMetadata
 import com.onesignal.user.internal.backend.IUserBackendService
 import com.onesignal.user.internal.backend.IdentityConstants
 import com.onesignal.user.internal.backend.SubscriptionObject
@@ -36,7 +37,6 @@ import com.onesignal.user.internal.operations.SetAliasOperation
 import com.onesignal.user.internal.operations.TransferSubscriptionOperation
 import com.onesignal.user.internal.operations.UpdateSubscriptionOperation
 import com.onesignal.user.internal.operations.reservedLoginAliasLabel
-import com.onesignal.user.internal.LoginWaitMetadata
 import com.onesignal.user.internal.properties.PropertiesModel
 import com.onesignal.user.internal.properties.PropertiesModelStore
 import com.onesignal.user.internal.subscriptions.SubscriptionModel
