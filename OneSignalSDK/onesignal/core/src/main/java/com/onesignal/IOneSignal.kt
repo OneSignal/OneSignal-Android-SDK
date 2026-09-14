@@ -251,7 +251,8 @@ interface IOneSignal {
     )
 
     /**
-     * Login with [externalId] plus [profile]. Email/SMS are additive; an alias owned by another user fails the request; email/phone already on another user transfers (JWT must include that address under IV). One malformed field fails the whole login.
+     * Login with [externalId] plus [profile]. Email/SMS additive. Alias owned by another user fails the whole request.
+     * Profile fields are a Create User upsert (anonymous is not merged). Same id is a no-op once a backend ID exists.
      */
     suspend fun login(
         externalId: String,

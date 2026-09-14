@@ -32,15 +32,15 @@ interface IOperationRepo {
     suspend fun enqueueAndWait(
         operation: Operation,
         flush: Boolean = false,
-    ): Boolean = enqueueAndAwaitResult(operation, flush).success
+    ): Boolean = enqueueAndAwaitResult<Any>(operation, flush).success
 
     /**
      * Same as [enqueueAndWait], plus the HTTP status and body when the executor recorded a backend failure.
      */
-    suspend fun enqueueAndAwaitResult(
+    suspend fun <T> enqueueAndAwaitResult(
         operation: Operation,
         flush: Boolean = false,
-    ): OperationWaitResult
+    ): OperationWaitResult<T>
 
     /**
      * Check if the queue contains a specific operation type
@@ -52,10 +52,12 @@ interface IOperationRepo {
     fun forceExecuteOperations()
 }
 
-class OperationWaitResult(
+/** Result of [IOperationRepo.enqueueAndAwaitResult]. [metadata] is executor-specific and null when unused. */
+class OperationWaitResult<out T>(
     val success: Boolean,
     val httpStatusCode: Int? = null,
     val httpResponse: String? = null,
+    val metadata: T? = null,
 )
 
 // Extension function so the syntax containsInstanceOf<Operation>() can be used over

@@ -30,6 +30,23 @@ class OneSignalUserProfileTests : FunSpec({
         profile.hasFields shouldBe true
     }
 
+    test("constructor copies tags so later mutation of the caller's map is not visible") {
+        val tags = mutableMapOf("plan" to "pro")
+        val profile = OneSignalUserProfile(tags = tags)
+
+        tags["plan"] = "changed"
+
+        profile.tags shouldBe mapOf("plan" to "pro")
+    }
+
+    test("toString redacts email and phone") {
+        val profile = OneSignalUserProfile(email = "bob@example.com", phoneNumber = "+15555550100")
+
+        profile.toString().contains("bob@example.com") shouldBe false
+        profile.toString().contains("+15555550100") shouldBe false
+        profile.toString().contains("<set>") shouldBe true
+    }
+
     test("Java builder can set email without a phone number") {
         val profile =
             OneSignalUserProfile.builder()

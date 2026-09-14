@@ -220,6 +220,40 @@ class OperationRepoTests : FunSpec({
         merged.tags shouldBe mapOf("plan" to "pro")
     }
 
+    test("enqueue dedupe last-write-wins for incoming email and phone") {
+        val mocks = Mocks()
+        val operationRepo = mocks.operationRepo
+
+        val queuedOp =
+            LoginUserOperation(
+                "appId",
+                "local-new",
+                "alice",
+                null,
+                OneSignalUserProfile(email = "first@b.com", phoneNumber = "+15555550100"),
+            )
+        queuedOp.id = UUID.randomUUID().toString()
+        synchronized(operationRepo.queue) {
+            operationRepo.queue.add(OperationQueueItem(queuedOp, bucket = 0))
+        }
+
+        val incomingOp =
+            LoginUserOperation(
+                "appId",
+                "local-new",
+                "alice",
+                null,
+                OneSignalUserProfile(email = "second@b.com", phoneNumber = "+15555550999"),
+            )
+
+        operationRepo.enqueue(incomingOp)
+        mocks.waitForInternalEnqueue()
+
+        val merged = operationRepo.queue.first().operation as LoginUserOperation
+        merged.email shouldBe "second@b.com"
+        merged.phoneNumber shouldBe "+15555550999"
+    }
+
     test("enqueue dedupe does not merge a local existingOnesignalId onto the queued op") {
         // Regression: when upgrading from 5.0.0-5.1.7, an anon user's backend-create
         // may have been dropped, so its onesignalId is still "local-". If
@@ -250,11 +284,6 @@ class OperationRepoTests : FunSpec({
     }
 
     test("enqueue dedupe wakes both queued and incoming enqueueAndWait callers on SUCCESS") {
-        // A LoginUserOperation is queued via enqueueAndWait while the loop is not yet
-        // started, so it sits in the queue with its waiter attached. A second
-        // enqueueAndWait arrives for the same onesignalId. Dedupe wakes the incoming
-        // caller immediately with true; the queued op's waiter wakes with the real
-        // execution result when SUCCESS lands.
         val mocks = Mocks()
         val opRepo = mocks.operationRepo
         val executeOperationsCall = mockExecuteOperations(opRepo)
@@ -262,26 +291,56 @@ class OperationRepoTests : FunSpec({
         val queuedOp = LoginUserOperation("appId", "alice", "ext", "anon-uuid")
         val incomingOp = LoginUserOperation("appId", "alice", "ext", "anon-uuid")
 
-        // When — first enqueueAndWait runs (loop not started, op stays in queue).
-        // UNDISPATCHED so enqueueAndWait reaches its scope.launch + suspend before
-        // we send the incoming op below; otherwise the scope's single thread would
-        // see the incoming op's internalEnqueue first and dedupe direction reverses.
         val queuedDone = WaiterWithValue<Boolean>()
         launch(start = CoroutineStart.UNDISPATCHED) {
             queuedDone.wake(opRepo.enqueueAndWait(queuedOp))
         }
         mocks.waitForInternalEnqueue()
 
-        // Incoming dedupes against the queued op and is woken immediately
-        val incomingResult = withTimeout(1_000) { opRepo.enqueueAndWait(incomingOp) }
-        // Run the loop; mocked executor SUCCESS wakes the queued op's waiter
+        val incomingDone = WaiterWithValue<Boolean>()
+        launch(start = CoroutineStart.UNDISPATCHED) {
+            incomingDone.wake(opRepo.enqueueAndWait(incomingOp))
+        }
+        mocks.waitForInternalEnqueue()
+
         opRepo.start()
         executeOperationsCall.waitForWake()
+        val incomingResult = withTimeout(1_000) { incomingDone.waitForWake() }
         val queuedResult = withTimeout(1_000) { queuedDone.waitForWake() }
 
-        // Then
         incomingResult shouldBe true
         queuedResult shouldBe true
+    }
+
+    test("enqueue dedupe wakes both waiters with the real FAIL_NORETRY result") {
+        val mocks = Mocks()
+        val opRepo = mocks.operationRepo
+        val executeOperationsCall = mockExecuteOperations(opRepo, OperationWaitResult<Any?>(false, 400, "bad phone"))
+
+        val queuedOp = LoginUserOperation("appId", "alice", "ext", null, OneSignalUserProfile(phoneNumber = "+1"))
+        val incomingOp = LoginUserOperation("appId", "alice", "ext", null, OneSignalUserProfile(email = "a@b.com"))
+
+        val queuedDone = WaiterWithValue<OperationWaitResult<*>>()
+        launch(start = CoroutineStart.UNDISPATCHED) {
+            queuedDone.wake(opRepo.enqueueAndAwaitResult<Any?>(queuedOp))
+        }
+        mocks.waitForInternalEnqueue()
+
+        val incomingDone = WaiterWithValue<OperationWaitResult<*>>()
+        launch(start = CoroutineStart.UNDISPATCHED) {
+            incomingDone.wake(opRepo.enqueueAndAwaitResult<Any?>(incomingOp))
+        }
+        mocks.waitForInternalEnqueue()
+
+        opRepo.start()
+        executeOperationsCall.waitForWake()
+        val incomingResult = withTimeout(1_000) { incomingDone.waitForWake() }
+        val queuedResult = withTimeout(1_000) { queuedDone.waitForWake() }
+
+        incomingResult.success shouldBe false
+        incomingResult.httpStatusCode shouldBe 400
+        queuedResult.success shouldBe false
+        queuedResult.httpStatusCode shouldBe 400
     }
 
     test("containsInstanceOf") {
@@ -1177,7 +1236,7 @@ class OperationRepoTests : FunSpec({
         val result =
             runBlocking {
                 withTimeout(2_000) {
-                    mocks.operationRepo.enqueueAndAwaitResult(mockOperation())
+                    mocks.operationRepo.enqueueAndAwaitResult<Any?>(mockOperation())
                 }
             }
 
@@ -1247,12 +1306,15 @@ class OperationRepoTests : FunSpec({
 
         private fun mockOperationNonGroupable() = mockOperation(groupComparisonType = GroupComparisonType.NONE)
 
-        private fun mockExecuteOperations(opRepo: OperationRepo): WaiterWithValue<Boolean> {
+        private fun mockExecuteOperations(
+            opRepo: OperationRepo,
+            waitResult: OperationWaitResult<*> = OperationWaitResult<Any?>(true),
+        ): WaiterWithValue<Boolean> {
             val executeWaiter = WaiterWithValue<Boolean>()
             coEvery { opRepo.executeOperations(any()) } coAnswers {
                 executeWaiter.wake(true)
                 firstArg<List<OperationRepo.OperationQueueItem>>().forEach {
-                    it.waiter?.wake(OperationWaitResult(true))
+                    it.wakeWaiters(waitResult)
                 }
             }
             return executeWaiter

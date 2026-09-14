@@ -2,7 +2,7 @@ package com.onesignal.example.data.repository
 
 import android.util.Log
 import com.onesignal.OneSignal
-import com.onesignal.example.CompositeLoginExample
+import com.onesignal.example.data.model.CompositeLoginExample
 import com.onesignal.example.data.model.NotificationType
 import com.onesignal.example.data.network.OneSignalService
 import com.onesignal.example.data.network.UserData
@@ -36,6 +36,7 @@ class OneSignalRepository {
         val profile = CompositeLoginExample.profile(email, phoneNumber)
         val result = OneSignal.login(externalUserId, profile, jwtToken)
         Log.d(TAG, "Composite login result: $result")
+        result
     }
 
     suspend fun updateUserJwt(externalUserId: String, jwtToken: String) = withContext(Dispatchers.IO) {

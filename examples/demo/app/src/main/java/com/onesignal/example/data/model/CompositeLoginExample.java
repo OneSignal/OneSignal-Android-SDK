@@ -1,4 +1,4 @@
-package com.onesignal.example;
+package com.onesignal.example.data.model;
 
 import com.onesignal.OneSignalUserProfile;
 import java.util.Collections;

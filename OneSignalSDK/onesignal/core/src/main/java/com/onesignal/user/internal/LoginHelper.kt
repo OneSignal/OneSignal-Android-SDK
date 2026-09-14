@@ -2,6 +2,7 @@ package com.onesignal.user.internal
 
 import com.onesignal.LoginData
 import com.onesignal.OneSignalUserProfile
+import com.onesignal.common.IDManager
 import com.onesignal.core.internal.config.ConfigModel
 import com.onesignal.core.internal.operations.IOperationRepo
 import com.onesignal.core.internal.operations.OperationWaitResult
@@ -13,6 +14,12 @@ import com.onesignal.user.internal.operations.LoginUserOperation
 import com.onesignal.user.internal.subscriptions.SubscriptionModel
 import com.onesignal.user.internal.subscriptions.SubscriptionModelStore
 import com.onesignal.user.internal.subscriptions.SubscriptionType
+
+internal data class LoginWaitMetadata(
+    val onesignalId: String,
+    val emailSubscriptionId: String? = null,
+    val smsSubscriptionId: String? = null,
+)
 
 internal class LoginHelper(
     private val identityModelStore: IdentityModelStore,
@@ -30,44 +37,44 @@ internal class LoginHelper(
         val existingOneSignalId: String?,
     )
 
+    internal data class LoginSwitchResult(
+        val context: LoginEnqueueContext?,
+        val onesignalId: String,
+    )
+
     /**
-     * Synchronously switches local user models under the login/logout lock so subsequent
-     * SDK calls (e.g. addTag) see the new user's identity immediately. Returns context
-     * needed for [enqueueLogin], or null if the user was already logged in with [externalId]
-     * (no switch needed).
+     * Switch local identity under the login lock. Null [LoginSwitchResult.context] means do not enqueue.
      */
     internal fun switchUser(
         externalId: String,
         jwtBearerToken: String? = null,
-    ): LoginEnqueueContext? {
+        profile: OneSignalUserProfile? = null,
+    ): LoginSwitchResult {
         synchronized(lock) {
             val currentExternalId = identityModelStore.model.externalId
             val currentOneSignalId = identityModelStore.model.onesignalId
 
             if (currentExternalId == externalId) {
-                // Same-user refresh path (e.g. login(sameId, freshJwt) after a 401). Store the
-                // fresh token and wake the queue so any ops deferred by `hasValidJwtIfRequired`
-                // dispatch immediately — symmetric with `updateUserJwt`. putJwt no-ops on null.
                 if (jwtBearerToken != null) {
                     jwtTokenStore.putJwt(externalId, jwtBearerToken)
                     operationRepo.forceExecuteOperations()
                 }
-                return null
+                val retryOrUpsert = IDManager.isLocalId(currentOneSignalId) || profile?.hasFields == true
+                val context =
+                    if (retryOrUpsert) {
+                        LoginEnqueueContext(configModel.appId, currentOneSignalId, externalId, null)
+                    } else {
+                        null
+                    }
+                return LoginSwitchResult(context, currentOneSignalId)
             }
 
-            // Store the JWT before the LoginUserOperation enqueues so that when the op
-            // dispatches, the JWT lookup in `hasValidJwtIfRequired` already succeeds.
-            // putJwt no-ops on null.
             jwtTokenStore.putJwt(externalId, jwtBearerToken)
             userSwitcher.createAndSwitchToNewUser { identityModel, _ ->
                 identityModel.externalId = externalId
             }
 
             val newOneSignalId = identityModelStore.model.onesignalId
-            // Under IV-required, the merge-anon-into-identified path can't dispatch — the
-            // anon user was never created server-side (no JWT) so the local-id reference
-            // would deadlock LoginUserOperation.canStartExecute. Skip the link entirely so
-            // the executor takes the createUser (upsert) path.
             val existingOneSignalId =
                 if (configModel.useIdentityVerification == JwtRequirement.REQUIRED) {
                     null
@@ -77,7 +84,10 @@ internal class LoginHelper(
                     null
                 }
 
-            return LoginEnqueueContext(configModel.appId, newOneSignalId, externalId, existingOneSignalId)
+            return LoginSwitchResult(
+                LoginEnqueueContext(configModel.appId, newOneSignalId, externalId, existingOneSignalId),
+                newOneSignalId,
+            )
         }
     }
 
@@ -87,9 +97,9 @@ internal class LoginHelper(
     internal suspend fun enqueueLogin(
         context: LoginEnqueueContext,
         profile: OneSignalUserProfile? = null,
-    ): OperationWaitResult {
+    ): OperationWaitResult<LoginWaitMetadata> {
         val result =
-            operationRepo.enqueueAndAwaitResult(
+            operationRepo.enqueueAndAwaitResult<LoginWaitMetadata>(
                 LoginUserOperation(
                     context.appId,
                     context.newIdentityOneSignalId,
@@ -105,26 +115,27 @@ internal class LoginHelper(
         return result
     }
 
-    internal fun contextForCurrentUser(externalId: String): LoginEnqueueContext =
-        LoginEnqueueContext(
-            appId = configModel.appId,
-            newIdentityOneSignalId = identityModelStore.model.onesignalId,
+    internal fun loginData(
+        externalId: String,
+        profile: OneSignalUserProfile,
+        wait: OperationWaitResult<LoginWaitMetadata>? = null,
+        fallbackOnesignalId: String? = null,
+    ): LoginData {
+        val subscriptions = subscriptionModelStore.list()
+        return LoginData(
+            onesignalId = wait?.metadata?.onesignalId ?: fallbackOnesignalId ?: identityModelStore.model.onesignalId,
             externalId = externalId,
-            existingOneSignalId = null,
+            emailSubscriptionId = wait?.metadata?.emailSubscriptionId
+                ?: subscriptionId(subscriptions, SubscriptionType.EMAIL, profile.email),
+            smsSubscriptionId = wait?.metadata?.smsSubscriptionId
+                ?: subscriptionId(subscriptions, SubscriptionType.SMS, profile.phoneNumber),
         )
+    }
 
     internal fun loginDataFromStores(
         externalId: String,
         profile: OneSignalUserProfile,
-    ): LoginData {
-        val subscriptions = subscriptionModelStore.list()
-        return LoginData(
-            onesignalId = identityModelStore.model.onesignalId,
-            externalId = externalId,
-            emailSubscriptionId = subscriptionId(subscriptions, SubscriptionType.EMAIL, profile.email),
-            smsSubscriptionId = subscriptionId(subscriptions, SubscriptionType.SMS, profile.phoneNumber),
-        )
-    }
+    ): LoginData = loginData(externalId, profile)
 
     private fun subscriptionId(
         subscriptions: Collection<SubscriptionModel>,
@@ -132,6 +143,7 @@ internal class LoginHelper(
         address: String?,
     ): String? {
         if (address.isNullOrBlank()) return null
-        return subscriptions.firstOrNull { it.type == type && it.address == address }?.id
+        val ignoreCase = type == SubscriptionType.EMAIL
+        return subscriptions.firstOrNull { it.type == type && it.address.equals(address, ignoreCase) }?.id
     }
 }

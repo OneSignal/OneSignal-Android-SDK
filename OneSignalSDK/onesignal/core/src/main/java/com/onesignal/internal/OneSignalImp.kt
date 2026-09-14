@@ -479,7 +479,7 @@ internal class OneSignalImp : IOneSignal,
 
         waitForInit(operationName = "login")
 
-        val context = loginHelper.switchUser(externalId, jwtBearerToken) ?: return
+        val context = loginHelper.switchUser(externalId, jwtBearerToken).context ?: return
 
         suspendifyOnIO { loginHelper.enqueueLogin(context) }
     }
@@ -805,7 +805,7 @@ internal class OneSignalImp : IOneSignal,
         // cause), and only returns once initState == SUCCESS — so no post-check is needed here.
         suspendUntilInit(operationName = "login")
 
-        val context = loginHelper.switchUser(externalId, jwtBearerToken) ?: return@withContext
+        val context = loginHelper.switchUser(externalId, jwtBearerToken).context ?: return@withContext
         loginHelper.enqueueLogin(context)
     }
 
@@ -819,11 +819,9 @@ internal class OneSignalImp : IOneSignal,
 
             suspendUntilInit(operationName = "login")
 
-            val context =
-                loginHelper.switchUser(externalId, jwtBearerToken)
-                    ?: if (profile.hasFields) loginHelper.contextForCurrentUser(externalId) else null
-            if (context != null) {
-                val completed = loginHelper.enqueueLogin(context, profile)
+            val switched = loginHelper.switchUser(externalId, jwtBearerToken, profile)
+            if (switched.context != null) {
+                val completed = loginHelper.enqueueLogin(switched.context, profile)
                 if (!completed.success) {
                     return@withContext OneSignalResult.failure(
                         ErrorCode.BACKEND_ERROR,
@@ -831,11 +829,14 @@ internal class OneSignalImp : IOneSignal,
                         backendCode = completed.httpStatusCode,
                     )
                 }
+                return@withContext OneSignalResult.success(
+                    loginHelper.loginData(externalId, profile, completed, switched.onesignalId),
+                )
             }
-            OneSignalResult.success(loginHelper.loginDataFromStores(externalId, profile))
+            OneSignalResult.success(loginHelper.loginData(externalId, profile, fallbackOnesignalId = switched.onesignalId))
         }
 
-    private fun loginFailureMessage(wait: OperationWaitResult): String {
+    private fun loginFailureMessage(wait: OperationWaitResult<*>): String {
         val body = wait.httpResponse?.takeIf { it.isNotBlank() }
         return body ?: wait.httpStatusCode?.let { "Login did not complete (HTTP $it)." } ?: "Login did not complete."
     }

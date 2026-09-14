@@ -295,21 +295,25 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
     ) {
         _isLoading.value = true
         viewModelScope.launch(Dispatchers.IO) {
-            repository.loginUserWithProfile(externalUserId, email, phoneNumber, jwtToken)
+            val result = repository.loginUserWithProfile(externalUserId, email, phoneNumber, jwtToken)
             withContext(Dispatchers.Main) {
-                SharedPreferenceUtil.cacheUserExternalUserId(getApplication(), externalUserId)
-                SharedPreferenceUtil.cacheJwtToken(getApplication(), jwtToken)
-                _externalUserId.value = externalUserId
-                aliasesList.clear()
-                emailsList.clear()
-                smsNumbersList.clear()
-                triggersList.clear()
-                refreshAliases()
-                refreshEmails()
-                refreshSmsNumbers()
-                refreshTriggers()
-                loadExistingTags()
-                refreshPushSubscription()
+                if (result.isSuccess) {
+                    SharedPreferenceUtil.cacheUserExternalUserId(getApplication(), externalUserId)
+                    SharedPreferenceUtil.cacheJwtToken(getApplication(), jwtToken)
+                    _externalUserId.value = externalUserId
+                    aliasesList.clear()
+                    emailsList.clear()
+                    smsNumbersList.clear()
+                    triggersList.clear()
+                    refreshAliases()
+                    refreshEmails()
+                    refreshSmsNumbers()
+                    refreshTriggers()
+                    loadExistingTags()
+                    refreshPushSubscription()
+                } else {
+                    Log.e(TAG, "Composite login failed: ${result.error}")
+                }
                 _isLoading.value = false
             }
         }

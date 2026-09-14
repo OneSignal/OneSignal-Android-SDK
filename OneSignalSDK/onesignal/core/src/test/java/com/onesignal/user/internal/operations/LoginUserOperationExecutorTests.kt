@@ -20,6 +20,7 @@ import com.onesignal.user.internal.identity.IdentityModelStore
 import com.onesignal.user.internal.operations.ExecutorMocks.Companion.getIdentityVerificationService
 import com.onesignal.user.internal.operations.ExecutorMocks.Companion.getJwtTokenStore
 import com.onesignal.user.internal.operations.impl.executors.IdentityOperationExecutor
+import com.onesignal.user.internal.LoginWaitMetadata
 import com.onesignal.user.internal.operations.impl.executors.LoginUserOperationExecutor
 import com.onesignal.user.internal.properties.PropertiesModel
 import com.onesignal.user.internal.properties.PropertiesModelStore
@@ -985,6 +986,7 @@ class LoginUserOperationExecutorTests : FunSpec({
             )
 
         response.result shouldBe ExecutionResult.SUCCESS
+        response.metadata shouldBe LoginWaitMetadata(remoteOneSignalId, "email-sub")
         coVerify(exactly = 1) {
             mockUserBackendService.createUser(
                 appId,
@@ -1114,6 +1116,19 @@ class LoginUserOperationExecutorTests : FunSpec({
         response.result shouldBe ExecutionResult.FAIL_NORETRY
         response.httpStatusCode shouldBe 400
         response.httpResponse shouldBe "INVALID EMAIL"
+    }
+
+    test("composite login 404 drops the login op") {
+        val mockUserBackendService = mockk<IUserBackendService>()
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } throws BackendException(404, "NOT FOUND")
+
+        val response =
+            profileExecutor(mockUserBackendService).execute(
+                listOf(LoginUserOperation(appId, localOneSignalId, "externalId", null, OneSignalUserProfile(email = "a@b.com"))),
+            )
+
+        response.result shouldBe ExecutionResult.FAIL_NORETRY
+        response.httpStatusCode shouldBe 404
     }
 
     test("IV composite login missing the claimed email is unauthorized") {

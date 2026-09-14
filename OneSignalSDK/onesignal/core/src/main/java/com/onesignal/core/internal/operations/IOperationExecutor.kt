@@ -44,6 +44,7 @@ class ExecutionResponse(
     val retryAfterSeconds: Int? = null,
     val httpStatusCode: Int? = null,
     val httpResponse: String? = null,
+    val metadata: Any? = null,
 )
 
 enum class ExecutionResult {
