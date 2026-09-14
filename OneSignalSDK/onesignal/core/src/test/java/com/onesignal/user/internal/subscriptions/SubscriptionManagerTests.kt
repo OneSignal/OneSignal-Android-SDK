@@ -790,6 +790,7 @@ class SubscriptionManagerTests : FunSpec({
                 SubscriptionStatus.HMS_TOKEN_TIMEOUT,
                 SubscriptionStatus.HMS_API_EXCEPTION_OTHER,
                 SubscriptionStatus.FIREBASE_FCM_ERROR_IOEXCEPTION_AUTHENTICATION_FAILED,
+                SubscriptionStatus.FIREBASE_FCM_FID_REGISTRATION_FAILED,
             )
     }
 
