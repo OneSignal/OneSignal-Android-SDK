@@ -144,8 +144,6 @@ class PushTokenManagerTests : FunSpec({
         val retryableStatuses =
             listOf(
                 SubscriptionStatus.FIREBASE_FCM_ERROR_MISC_EXCEPTION,
-                SubscriptionStatus.FIREBASE_FCM_FID_DEFAULT_APP_MISSING,
-                SubscriptionStatus.FIREBASE_FCM_FID_REGISTER_API_UNAVAILABLE,
                 SubscriptionStatus.FIREBASE_FCM_FID_REGISTRATION_FAILED,
             )
 
@@ -165,6 +163,33 @@ class PushTokenManagerTests : FunSpec({
             response.token shouldBe "push-token"
             response.status shouldBe SubscriptionStatus.SUBSCRIBED
             pushTokenManager.pushToken shouldBe "push-token"
+            pushTokenManager.pushTokenStatus shouldBe SubscriptionStatus.SUBSCRIBED
+        }
+    }
+
+    test("FID errors preserve a previously successful token") {
+        val fidErrors =
+            listOf(
+                SubscriptionStatus.FIREBASE_FCM_FID_DEFAULT_APP_MISSING,
+                SubscriptionStatus.FIREBASE_FCM_FID_REGISTER_API_UNAVAILABLE,
+                SubscriptionStatus.FIREBASE_FCM_FID_REGISTRATION_FAILED,
+            )
+
+        fidErrors.forEach { fidError ->
+            val mockPushRegistrator = mockk<IPushRegistrator>()
+            coEvery { mockPushRegistrator.registerForPush() } returns
+                IPushRegistrator.RegisterResult("installation-id", SubscriptionStatus.SUBSCRIBED) andThen
+                IPushRegistrator.RegisterResult(null, fidError)
+            val mockDeviceService = MockHelper.deviceService()
+            every { mockDeviceService.jetpackLibraryStatus } returns IDeviceService.JetpackLibraryStatus.OK
+            val pushTokenManager = PushTokenManager(mockPushRegistrator, mockDeviceService)
+
+            pushTokenManager.retrievePushToken()
+            val response = pushTokenManager.retrievePushToken()
+
+            response.token shouldBe "installation-id"
+            response.status shouldBe SubscriptionStatus.SUBSCRIBED
+            pushTokenManager.pushToken shouldBe "installation-id"
             pushTokenManager.pushTokenStatus shouldBe SubscriptionStatus.SUBSCRIBED
         }
     }

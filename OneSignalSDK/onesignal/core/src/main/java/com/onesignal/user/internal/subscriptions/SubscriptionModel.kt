@@ -111,8 +111,6 @@ enum class SubscriptionStatus(val value: Int) {
                 HMS_TOKEN_TIMEOUT, // -25
                 HMS_API_EXCEPTION_OTHER, // -27
                 FIREBASE_FCM_ERROR_IOEXCEPTION_AUTHENTICATION_FAILED, // -29
-                FIREBASE_FCM_FID_DEFAULT_APP_MISSING, // -32
-                FIREBASE_FCM_FID_REGISTER_API_UNAVAILABLE, // -33
                 FIREBASE_FCM_FID_REGISTRATION_FAILED, // -34
             )
 
