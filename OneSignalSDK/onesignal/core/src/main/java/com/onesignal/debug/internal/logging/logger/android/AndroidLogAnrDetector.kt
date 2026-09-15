@@ -6,6 +6,7 @@ import android.os.SystemClock
 import com.onesignal.debug.internal.crash.AnrCheckEvaluator
 import com.onesignal.debug.internal.crash.AnrCheckResult
 import com.onesignal.debug.internal.crash.AnrConstants
+import com.onesignal.debug.internal.crash.MonotonicClock
 import com.onesignal.debug.internal.crash.buildAnrCrashData
 import com.onesignal.debug.internal.crash.buildBackgroundBlockCrashData
 import com.onesignal.logger.ILogAnrDetector
@@ -37,7 +38,7 @@ internal class AndroidLogAnrDetector(
             dedupWindowMs = MIN_TIME_BETWEEN_ANR_REPORTS_MS,
             // Monotonic clock: SystemClock.uptimeMillis matches the main Looper's scheduling
             // clock and can't be skewed by NTP/time changes.
-            now = { SystemClock.uptimeMillis() },
+            clock = MonotonicClock { SystemClock.uptimeMillis() },
         )
 
     private var watchdogThread: Thread? = null
@@ -68,7 +69,7 @@ internal class AndroidLogAnrDetector(
 
     @Suppress("TooGenericExceptionCaught")
     private fun setupRunnables() {
-        mainThreadRunnable = Runnable { evaluator.recordHeartbeat() }
+        mainThreadRunnable = Runnable { evaluator.recordHeartbeatSafely() }
         watchdogRunnable =
             Runnable {
                 while (isMonitoring.get()) {

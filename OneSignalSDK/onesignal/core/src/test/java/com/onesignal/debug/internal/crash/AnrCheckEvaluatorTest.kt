@@ -1,5 +1,6 @@
 package com.onesignal.debug.internal.crash
 
+import io.kotest.assertions.throwables.shouldNotThrowAny
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
@@ -10,8 +11,9 @@ import io.kotest.matchers.types.shouldBeInstanceOf
  */
 class AnrCheckEvaluatorTest : FunSpec({
 
-    class FakeClock(var nowMs: Long = 1_000L) {
-        fun advance(ms: Long) { nowMs += ms }
+    class FakeClock(private var t: Long = 1_000L) : MonotonicClock {
+        fun advance(ms: Long) { t += ms }
+        override fun now(): Long = t
     }
 
     fun evaluator(clock: FakeClock) = AnrCheckEvaluator(
@@ -20,7 +22,7 @@ class AnrCheckEvaluatorTest : FunSpec({
         backgroundThresholdMs = 10_000L,
         frozenSlackMs = 2_000L,
         dedupWindowMs = 30_000L,
-        now = { clock.nowMs },
+        clock = clock,
     )
 
     // ===== classifyBlock (pure) =====
@@ -77,6 +79,23 @@ class AnrCheckEvaluatorTest : FunSpec({
         clock.advance(4_000L)
 
         e.evaluate(actualSleepMs = 2_000L, inForeground = true).shouldBeInstanceOf<AnrCheckResult.Responsive>()
+    }
+
+    test("recordHeartbeatSafely swallows a throwing clock") {
+        var ticks = 0
+        val e = AnrCheckEvaluator(
+            anrThresholdMs = 5_000L,
+            checkIntervalMs = 2_000L,
+            backgroundThresholdMs = 10_000L,
+            frozenSlackMs = 2_000L,
+            dedupWindowMs = 30_000L,
+            clock = MonotonicClock {
+                ticks += 1
+                if (ticks > 1) throw OutOfMemoryError("boxed Long")
+                1_000L
+            },
+        )
+        shouldNotThrowAny { e.recordHeartbeatSafely() }
     }
 
     test("a stale heartbeat past the threshold reports a foreground ANR") {
