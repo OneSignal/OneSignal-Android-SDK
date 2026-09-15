@@ -67,7 +67,7 @@ internal class AndroidLogAnrDetector(
         logger.info("$TAG: ANR detection started")
     }
 
-    @Suppress("TooGenericExceptionCaught")
+    @Suppress("TooGenericExceptionCaught", "SwallowedException")
     private fun setupRunnables() {
         mainThreadRunnable = Runnable { evaluator.recordHeartbeatSafely() }
         watchdogRunnable =
@@ -78,7 +78,10 @@ internal class AndroidLogAnrDetector(
                     } catch (e: InterruptedException) {
                         break
                     } catch (t: Throwable) {
-                        logger.error("$TAG: error in watchdog: ${t.message}")
+                        try {
+                            logger.error("$TAG: error in watchdog")
+                        } catch (_: Throwable) {
+                        }
                     }
                 }
             }

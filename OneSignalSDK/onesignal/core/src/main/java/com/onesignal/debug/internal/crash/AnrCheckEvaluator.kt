@@ -3,10 +3,7 @@ package com.onesignal.debug.internal.crash
 import com.onesignal.logger.CrashData
 import java.util.concurrent.atomic.AtomicLong
 
-/**
- * Monotonic ms clock. Fun-interface `now()` returns a primitive long so the main-thread
- * heartbeat does not box through `Function0<Long>` (that Long.valueOf was an SDK fatal under OOM).
- */
+/** Primitive `now()`: a `() -> Long` clock boxes on every main-thread heartbeat. */
 internal fun interface MonotonicClock {
     fun now(): Long
 }
@@ -33,12 +30,11 @@ internal class AnrCheckEvaluator(
         lastResponseTime.set(clock.now())
     }
 
-    /** Records that the main thread ran the heartbeat runnable. */
-    fun recordHeartbeat() {
+    private fun recordHeartbeat() {
         lastResponseTime.set(clock.now())
     }
 
-    // Posted to the main thread. Must not throw: OOM on now() was a fatal attributed to this SDK.
+    // Posted to the main thread; must not throw.
     @Suppress("TooGenericExceptionCaught", "SwallowedException")
     fun recordHeartbeatSafely() {
         try {
