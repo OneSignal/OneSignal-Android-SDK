@@ -16,8 +16,13 @@ import com.onesignal.mocks.MockHelper
 import com.onesignal.mocks.MockPreferencesService
 import com.onesignal.user.internal.jwt.JwtRequirement
 import com.onesignal.user.internal.jwt.JwtTokenStore
+import com.onesignal.user.internal.operations.CreateSubscriptionOperation
 import com.onesignal.user.internal.operations.ExecutorMocks.Companion.getNewRecordState
 import com.onesignal.user.internal.operations.LoginUserOperation
+import com.onesignal.user.internal.operations.impl.executors.LoginUserOperationExecutor
+import com.onesignal.user.internal.operations.impl.executors.SubscriptionOperationExecutor
+import com.onesignal.user.internal.subscriptions.SubscriptionStatus
+import com.onesignal.user.internal.subscriptions.SubscriptionType
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.ints.shouldBeGreaterThan
 import io.kotest.matchers.ints.shouldBeLessThan
@@ -341,6 +346,119 @@ class OperationRepoTests : FunSpec({
         incomingResult.httpStatusCode shouldBe 400
         queuedResult.success shouldBe false
         queuedResult.httpStatusCode shouldBe 400
+    }
+
+    test("FAIL_NORETRY on login keeps grouped create-subscription in the queue") {
+        val mocks = Mocks()
+        every { mocks.executor.operations } returns
+            listOf(
+                LoginUserOperationExecutor.LOGIN_USER,
+                SubscriptionOperationExecutor.CREATE_SUBSCRIPTION,
+            )
+        coEvery { mocks.executor.execute(any()) } returns
+            ExecutionResponse(ExecutionResult.FAIL_NORETRY, httpStatusCode = 400)
+
+        val opRepo = mocks.operationRepo
+        val loginOp = LoginUserOperation("appId", "local-alice", "alice", null)
+        val createOp =
+            CreateSubscriptionOperation(
+                "appId",
+                "local-alice",
+                "alice",
+                "local-push",
+                SubscriptionType.PUSH,
+                true,
+                "push-token",
+                SubscriptionStatus.SUBSCRIBED,
+            )
+
+        val loginDone = WaiterWithValue<OperationWaitResult>()
+        launch(start = CoroutineStart.UNDISPATCHED) {
+            loginDone.wake(opRepo.enqueueAndAwaitResult(loginOp))
+        }
+        mocks.waitForInternalEnqueue()
+        opRepo.enqueue(createOp)
+        mocks.waitForInternalEnqueue()
+
+        opRepo.start()
+        val loginResult = withTimeout(2_000) { loginDone.waitForWake() }
+
+        loginResult.success shouldBe false
+        opRepo.queue.map { it.operation } shouldBe listOf(createOp)
+        verify { mocks.operationModelStore.remove(loginOp.id) }
+        verify(exactly = 0) { mocks.operationModelStore.remove(createOp.id) }
+        coVerify {
+            mocks.executor.execute(
+                match {
+                    it.size == 2 &&
+                        it[0] is LoginUserOperation &&
+                        it[1] is CreateSubscriptionOperation
+                },
+            )
+        }
+    }
+
+    test("enqueueAndAwaitResult same login after FAIL_PAUSE returns false without hanging") {
+        val mocks = Mocks()
+        every { mocks.executor.operations } returns listOf(LoginUserOperationExecutor.LOGIN_USER)
+        coEvery { mocks.executor.execute(any()) } returns ExecutionResponse(ExecutionResult.FAIL_PAUSE_OPREPO)
+
+        val opRepo = mocks.operationRepo
+        opRepo.start()
+        val first =
+            withTimeout(2_000) {
+                opRepo.enqueueAndAwaitResult(LoginUserOperation("appId", "local-alice", "alice", null))
+            }
+        first.success shouldBe false
+
+        val second =
+            withTimeout(500) {
+                opRepo.enqueueAndAwaitResult(LoginUserOperation("appId", "local-alice", "alice", null))
+            }
+        second.success shouldBe false
+        coVerify(exactly = 1) { mocks.executor.execute(any()) }
+    }
+
+    test("enqueue dedupes LoginUserOperation that is already in-flight") {
+        val mocks = Mocks()
+        every { mocks.executor.operations } returns listOf(LoginUserOperationExecutor.LOGIN_USER)
+        val executeStarted = Waiter()
+        val releaseExecute = Waiter()
+        coEvery { mocks.executor.execute(any()) } coAnswers {
+            executeStarted.wake()
+            releaseExecute.waitForWake()
+            ExecutionResponse(ExecutionResult.SUCCESS)
+        }
+
+        val opRepo = mocks.operationRepo
+        opRepo.start()
+        val firstDone = WaiterWithValue<OperationWaitResult>()
+        launch(start = CoroutineStart.UNDISPATCHED) {
+            firstDone.wake(
+                opRepo.enqueueAndAwaitResult(LoginUserOperation("appId", "local-alice", "alice", null)),
+            )
+        }
+        executeStarted.waitForWake()
+
+        val secondDone = WaiterWithValue<OperationWaitResult>()
+        launch(start = CoroutineStart.UNDISPATCHED) {
+            secondDone.wake(
+                opRepo.enqueueAndAwaitResult(LoginUserOperation("appId", "local-alice", "alice", null)),
+            )
+        }
+        verify(exactly = 2, timeout = 1_000) {
+            opRepo["internalEnqueue"](
+                any<OperationQueueItem>(), any<Boolean>(), any<Boolean>(), any<Int>()
+            )
+        }
+
+        releaseExecute.wake()
+        val firstResult = withTimeout(2_000) { firstDone.waitForWake() }
+        val secondResult = withTimeout(2_000) { secondDone.waitForWake() }
+
+        firstResult.success shouldBe true
+        secondResult.success shouldBe true
+        coVerify(exactly = 1) { mocks.executor.execute(any()) }
     }
 
     test("containsInstanceOf") {

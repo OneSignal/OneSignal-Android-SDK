@@ -77,6 +77,7 @@ internal class OperationRepo(
 
     private val executorsMap: Map<String, IOperationExecutor>
     internal val queue = mutableListOf<OperationQueueItem>()
+    private val inFlightLogins = mutableMapOf<String, OperationQueueItem>()
     private val waiter = WaiterWithValue<LoopWaiterMessage>()
     private val retryWaiter = WaiterWithValue<LoopWaiterMessage>()
     private var paused = false
@@ -216,26 +217,37 @@ internal class OperationRepo(
             // Dedupe LoginUserOperation by onesignalId.
             val op = queueItem.operation
             if (op is LoginUserOperation) {
-                val existing =
+                val existingInQueue =
                     queue.firstOrNull {
                         it.operation is LoginUserOperation && it.operation.onesignalId == op.onesignalId
                     }
+                val existing = existingInQueue ?: inFlightLogins[op.onesignalId]
                 if (existing != null) {
-                    val existingOp = existing.operation as LoginUserOperation
-                    // Preserve the anon-user conversion link if the queued op lacks it (e.g. RecoverFromDroppedLoginBug enqueued with null).
-                    // Skip local ids: merging one would flip canStartExecute to false and strand the op,
-                    // since a local id that never hit the backend will never receive an idTranslation.
-                    val incomingExistingId = op.existingOnesignalId
-                    if (incomingExistingId != null &&
-                        !IDManager.isLocalId(incomingExistingId) &&
-                        existingOp.existingOnesignalId == null
-                    ) {
-                        Logging.debug("OperationRepo: internalEnqueue - merging existingOnesignalId=$incomingExistingId into queued LoginUserOperation for onesignalId: ${op.onesignalId}.")
-                        existingOp.existingOnesignalId = incomingExistingId
-                    } else {
-                        Logging.debug("OperationRepo: internalEnqueue - LoginUserOperation for onesignalId: ${op.onesignalId} already exists in the queue.")
+                    if (paused) {
+                        queueItem.waiters.forEach { it.wake(OperationWaitResult(false)) }
+                        if (!addToStore) {
+                            _operationModelStore.remove(queueItem.operation.id)
+                        }
+                        return
                     }
-                    existingOp.mergeProfileFrom(op)
+                    // In-flight: attach waiters only. The HTTP call already copied this op.
+                    if (existingInQueue != null) {
+                        val existingOp = existing.operation as LoginUserOperation
+                        // Preserve the anon-user conversion link if the queued op lacks it (e.g. RecoverFromDroppedLoginBug enqueued with null).
+                        // Skip local ids: merging one would flip canStartExecute to false and strand the op,
+                        // since a local id that never hit the backend will never receive an idTranslation.
+                        val incomingExistingId = op.existingOnesignalId
+                        if (incomingExistingId != null &&
+                            !IDManager.isLocalId(incomingExistingId) &&
+                            existingOp.existingOnesignalId == null
+                        ) {
+                            Logging.debug("OperationRepo: internalEnqueue - merging existingOnesignalId=$incomingExistingId into queued LoginUserOperation for onesignalId: ${op.onesignalId}.")
+                            existingOp.existingOnesignalId = incomingExistingId
+                        } else {
+                            Logging.debug("OperationRepo: internalEnqueue - LoginUserOperation for onesignalId: ${op.onesignalId} already exists in the queue.")
+                        }
+                        existingOp.mergeProfileFrom(op)
+                    }
                     existing.waiters.addAll(queueItem.waiters)
                     if (!addToStore) {
                         _operationModelStore.remove(queueItem.operation.id)
@@ -422,7 +434,18 @@ internal class OperationRepo(
                 ExecutionResult.FAIL_CONFLICT,
                 -> {
                     Logging.warn("Operation execution failed without retry: $operations")
-                    dropAndWake(ops, response)
+                    // Login 4xx is terminal for login only. Grouped push create/transfer stay queued
+                    // so a later successful login can translate their local onesignalId.
+                    val followers = ops.filter { it != startingOp }
+                    if (startingOp.operation is LoginUserOperation && followers.isNotEmpty()) {
+                        _operationModelStore.remove(startingOp.operation.id)
+                        startingOp.wakeWaiters(response.toWaitResult(false))
+                        synchronized(queue) {
+                            followers.reversed().forEach { queue.add(0, it) }
+                        }
+                    } else {
+                        dropAndWake(ops, response)
+                    }
                 }
                 ExecutionResult.SUCCESS_STARTING_ONLY -> {
                     // remove the starting operation from the store and wake any waiters, then
@@ -483,6 +506,13 @@ internal class OperationRepo(
         } catch (e: Throwable) {
             Logging.log(LogLevel.ERROR, "Error attempting to execute operation: $ops", e)
             dropAndWake(ops)
+        } finally {
+            synchronized(queue) {
+                ops.forEach { item ->
+                    val login = item.operation as? LoginUserOperation ?: return@forEach
+                    inFlightLogins.remove(login.onesignalId)
+                }
+            }
         }
     }
 
@@ -557,7 +587,12 @@ internal class OperationRepo(
 
             if (startingOp != null) {
                 queue.remove(startingOp)
-                getGroupableOperations(startingOp)
+                val grouped = getGroupableOperations(startingOp)
+                grouped.forEach { item ->
+                    val login = item.operation as? LoginUserOperation ?: return@forEach
+                    inFlightLogins[login.onesignalId] = item
+                }
+                grouped
             } else {
                 null
             }
