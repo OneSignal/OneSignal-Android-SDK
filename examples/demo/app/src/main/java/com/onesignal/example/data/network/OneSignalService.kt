@@ -22,8 +22,8 @@ import java.net.URLEncoder
  */
 object OneSignalService {
     
-    private const val ONESIGNAL_API_URL = "https://onesignal.com/api/v1/notifications"
-    private const val ONESIGNAL_API_BASE_URL = "https://api.onesignal.com"
+    private const val ONESIGNAL_API_URL = "https://staging.onesignal.com/api/v1/notifications"
+    private const val ONESIGNAL_API_BASE_URL = "https://api.staging.onesignal.com"
     private const val DEMO_ANDROID_GROUP = "demo-group"
     
     private var appId: String = ""
