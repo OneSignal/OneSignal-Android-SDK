@@ -1,7 +1,13 @@
 package com.onesignal.debug.internal.crash
 
 import com.onesignal.logger.CrashData
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
+
+/** Primitive `now()`: a `() -> Long` clock boxes on every main-thread heartbeat. */
+internal fun interface MonotonicClock {
+    fun now(): Long
+}
 
 /**
  * Pure decision core for the ANR watchdog: all timing, classification and dedup state. Foreground
@@ -13,21 +19,44 @@ internal class AnrCheckEvaluator(
     private val backgroundThresholdMs: Long,
     private val frozenSlackMs: Long,
     private val dedupWindowMs: Long,
-    private val now: () -> Long,
+    private val clock: MonotonicClock,
 ) {
-    // Monotonic timestamps (from `now`); see AndroidLogAnrDetector for why the clock must be monotonic.
-    private val lastResponseTime = AtomicLong(now())
+    // Monotonic timestamps (from `clock`); see AndroidLogAnrDetector for why it must be monotonic.
+    private val lastResponseTime = AtomicLong(clock.now())
     private val lastForegroundReportTime = AtomicLong(NEVER_REPORTED)
     private val lastBackgroundReportTime = AtomicLong(NEVER_REPORTED)
 
+    // Posted-runnable ran, even if now() threw. evaluate treats this as proof the main thread is alive.
+    private val heartbeatSeen = AtomicBoolean(false)
+
     /** Re-baselines the responsiveness clock, e.g. at start() so a construction->start gap isn't a block. */
     fun resetBaseline() {
-        lastResponseTime.set(now())
+        heartbeatSeen.set(false)
+        lastResponseTime.set(clock.now())
     }
 
-    /** Records that the main thread ran the heartbeat runnable. */
-    fun recordHeartbeat() {
-        lastResponseTime.set(now())
+    private fun recordHeartbeat() {
+        lastResponseTime.set(clock.now())
+    }
+
+    // Posted to the main thread; must not throw.
+    @Suppress("TooGenericExceptionCaught", "SwallowedException")
+    fun recordHeartbeatSafely() {
+        heartbeatSeen.set(true)
+        try {
+            recordHeartbeat()
+        } catch (_: Throwable) {
+        }
+    }
+
+    @Suppress("TooGenericExceptionCaught", "SwallowedException")
+    private fun consumeHeartbeatSeen(): Boolean {
+        if (!heartbeatSeen.getAndSet(false)) return false
+        try {
+            lastResponseTime.set(clock.now())
+        } catch (_: Throwable) {
+        }
+        return true
     }
 
     /**
@@ -35,7 +64,11 @@ internal class AnrCheckEvaluator(
      * performs side effects.
      */
     fun evaluate(actualSleepMs: Long, inForeground: Boolean): AnrCheckResult {
-        val timeSinceLastResponse = now() - lastResponseTime.get()
+        if (consumeHeartbeatSeen()) {
+            clearReportTimestamps()
+            return AnrCheckResult.Responsive
+        }
+        val timeSinceLastResponse = clock.now() - lastResponseTime.get()
 
         return when (
             classifyBlock(
@@ -51,7 +84,7 @@ internal class AnrCheckEvaluator(
             BlockClassification.FROZEN_PROCESS -> {
                 // The watchdog thread itself was descheduled, so anything measured for the main
                 // thread is a freeze artifact: re-baseline rather than fire on the next iteration.
-                lastResponseTime.set(now())
+                lastResponseTime.set(clock.now())
                 AnrCheckResult.FrozenProcess(actualSleepMs = actualSleepMs, expectedSleepMs = checkIntervalMs)
             }
             BlockClassification.RESPONSIVE -> {
@@ -70,7 +103,7 @@ internal class AnrCheckEvaluator(
         lastReportHolder: AtomicLong,
         inForeground: Boolean,
     ): AnrCheckResult {
-        val nowMs = now()
+        val nowMs = clock.now()
         val lastReport = lastReportHolder.get()
 
         // NEVER_REPORTED must not dedup: shortly after boot the monotonic clock is still small and
