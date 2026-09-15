@@ -141,21 +141,32 @@ class PushTokenManagerTests : FunSpec({
     }
 
     test("retryable errors preserve a previously successful token") {
-        val mockPushRegistrator = mockk<IPushRegistrator>()
-        coEvery { mockPushRegistrator.registerForPush() } returns
-            IPushRegistrator.RegisterResult("push-token", SubscriptionStatus.SUBSCRIBED) andThen
-            IPushRegistrator.RegisterResult(null, SubscriptionStatus.FIREBASE_FCM_ERROR_MISC_EXCEPTION)
-        val mockDeviceService = MockHelper.deviceService()
-        every { mockDeviceService.jetpackLibraryStatus } returns IDeviceService.JetpackLibraryStatus.OK
-        val pushTokenManager = PushTokenManager(mockPushRegistrator, mockDeviceService)
+        val retryableStatuses =
+            listOf(
+                SubscriptionStatus.FIREBASE_FCM_ERROR_MISC_EXCEPTION,
+                SubscriptionStatus.FIREBASE_FCM_FID_DEFAULT_APP_MISSING,
+                SubscriptionStatus.FIREBASE_FCM_FID_REGISTER_API_UNAVAILABLE,
+                SubscriptionStatus.FIREBASE_FCM_FID_REGISTRATION_FAILED,
+            )
 
-        pushTokenManager.retrievePushToken()
-        val response = pushTokenManager.retrievePushToken()
+        retryableStatuses.forEach { retryableStatus ->
+            val mockPushRegistrator = mockk<IPushRegistrator>()
+            coEvery { mockPushRegistrator.registerForPush() } returns
+                IPushRegistrator.RegisterResult("push-token", SubscriptionStatus.SUBSCRIBED) andThen
+                IPushRegistrator.RegisterResult(null, retryableStatus)
+            val mockDeviceService = MockHelper.deviceService()
+            every { mockDeviceService.jetpackLibraryStatus } returns IDeviceService.JetpackLibraryStatus.OK
+            val pushTokenManager = PushTokenManager(mockPushRegistrator, mockDeviceService)
 
-        response.token shouldBe "push-token"
-        response.status shouldBe SubscriptionStatus.SUBSCRIBED
-        pushTokenManager.pushToken shouldBe "push-token"
-        pushTokenManager.pushTokenStatus shouldBe SubscriptionStatus.SUBSCRIBED
+            pushTokenManager.retrievePushToken()
+            val response = pushTokenManager.retrievePushToken()
+
+            retryableStatus.isRetryableTokenError shouldBe true
+            response.token shouldBe "push-token"
+            response.status shouldBe SubscriptionStatus.SUBSCRIBED
+            pushTokenManager.pushToken shouldBe "push-token"
+            pushTokenManager.pushTokenStatus shouldBe SubscriptionStatus.SUBSCRIBED
+        }
     }
 
     test("retrievePushToken should fail with failure status from push registrator with config-type error") {
