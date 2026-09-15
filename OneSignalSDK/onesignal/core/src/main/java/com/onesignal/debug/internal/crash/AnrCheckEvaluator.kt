@@ -1,6 +1,7 @@
 package com.onesignal.debug.internal.crash
 
 import com.onesignal.logger.CrashData
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
 
 /** Primitive `now()`: a `() -> Long` clock boxes on every main-thread heartbeat. */
@@ -25,8 +26,12 @@ internal class AnrCheckEvaluator(
     private val lastForegroundReportTime = AtomicLong(NEVER_REPORTED)
     private val lastBackgroundReportTime = AtomicLong(NEVER_REPORTED)
 
+    // Posted-runnable ran, even if now() threw. evaluate treats this as proof the main thread is alive.
+    private val heartbeatSeen = AtomicBoolean(false)
+
     /** Re-baselines the responsiveness clock, e.g. at start() so a construction->start gap isn't a block. */
     fun resetBaseline() {
+        heartbeatSeen.set(false)
         lastResponseTime.set(clock.now())
     }
 
@@ -37,10 +42,21 @@ internal class AnrCheckEvaluator(
     // Posted to the main thread; must not throw.
     @Suppress("TooGenericExceptionCaught", "SwallowedException")
     fun recordHeartbeatSafely() {
+        heartbeatSeen.set(true)
         try {
             recordHeartbeat()
         } catch (_: Throwable) {
         }
+    }
+
+    @Suppress("TooGenericExceptionCaught", "SwallowedException")
+    private fun consumeHeartbeatSeen(): Boolean {
+        if (!heartbeatSeen.getAndSet(false)) return false
+        try {
+            lastResponseTime.set(clock.now())
+        } catch (_: Throwable) {
+        }
+        return true
     }
 
     /**
@@ -48,6 +64,10 @@ internal class AnrCheckEvaluator(
      * performs side effects.
      */
     fun evaluate(actualSleepMs: Long, inForeground: Boolean): AnrCheckResult {
+        if (consumeHeartbeatSeen()) {
+            clearReportTimestamps()
+            return AnrCheckResult.Responsive
+        }
         val timeSinceLastResponse = clock.now() - lastResponseTime.get()
 
         return when (
