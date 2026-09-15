@@ -2,8 +2,12 @@ package com.onesignal.internal
 
 import android.content.Context
 import android.os.Build
+import com.onesignal.ErrorCode
 import com.onesignal.IOneSignal
 import com.onesignal.IUserJwtInvalidatedListener
+import com.onesignal.LoginData
+import com.onesignal.OneSignalResult
+import com.onesignal.OneSignalUserProfile
 import com.onesignal.common.AndroidUtils
 import com.onesignal.common.DeviceUtils
 import com.onesignal.common.OneSignalUtils
@@ -21,6 +25,7 @@ import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.config.impl.IdentityVerificationService
 import com.onesignal.core.internal.features.IFeatureManager
 import com.onesignal.core.internal.operations.IOperationRepo
+import com.onesignal.core.internal.operations.OperationWaitResult
 import com.onesignal.core.internal.preferences.IPreferencesService
 import com.onesignal.core.internal.preferences.PreferenceStoreFix
 import com.onesignal.core.internal.startup.StartupService
@@ -221,6 +226,7 @@ internal class OneSignalImp : IOneSignal,
             configModel = configModel,
             jwtTokenStore = jwtTokenStore,
             lock = loginLogoutLock,
+            subscriptionModelStore = subscriptionModelStore,
         )
     }
 
@@ -473,7 +479,7 @@ internal class OneSignalImp : IOneSignal,
 
         waitForInit(operationName = "login")
 
-        val context = loginHelper.switchUser(externalId, jwtBearerToken) ?: return
+        val context = loginHelper.switchUser(externalId, jwtBearerToken).context ?: return
 
         suspendifyOnIO { loginHelper.enqueueLogin(context) }
     }
@@ -799,8 +805,40 @@ internal class OneSignalImp : IOneSignal,
         // cause), and only returns once initState == SUCCESS — so no post-check is needed here.
         suspendUntilInit(operationName = "login")
 
-        val context = loginHelper.switchUser(externalId, jwtBearerToken) ?: return@withContext
+        val context = loginHelper.switchUser(externalId, jwtBearerToken).context ?: return@withContext
         loginHelper.enqueueLogin(context)
+    }
+
+    override suspend fun login(
+        externalId: String,
+        profile: OneSignalUserProfile,
+        jwtBearerToken: String?,
+    ): OneSignalResult<LoginData> =
+        withContext(ioDispatcher) {
+            Logging.log(LogLevel.DEBUG, "login(externalId: $externalId, profile: $profile, jwtBearerToken: ...${jwtBearerToken?.takeLast(8)})")
+
+            suspendUntilInit(operationName = "login")
+
+            val switched = loginHelper.switchUser(externalId, jwtBearerToken, profile)
+            if (switched.context != null) {
+                val completed = loginHelper.enqueueLogin(switched.context, profile)
+                if (!completed.success) {
+                    return@withContext OneSignalResult.failure(
+                        ErrorCode.BACKEND_ERROR,
+                        loginFailureMessage(completed),
+                        backendCode = completed.httpStatusCode,
+                    )
+                }
+                return@withContext OneSignalResult.success(
+                    loginHelper.loginData(externalId, profile, completed, switched.onesignalId),
+                )
+            }
+            OneSignalResult.success(loginHelper.loginData(externalId, profile, fallbackOnesignalId = switched.onesignalId))
+        }
+
+    private fun loginFailureMessage(wait: OperationWaitResult): String {
+        val body = wait.httpResponse?.takeIf { it.isNotBlank() }
+        return body ?: wait.httpStatusCode?.let { "Login did not complete (HTTP $it)." } ?: "Login did not complete."
     }
 
     override suspend fun updateUserJwtSuspend(

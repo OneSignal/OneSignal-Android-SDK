@@ -528,6 +528,63 @@ class OneSignalResultTests : FunSpec({
         restored.error.shouldBeNull()
     }
 
+    test("LoginData subscription IDs round-trip when present and stay absent when omitted") {
+        val withIds =
+            LoginData(
+                "os-1",
+                "ext-1",
+                emailSubscriptionId = "email-sub",
+                smsSubscriptionId = "sms-sub",
+            )
+        val restoredWithIds = OneSignalResult.fromMap(OneSignalResult.success(withIds).toMap(), LoginData::fromMap)
+
+        restoredWithIds.isSuccess.shouldBeTrue()
+        restoredWithIds.data!!.emailSubscriptionId shouldBe "email-sub"
+        restoredWithIds.data!!.smsSubscriptionId shouldBe "sms-sub"
+        restoredWithIds.toMap() shouldBe
+            mapOf(
+                "success" to true,
+                "data" to
+                    mapOf(
+                        "onesignalId" to "os-1",
+                        "externalId" to "ext-1",
+                        "emailSubscriptionId" to "email-sub",
+                        "smsSubscriptionId" to "sms-sub",
+                    ),
+                "error" to null,
+            )
+
+        val restoredWithoutIds =
+            OneSignalResult.fromMap(
+                mapOf("success" to true, "data" to mapOf("onesignalId" to "os-1", "externalId" to "ext-1")),
+                LoginData::fromMap,
+            )
+        restoredWithoutIds.data!!.emailSubscriptionId.shouldBeNull()
+        restoredWithoutIds.data!!.smsSubscriptionId.shouldBeNull()
+        restoredWithoutIds.toMap()["data"] shouldBe mapOf("onesignalId" to "os-1", "externalId" to "ext-1")
+    }
+
+    test("LoginData ignores empty or wrongly typed subscription IDs rather than failing the payload") {
+        val restored =
+            OneSignalResult.fromMap(
+                mapOf(
+                    "success" to true,
+                    "data" to
+                        mapOf(
+                            "onesignalId" to "os-1",
+                            "externalId" to "ext-1",
+                            "emailSubscriptionId" to "",
+                            "smsSubscriptionId" to 1,
+                        ),
+                ),
+                LoginData::fromMap,
+            )
+
+        restored.isSuccess.shouldBeTrue()
+        restored.data!!.emailSubscriptionId.shouldBeNull()
+        restored.data!!.smsSubscriptionId.shouldBeNull()
+    }
+
     test("JSONObject.NULL under data is treated as an absent payload") {
         val restored =
             OneSignalResult.fromMap(

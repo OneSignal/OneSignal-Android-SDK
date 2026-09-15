@@ -287,6 +287,38 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
         }
     }
 
+    fun loginUserWithProfile(
+        externalUserId: String,
+        email: String?,
+        phoneNumber: String?,
+        jwtToken: String? = null,
+    ) {
+        _isLoading.value = true
+        viewModelScope.launch(Dispatchers.IO) {
+            val result = repository.loginUserWithProfile(externalUserId, email, phoneNumber, jwtToken)
+            withContext(Dispatchers.Main) {
+                if (result.isSuccess) {
+                    SharedPreferenceUtil.cacheUserExternalUserId(getApplication(), externalUserId)
+                    SharedPreferenceUtil.cacheJwtToken(getApplication(), jwtToken)
+                    _externalUserId.value = externalUserId
+                    aliasesList.clear()
+                    emailsList.clear()
+                    smsNumbersList.clear()
+                    triggersList.clear()
+                    refreshAliases()
+                    refreshEmails()
+                    refreshSmsNumbers()
+                    refreshTriggers()
+                    loadExistingTags()
+                    refreshPushSubscription()
+                } else {
+                    Log.e(TAG, "Composite login failed: ${result.error}")
+                }
+                _isLoading.value = false
+            }
+        }
+    }
+
     fun updateUserJwt(externalUserId: String, jwtToken: String) {
         viewModelScope.launch(Dispatchers.IO) {
             repository.updateUserJwt(externalUserId, jwtToken)

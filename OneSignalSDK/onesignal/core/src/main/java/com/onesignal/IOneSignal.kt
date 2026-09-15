@@ -251,6 +251,16 @@ interface IOneSignal {
     )
 
     /**
+     * Login with [externalId] plus [profile]. Email/SMS additive. Alias owned by another user fails the whole request.
+     * Profile fields are a Create User upsert (anonymous is not merged). Same id is a no-op once a backend ID exists.
+     */
+    suspend fun login(
+        externalId: String,
+        profile: OneSignalUserProfile,
+        jwtBearerToken: String? = null,
+    ): OneSignalResult<LoginData>
+
+    /**
      * Logout the current user (suspend version).
      */
     suspend fun logoutSuspend()

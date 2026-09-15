@@ -1,5 +1,6 @@
 package com.onesignal.core.internal.operations.impl
 
+import com.onesignal.core.internal.operations.ExecutionResponse
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.user.internal.jwt.JwtTokenStore
 
@@ -43,9 +44,10 @@ internal fun OperationRepo.handleFailUnauthorized(
     ops: List<OperationRepo.OperationQueueItem>,
     jwtTokenStore: JwtTokenStore,
     ivBehaviorActive: Boolean,
+    response: ExecutionResponse,
 ): Boolean {
-    if (!ivBehaviorActive) return false
-    val externalId = startingOp.operation.externalId ?: return false
+    val externalId = startingOp.operation.externalId
+    if (!ivBehaviorActive || externalId == null) return false
 
     // Schedules an async fire of onUserJwtInvalidated to subscribers via
     // OneSignalDispatchers.launchOnDefault — the developer-facing listener invocation is
@@ -58,7 +60,7 @@ internal fun OperationRepo.handleFailUnauthorized(
     )
     // Wake enqueueAndWait callers; re-queue with waiter = null because the original waiter
     // is already woken.
-    ops.forEach { it.waiter?.wake(false) }
+    ops.forEach { it.wakeWaiters(response.toWaitResult(false)) }
     synchronized(queue) {
         ops.reversed().forEach {
             queue.add(0, OperationRepo.OperationQueueItem(it.operation, waiter = null, bucket = it.bucket, retries = it.retries))

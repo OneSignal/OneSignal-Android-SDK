@@ -20,10 +20,12 @@ import com.onesignal.core.internal.language.ILanguageContext
 import com.onesignal.core.internal.operations.ExecutionResponse
 import com.onesignal.core.internal.operations.ExecutionResult
 import com.onesignal.core.internal.operations.IOperationExecutor
+import com.onesignal.core.internal.operations.LoginWaitMetadata
 import com.onesignal.core.internal.operations.Operation
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.user.internal.backend.IUserBackendService
 import com.onesignal.user.internal.backend.IdentityConstants
+import com.onesignal.user.internal.backend.PropertiesObject
 import com.onesignal.user.internal.backend.SubscriptionObject
 import com.onesignal.user.internal.backend.SubscriptionObjectType
 import com.onesignal.user.internal.identity.IdentityModelStore
@@ -35,6 +37,7 @@ import com.onesignal.user.internal.operations.RefreshUserOperation
 import com.onesignal.user.internal.operations.SetAliasOperation
 import com.onesignal.user.internal.operations.TransferSubscriptionOperation
 import com.onesignal.user.internal.operations.UpdateSubscriptionOperation
+import com.onesignal.user.internal.operations.reservedLoginAliasLabel
 import com.onesignal.user.internal.properties.PropertiesModel
 import com.onesignal.user.internal.properties.PropertiesModelStore
 import com.onesignal.user.internal.subscriptions.SubscriptionModel
@@ -81,9 +84,7 @@ internal class LoginUserOperationExecutor(
         if (!containsSubscriptionOperation && loginUserOp.externalId == null) {
             return ExecutionResponse(ExecutionResult.FAIL_NORETRY)
         }
-        if (loginUserOp.existingOnesignalId == null || loginUserOp.externalId == null ||
-            _identityVerificationService.ivBehaviorActive
-        ) {
+        if (shouldCreateUserDirectly(loginUserOp)) {
             // When there is no existing user to attempt to associate with the externalId provided, we go right to
             // createUser.  If there is no externalId provided this is an insert, if there is this will be an
             // "upsert with retrieval" as the user may already exist.
@@ -132,7 +133,11 @@ internal class LoginUserOperationExecutor(
                         )
                     }
 
-                    ExecutionResponse(ExecutionResult.SUCCESS_STARTING_ONLY, mapOf(loginUserOp.onesignalId to backendOneSignalId))
+                    ExecutionResponse(
+                        ExecutionResult.SUCCESS_STARTING_ONLY,
+                        mapOf(loginUserOp.onesignalId to backendOneSignalId),
+                        metadata = LoginWaitMetadata(backendOneSignalId),
+                    )
                 }
                 ExecutionResult.FAIL_CONFLICT -> {
                     // When the SetAliasOperation fails with conflict that *most likely* means the externalId provided
@@ -159,16 +164,22 @@ internal class LoginUserOperationExecutor(
         createUserOperation: LoginUserOperation,
         operations: List<Operation>,
     ): ExecutionResponse {
-        var identities = mapOf<String, String>()
+        val identities = mutableMapOf<String, String>()
         var subscriptions = mapOf<String, SubscriptionObject>()
-        val properties = mutableMapOf<String, String>()
-        properties["timezone_id"] = TimeUtils.getTimeZoneId()
-        properties["language"] = _languageContext.language
+        val properties =
+            PropertiesObject(
+                tags = createUserOperation.tags.takeIf { it.isNotEmpty() },
+                language = _languageContext.language,
+                timezoneId = TimeUtils.getTimeZoneId(),
+            )
 
-        if (createUserOperation.externalId != null) {
-            val mutableIdentities = identities.toMutableMap()
-            mutableIdentities[IdentityConstants.EXTERNAL_ID] = createUserOperation.externalId!!
-            identities = mutableIdentities
+        createUserOperation.externalId?.let { identities[IdentityConstants.EXTERNAL_ID] = it }
+        for ((label, id) in createUserOperation.aliases) {
+            if (reservedLoginAliasLabel(label)) {
+                Logging.warn("LoginUserOperationExecutor: skipping reserved alias label")
+                continue
+            }
+            identities[label] = id
         }
 
         // go through the operations grouped with this create user and apply them to the appropriate objects.
@@ -181,6 +192,7 @@ internal class LoginUserOperationExecutor(
                 else -> throw Exception("Unrecognized operation: $operation")
             }
         }
+        subscriptions = LoginProfileApplier.addSubscriptions(createUserOperation, subscriptions)
 
         try {
             val subscriptionList = subscriptions.toList()
@@ -207,6 +219,8 @@ internal class LoginUserOperationExecutor(
             }
 
             val backendSubscriptions = response.subscriptions.toMutableSet()
+            var emailSubscriptionId: String? = null
+            var smsSubscriptionId: String? = null
 
             for (pair in subscriptionList) {
                 // Find the corresponding subscription (subscriptions are not returned in the order they are sent)
@@ -222,14 +236,33 @@ internal class LoginUserOperationExecutor(
                 }
 
                 if (backendSubscription != null) {
-                    idTranslations[pair.first] = backendSubscription.id!!
+                    if (!LoginProfileApplier.isProfileSubscriptionKey(pair.first)) {
+                        idTranslations[pair.first] = backendSubscription.id!!
+                    }
 
                     if (_configModelStore.model.pushSubscriptionId == pair.first) {
                         _configModelStore.model.pushSubscriptionId = backendSubscription.id
                     }
 
                     val subscriptionModel = _subscriptionsModelStore.get(pair.first)
-                    subscriptionModel?.setStringProperty(SubscriptionModel::id.name, backendSubscription.id!!, ModelChangeTags.HYDRATE)
+                    if (subscriptionModel != null) {
+                        subscriptionModel.setStringProperty(SubscriptionModel::id.name, backendSubscription.id!!, ModelChangeTags.HYDRATE)
+                    } else if (LoginProfileApplier.isProfileSubscriptionKey(pair.first)) {
+                        if (_identityModelStore.model.onesignalId == backendOneSignalId) {
+                            LoginProfileApplier.persistSubscription(
+                                backendSubscription,
+                                LoginProfileApplier.fallbackToken(backendSubscription.type, createUserOperation),
+                                _subscriptionsModelStore,
+                            )
+                        }
+                        when (LoginProfileApplier.subscriptionType(backendSubscription.type)) {
+                            SubscriptionType.EMAIL -> emailSubscriptionId = backendSubscription.id
+                            SubscriptionType.SMS -> smsSubscriptionId = backendSubscription.id
+                            else -> {}
+                        }
+                    } else {
+                        Logging.error("LoginUserOperationExecutor.createUser response is missing a local subscription model for ${pair.first}")
+                    }
                 } else {
                     Logging.error("LoginUserOperationExecutor.createUser response is missing subscription data for ${pair.first}")
                 }
@@ -248,6 +281,10 @@ internal class LoginUserOperationExecutor(
                 }
             }
 
+            if (_identityModelStore.model.onesignalId == backendOneSignalId) {
+                LoginProfileApplier.hydrate(createUserOperation, _identityModelStore, _propertiesModelStore)
+            }
+
             val wasPossiblyAnUpsert = identities.isNotEmpty()
             val followUpOperations =
                 if (wasPossiblyAnUpsert) {
@@ -256,17 +293,32 @@ internal class LoginUserOperationExecutor(
                     null
                 }
 
-            return ExecutionResponse(ExecutionResult.SUCCESS, idTranslations, followUpOperations)
+            return ExecutionResponse(
+                ExecutionResult.SUCCESS,
+                idTranslations,
+                followUpOperations,
+                metadata = LoginWaitMetadata(backendOneSignalId, emailSubscriptionId, smsSubscriptionId),
+            )
         } catch (ex: BackendException) {
+            Logging.error("LoginUserOperationExecutor.createUser failed: HTTP ${ex.statusCode}")
             val responseType = NetworkUtils.getResponseStatusType(ex.statusCode)
 
             return when (responseType) {
                 NetworkUtils.ResponseStatusType.RETRYABLE ->
-                    ExecutionResponse(ExecutionResult.FAIL_RETRY, retryAfterSeconds = ex.retryAfterSeconds)
+                    backendExecutionResponse(ExecutionResult.FAIL_RETRY, ex)
                 NetworkUtils.ResponseStatusType.UNAUTHORIZED ->
-                    ExecutionResponse(ExecutionResult.FAIL_UNAUTHORIZED, retryAfterSeconds = ex.retryAfterSeconds)
+                    backendExecutionResponse(ExecutionResult.FAIL_UNAUTHORIZED, ex)
+                NetworkUtils.ResponseStatusType.INVALID,
+                NetworkUtils.ResponseStatusType.CONFLICT,
+                NetworkUtils.ResponseStatusType.MISSING,
+                ->
+                    if (createUserOperation.hasProfileFields()) {
+                        backendExecutionResponse(ExecutionResult.FAIL_NORETRY, ex)
+                    } else {
+                        backendExecutionResponse(ExecutionResult.FAIL_PAUSE_OPREPO, ex)
+                    }
                 else ->
-                    ExecutionResponse(ExecutionResult.FAIL_PAUSE_OPREPO)
+                    backendExecutionResponse(ExecutionResult.FAIL_PAUSE_OPREPO, ex)
             }
         }
     }
@@ -370,6 +422,21 @@ internal class LoginUserOperationExecutor(
         mutableSubscriptions.remove(operation.subscriptionId)
         return mutableSubscriptions
     }
+
+    private fun shouldCreateUserDirectly(op: LoginUserOperation): Boolean {
+        if (op.hasProfileFields() || _identityVerificationService.ivBehaviorActive) return true
+        return op.existingOnesignalId == null || op.externalId == null
+    }
+
+    private fun backendExecutionResponse(
+        result: ExecutionResult,
+        ex: BackendException,
+    ) = ExecutionResponse(
+        result,
+        retryAfterSeconds = ex.retryAfterSeconds,
+        httpStatusCode = ex.statusCode,
+        httpResponse = ex.response,
+    )
 
     companion object {
         const val LOGIN_USER = "login-user"

@@ -95,10 +95,7 @@ class OneSignalError private constructor(
         /** A stable code, safe to branch on. Never localized. */
         val code: ErrorCode,
         /**
-         * The backend's catalog code, present only when [code] is [ErrorCode.BACKEND_ERROR].
-         *
-         * Left as a raw number on purpose: the backend adds codes on its own schedule, and an SDK
-         * release must not be the thing that unblocks recognizing one.
+         * HTTP status today (catalog codes are not parsed yet). Present only for BACKEND_ERROR.
          */
         val backendCode: Int?,
         /** A human-readable description intended for logs and diagnostics, not for end users. */

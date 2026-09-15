@@ -465,6 +465,102 @@ fun LoginDialog(
     )
 }
 
+@Composable
+fun CompositeLoginDialog(
+    onDismiss: () -> Unit,
+    onConfirm: (externalId: String, email: String?, phoneNumber: String?, jwt: String?) -> Unit,
+) {
+    var externalId by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") }
+    var phoneNumber by remember { mutableStateOf("") }
+    var jwtToken by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = DemoLayout.pagePadding).exposeTestTagsAsResourceId(),
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+        title = {
+            DialogTitle("Login With Profile")
+        },
+        text = {
+            Column {
+                OutlinedTextField(
+                    value = externalId,
+                    onValueChange = { externalId = it },
+                    label = { Text("External User Id") },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("composite_login_user_id_input"),
+                    singleLine = true,
+                    shape = TextFieldShape,
+                    colors = dialogTextFieldColors()
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = email,
+                    onValueChange = { email = it },
+                    label = { Text("Email (optional)") },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("composite_login_email_input"),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                    shape = TextFieldShape,
+                    colors = dialogTextFieldColors()
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = phoneNumber,
+                    onValueChange = { phoneNumber = it },
+                    label = { Text("Phone (optional)") },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("composite_login_phone_input"),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                    shape = TextFieldShape,
+                    colors = dialogTextFieldColors()
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = jwtToken,
+                    onValueChange = { jwtToken = it },
+                    label = { Text("JWT Token (optional)") },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("composite_login_jwt_input"),
+                    singleLine = true,
+                    shape = TextFieldShape,
+                    colors = dialogTextFieldColors()
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    onConfirm(
+                        externalId,
+                        email.ifBlank { null },
+                        phoneNumber.ifBlank { null },
+                        jwtToken.ifBlank { null },
+                    )
+                },
+                enabled = externalId.isNotBlank(),
+                modifier = Modifier.testTag("composite_login_confirm_button"),
+                colors = dialogTextButtonColors(),
+            ) {
+                DialogActionLabel("Login")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss, colors = dialogTextButtonColors()) {
+                DialogActionLabel("Cancel")
+            }
+        },
+        shape = DialogShape
+    )
+}
+
 /**
  * Dialog for outcome selection and input.
  */

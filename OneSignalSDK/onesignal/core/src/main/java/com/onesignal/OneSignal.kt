@@ -425,6 +425,18 @@ object OneSignal {
     }
 
     /**
+     * Login with [externalId] plus [profile]. Email/SMS additive. Alias owned by another user fails the whole request.
+     * Profile fields are a Create User upsert (anonymous is not merged). Same id is a no-op once a backend ID exists.
+     */
+    @JvmStatic
+    @JvmOverloads
+    suspend fun login(
+        externalId: String,
+        profile: OneSignalUserProfile,
+        jwtBearerToken: String? = null,
+    ): OneSignalResult<LoginData> = oneSignal.login(externalId, profile, jwtBearerToken)
+
+    /**
      * Logout the current user without blocking the calling thread.
      * Suspends until the SDK is initialized if initialization is in progress.
      * This is the suspend-safe version of the [logout] method.
