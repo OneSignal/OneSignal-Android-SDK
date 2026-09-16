@@ -101,6 +101,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
     private val _externalUserId = MutableLiveData<String?>()
     val externalUserId: LiveData<String?> = _externalUserId
 
+    private val _language = MutableLiveData<String>()
+    val language: LiveData<String> = _language
+
     // Local lists to track added items
     private val aliasesList = mutableListOf<Pair<String, String>>()
     private val emailsList = mutableListOf<String>()
@@ -151,6 +154,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
         _locationShared.value = repository.isLocationShared()
         _useIdentityVerification.value = SharedPreferenceUtil.getCachedIdentityVerification(context)
         _notificationExtensionOptions.value = SharedPreferenceUtil.getNotificationExtensionOptions(context)
+        _language.value = SharedPreferenceUtil.getCachedLanguage(context)
 
         val externalId = OneSignal.User.externalId
         _externalUserId.value = if (externalId.isEmpty()) null else externalId
@@ -327,6 +331,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
         SharedPreferenceUtil.cacheIdentityVerification(getApplication(), enabled)
         _useIdentityVerification.value = enabled
         DemoLog.i(if (enabled) "Identity verification enabled" else "Identity verification disabled")
+    }
+
+    fun setLanguage(language: String) {
+        repository.setLanguage(language)
+        SharedPreferenceUtil.cacheLanguage(getApplication(), language)
+        _language.value = language
+        DemoLog.i("Language set to: ${language.ifEmpty { "device default" }}")
     }
 
     // Consent required

@@ -29,6 +29,7 @@ import com.onesignal.example.ui.components.CollapsibleSingleList
 import com.onesignal.example.ui.components.CustomNotificationDialog
 import com.onesignal.example.ui.components.DemoSection
 import com.onesignal.example.ui.components.DestructiveButton
+import com.onesignal.example.ui.components.DropdownRow
 import com.onesignal.example.ui.components.LocalSnackbarController
 import com.onesignal.example.ui.components.LoginDialog
 import com.onesignal.example.ui.components.MultiPairInputDialog
@@ -50,6 +51,14 @@ import com.onesignal.example.ui.theme.OsGrey700
 import com.onesignal.example.ui.theme.OsPrimary
 import com.onesignal.example.ui.theme.OsSuccess
 import com.onesignal.example.ui.theme.OsWarningBackground
+
+private val languageOptions = listOf(
+    "Device Default" to "",
+    "English" to "en",
+    "German" to "de",
+    "Chinese (Simplified)" to "zh-Hans",
+    "Chinese (Traditional)" to "zh-Hant",
+)
 
 @Composable
 private fun DemoCard(
@@ -131,8 +140,10 @@ fun AppSection(
 @Composable
 fun UserSection(
     externalUserId: String?,
+    language: String,
     useIdentityVerification: Boolean,
     onUseIdentityVerificationChange: (Boolean) -> Unit,
+    onLanguageChange: (String) -> Unit,
     onLogin: (String, String?) -> Unit,
     onLogout: () -> Unit,
     onUpdateJwt: (String, String) -> Unit,
@@ -165,6 +176,14 @@ fun UserSection(
                 label = "External ID",
                 value = externalUserId ?: "—",
                 valueTestTag = "user_external_id_value",
+            )
+            HorizontalDivider(color = OsDivider, modifier = Modifier.padding(vertical = DemoLayout.gap))
+            DropdownRow(
+                label = "Language",
+                selectedValue = language,
+                options = languageOptions,
+                onValueSelected = onLanguageChange,
+                testTag = "user_language_dropdown",
             )
         }
 

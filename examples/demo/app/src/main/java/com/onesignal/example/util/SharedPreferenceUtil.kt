@@ -14,6 +14,7 @@ object SharedPreferenceUtil {
     private const val CONSENT_REQUIRED_PREF = "CONSENT_REQUIRED_PREF"
     private const val IDENTITY_VERIFICATION_PREF = "IDENTITY_VERIFICATION_PREF"
     private const val JWT_TOKEN_PREF = "JWT_TOKEN_PREF"
+    private const val LANGUAGE_PREF = "LANGUAGE_PREF"
 
     // Notification service extension switches. DemoNotificationServiceExtension reads these
     // directly because it runs whether or not the app is open.
@@ -88,6 +89,14 @@ object SharedPreferenceUtil {
 
     fun cacheJwtToken(context: Context, token: String?) {
         getSharedPreference(context).edit().putString(JWT_TOKEN_PREF, token).apply()
+    }
+
+    fun getCachedLanguage(context: Context): String {
+        return getSharedPreference(context).getString(LANGUAGE_PREF, "") ?: ""
+    }
+
+    fun cacheLanguage(context: Context, language: String) {
+        getSharedPreference(context).edit().putString(LANGUAGE_PREF, language).apply()
     }
 
     // Every switch defaults to false so a fresh install behaves as if no extension were
