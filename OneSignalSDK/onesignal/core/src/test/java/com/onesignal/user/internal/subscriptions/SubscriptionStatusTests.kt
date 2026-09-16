@@ -16,9 +16,8 @@ class SubscriptionStatusTests : FunSpec({
         }
     }
 
-    test("hydrates unknown non-positive notification types as an unsubscribed registration error") {
-        SubscriptionStatus.fromNotificationTypes(-999) shouldBe
-            SubscriptionStatus.FIREBASE_FCM_ERROR_MISC_EXCEPTION
+    test("hydrates unknown disabled notification types as a channel-neutral error") {
+        SubscriptionStatus.fromNotificationTypes(-999) shouldBe SubscriptionStatus.ERROR
     }
 
     test("hydrates unknown positive notification types as subscribed") {

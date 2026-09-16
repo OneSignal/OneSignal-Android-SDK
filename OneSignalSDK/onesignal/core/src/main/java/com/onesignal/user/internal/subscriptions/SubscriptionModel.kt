@@ -79,7 +79,7 @@ enum class SubscriptionStatus(val value: Int) {
     /** The subscription is not enabled because FirebaseMessaging.register() is unavailable */
     FIREBASE_FCM_FID_REGISTER_API_UNAVAILABLE(-33),
 
-    /** The subscription is not enabled because FID registration failed at runtime */
+    /** The subscription is not enabled because FID registration failed at runtime, this can be retried */
     FIREBASE_FCM_FID_REGISTRATION_FAILED(-34),
 
     /** The subscription is not enabled due to some other (unknown locally) error */
@@ -149,12 +149,12 @@ enum class SubscriptionStatus(val value: Int) {
         /**
          * Converts the backend notification-types wire value without allowing an unknown disabled
          * state to become [SUBSCRIBED]. Older SDKs can receive statuses introduced by a newer
-         * backend, so unknown non-positive values use the existing generic registration failure.
+         * backend, so unknown disabled values use the channel-neutral generic error.
          */
         fun fromNotificationTypes(value: Int): SubscriptionStatus =
             fromInt(value)
-                ?: if (value <= NO_PERMISSION.value) {
-                    FIREBASE_FCM_ERROR_MISC_EXCEPTION
+                ?: if (value < SUBSCRIBED.value) {
+                    ERROR
                 } else {
                     SUBSCRIBED
                 }

@@ -280,9 +280,10 @@ internal object FCMTokenProvider {
         } catch (e: Exception) {
             throw FCMInstallationIdException(
                 FCMInstallationIdFailureReason.REGISTRATION_FAILED,
-                "Firebase Installation ID registration failed (${diagnostics.summary()}). Verify " +
-                    "google-services.json, the com.google.gms.google-services Gradle plugin, and " +
-                    "that the default Firebase project matches the OneSignal Android configuration.",
+                "Firebase Installation ID registration failed and can be retried on the next " +
+                    "session (${diagnostics.summary()}). If it persists, verify google-services.json, " +
+                    "the com.google.gms.google-services Gradle plugin, and that the default Firebase " +
+                    "project matches the OneSignal Android configuration.",
                 e,
             )
         }
