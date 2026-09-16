@@ -227,7 +227,7 @@ class PushRegistratorFCMTests : FunSpec({
         thrown.message!! shouldContain "manifest merging"
     }
 
-    test("reports FID configuration failures through the push registration status") {
+    test("reports a missing default Firebase app through the push registration status") {
         val configModelStore =
             MockHelper.configModelStore {
                 it.isInitializedWithRemote = true
@@ -246,7 +246,72 @@ class PushRegistratorFCMTests : FunSpec({
         val result = withContext(Dispatchers.IO) { registrator.registerForPush() }
 
         result.id shouldBe null
-        result.status shouldBe SubscriptionStatus.FIREBASE_FCM_ERROR_MISC_EXCEPTION
+        result.status shouldBe SubscriptionStatus.FIREBASE_FCM_FID_DEFAULT_APP_MISSING
+        result.isExistingTokenInvalid shouldBe false
+    }
+
+    test("reports an unavailable FID register API through the push registration status") {
+        val metaData = Bundle().apply { putBoolean("firebase_messaging_installation_id_enabled", true) }
+        mockkObject(AndroidUtils)
+        every { AndroidUtils.getManifestMetaBundle(any()) } returns metaData
+        val app = defaultApp(SENDER_ID)
+        mockkObject(FCMTokenProvider)
+        every { FCMTokenProvider.hasRegisterMethod(FirebaseMessaging::class.java) } returns false
+        val configModelStore =
+            MockHelper.configModelStore {
+                it.isInitializedWithRemote = true
+                it.googleProjectNumber = SENDER_ID
+            }
+        val deviceService = mockk<IDeviceService>()
+        every { deviceService.hasFCMLibrary } returns true
+        every { deviceService.isGMSInstalledAndEnabled } returns true
+        val registrator =
+            registrator(
+                legacyToken = Tasks.forException(disabledLegacyApi),
+                installedApps = listOf(app),
+                configModelStore = configModelStore,
+                deviceService = deviceService,
+            )
+
+        val result = withContext(Dispatchers.IO) { registrator.registerForPush() }
+
+        result.id shouldBe null
+        result.status shouldBe SubscriptionStatus.FIREBASE_FCM_FID_REGISTER_API_UNAVAILABLE
+        result.isExistingTokenInvalid shouldBe false
+    }
+
+    test("reports a generic FID runtime failure through the push registration status") {
+        val metaData = Bundle().apply { putBoolean("firebase_messaging_installation_id_enabled", true) }
+        mockkObject(AndroidUtils)
+        every { AndroidUtils.getManifestMetaBundle(any()) } returns metaData
+        val messaging = mockk<FirebaseMessaging>()
+        val app = defaultApp(SENDER_ID, messaging)
+        mockkObject(FCMTokenProvider)
+        every { FCMTokenProvider.hasRegisterMethod(FirebaseMessaging::class.java) } returns true
+        every {
+            FCMTokenProvider.invokeRegister(messaging)
+        } returns Tasks.forException<Void>(IllegalStateException("registration failed"))
+        val configModelStore =
+            MockHelper.configModelStore {
+                it.isInitializedWithRemote = true
+                it.googleProjectNumber = SENDER_ID
+            }
+        val deviceService = mockk<IDeviceService>()
+        every { deviceService.hasFCMLibrary } returns true
+        every { deviceService.isGMSInstalledAndEnabled } returns true
+        val registrator =
+            registrator(
+                legacyToken = Tasks.forException(disabledLegacyApi),
+                installedApps = listOf(app),
+                configModelStore = configModelStore,
+                deviceService = deviceService,
+            )
+
+        val result = withContext(Dispatchers.IO) { registrator.registerForPush() }
+
+        result.id shouldBe null
+        result.status shouldBe SubscriptionStatus.FIREBASE_FCM_FID_REGISTRATION_FAILED
+        result.isExistingTokenInvalid shouldBe false
     }
 
     test("reports an invalid sender id when FID registration would use a different Firebase project") {
