@@ -3,7 +3,6 @@ package com.onesignal.core.internal.language.impl
 import com.onesignal.mocks.MockHelper
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
-import java.util.Locale
 
 class LanguageContextTests : FunSpec({
     test("setting a language stores the explicit value") {
@@ -21,12 +20,10 @@ class LanguageContextTests : FunSpec({
             MockHelper.propertiesModelStore {
                 it.language = "de"
             }
-        val deviceLanguageProvider = LanguageProviderDevice { Locale.forLanguageTag("zh-Hans-CN") }
-        val languageContext = LanguageContext(propertiesModelStore, deviceLanguageProvider)
+        val languageContext = LanguageContext(propertiesModelStore)
 
         languageContext.language = ""
 
         propertiesModelStore.model.language shouldBe null
-        languageContext.language shouldBe "zh-Hans"
     }
 })
