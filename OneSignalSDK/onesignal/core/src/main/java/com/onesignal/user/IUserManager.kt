@@ -40,10 +40,11 @@ interface IUserManager {
     val externalId: String
 
     /**
-     * Set the 2-character language either as a detected language or explicitly set for this user. See
-     * See [Supported Languages | OneSignal](https://documentation.onesignal.com/docs/language-localization#what-languages-are-supported)
+     * Sets the language for this user.
      *
-     * @param value The 2-character language string, or an empty string to use the device default.
+     * See [Supported Languages | OneSignal](https://documentation.onesignal.com/docs/language-localization#what-languages-are-supported).
+     *
+     * @param value A supported language code, or an empty string to use the device default.
      */
     fun setLanguage(value: String)
 

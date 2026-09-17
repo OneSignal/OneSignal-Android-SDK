@@ -313,6 +313,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
             withContext(Dispatchers.Main) {
                 SharedPreferenceUtil.cacheUserExternalUserId(getApplication(), "")
                 _externalUserId.value = null
+                setLanguage("")
                 loadExistingAliases()
                 loadExistingTags()
                 refreshPushSubscription()

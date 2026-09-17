@@ -15,7 +15,7 @@ class LanguageContextTests : FunSpec({
         languageContext.language shouldBe "de"
     }
 
-    test("setting an empty language clears the override and uses the device language") {
+    test("setting an empty language stores and uses the device language") {
         val propertiesModelStore =
             MockHelper.propertiesModelStore {
                 it.language = "de"
@@ -24,6 +24,7 @@ class LanguageContextTests : FunSpec({
 
         languageContext.language = ""
 
-        propertiesModelStore.model.language shouldBe null
+        propertiesModelStore.model.language shouldBe LanguageProviderDevice().language
+        languageContext.language shouldBe LanguageProviderDevice().language
     }
 })
