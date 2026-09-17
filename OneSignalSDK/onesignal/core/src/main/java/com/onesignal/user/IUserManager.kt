@@ -42,7 +42,7 @@ interface IUserManager {
     /**
      * Sets the language for this user.
      *
-     * See [Supported Languages | OneSignal](https://documentation.onesignal.com/docs/language-localization#what-languages-are-supported).
+     * See [Supported Languages | OneSignal](https://documentation.onesignal.com/docs/en/multi-language-messaging#supported-languages).
      *
      * @param value A supported language code, or an empty string to use the device default.
      */
