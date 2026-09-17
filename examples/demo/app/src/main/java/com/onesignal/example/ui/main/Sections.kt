@@ -29,6 +29,7 @@ import com.onesignal.example.ui.components.CollapsibleSingleList
 import com.onesignal.example.ui.components.CustomNotificationDialog
 import com.onesignal.example.ui.components.DemoSection
 import com.onesignal.example.ui.components.DestructiveButton
+import com.onesignal.example.ui.components.DropdownRow
 import com.onesignal.example.ui.components.LocalSnackbarController
 import com.onesignal.example.ui.components.LoginDialog
 import com.onesignal.example.ui.components.MultiPairInputDialog
@@ -50,6 +51,53 @@ import com.onesignal.example.ui.theme.OsGrey700
 import com.onesignal.example.ui.theme.OsPrimary
 import com.onesignal.example.ui.theme.OsSuccess
 import com.onesignal.example.ui.theme.OsWarningBackground
+
+private val languageOptions = listOf(
+    "Device Default" to "",
+    "English" to "en",
+    "Arabic" to "ar",
+    "Azerbaijani" to "az",
+    "Bosnian" to "bs",
+    "Catalan" to "ca",
+    "Chinese (Simplified)" to "zh-Hans",
+    "Chinese (Traditional)" to "zh-Hant",
+    "Croatian" to "hr",
+    "Czech" to "cs",
+    "Danish" to "da",
+    "Dutch" to "nl",
+    "Estonian" to "et",
+    "Finnish" to "fi",
+    "French" to "fr",
+    "Georgian" to "ka",
+    "Bulgarian" to "bg",
+    "German" to "de",
+    "Greek" to "el",
+    "Hindi" to "hi",
+    "Hebrew" to "he",
+    "Hungarian" to "hu",
+    "Indonesian" to "id",
+    "Italian" to "it",
+    "Japanese" to "ja",
+    "Korean" to "ko",
+    "Latvian" to "lv",
+    "Lithuanian" to "lt",
+    "Malay" to "ms",
+    "Norwegian" to "nb",
+    "Persian" to "fa",
+    "Polish" to "pl",
+    "Portuguese" to "pt",
+    "Punjabi" to "pa",
+    "Romanian" to "ro",
+    "Russian" to "ru",
+    "Serbian" to "sr",
+    "Slovak" to "sk",
+    "Spanish" to "es",
+    "Swedish" to "sv",
+    "Thai" to "th",
+    "Turkish" to "tr",
+    "Ukrainian" to "uk",
+    "Vietnamese" to "vi",
+)
 
 @Composable
 private fun DemoCard(
@@ -131,8 +179,10 @@ fun AppSection(
 @Composable
 fun UserSection(
     externalUserId: String?,
+    language: String,
     useIdentityVerification: Boolean,
     onUseIdentityVerificationChange: (Boolean) -> Unit,
+    onLanguageChange: (String) -> Unit,
     onLogin: (String, String?) -> Unit,
     onLogout: () -> Unit,
     onUpdateJwt: (String, String) -> Unit,
@@ -165,6 +215,14 @@ fun UserSection(
                 label = "External ID",
                 value = externalUserId ?: "—",
                 valueTestTag = "user_external_id_value",
+            )
+            HorizontalDivider(color = OsDivider, modifier = Modifier.padding(vertical = DemoLayout.gap))
+            DropdownRow(
+                label = "Language",
+                selectedValue = language,
+                options = languageOptions,
+                onValueSelected = onLanguageChange,
+                testTag = "user_language_dropdown",
             )
         }
 

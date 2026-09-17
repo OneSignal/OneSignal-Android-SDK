@@ -166,6 +166,11 @@ class OneSignalRepository {
         }
     }
 
+    fun setLanguage(language: String) {
+        DemoLog.d("Setting language: ${language.ifEmpty { "device default" }}")
+        OneSignal.User.setLanguage(language)
+    }
+
     // In-App Messaging
     fun isInAppMessagesPaused(): Boolean {
         return OneSignal.InAppMessages.paused
