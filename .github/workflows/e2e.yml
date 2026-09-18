@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       sdk-version:
-        description: 'OneSignal Android SDK version to publish locally and build against (defaults to OneSignalSDK/gradle.properties).'
+        description: 'OneSignal Android SDK version to build against (defaults to OneSignalSDK/gradle.properties).'
         required: false
         type: string
 
@@ -60,32 +60,14 @@ jobs:
           echo "Resolved OneSignal Android SDK version: $VERSION"
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
 
-      - name: Publish OneSignal Android SDK to Maven Local
+      # gms+debug: BrowserStack devices have GMS, debug enables UiAutomator2
+      # attach. The OneSignalSDK build substitutes the demo's Maven dependencies
+      # with the local SDK projects defined in OneSignalSDK/settings.gradle.
+      - name: Build debug APK
         working-directory: OneSignalSDK
         env:
           SDK_VERSION: ${{ steps.android-sdk-version.outputs.version }}
-        run: ./gradlew publishToMavenLocal "-PSDK_VERSION=$SDK_VERSION" --no-configuration-cache --console=plain --warning-mode=summary
-
-      # gms+debug: BrowserStack devices have GMS, debug enables UiAutomator2
-      # attach. The init script adds Maven Local before the project's remote
-      # repositories so this build exercises the SDK published above.
-      - name: Build debug APK
-        working-directory: examples/demo
-        env:
-          SDK_VERSION: ${{ steps.android-sdk-version.outputs.version }}
-        run: |
-          cat > "$RUNNER_TEMP/maven-local.init.gradle" <<'EOF'
-          allprojects {
-              repositories {
-                  mavenLocal()
-              }
-          }
-          EOF
-          ./gradlew :app:assembleGmsDebug \
-            "-PSDK_VERSION=$SDK_VERSION" \
-            --init-script "$RUNNER_TEMP/maven-local.init.gradle" \
-            --console=plain \
-            --warning-mode=summary
+        run: ./gradlew :app:assembleGmsDebug "-PSDK_VERSION=$SDK_VERSION" --console=plain --warning-mode=summary
 
       - name: Upload APK
         uses: actions/upload-artifact@v7
