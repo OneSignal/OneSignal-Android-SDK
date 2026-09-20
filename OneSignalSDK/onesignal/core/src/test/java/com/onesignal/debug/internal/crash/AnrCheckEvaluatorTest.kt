@@ -1,5 +1,6 @@
 package com.onesignal.debug.internal.crash
 
+import io.kotest.assertions.throwables.shouldNotThrowAny
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
@@ -10,8 +11,9 @@ import io.kotest.matchers.types.shouldBeInstanceOf
  */
 class AnrCheckEvaluatorTest : FunSpec({
 
-    class FakeClock(var nowMs: Long = 1_000L) {
-        fun advance(ms: Long) { nowMs += ms }
+    class FakeClock(private var t: Long = 1_000L) : MonotonicClock {
+        fun advance(ms: Long) { t += ms }
+        override fun now(): Long = t
     }
 
     fun evaluator(clock: FakeClock) = AnrCheckEvaluator(
@@ -20,8 +22,14 @@ class AnrCheckEvaluatorTest : FunSpec({
         backgroundThresholdMs = 10_000L,
         frozenSlackMs = 2_000L,
         dedupWindowMs = 30_000L,
-        now = { clock.nowMs },
+        clock = clock,
     )
+
+    fun AnrCheckEvaluator.ping() {
+        recordHeartbeatSafely()
+        evaluate(actualSleepMs = 2_000L, inForeground = true)
+            .shouldBeInstanceOf<AnrCheckResult.Responsive>()
+    }
 
     // ===== classifyBlock (pure) =====
 
@@ -73,17 +81,50 @@ class AnrCheckEvaluatorTest : FunSpec({
         val clock = FakeClock(5_000L)
         val e = evaluator(clock)
 
-        e.recordHeartbeat()
+        e.ping()
         clock.advance(4_000L)
 
         e.evaluate(actualSleepMs = 2_000L, inForeground = true).shouldBeInstanceOf<AnrCheckResult.Responsive>()
+    }
+
+    test("MonotonicClock.now returns a primitive long so the heartbeat cannot box") {
+        MonotonicClock::class.java.getMethod("now").returnType shouldBe java.lang.Long.TYPE
+    }
+
+    test("recordHeartbeatSafely swallows a throwing clock") {
+        var ticks = 0
+        var nowMs = 1_000L
+        val e = AnrCheckEvaluator(
+            anrThresholdMs = 5_000L,
+            checkIntervalMs = 2_000L,
+            backgroundThresholdMs = 10_000L,
+            frozenSlackMs = 2_000L,
+            dedupWindowMs = 30_000L,
+            clock = MonotonicClock {
+                ticks += 1
+                if (ticks == 2) throw OutOfMemoryError("boxed Long")
+                nowMs
+            },
+        )
+        shouldNotThrowAny { e.recordHeartbeatSafely() }
+        ticks shouldBe 2
+
+        nowMs += 6_000L
+        e.evaluate(actualSleepMs = 2_000L, inForeground = true)
+            .shouldBeInstanceOf<AnrCheckResult.Responsive>()
+        ticks shouldBe 3
+
+        nowMs += 6_000L
+        val r = e.evaluate(actualSleepMs = 2_000L, inForeground = true)
+        r.shouldBeInstanceOf<AnrCheckResult.ForegroundAnr>()
+        r.durationMs shouldBe 6_000L
     }
 
     test("a stale heartbeat past the threshold reports a foreground ANR") {
         val clock = FakeClock(1_000L)
         val e = evaluator(clock)
 
-        e.recordHeartbeat()
+        e.ping()
         clock.advance(6_000L)
 
         val r = e.evaluate(actualSleepMs = 2_000L, inForeground = true)
@@ -95,7 +136,7 @@ class AnrCheckEvaluatorTest : FunSpec({
         val clock = FakeClock(1_000L)
         val e = evaluator(clock)
 
-        e.recordHeartbeat()
+        e.ping()
         clock.advance(11_000L)
 
         e.evaluate(actualSleepMs = 2_000L, inForeground = false).shouldBeInstanceOf<AnrCheckResult.BackgroundWarning>()
@@ -105,7 +146,7 @@ class AnrCheckEvaluatorTest : FunSpec({
         val clock = FakeClock(1_000L)
         val e = evaluator(clock)
 
-        e.recordHeartbeat()
+        e.ping()
         clock.advance(60_000L)
         e.evaluate(actualSleepMs = 30_000L, inForeground = true).shouldBeInstanceOf<AnrCheckResult.FrozenProcess>()
 
@@ -119,7 +160,7 @@ class AnrCheckEvaluatorTest : FunSpec({
         val clock = FakeClock(1_000L)
         val e = evaluator(clock)
 
-        e.recordHeartbeat()
+        e.ping()
         clock.advance(6_000L)
         e.evaluate(actualSleepMs = 2_000L, inForeground = true).shouldBeInstanceOf<AnrCheckResult.ForegroundAnr>()
 
@@ -135,7 +176,7 @@ class AnrCheckEvaluatorTest : FunSpec({
         val e = evaluator(clock)
 
         // Background warning fires first and sets the background dedup timestamp.
-        e.recordHeartbeat()
+        e.ping()
         clock.advance(11_000L)
         e.evaluate(actualSleepMs = 2_000L, inForeground = false).shouldBeInstanceOf<AnrCheckResult.BackgroundWarning>()
 
@@ -147,14 +188,13 @@ class AnrCheckEvaluatorTest : FunSpec({
         val clock = FakeClock(1_000L)
         val e = evaluator(clock)
 
-        e.recordHeartbeat()
+        e.ping()
         clock.advance(6_000L)
         e.evaluate(actualSleepMs = 2_000L, inForeground = true).shouldBeInstanceOf<AnrCheckResult.ForegroundAnr>()
 
         // Main thread recovers.
         clock.advance(1_000L)
-        e.recordHeartbeat()
-        e.evaluate(actualSleepMs = 2_000L, inForeground = true).shouldBeInstanceOf<AnrCheckResult.Responsive>()
+        e.ping()
 
         // A new block right away (within the old dedup window) still reports because recovery cleared it.
         clock.advance(6_000L)
@@ -166,7 +206,7 @@ class AnrCheckEvaluatorTest : FunSpec({
         val clock = FakeClock(500L)
         val e = evaluator(clock)
 
-        e.recordHeartbeat()
+        e.ping()
         clock.advance(6_000L)
         e.evaluate(actualSleepMs = 2_000L, inForeground = true).shouldBeInstanceOf<AnrCheckResult.ForegroundAnr>()
     }

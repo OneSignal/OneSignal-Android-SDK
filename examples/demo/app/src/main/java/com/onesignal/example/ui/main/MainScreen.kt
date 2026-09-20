@@ -61,6 +61,7 @@ fun MainScreen(viewModel: MainViewModel) {
     val consentRequired by viewModel.consentRequired.observeAsState(false)
     val privacyConsentGiven by viewModel.privacyConsentGiven.observeAsState(false)
     val externalUserId by viewModel.externalUserId.observeAsState()
+    val language by viewModel.language.observeAsState("")
     val useIdentityVerification by viewModel.useIdentityVerification.observeAsState(false)
     val aliases by viewModel.aliases.observeAsState(emptyList())
     val emails by viewModel.emails.observeAsState(emptyList())
@@ -138,8 +139,10 @@ fun MainScreen(viewModel: MainViewModel) {
 
                 UserSection(
                     externalUserId = externalUserId,
+                    language = language,
                     useIdentityVerification = useIdentityVerification,
                     onUseIdentityVerificationChange = { viewModel.setUseIdentityVerification(it) },
+                    onLanguageChange = { viewModel.setLanguage(it) },
                     onLogin = { userId, jwt -> viewModel.loginUser(userId, jwt) },
                     onLogout = { viewModel.logoutUser() },
                     onUpdateJwt = { externalId, token -> viewModel.updateUserJwt(externalId, token) },

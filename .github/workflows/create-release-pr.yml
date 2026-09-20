@@ -8,9 +8,9 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "New SDK version (e.g. 5.1.38 or 5.2.0-beta1)"
+        description: "Override the auto-detected version (e.g. 5.1.38 or 5.2.0-beta1). Leave blank to auto-detect from merged PR titles."
         type: string
-        required: true
+        required: false
       base_branch:
         description: "Target branch for the PR (e.g. main for regular releases, 5.4-main for 5.4.x releases)"
         type: string
@@ -22,24 +22,14 @@ permissions:
   pull-requests: write
 
 jobs:
-  bump-version:
+  determine-version:
     runs-on: ubuntu-latest
-
+    outputs:
+      version: ${{ inputs.version || steps.next_version.outputs.version }}
+      release_needed: ${{ inputs.version != '' || steps.next_version.outputs.release-needed == 'true' }}
     env:
-      VERSION: ${{ github.event.inputs.version }}
-      BASE_BRANCH: ${{ github.event.inputs.base_branch || 'main' }}
-      BRANCH: rel/${{ github.event.inputs.version }}
-      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
+      BASE_BRANCH: ${{ inputs.base_branch || 'main' }}
     steps:
-      - name: 📋 Display Configuration
-        run: |
-          echo "============================================"
-          echo "📦 Release Version: $VERSION"
-          echo "🎯 Base Branch (PR Target): $BASE_BRANCH"
-          echo "🌿 Release Branch (to create): $BRANCH"
-          echo "============================================"
-
       - name: ✅ Validate Base Branch
         run: |
           if [[ "$BASE_BRANCH" == "main" ]]; then
@@ -63,25 +53,58 @@ jobs:
             exit 1
           fi
 
+      - name: Determine next version
+        if: inputs.version == ''
+        id: next_version
+        uses: OneSignal/sdk-shared/.github/actions/determine-next-version@main
+        with:
+          github-token: ${{ secrets.GH_PUSH_TOKEN || github.token }}
+          target-repo: ${{ github.repository }}
+          target-branch: ${{ env.BASE_BRANCH }}
+
+      - name: 📋 Display Configuration
+        env:
+          VERSION: ${{ inputs.version || steps.next_version.outputs.version }}
+          RELEASE_NEEDED: ${{ inputs.version != '' || steps.next_version.outputs.release-needed == 'true' }}
+        run: |
+          echo "============================================"
+          if [[ "$RELEASE_NEEDED" != "true" ]]; then
+            echo "ℹ️ No releasable PRs merged since the last release. Nothing to do."
+          else
+            echo "📦 Release Version: $VERSION"
+            echo "🎯 Base Branch (PR Target): $BASE_BRANCH"
+            echo "🌿 Release Branch (to create): rel/$VERSION"
+          fi
+          echo "============================================"
+
+  # Step 1: Use reusable workflow to prepare release branch
+  prep:
+    needs: determine-version
+    if: needs.determine-version.outputs.release_needed == 'true'
+    uses: OneSignal/sdk-shared/.github/workflows/prep-release.yml@main
+    secrets:
+      # Pushes made with GITHUB_TOKEN do not trigger workflows (e.g. E2E on rel/**)
+      GH_PUSH_TOKEN: ${{ secrets.GH_PUSH_TOKEN }}
+    with:
+      version: ${{ needs.determine-version.outputs.version }}
+      target_branch: ${{ inputs.base_branch || 'main' }}
+
+  # Step 2: Bump Android-specific version files on the release branch
+  bump-version:
+    needs: [determine-version, prep]
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ needs.determine-version.outputs.version }}
+      RELEASE_BRANCH: ${{ needs.prep.outputs.release_branch }}
+    steps:
       - name: Checkout repository
         uses: actions/checkout@v7
         with:
-          fetch-depth: 0 # Ensure full history for git log
-          fetch-tags: true
+          ref: ${{ needs.prep.outputs.release_branch }}
+          token: ${{ secrets.GH_PUSH_TOKEN || github.token }}
 
       - name: Setup Git User
         uses: OneSignal/sdk-shared/.github/actions/setup-git-user@main
-
-      - name: Create release branch from base
-        run: |
-
-          if git ls-remote --exit-code --heads origin "$BRANCH"; then
-            echo "Deleting remote branch $BRANCH"
-            git push origin --delete "$BRANCH"
-          fi
-
-          echo "Creating release branch $BRANCH from $BASE_BRANCH"
-          git checkout -b "$BRANCH" origin/$BASE_BRANCH
 
       - name: Update SDK_VERSION in gradle.properties
         run: |
@@ -91,93 +114,14 @@ jobs:
       - name: Commit and Push changes
         run: |
           git commit -am "chore: bump SDK_VERSION to $VERSION"
-          git push origin "$BRANCH"
+          git push origin "$RELEASE_BRANCH"
 
-      - name: Fetch Last GitHub Release Tag
-        id: fetch_last_release
-        run: |
-          echo "Fetching latest GitHub release tag..."
-          LAST_TAG=$(gh release list --limit 1 --json tagName --jq '.[0].tagName')
-
-          if [[ -z "$LAST_TAG" ]]; then
-            echo "❌ No previous release tag found. Cannot generate release notes."
-            exit 0
-          fi
-
-          echo "✅ Found last release tag: $LAST_TAG"
-          echo "range=$LAST_TAG..HEAD" >> $GITHUB_OUTPUT
-
-      - name: Generate Release Notes from PR Titles
-        id: generate_notes
-        run: |
-          if [[ "$VERSION" == *"alpha"* ]]; then
-            CHANNEL="alpha"
-          elif [[ "$VERSION" == *"beta"* ]]; then
-            CHANNEL="beta"
-          else
-            CHANNEL="current"
-          fi
-
-          echo "**Channels:** $CHANNEL" >> pr_body.md
-          echo "" >> pr_body.md
-
-          RANGE="${{ steps.fetch_last_release.outputs.range }}"
-          echo "📦 Commit range: $RANGE"
-
-          COMMITS=$(git log "$RANGE" --pretty=format:"%H" | sort -u)
-
-          if [[ -z "$COMMITS" ]]; then
-            echo "❌ No commits found. Exiting."
-            exit 0
-          fi
-
-          > raw_titles.txt
-          for SHA in $COMMITS; do
-            PR_INFO=$(gh api "repos/${{ github.repository }}/commits/$SHA/pulls" \
-              -H "Accept: application/vnd.github.groot-preview+json" 2>/dev/null)
-
-            TITLE=$(echo "$PR_INFO" | jq -r '.[0].title // empty')
-            NUMBER=$(echo "$PR_INFO" | jq -r '.[0].number // empty')
-
-            if [[ -n "$TITLE" && -n "$NUMBER" ]]; then
-              echo "$TITLE ([#$NUMBER](https://github.com/${{ github.repository }}/pull/$NUMBER))" >> raw_titles.txt
-              echo "✅ $SHA → $TITLE (#$NUMBER)"
-            else
-              echo "⚠️ $SHA → No PR found"
-            fi
-          done
-
-          sort -fu raw_titles.txt > pr_titles.txt
-
-          if [[ ! -s pr_titles.txt ]]; then
-            echo "❌ No PR titles found from commits. Exiting."
-            exit 0
-          fi
-
-          echo "" >> pr_body.md
-          echo "### 🚀 New Features" >> pr_body.md
-          grep -i '^feat' pr_titles.txt | sed 's/^/- /' >> pr_body.md || echo "- _None_" >> pr_body.md
-
-          echo "" >> pr_body.md
-          echo "### 🐛 Bug Fixes" >> pr_body.md
-          grep -i '^bug' pr_titles.txt | sed 's/^/- /' >> pr_body.md || echo "- _None_" >> pr_body.md
-
-          echo "" >> pr_body.md
-          echo "### 🔧 Improvements" >> pr_body.md
-          grep -i -E '^(perf|refactor)' pr_titles.txt | sed 's/^/- /' >> pr_body.md || echo "- _None_" >> pr_body.md
-
-          echo "" >> pr_body.md
-          echo "### 📝 Uncategorized PRs" >> pr_body.md
-          grep -v -i -E '^(feat|bug|perf|refactor)' pr_titles.txt | sed 's/^/- /' >> pr_body.md || echo "- _None_" >> pr_body.md
-
-          echo "" >> pr_body.md
-          echo "### 📦 Version" >> pr_body.md
-          echo "$VERSION" >> pr_body.md
-
-      - name: Create Pull Request
-        run: |
-          gh pr create \
-            --title "Release SDK v$VERSION" \
-            --body-file pr_body.md \
-            --head "$BRANCH" \
-            --base "$BASE_BRANCH"
+  # Step 3: Use reusable workflow to create release PR with release notes
+  create-pr:
+    needs: [prep, bump-version]
+    uses: OneSignal/sdk-shared/.github/workflows/create-release.yml@main
+    secrets:
+      GH_PUSH_TOKEN: ${{ secrets.GH_PUSH_TOKEN }}
+    with:
+      release_branch: ${{ needs.prep.outputs.release_branch }}
+      target_branch: ${{ inputs.base_branch || 'main' }}
