@@ -308,12 +308,12 @@ fun PushSection(
             )
             HorizontalDivider(color = OsDivider, modifier = Modifier.padding(vertical = DemoLayout.gap))
             ToggleRow(
-                label = "Enabled",
+                label = "Opted In",
                 checked = pushEnabled,
                 onCheckedChange = onEnabledChange,
                 enabled = hasPermission,
                 testTag = "push_enabled_toggle",
-                contentDescription = "Push enabled",
+                contentDescription = "Push opted in",
             )
         }
 
