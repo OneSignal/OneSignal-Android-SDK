@@ -56,6 +56,7 @@ fun MainScreen(viewModel: MainViewModel) {
 
     val appId by viewModel.appId.observeAsState("")
     val pushSubscriptionId by viewModel.pushSubscriptionId.observeAsState()
+    val pushSubscriptionToken by viewModel.pushSubscriptionToken.observeAsState("")
     val pushEnabled by viewModel.pushEnabled.observeAsState(false)
     val hasNotificationPermission by viewModel.hasNotificationPermission.observeAsState(false)
     val consentRequired by viewModel.consentRequired.observeAsState(false)
@@ -151,6 +152,7 @@ fun MainScreen(viewModel: MainViewModel) {
 
                 PushSection(
                     pushSubscriptionId = pushSubscriptionId,
+                    pushSubscriptionToken = pushSubscriptionToken,
                     pushEnabled = pushEnabled,
                     hasPermission = hasNotificationPermission,
                     onEnabledChange = { viewModel.setPushEnabled(it) },
