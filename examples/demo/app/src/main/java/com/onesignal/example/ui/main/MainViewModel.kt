@@ -42,6 +42,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
     private val _pushSubscriptionId = MutableLiveData<String?>()
     val pushSubscriptionId: LiveData<String?> = _pushSubscriptionId
 
+    private val _pushSubscriptionToken = MutableLiveData<String>()
+    val pushSubscriptionToken: LiveData<String> = _pushSubscriptionToken
+
     private val _pushEnabled = MutableLiveData<Boolean>()
     val pushEnabled: LiveData<Boolean> = _pushEnabled
 
@@ -261,6 +264,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
 
     fun refreshPushSubscription() {
         _pushSubscriptionId.value = repository.getPushSubscriptionId()
+        _pushSubscriptionToken.value = repository.getPushSubscriptionToken()
         _pushEnabled.value = repository.isPushEnabled()
         _hasNotificationPermission.value = repository.hasNotificationPermission()
         _oneSignalId.value = repository.getOneSignalId()
@@ -708,6 +712,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
     override fun onPushSubscriptionChange(state: PushSubscriptionChangedState) {
         DemoLog.i("onPushSubscriptionChange: ${state.toJSONObject()}")
         _pushSubscriptionId.postValue(state.current.id)
+        _pushSubscriptionToken.postValue(state.current.token)
         _pushEnabled.postValue(state.current.optedIn)
     }
 

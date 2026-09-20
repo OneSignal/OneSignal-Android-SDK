@@ -280,6 +280,7 @@ fun UserSection(
 @Composable
 fun PushSection(
     pushSubscriptionId: String?,
+    pushSubscriptionToken: String,
     pushEnabled: Boolean,
     hasPermission: Boolean,
     onEnabledChange: (Boolean) -> Unit,
@@ -293,6 +294,17 @@ fun PushSection(
                 value = pushSubscriptionId.takeUnless { it.isNullOrEmpty() } ?: "—",
                 valueTestTag = "push_id_value",
                 valueColor = if (!pushSubscriptionId.isNullOrEmpty()) OsGrey600 else OsGrey600.copy(alpha = 0.5f),
+            )
+            HorizontalDivider(color = OsDivider, modifier = Modifier.padding(vertical = DemoLayout.gap))
+            CardKvRow(
+                label = "Status",
+                value = if (pushEnabled && hasPermission && pushSubscriptionToken.isNotEmpty()) {
+                    "Subscribed"
+                } else {
+                    "Unsubscribed"
+                },
+                valueTestTag = "push_subscription_status",
+                monospaceValue = false,
             )
             HorizontalDivider(color = OsDivider, modifier = Modifier.padding(vertical = DemoLayout.gap))
             ToggleRow(
