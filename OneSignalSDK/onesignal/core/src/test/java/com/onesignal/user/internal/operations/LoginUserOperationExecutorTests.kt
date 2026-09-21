@@ -2,6 +2,7 @@ package com.onesignal.user.internal.operations
 
 import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
 import com.onesignal.OneSignalUserProfile
+import com.onesignal.common.PIIHasher
 import com.onesignal.common.exceptions.BackendException
 import com.onesignal.core.internal.operations.ExecutionResponse
 import com.onesignal.core.internal.operations.ExecutionResult
@@ -22,6 +23,7 @@ import com.onesignal.user.internal.operations.ExecutorMocks.Companion.getIdentit
 import com.onesignal.user.internal.operations.ExecutorMocks.Companion.getJwtTokenStore
 import com.onesignal.user.internal.operations.impl.executors.IdentityOperationExecutor
 import com.onesignal.user.internal.operations.impl.executors.LoginUserOperationExecutor
+import com.onesignal.user.internal.operations.impl.executors.matchingBackendSubscription
 import com.onesignal.user.internal.properties.PropertiesModel
 import com.onesignal.user.internal.properties.PropertiesModelStore
 import com.onesignal.user.internal.subscriptions.SubscriptionModel
@@ -971,6 +973,104 @@ class LoginUserOperationExecutorTests : FunSpec({
         mockk(relaxed = true),
     )
 
+    test("matchingBackendSubscription matches by id even when another sub has the token") {
+        val remaining =
+            setOf(
+                SubscriptionObject(id = "by-id", type = SubscriptionObjectType.EMAIL, token = "other@b.com"),
+                SubscriptionObject(id = "by-token", type = SubscriptionObjectType.EMAIL, token = "a@b.com"),
+            )
+        val local = SubscriptionObject(type = SubscriptionObjectType.EMAIL, token = "a@b.com")
+
+        matchingBackendSubscription(remaining, "by-id", local)?.id shouldBe "by-id"
+    }
+
+    test("matchingBackendSubscription matches by token when ids differ") {
+        val remaining =
+            setOf(
+                SubscriptionObject(id = "email-sub", type = SubscriptionObjectType.EMAIL, token = "a@b.com"),
+                SubscriptionObject(id = "push-sub", type = SubscriptionObjectType.ANDROID_PUSH, token = "push-token"),
+            )
+        val local = SubscriptionObject(type = SubscriptionObjectType.EMAIL, token = "a@b.com")
+
+        matchingBackendSubscription(remaining, "local-email", local)?.id shouldBe "email-sub"
+    }
+
+    test("matchingBackendSubscription matches email tokens case-insensitively") {
+        val remaining =
+            setOf(
+                SubscriptionObject(id = "other-email", type = SubscriptionObjectType.EMAIL, token = "other@b.com"),
+                SubscriptionObject(id = "email-sub", type = SubscriptionObjectType.EMAIL, token = "A@B.COM"),
+            )
+        val local = SubscriptionObject(type = SubscriptionObjectType.EMAIL, token = "a@b.com")
+
+        matchingBackendSubscription(remaining, "local-email", local)?.id shouldBe "email-sub"
+    }
+
+    test("matchingBackendSubscription matches a hashed email or SMS token") {
+        val remaining =
+            setOf(
+                SubscriptionObject(id = "email-sub", type = SubscriptionObjectType.EMAIL, token = PIIHasher.hash("a@b.com")),
+                SubscriptionObject(id = "sms-sub", type = SubscriptionObjectType.SMS, token = PIIHasher.hash("+15555550100")),
+            )
+        val email = SubscriptionObject(type = SubscriptionObjectType.EMAIL, token = "a@b.com")
+        val sms = SubscriptionObject(type = SubscriptionObjectType.SMS, token = "+15555550100")
+
+        matchingBackendSubscription(remaining, "local-email", email)?.id shouldBe "email-sub"
+        matchingBackendSubscription(remaining, "local-sms", sms)?.id shouldBe "sms-sub"
+    }
+
+    test("matchingBackendSubscription maps push by type when id and token do not match") {
+        val remaining =
+            setOf(SubscriptionObject(id = "push-sub", type = SubscriptionObjectType.ANDROID_PUSH, token = null))
+        val local = SubscriptionObject(type = SubscriptionObjectType.ANDROID_PUSH, token = "push-token")
+
+        matchingBackendSubscription(remaining, "local-push", local)?.id shouldBe "push-sub"
+    }
+
+    test("matchingBackendSubscription maps email or SMS by type only when one remains and it has no token") {
+        val emailRemaining =
+            setOf(SubscriptionObject(id = "email-sub", type = SubscriptionObjectType.EMAIL, token = null))
+        val smsRemaining =
+            setOf(SubscriptionObject(id = "sms-sub", type = SubscriptionObjectType.SMS, token = null))
+        val email = SubscriptionObject(type = SubscriptionObjectType.EMAIL, token = "a@b.com")
+        val sms = SubscriptionObject(type = SubscriptionObjectType.SMS, token = "+15555550100")
+
+        matchingBackendSubscription(emailRemaining, "local-email", email)?.id shouldBe "email-sub"
+        matchingBackendSubscription(smsRemaining, "local-sms", sms)?.id shouldBe "sms-sub"
+    }
+
+    test("matchingBackendSubscription does not take another email or SMS whose token did not match") {
+        val remaining =
+            setOf(
+                SubscriptionObject(id = "other-email", type = SubscriptionObjectType.EMAIL, token = "other@b.com"),
+                SubscriptionObject(id = "other-sms", type = SubscriptionObjectType.SMS, token = "+15555550999"),
+            )
+        val email = SubscriptionObject(type = SubscriptionObjectType.EMAIL, token = "a@b.com")
+        val sms = SubscriptionObject(type = SubscriptionObjectType.SMS, token = "+15555550100")
+
+        matchingBackendSubscription(remaining, "local-email", email) shouldBe null
+        matchingBackendSubscription(remaining, "local-sms", sms) shouldBe null
+    }
+
+    test("matchingBackendSubscription does not type-fallback when two emails remain") {
+        val remaining =
+            setOf(
+                SubscriptionObject(id = "blank-email", type = SubscriptionObjectType.EMAIL, token = null),
+                SubscriptionObject(id = "other-email", type = SubscriptionObjectType.EMAIL, token = "other@b.com"),
+            )
+        val local = SubscriptionObject(type = SubscriptionObjectType.EMAIL, token = "a@b.com")
+
+        matchingBackendSubscription(remaining, "local-email", local) shouldBe null
+    }
+
+    test("matchingBackendSubscription returns null when nothing matches") {
+        val remaining =
+            setOf(SubscriptionObject(id = "push-sub", type = SubscriptionObjectType.ANDROID_PUSH, token = "push-token"))
+        val local = SubscriptionObject(type = SubscriptionObjectType.EMAIL, token = "a@b.com")
+
+        matchingBackendSubscription(remaining, "local-email", local) shouldBe null
+    }
+
     test("composite login with email only sends an Email subscription") {
         val mockUserBackendService = mockk<IUserBackendService>()
         coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } returns
@@ -1143,6 +1243,79 @@ class LoginUserOperationExecutorTests : FunSpec({
         response.result shouldBe ExecutionResult.FAIL_UNAUTHORIZED
         response.httpStatusCode shouldBe 401
         response.httpResponse shouldBe "UNAUTHORIZED"
+    }
+
+    test("composite login does not take another email when the profile address is absent") {
+        val mockUserBackendService = mockk<IUserBackendService>()
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } returns
+            CreateUserResponse(
+                mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId),
+                PropertiesObject(),
+                listOf(SubscriptionObject(id = "other-email", type = SubscriptionObjectType.EMAIL, token = "other@b.com")),
+            )
+
+        val response =
+            profileExecutor(mockUserBackendService).execute(
+                listOf(LoginUserOperation(appId, localOneSignalId, "externalId", null, OneSignalUserProfile(email = "a@b.com"))),
+            )
+
+        response.result shouldBe ExecutionResult.SUCCESS
+        (response.metadata as LoginWaitMetadata).emailSubscriptionId shouldBe null
+    }
+
+    test("composite login matches an email subscription case-insensitively") {
+        val mockUserBackendService = mockk<IUserBackendService>()
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } returns
+            CreateUserResponse(
+                mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId),
+                PropertiesObject(),
+                listOf(
+                    SubscriptionObject(id = "other-email", type = SubscriptionObjectType.EMAIL, token = "other@b.com"),
+                    SubscriptionObject(id = "email-sub", type = SubscriptionObjectType.EMAIL, token = "A@B.COM"),
+                ),
+            )
+
+        val response =
+            profileExecutor(mockUserBackendService).execute(
+                listOf(LoginUserOperation(appId, localOneSignalId, "externalId", null, OneSignalUserProfile(email = "a@b.com"))),
+            )
+
+        response.result shouldBe ExecutionResult.SUCCESS
+        response.metadata shouldBe LoginWaitMetadata(remoteOneSignalId, "email-sub")
+    }
+
+    test("composite login skips hydration when current identity is a different user") {
+        val mockUserBackendService = mockk<IUserBackendService>()
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } returns
+            CreateUserResponse(
+                mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId),
+                PropertiesObject(),
+                listOf(SubscriptionObject(id = "email-sub", type = SubscriptionObjectType.EMAIL, token = "a@b.com")),
+            )
+        val identityStore = MockHelper.identityModelStore { it.onesignalId = "other-user" }
+        val propertiesStore = MockHelper.propertiesModelStore { it.onesignalId = "other-user" }
+
+        val response =
+            profileExecutor(mockUserBackendService, identityStore = identityStore, propertiesStore = propertiesStore).execute(
+                listOf(
+                    LoginUserOperation(
+                        appId,
+                        localOneSignalId,
+                        "externalId",
+                        null,
+                        OneSignalUserProfile(
+                            email = "a@b.com",
+                            tags = mapOf("plan" to "pro"),
+                            aliases = mapOf("facebook" to "bob"),
+                        ),
+                    ),
+                ),
+            )
+
+        response.result shouldBe ExecutionResult.SUCCESS
+        identityStore.model.onesignalId shouldBe "other-user"
+        identityStore.model["facebook"] shouldBe null
+        propertiesStore.model.tags["plan"] shouldBe null
     }
 
     test("composite login hydrates aliases tags and email subscription on success") {

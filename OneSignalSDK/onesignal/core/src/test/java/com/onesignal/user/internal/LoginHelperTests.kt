@@ -1,6 +1,7 @@
 package com.onesignal.user.internal
 
 import com.onesignal.OneSignalUserProfile
+import com.onesignal.common.PIIHasher
 import com.onesignal.core.internal.config.ConfigModel
 import com.onesignal.core.internal.operations.IOperationRepo
 import com.onesignal.core.internal.operations.LoginWaitMetadata
@@ -661,5 +662,47 @@ class LoginHelperTests : FunSpec({
             currentExternalId,
             OneSignalUserProfile(email = "Bob@Example.com"),
         ).emailSubscriptionId shouldBe "email-id"
+    }
+
+    test("loginDataFromStores matches a hashed email or SMS address") {
+        val identityStore =
+            MockHelper.identityModelStore { model ->
+                model.externalId = currentExternalId
+                model.onesignalId = currentOneSignalId
+            }
+        val subscriptions = SubscriptionModelStore(MockPreferencesService())
+        subscriptions.add(
+            SubscriptionModel().apply {
+                id = "email-id"
+                type = SubscriptionType.EMAIL
+                address = PIIHasher.hash("a@b.com")
+            },
+        )
+        subscriptions.add(
+            SubscriptionModel().apply {
+                id = "sms-id"
+                type = SubscriptionType.SMS
+                address = PIIHasher.hash("+15555550100")
+            },
+        )
+        val loginHelper =
+            LoginHelper(
+                identityModelStore = identityStore,
+                userSwitcher = mockk(relaxed = true),
+                operationRepo = mockk(relaxed = true),
+                configModel = mockk(relaxed = true),
+                jwtTokenStore = JwtTokenStore(MockPreferencesService()),
+                lock = Any(),
+                subscriptionModelStore = subscriptions,
+            )
+
+        val data =
+            loginHelper.loginDataFromStores(
+                currentExternalId,
+                OneSignalUserProfile(email = "a@b.com", phoneNumber = "+15555550100"),
+            )
+
+        data.emailSubscriptionId shouldBe "email-id"
+        data.smsSubscriptionId shouldBe "sms-id"
     }
 })

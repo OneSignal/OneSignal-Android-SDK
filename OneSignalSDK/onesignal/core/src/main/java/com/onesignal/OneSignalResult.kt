@@ -83,9 +83,10 @@ class OneSignalResult<T : OneSignalResultData> private constructor(
         fun <T : OneSignalResultData> failure(
             code: ErrorCode,
             message: String? = null,
-            backendCode: Int? = null,
+            backendCode: String? = null,
+            httpStatus: Int? = null,
             cause: Throwable? = null,
-        ): OneSignalResult<T> = failure(OneSignalError.of(code, message, backendCode, cause))
+        ): OneSignalResult<T> = failure(OneSignalError.of(code, message, backendCode, httpStatus, cause = cause))
 
         /**
          * Rebuilds an envelope from its wire shape, delegating payload parsing to [dataParser].

@@ -251,8 +251,8 @@ interface IOneSignal {
     )
 
     /**
-     * Login with [externalId] plus [profile]. Email/SMS additive. Alias owned by another user fails the whole request.
-     * Profile fields are a Create User upsert (anonymous is not merged). Same id is a no-op once a backend ID exists.
+     * Login with [externalId] plus [profile]. Email/SMS create or transfer that address; an alias owned elsewhere fails the request.
+     * Create User upsert (anonymous is not merged). Same id is a no-op once a backend ID exists. Failure still leaves this identity local.
      */
     suspend fun login(
         externalId: String,

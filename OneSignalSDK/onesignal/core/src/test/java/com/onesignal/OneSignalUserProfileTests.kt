@@ -85,4 +85,17 @@ class OneSignalUserProfileTests : FunSpec({
     test("blank email and phone do not count as fields") {
         OneSignalUserProfile(email = "  ", phoneNumber = "").hasFields shouldBe false
     }
+
+    test("validationError is null for a valid profile") {
+        OneSignalUserProfile(email = "bob@example.com", phoneNumber = "+15555550100").validationError().shouldBeNull()
+        OneSignalUserProfile().validationError().shouldBeNull()
+    }
+
+    test("validationError rejects a malformed email") {
+        OneSignalUserProfile(email = "not-an-email").validationError() shouldBe "Invalid email address"
+    }
+
+    test("validationError rejects a non-E.164 phone number") {
+        OneSignalUserProfile(phoneNumber = "555-0100").validationError() shouldBe "Invalid phone number"
+    }
 })

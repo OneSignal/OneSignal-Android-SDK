@@ -5,6 +5,7 @@ import com.onesignal.common.toMap
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.Collections
+import java.util.LinkedHashMap
 
 /** Whether the SDK produced a failure locally or OneSignal's backend returned it. */
 enum class ErrorSource {
@@ -94,21 +95,16 @@ class OneSignalError private constructor(
     class Detail private constructor(
         /** A stable code, safe to branch on. Never localized. */
         val code: ErrorCode,
-        /**
-         * HTTP status today (catalog codes are not parsed yet). Present only for BACKEND_ERROR.
-         */
-        val backendCode: Int?,
+        /** Backend catalog code (e.g. `user-1`). Present only for BACKEND_ERROR. */
+        val backendCode: String?,
+        /** HTTP status of the backend response, when there was one. */
+        val httpStatus: Int?,
         /** A human-readable description intended for logs and diagnostics, not for end users. */
         val message: String?,
-        /**
-         * Who the failure came from.
-         *
-         * Carried rather than derived from [code] on demand, because a code this SDK does not
-         * recognize degrades to [ErrorCode.UNKNOWN] and re-deriving from that would report a
-         * backend failure as a client one. Defaults to the source [code] implies, which is right
-         * for everything the SDK raises locally.
-         */
+        /** Who the failure came from. Kept on UNKNOWN so a backend failure is not re-attributed as client. */
         val source: ErrorSource,
+        /** Backend `meta` object, when present (e.g. `conflicting_aliases`). */
+        val meta: Map<String, Any?>?,
     ) {
         /** Projects this reason onto the cross-SDK wire shape consumed by the wrapper bridges. */
         fun toMap(): Map<String, Any?> =
@@ -116,10 +112,13 @@ class OneSignalError private constructor(
                 KEY_CODE to code.name,
                 KEY_SOURCE to source.name,
                 KEY_BACKEND_CODE to backendCode,
+                KEY_HTTP_STATUS to httpStatus,
                 KEY_MESSAGE to message,
+                KEY_META to meta,
             )
 
-        override fun toString(): String = "Detail(code=$code, source=$source, backendCode=$backendCode, message=$message)"
+        override fun toString(): String =
+            "Detail(code=$code, source=$source, backendCode=$backendCode, httpStatus=$httpStatus, message=$message, meta=$meta)"
 
         internal companion object {
             // Private because `const val` in an internal companion still compiles to a public
@@ -127,40 +126,58 @@ class OneSignalError private constructor(
             private const val KEY_CODE = "code"
             private const val KEY_SOURCE = "source"
             private const val KEY_BACKEND_CODE = "backendCode"
+            private const val KEY_HTTP_STATUS = "httpStatus"
             private const val KEY_MESSAGE = "message"
+            private const val KEY_META = "meta"
 
-            /**
-             * Rebuilds a reason from its wire shape.
-             *
-             * Reads a raw map because the bridges do not all hand over `Map<String, Any?>`
-             * specifically, and because an unchecked cast that failed would be indistinguishable
-             * from a reason that was never there.
-             *
-             * An unrecognized code degrades to [ErrorCode.UNKNOWN] rather than throwing, so a
-             * wrapper built against an older SDK survives a newer producer emitting a code it has
-             * never heard of. [message], [backendCode] and [source] are preserved either way, which
-             * is what keeps a degraded reason diagnosable.
-             */
+            /** Rebuilds a reason from its wire shape. Unrecognized codes become [ErrorCode.UNKNOWN]. */
             fun fromMap(map: Map<*, *>): Detail {
                 val code = codeOf(map[KEY_CODE] as? String)
                 return Detail(
                     code = code,
-                    backendCode = (map[KEY_BACKEND_CODE] as? Number)?.toInt(),
+                    backendCode = optionalString(map[KEY_BACKEND_CODE]),
+                    httpStatus = (map[KEY_HTTP_STATUS] as? Number)?.toInt(),
                     message = map[KEY_MESSAGE] as? String,
                     source = sourceOf(map[KEY_SOURCE] as? String) ?: code.source,
+                    meta = optionalMeta(map[KEY_META]),
                 )
             }
 
             fun of(
                 code: ErrorCode,
-                backendCode: Int? = null,
+                backendCode: String? = null,
+                httpStatus: Int? = null,
                 message: String? = null,
                 source: ErrorSource = code.source,
-            ): Detail = Detail(code, backendCode, message, source)
+                meta: Map<String, Any?>? = null,
+            ): Detail =
+                Detail(
+                    code,
+                    backendCode,
+                    httpStatus,
+                    message,
+                    source,
+                    meta?.let { Collections.unmodifiableMap(LinkedHashMap(it)) },
+                )
 
             private fun codeOf(name: String?): ErrorCode = ErrorCode.entries.firstOrNull { it.name == name } ?: ErrorCode.UNKNOWN
 
             private fun sourceOf(name: String?): ErrorSource? = ErrorSource.entries.firstOrNull { it.name == name }
+
+            private fun optionalString(value: Any?): String? = (value as? String)?.takeIf { it.isNotEmpty() }
+
+            private fun optionalMeta(value: Any?): Map<String, Any?>? {
+                val map =
+                    when (value) {
+                        is Map<*, *> ->
+                            value.entries.mapNotNull { (key, entry) ->
+                                (key as? String)?.let { it to entry }
+                            }.toMap()
+                        is JSONObject -> value.toMap()
+                        else -> return null
+                    }
+                return map.takeIf { it.isNotEmpty() }?.let { Collections.unmodifiableMap(LinkedHashMap(it)) }
+            }
         }
     }
 
@@ -178,9 +195,11 @@ class OneSignalError private constructor(
         fun of(
             code: ErrorCode,
             message: String? = null,
-            backendCode: Int? = null,
+            backendCode: String? = null,
+            httpStatus: Int? = null,
+            meta: Map<String, Any?>? = null,
             cause: Throwable? = null,
-        ): OneSignalError = OneSignalError(listOf(Detail.of(code, backendCode, message)), cause)
+        ): OneSignalError = OneSignalError(listOf(Detail.of(code, backendCode, httpStatus, message, meta = meta)), cause)
 
         /** Builds a multi-reason error. [reasons] must not be empty. */
         fun of(
@@ -188,17 +207,18 @@ class OneSignalError private constructor(
             cause: Throwable? = null,
         ): OneSignalError = OneSignalError(reasons, cause)
 
-        /**
-         * Rebuilds an error from its wire shape.
-         *
-         * Takes the raw value rather than a typed list because the bridges do not all hand over a
-         * [List] — org.json's array is not one. Anything a producer put under `error` is a failure
-         * being reported, so an unreadable shape becomes a reason carrying its own text rather than
-         * being dropped, which would silently turn the failure into a success.
-         *
-         * A payload carrying no recognizable reason still yields a usable error rather than an
-         * empty list, so [first] is always safe.
-         */
+        /** Parses a backend `errors[]` body. Unreadable bodies become one reason with [httpStatus]. */
+        fun fromBackendResponse(
+            httpStatus: Int?,
+            body: String?,
+            fallbackMessage: String? = null,
+        ): OneSignalError {
+            parseBackendErrors(httpStatus, body)?.let { return OneSignalError(it, cause = null) }
+            val message = body?.takeIf { it.isNotBlank() } ?: fallbackMessage
+            return of(ErrorCode.BACKEND_ERROR, message = message, httpStatus = httpStatus)
+        }
+
+        /** Rebuilds an error from its wire shape. Unreadable entries become UNKNOWN rather than dropping the failure. */
         fun fromWire(raw: Any?): OneSignalError {
             val reasons =
                 when (raw) {
@@ -217,5 +237,32 @@ class OneSignalError private constructor(
                 is JSONObject -> Detail.fromMap(raw.toMap())
                 else -> Detail.of(ErrorCode.UNKNOWN, message = raw?.toString())
             }
+
+        private fun parseBackendErrors(
+            httpStatus: Int?,
+            body: String?,
+        ): List<Detail>? {
+            if (body.isNullOrBlank()) return null
+            return try {
+                val errors = JSONObject(body).optJSONArray("errors") ?: return null
+                val details =
+                    (0 until errors.length()).mapNotNull { index ->
+                        val item = errors.optJSONObject(index) ?: return@mapNotNull null
+                        Detail.of(
+                            code = ErrorCode.BACKEND_ERROR,
+                            backendCode = item.optionalString("code"),
+                            httpStatus = httpStatus,
+                            message = item.optionalString("title"),
+                            meta = item.optJSONObject("meta")?.toMap()?.takeIf { it.isNotEmpty() },
+                        )
+                    }
+                details.takeIf { it.isNotEmpty() }
+            } catch (_: Exception) {
+                null
+            }
+        }
+
+        private fun JSONObject.optionalString(key: String): String? =
+            if (isNull(key)) null else opt(key)?.toString()?.takeIf { it.isNotEmpty() && it != "null" }
     }
 }

@@ -1,7 +1,9 @@
 package com.onesignal
 
+import com.onesignal.common.OneSignalUtils
+
 /**
- * Profile fields applied at composite login. Email and SMS are additive subscriptions, not replaced traits.
+ * Profile applied at login. Email/SMS create or transfer that address onto this user; they do not replace other subscriptions.
  */
 class OneSignalUserProfile @JvmOverloads constructor(
     email: String? = null,
@@ -20,6 +22,12 @@ class OneSignalUserProfile @JvmOverloads constructor(
                 !phoneNumber.isNullOrBlank() ||
                 tags.isNotEmpty() ||
                 aliases.isNotEmpty()
+
+    internal fun validationError(): String? {
+        if (email != null && !OneSignalUtils.isValidEmail(email)) return "Invalid email address"
+        if (phoneNumber != null && !OneSignalUtils.isValidPhoneNumber(phoneNumber)) return "Invalid phone number"
+        return null
+    }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -48,10 +56,10 @@ class OneSignalUserProfile @JvmOverloads constructor(
         private var tags: Map<String, String> = emptyMap()
         private var aliases: Map<String, String> = emptyMap()
 
-        /** Sets the email subscription to create at login. */
+        /** Email to create or transfer onto this user at login. */
         fun setEmail(email: String?) = apply { this.email = email }
 
-        /** Sets the SMS subscription to create at login. Must be E.164 (e.g. +14155552671). */
+        /** SMS to create or transfer onto this user at login. Must be E.164 (e.g. +14155552671). */
         fun setPhoneNumber(phoneNumber: String?) = apply { this.phoneNumber = phoneNumber }
 
         /** Sets tags to apply at login. The map is copied. */

@@ -4,6 +4,7 @@ import android.os.Build
 import com.onesignal.common.AndroidUtils
 import com.onesignal.common.DeviceUtils
 import com.onesignal.common.IDManager
+import com.onesignal.common.PIIHasher
 import com.onesignal.common.NetworkUtils
 import com.onesignal.common.OneSignalUtils
 import com.onesignal.common.RootToolsInternalMethods
@@ -223,17 +224,7 @@ internal class LoginUserOperationExecutor(
             var smsSubscriptionId: String? = null
 
             for (pair in subscriptionList) {
-                // Find the corresponding subscription (subscriptions are not returned in the order they are sent)
-                // 1. Start by matching the subscription ID
-                var backendSubscription = backendSubscriptions.firstOrNull { it.id == pair.first }
-                // 2. If ID fails, match the token, this should always succeed for email or sms
-                if (backendSubscription == null) {
-                    backendSubscription = backendSubscriptions.firstOrNull { it.token == pair.second.token && !it.token.isNullOrBlank() }
-                }
-                // 3. Match by type. By this point, only a single push subscription should remain, at most
-                if (backendSubscription == null) {
-                    backendSubscription = backendSubscriptions.firstOrNull { it.type == pair.second.type }
-                }
+                val backendSubscription = matchingBackendSubscription(backendSubscriptions, pair.first, pair.second)
 
                 if (backendSubscription != null) {
                     if (!LoginProfileApplier.isProfileSubscriptionKey(pair.first)) {
@@ -283,6 +274,8 @@ internal class LoginUserOperationExecutor(
 
             if (_identityModelStore.model.onesignalId == backendOneSignalId) {
                 LoginProfileApplier.hydrate(createUserOperation, _identityModelStore, _propertiesModelStore)
+            } else if (createUserOperation.hasProfileFields()) {
+                Logging.warn("LoginUserOperationExecutor: skipped profile hydration because the current identity is not the created user")
             }
 
             val wasPossiblyAnUpsert = identities.isNotEmpty()
@@ -441,4 +434,30 @@ internal class LoginUserOperationExecutor(
     companion object {
         const val LOGIN_USER = "login-user"
     }
+}
+
+// Find the corresponding subscription (subscriptions are not returned in the order they are sent)
+internal fun matchingBackendSubscription(
+    remaining: Set<SubscriptionObject>,
+    localId: String,
+    local: SubscriptionObject,
+): SubscriptionObject? {
+    // 1. Start by matching the subscription ID
+    remaining.firstOrNull { it.id == localId }?.let { return it }
+    val localToken = local.token
+    if (!localToken.isNullOrBlank()) {
+        // 2. If ID fails, match the token, this should always succeed for email or sms
+        val ignoreCase = local.type == SubscriptionObjectType.EMAIL
+        val hashed = PIIHasher.hash(localToken)
+        remaining.firstOrNull { backend ->
+            val token = backend.token
+            !token.isNullOrBlank() && (token.equals(localToken, ignoreCase) || token == hashed)
+        }?.let { return it }
+    }
+    // 3. Match by type. Push: at most one remains. Email/SMS: only if one remains and it has no token.
+    val sameType = remaining.filter { it.type == local.type }
+    if (local.type == SubscriptionObjectType.EMAIL || local.type == SubscriptionObjectType.SMS) {
+        return sameType.singleOrNull()?.takeIf { it.token.isNullOrBlank() }
+    }
+    return sameType.firstOrNull()
 }

@@ -3,6 +3,7 @@ package com.onesignal.user.internal
 import com.onesignal.LoginData
 import com.onesignal.OneSignalUserProfile
 import com.onesignal.common.IDManager
+import com.onesignal.common.PIIHasher
 import com.onesignal.core.internal.config.ConfigModel
 import com.onesignal.core.internal.operations.IOperationRepo
 import com.onesignal.core.internal.operations.LoginWaitMetadata
@@ -105,7 +106,7 @@ internal class LoginHelper(
             )
 
         if (!result.success) {
-            Logging.warn("Could not login user: HTTP ${result.httpStatusCode} ${result.httpResponse}")
+            Logging.warn("Could not login user: HTTP ${result.httpStatusCode} ${result.httpResponse}. Local identity is already ${context.externalId}.")
         }
         return result
     }
@@ -139,7 +140,10 @@ internal class LoginHelper(
         address: String?,
     ): String? {
         if (address.isNullOrBlank()) return null
+        val hashed = PIIHasher.hash(address)
         val ignoreCase = type == SubscriptionType.EMAIL
-        return subscriptions.firstOrNull { it.type == type && it.address.equals(address, ignoreCase) }?.id
+        return subscriptions.firstOrNull { sub ->
+            sub.type == type && (sub.address.equals(address, ignoreCase) || sub.address == hashed)
+        }?.id
     }
 }

@@ -1,5 +1,6 @@
 package com.onesignal.user.internal.operations.impl.executors
 
+import com.onesignal.common.PIIHasher
 import com.onesignal.common.modeling.ModelChangeTags
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.user.internal.backend.SubscriptionObject
@@ -64,7 +65,12 @@ internal object LoginProfileApplier {
         val type = subscriptionType(backend.type)
         if (id == null || token == null || type == null) return
 
-        val existing = subscriptionsModelStore.list().firstOrNull { it.type == type && it.address == token }
+        val ignoreCase = type == SubscriptionType.EMAIL
+        val hashed = PIIHasher.hash(token)
+        val existing =
+            subscriptionsModelStore.list().firstOrNull { sub ->
+                sub.type == type && (sub.address.equals(token, ignoreCase) || sub.address == hashed)
+            }
         if (existing != null) {
             existing.setStringProperty(SubscriptionModel::id.name, id, ModelChangeTags.HYDRATE)
             return

@@ -16,6 +16,22 @@ import org.json.JSONObject
 
 class OneSignalResultTests : FunSpec({
 
+    fun reasonMap(
+        code: String,
+        source: String,
+        message: String? = null,
+        backendCode: String? = null,
+        httpStatus: Int? = null,
+        meta: Map<String, Any?>? = null,
+    ) = mapOf(
+        "code" to code,
+        "source" to source,
+        "backendCode" to backendCode,
+        "httpStatus" to httpStatus,
+        "message" to message,
+        "meta" to meta,
+    )
+
     test("success carries data and no error") {
         val result = OneSignalResult.success(LoginData("os-1", "ext-1"))
 
@@ -40,27 +56,35 @@ class OneSignalResultTests : FunSpec({
 
     test("a client code is distinguishable from a backend one without inspecting the message") {
         val client = OneSignalResult.failure<LoginData>(ErrorCode.STORAGE_LOCKED, "device locked")
-        val backend = OneSignalResult.failure<LoginData>(ErrorCode.BACKEND_ERROR, "Invalid API Key", backendCode = 100)
+        val backend =
+            OneSignalResult.failure<LoginData>(
+                ErrorCode.BACKEND_ERROR,
+                "Invalid API Key",
+                backendCode = "user-1",
+                httpStatus = 400,
+            )
 
         client.error!!.first.source shouldBe ErrorSource.CLIENT
         client.error!!.first.backendCode.shouldBeNull()
+        client.error!!.first.httpStatus.shouldBeNull()
 
         backend.error!!.first.source shouldBe ErrorSource.BACKEND
-        backend.error!!.first.backendCode shouldBe 100
+        backend.error!!.first.backendCode shouldBe "user-1"
+        backend.error!!.first.httpStatus shouldBe 400
     }
 
     test("an error can carry several reasons at once") {
         val error =
             OneSignalError.of(
                 listOf(
-                    OneSignalError.Detail.of(ErrorCode.BACKEND_ERROR, 100, "Invalid API Key"),
-                    OneSignalError.Detail.of(ErrorCode.BACKEND_ERROR, 144, "Invalid external ID"),
+                    OneSignalError.Detail.of(ErrorCode.BACKEND_ERROR, backendCode = "user-1", message = "Invalid API Key"),
+                    OneSignalError.Detail.of(ErrorCode.BACKEND_ERROR, backendCode = "user-3", message = "Invalid external ID"),
                 ),
             )
 
         error.error.size shouldBe 2
-        error.first.backendCode shouldBe 100
-        error.toList().map { it["backendCode"] } shouldBe listOf(100, 144)
+        error.first.backendCode shouldBe "user-1"
+        error.toList().map { it["backendCode"] } shouldBe listOf("user-1", "user-3")
     }
 
     // first is documented as always safe to read, so the factories have to refuse the one input
@@ -98,7 +122,7 @@ class OneSignalResultTests : FunSpec({
         val error = OneSignalError.of(ErrorCode.UNKNOWN, "boom", cause = IllegalStateException("boom"))
 
         error.cause.shouldNotBeNull()
-        error.toList().single().keys shouldBe setOf("code", "source", "backendCode", "message")
+        error.toList().single().keys shouldBe setOf("code", "source", "backendCode", "httpStatus", "message", "meta")
     }
 
     test("success projects onto the wire envelope") {
@@ -121,12 +145,7 @@ class OneSignalResultTests : FunSpec({
                 "data" to null,
                 "error" to
                     listOf(
-                        mapOf(
-                            "code" to "STORAGE_LOCKED",
-                            "source" to "CLIENT",
-                            "backendCode" to null,
-                            "message" to "device locked",
-                        ),
+                        reasonMap("STORAGE_LOCKED", "CLIENT", message = "device locked"),
                     ),
             )
     }
@@ -150,11 +169,39 @@ class OneSignalResultTests : FunSpec({
     }
 
     test("failure round-trips through the wire shape") {
-        val original = OneSignalResult.failure<LoginData>(ErrorCode.BACKEND_ERROR, "already linked", backendCode = 409)
+        val original =
+            OneSignalResult.failure<LoginData>(
+                ErrorCode.BACKEND_ERROR,
+                "already linked",
+                backendCode = "user-1",
+                httpStatus = 409,
+            )
 
         val restored = OneSignalResult.fromMap(original.toMap(), LoginData::fromMap)
 
         restored.isSuccess.shouldBeFalse()
+        restored.toMap() shouldBe original.toMap()
+        restored.error!!.first.backendCode shouldBe "user-1"
+        restored.error!!.first.httpStatus shouldBe 409
+    }
+
+    test("catalog code, http status, and meta round-trip on the wire") {
+        val original =
+            OneSignalResult.failure<LoginData>(
+                OneSignalError.of(
+                    ErrorCode.BACKEND_ERROR,
+                    message = "Multiple existing Users found with provided set of Aliases",
+                    backendCode = "user-1",
+                    httpStatus = 409,
+                    meta = mapOf("conflicting_aliases" to mapOf("external_id" to "jon-api-3")),
+                ),
+            )
+
+        val restored = OneSignalResult.fromMap(original.toMap(), LoginData::fromMap)
+
+        restored.error!!.first.backendCode shouldBe "user-1"
+        restored.error!!.first.httpStatus shouldBe 409
+        restored.error!!.first.meta shouldBe mapOf("conflicting_aliases" to mapOf("external_id" to "jon-api-3"))
         restored.toMap() shouldBe original.toMap()
     }
 
@@ -383,14 +430,15 @@ class OneSignalResultTests : FunSpec({
                 "data" to null,
                 "error" to
                     listOf(
-                        mapOf("code" to "RATE_LIMITED", "source" to "BACKEND", "backendCode" to 429, "message" to "slow down"),
+                        mapOf("code" to "RATE_LIMITED", "source" to "BACKEND", "httpStatus" to 429, "message" to "slow down"),
                     ),
             )
 
         val restored = OneSignalResult.fromMap(fromNewerProducer, LoginData::fromMap)
 
         restored.error!!.first.code shouldBe ErrorCode.UNKNOWN
-        restored.error!!.first.backendCode shouldBe 429
+        restored.error!!.first.backendCode.shouldBeNull()
+        restored.error!!.first.httpStatus shouldBe 429
         restored.error!!.first.source shouldBe ErrorSource.BACKEND
         // Also checked through the wire projection, since toMap and fromMap have to stay symmetric.
         restored.error!!.toList().first()["source"] shouldBe "BACKEND"
@@ -458,7 +506,7 @@ class OneSignalResultTests : FunSpec({
     test("a reason with no source on the wire falls back to the source its code implies") {
         val restored =
             OneSignalResult.fromMap(
-                mapOf("error" to listOf(mapOf("code" to "BACKEND_ERROR", "backendCode" to 100))),
+                mapOf("error" to listOf(mapOf("code" to "BACKEND_ERROR", "backendCode" to "user-1"))),
                 LoginData::fromMap,
             )
 

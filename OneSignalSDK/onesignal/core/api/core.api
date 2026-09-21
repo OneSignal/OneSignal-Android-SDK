@@ -163,10 +163,12 @@ public final class com/onesignal/OneSignalError {
 }
 
 public final class com/onesignal/OneSignalError$Detail {
-	public synthetic fun <init> (Lcom/onesignal/ErrorCode;Ljava/lang/Integer;Ljava/lang/String;Lcom/onesignal/ErrorSource;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
-	public final fun getBackendCode ()Ljava/lang/Integer;
+	public synthetic fun <init> (Lcom/onesignal/ErrorCode;Ljava/lang/String;Ljava/lang/Integer;Ljava/lang/String;Lcom/onesignal/ErrorSource;Ljava/util/Map;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun getBackendCode ()Ljava/lang/String;
 	public final fun getCode ()Lcom/onesignal/ErrorCode;
+	public final fun getHttpStatus ()Ljava/lang/Integer;
 	public final fun getMessage ()Ljava/lang/String;
+	public final fun getMeta ()Ljava/util/Map;
 	public final fun getSource ()Lcom/onesignal/ErrorSource;
 	public final fun toMap ()Ljava/util/Map;
 	public fun toString ()Ljava/lang/String;

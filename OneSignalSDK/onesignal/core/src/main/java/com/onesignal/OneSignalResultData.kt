@@ -30,9 +30,9 @@ class LoginData internal constructor(
     val onesignalId: String,
     /** The external ID that was logged in. */
     val externalId: String,
-    /** The email subscription created by this login, when the backend returned one. */
+    /** ID of the email subscription for the address passed in, if the backend returned one. */
     val emailSubscriptionId: String? = null,
-    /** The SMS subscription created by this login, when the backend returned one. */
+    /** ID of the SMS subscription for the number passed in, if the backend returned one. */
     val smsSubscriptionId: String? = null,
 ) : OneSignalResultData {
     override fun toMap(): Map<String, Any?> =

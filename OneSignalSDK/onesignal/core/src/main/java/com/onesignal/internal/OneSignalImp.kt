@@ -6,6 +6,7 @@ import com.onesignal.ErrorCode
 import com.onesignal.IOneSignal
 import com.onesignal.IUserJwtInvalidatedListener
 import com.onesignal.LoginData
+import com.onesignal.OneSignalError
 import com.onesignal.OneSignalResult
 import com.onesignal.OneSignalUserProfile
 import com.onesignal.common.AndroidUtils
@@ -817,6 +818,10 @@ internal class OneSignalImp : IOneSignal,
         withContext(ioDispatcher) {
             Logging.log(LogLevel.DEBUG, "login(externalId: $externalId, profile: $profile, jwtBearerToken: ...${jwtBearerToken?.takeLast(8)})")
 
+            profile.validationError()?.let {
+                return@withContext OneSignalResult.failure(ErrorCode.INVALID_ARGUMENT, it)
+            }
+
             suspendUntilInit(operationName = "login")
 
             val switched = loginHelper.switchUser(externalId, jwtBearerToken, profile)
@@ -824,9 +829,11 @@ internal class OneSignalImp : IOneSignal,
                 val completed = loginHelper.enqueueLogin(switched.context, profile)
                 if (!completed.success) {
                     return@withContext OneSignalResult.failure(
-                        ErrorCode.BACKEND_ERROR,
-                        loginFailureMessage(completed),
-                        backendCode = completed.httpStatusCode,
+                        OneSignalError.fromBackendResponse(
+                            httpStatus = completed.httpStatusCode,
+                            body = completed.httpResponse,
+                            fallbackMessage = loginFailureMessage(completed),
+                        ),
                     )
                 }
                 return@withContext OneSignalResult.success(
@@ -836,10 +843,8 @@ internal class OneSignalImp : IOneSignal,
             OneSignalResult.success(loginHelper.loginData(externalId, profile, fallbackOnesignalId = switched.onesignalId))
         }
 
-    private fun loginFailureMessage(wait: OperationWaitResult): String {
-        val body = wait.httpResponse?.takeIf { it.isNotBlank() }
-        return body ?: wait.httpStatusCode?.let { "Login did not complete (HTTP $it)." } ?: "Login did not complete."
-    }
+    private fun loginFailureMessage(wait: OperationWaitResult): String =
+        wait.httpStatusCode?.let { "Login did not complete (HTTP $it)." } ?: "Login did not complete."
 
     override suspend fun updateUserJwtSuspend(
         externalId: String,
