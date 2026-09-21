@@ -40,24 +40,13 @@ class OneSignalResult<T : OneSignalResultData> private constructor(
     val error: OneSignalError?,
 ) {
     init {
-        // [isSuccess] reads error while [getOrThrow] reads data, so an envelope carrying neither or
-        // both leaves the two disagreeing with nothing to arbitrate. Mirrors the same guard in
-        // OneSignalError, and means no caller of this constructor can build a result that lies.
+        // [isSuccess] reads error while callers read data, so neither or both leaves the two disagreeing.
         require((data == null) != (error == null)) { "OneSignalResult carries exactly one of data or error." }
     }
 
     /** `true` when the call completed successfully. Equivalent to `error == null`. */
     val isSuccess: Boolean
         get() = error == null
-
-    /** Kotlin-idiomatic alias for [data]. */
-    fun getOrNull(): T? = data
-
-    /**
-     * Returns the payload, or throws [OneSignalException] when the call failed. Use this only where
-     * a failure genuinely cannot be handled locally.
-     */
-    fun getOrThrow(): T = data ?: throw OneSignalException(checkNotNull(error))
 
     /** Projects the envelope onto the cross-SDK wire shape consumed by the wrapper bridges. */
     fun toMap(): Map<String, Any?> =
@@ -145,16 +134,3 @@ class OneSignalResult<T : OneSignalResultData> private constructor(
         private fun Any?.isJsonAbsent(): Boolean = this === null || this === JSONObject.NULL
     }
 }
-
-/** Thrown by [OneSignalResult.getOrThrow] when the underlying call failed. */
-class OneSignalException internal constructor(
-    /** The failure detail that caused this exception. */
-    val error: OneSignalError,
-) : Exception(describe(error), error.cause)
-
-// A Detail carries no message when the code says everything, so appending a bare "null" to the
-// exception text would only add noise to the stack trace.
-private fun describe(error: OneSignalError): String =
-    error.error.joinToString("; ") { detail ->
-        if (detail.message == null) detail.code.name else "${detail.code}: ${detail.message}"
-    }

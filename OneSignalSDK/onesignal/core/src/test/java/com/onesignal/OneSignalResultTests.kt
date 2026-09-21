@@ -39,8 +39,7 @@ class OneSignalResultTests : FunSpec({
         result.error.shouldBeNull()
         result.data.shouldNotBeNull()
         result.data!!.onesignalId shouldBe "os-1"
-        result.getOrNull().shouldNotBeNull()
-        result.getOrThrow().externalId shouldBe "ext-1"
+        result.data!!.externalId shouldBe "ext-1"
     }
 
     test("failure carries error and no data") {
@@ -48,7 +47,6 @@ class OneSignalResultTests : FunSpec({
 
         result.isSuccess.shouldBeFalse()
         result.data.shouldBeNull()
-        result.getOrNull().shouldBeNull()
         result.error.shouldNotBeNull()
         result.error!!.first.code shouldBe ErrorCode.INVALID_ARGUMENT
         result.error!!.first.message shouldBe "no app ID"
@@ -91,31 +89,6 @@ class OneSignalResultTests : FunSpec({
     // that would make it throw. The constructor is private; this is the supported construction path.
     test("an error cannot be built with no reasons") {
         shouldThrow<IllegalArgumentException> { OneSignalError.of(emptyList()) }
-    }
-
-    test("a reason with no message keeps the exception text free of a bare null") {
-        val result = OneSignalResult.failure<LogoutData>(ErrorCode.STORAGE_LOCKED)
-
-        val thrown =
-            runCatching { result.getOrThrow() }
-                .exceptionOrNull()
-                .shouldBeInstanceOf<OneSignalException>()
-
-        thrown.message shouldBe "STORAGE_LOCKED"
-    }
-
-    test("getOrThrow surfaces the error and keeps the cause attached") {
-        val boom = IllegalStateException("boom")
-        val result = OneSignalResult.failure<LogoutData>(ErrorCode.UNKNOWN, "offline", cause = boom)
-
-        val thrown =
-            runCatching { result.getOrThrow() }
-                .exceptionOrNull()
-                .shouldBeInstanceOf<OneSignalException>()
-
-        thrown.error.first.code shouldBe ErrorCode.UNKNOWN
-        thrown.message shouldBe "UNKNOWN: offline"
-        thrown.cause shouldBe boom
     }
 
     test("the cause stays off the wire so every SDK serializes the same shape") {
@@ -372,10 +345,7 @@ class OneSignalResultTests : FunSpec({
         restored.error!!.error[1].message shouldBe "42"
     }
 
-    // isSuccess reads error while getOrThrow reads data, so an envelope carrying neither or both
-    // makes the two disagree. The constructor is private and the factories only emit one side; the
-    // require stays as defense for a future factory bug and is reached here via reflection so the
-    // JVM-public accidental entry point Fadi flagged cannot reopen quietly.
+    // isSuccess reads error, callers read data. Neither or both leaves the two disagreeing.
     test("a result cannot be built carrying neither data nor error") {
         val ctor =
             OneSignalResult::class.java.getDeclaredConstructor(
