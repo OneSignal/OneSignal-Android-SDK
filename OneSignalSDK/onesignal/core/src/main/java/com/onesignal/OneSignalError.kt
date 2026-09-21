@@ -2,6 +2,12 @@ package com.onesignal
 
 import com.onesignal.common.toList
 import com.onesignal.common.toMap
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.Collections
@@ -191,6 +197,12 @@ class OneSignalError private constructor(
     override fun toString(): String = "OneSignalError(error=$error)"
 
     internal companion object {
+        private val json =
+            Json {
+                ignoreUnknownKeys = true
+                isLenient = false
+            }
+
         /** Builds a single-reason error, which is the shape of everything the SDK raises locally. */
         fun of(
             code: ErrorCode,
@@ -244,16 +256,17 @@ class OneSignalError private constructor(
         ): List<Detail>? {
             if (body.isNullOrBlank()) return null
             return try {
-                val errors = JSONObject(body).optJSONArray("errors") ?: return null
+                val root = json.parseToJsonElement(body) as? JsonObject ?: return null
+                val errors = root["errors"] as? JsonArray ?: return null
                 val details =
-                    (0 until errors.length()).mapNotNull { index ->
-                        val item = errors.optJSONObject(index) ?: return@mapNotNull null
+                    errors.mapNotNull { element ->
+                        val item = element as? JsonObject ?: return@mapNotNull null
                         Detail.of(
                             code = ErrorCode.BACKEND_ERROR,
                             backendCode = item.optionalString("code"),
                             httpStatus = httpStatus,
                             message = item.optionalString("title"),
-                            meta = item.optJSONObject("meta")?.toMap()?.takeIf { it.isNotEmpty() },
+                            meta = (item["meta"] as? JsonObject)?.toPlainMap()?.takeIf { it.isNotEmpty() },
                         )
                     }
                 details.takeIf { it.isNotEmpty() }
@@ -262,7 +275,27 @@ class OneSignalError private constructor(
             }
         }
 
-        private fun JSONObject.optionalString(key: String): String? =
-            if (isNull(key)) null else opt(key)?.toString()?.takeIf { it.isNotEmpty() && it != "null" }
+        private fun JsonObject.optionalString(key: String): String? {
+            val value = this[key] ?: return null
+            if (value is JsonNull) return null
+            val primitive = value as? JsonPrimitive ?: return null
+            return primitive.content.takeIf { it.isNotEmpty() }
+        }
+
+        private fun JsonObject.toPlainMap(): Map<String, Any?> = entries.associate { it.key to it.value.toPlain() }
+
+        private fun JsonElement.toPlain(): Any? =
+            when (this) {
+                is JsonNull -> null
+                is JsonPrimitive ->
+                    when {
+                        isString -> content
+                        content.equals("true", ignoreCase = true) -> true
+                        content.equals("false", ignoreCase = true) -> false
+                        else -> content.toLongOrNull() ?: content.toDoubleOrNull() ?: content
+                    }
+                is JsonObject -> toPlainMap()
+                is JsonArray -> map { it.toPlain() }
+            }
     }
 }
