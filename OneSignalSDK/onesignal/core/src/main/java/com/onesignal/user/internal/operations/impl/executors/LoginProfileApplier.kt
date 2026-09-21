@@ -2,12 +2,13 @@ package com.onesignal.user.internal.operations.impl.executors
 
 import com.onesignal.common.PIIHasher
 import com.onesignal.common.modeling.ModelChangeTags
-import com.onesignal.debug.internal.logging.Logging
+import com.onesignal.user.internal.backend.CreateUserResponse
 import com.onesignal.user.internal.backend.SubscriptionObject
 import com.onesignal.user.internal.backend.SubscriptionObjectType
 import com.onesignal.user.internal.identity.IdentityModelStore
 import com.onesignal.user.internal.operations.LoginUserOperation
 import com.onesignal.user.internal.operations.reservedLoginAliasLabel
+import com.onesignal.user.internal.properties.PropertiesModel
 import com.onesignal.user.internal.properties.PropertiesModelStore
 import com.onesignal.user.internal.subscriptions.SubscriptionModel
 import com.onesignal.user.internal.subscriptions.SubscriptionModelStore
@@ -36,21 +37,34 @@ internal object LoginProfileApplier {
         return mutable
     }
 
+    /**
+     * The backend wins where it spoke, the request fills the rest. Never deletes: Create User can
+     * echo a partial body, and dropping keys it omitted would discard state we just sent.
+     */
     fun hydrate(
         op: LoginUserOperation,
+        response: CreateUserResponse,
         identityModelStore: IdentityModelStore,
         propertiesModelStore: PropertiesModelStore,
     ) {
         val identityModel = identityModelStore.model
-        for ((label, id) in op.aliases) {
-            if (reservedLoginAliasLabel(label)) {
-                Logging.warn("LoginProfileApplier: skipping reserved alias label")
-                continue
-            }
+        // onesignal_id and external_id arrive on every response and are owned by the executor.
+        for ((label, id) in op.aliases + response.identities) {
+            if (reservedLoginAliasLabel(label)) continue
             identityModel.setStringProperty(label, id, ModelChangeTags.HYDRATE)
         }
-        val tagsModel = propertiesModelStore.model.tags
-        for ((key, value) in op.tags) {
+
+        val propertiesModel = propertiesModelStore.model
+        response.properties.language?.let {
+            propertiesModel.setStringProperty(PropertiesModel::language.name, it, ModelChangeTags.HYDRATE)
+        }
+        response.properties.country?.let {
+            propertiesModel.setStringProperty(PropertiesModel::country.name, it, ModelChangeTags.HYDRATE)
+        }
+
+        val backendTags = response.properties.tags.orEmpty().mapNotNull { (key, value) -> value?.let { key to it } }
+        val tagsModel = propertiesModel.tags
+        for ((key, value) in op.tags + backendTags) {
             tagsModel.setStringProperty(key, value, ModelChangeTags.HYDRATE)
         }
     }

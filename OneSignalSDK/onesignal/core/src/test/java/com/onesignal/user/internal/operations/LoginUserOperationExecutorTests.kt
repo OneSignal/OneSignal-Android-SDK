@@ -1357,6 +1357,46 @@ class LoginUserOperationExecutorTests : FunSpec({
         }
     }
 
+    test("composite login hydrates the backend tag set, not just the tags it sent") {
+        val mockUserBackendService = mockk<IUserBackendService>()
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } returns
+            CreateUserResponse(
+                mapOf(
+                    IdentityConstants.ONESIGNAL_ID to remoteOneSignalId,
+                    "crm_id" to "CRM-1",
+                ),
+                PropertiesObject(
+                    tags = mapOf("plan" to "enterprise", "seats" to "40", "dropped" to null),
+                    language = "fr",
+                    country = "FR",
+                ),
+                listOf(),
+            )
+        val identityStore = MockHelper.identityModelStore { it.onesignalId = localOneSignalId }
+        val propertiesStore = MockHelper.propertiesModelStore { it.onesignalId = localOneSignalId }
+
+        val response =
+            profileExecutor(mockUserBackendService, identityStore = identityStore, propertiesStore = propertiesStore).execute(
+                listOf(
+                    LoginUserOperation(
+                        appId,
+                        localOneSignalId,
+                        "externalId",
+                        null,
+                        OneSignalUserProfile(tags = mapOf("plan" to "pro"), aliases = mapOf("facebook" to "bob")),
+                    ),
+                ),
+            )
+
+        response.result shouldBe ExecutionResult.SUCCESS
+        propertiesStore.model.tags["plan"] shouldBe "enterprise"
+        propertiesStore.model.tags["seats"] shouldBe "40"
+        propertiesStore.model.tags["dropped"] shouldBe null
+        propertiesStore.model.language shouldBe "fr"
+        propertiesStore.model.country shouldBe "FR"
+        identityStore.model["crm_id"] shouldBe "CRM-1"
+    }
+
     test("composite login with existingOnesignalId still createUsers so the profile is sent") {
         val mockUserBackendService = mockk<IUserBackendService>()
         coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } returns

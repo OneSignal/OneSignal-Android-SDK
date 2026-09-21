@@ -273,7 +273,7 @@ internal class LoginUserOperationExecutor(
             }
 
             if (_identityModelStore.model.onesignalId == backendOneSignalId) {
-                LoginProfileApplier.hydrate(createUserOperation, _identityModelStore, _propertiesModelStore)
+                LoginProfileApplier.hydrate(createUserOperation, response, _identityModelStore, _propertiesModelStore)
             } else if (createUserOperation.hasProfileFields()) {
                 Logging.warn("LoginUserOperationExecutor: skipped profile hydration because the current identity is not the created user")
             }
