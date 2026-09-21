@@ -278,6 +278,14 @@ internal class LoginUserOperationExecutor(
                 Logging.warn("LoginUserOperationExecutor: skipped profile hydration because the current identity is not the created user")
             }
 
+            if (!_identityVerificationService.ivBehaviorActive &&
+                (!createUserOperation.email.isNullOrBlank() || !createUserOperation.phoneNumber.isNullOrBlank())
+            ) {
+                Logging.warn(
+                    "LoginUserOperationExecutor: email or SMS sent without identity verification. If that address belonged to another user it was transferred.",
+                )
+            }
+
             val wasPossiblyAnUpsert = identities.isNotEmpty()
             val followUpOperations =
                 if (wasPossiblyAnUpsert) {
