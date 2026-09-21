@@ -106,7 +106,8 @@ internal class LoginHelper(
             )
 
         if (!result.success) {
-            Logging.warn("Could not login user: HTTP ${result.httpStatusCode} ${result.httpResponse}. Local identity is already ${context.externalId}.")
+            val detail = result.httpStatusCode?.let { "HTTP $it ${result.httpResponse}" } ?: "wait timed out"
+            Logging.warn("Could not login user: $detail. Local identity is already ${context.externalId}.")
         }
         return result
     }

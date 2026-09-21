@@ -928,6 +928,8 @@ public abstract interface class com/onesignal/core/internal/background/IBackgrou
 }
 
 public final class com/onesignal/core/internal/config/ConfigModel : com/onesignal/common/modeling/Model {
+	public static final field Companion Lcom/onesignal/core/internal/config/ConfigModel$Companion;
+	public static final field DEFAULT_TIMEOUT_MS J
 	public fun <init> ()V
 	public final fun getApiUrl ()Ljava/lang/String;
 	public final fun getAppId ()Ljava/lang/String;
@@ -948,6 +950,7 @@ public final class com/onesignal/core/internal/config/ConfigModel : com/onesigna
 	public final fun getInfluenceParams ()Lcom/onesignal/core/internal/config/InfluenceConfigModel;
 	public final fun getLocationShared ()Z
 	public final fun getNotificationChannels ()Lorg/json/JSONArray;
+	public final fun getOpRepoAwaitTimeout ()J
 	public final fun getOpRepoDefaultFailRetryBackoff ()J
 	public final fun getOpRepoExecutionInterval ()J
 	public final fun getOpRepoPostCreateDelay ()J
@@ -981,6 +984,7 @@ public final class com/onesignal/core/internal/config/ConfigModel : com/onesigna
 	public final fun setInitializedWithRemote (Z)V
 	public final fun setLocationShared (Z)V
 	public final fun setNotificationChannels (Lorg/json/JSONArray;)V
+	public final fun setOpRepoAwaitTimeout (J)V
 	public final fun setOpRepoDefaultFailRetryBackoff (J)V
 	public final fun setOpRepoExecutionInterval (J)V
 	public final fun setOpRepoPostCreateDelay (J)V
@@ -994,6 +998,9 @@ public final class com/onesignal/core/internal/config/ConfigModel : com/onesigna
 	public final fun setSessionFocusTimeout (J)V
 	public final fun setUnsubscribeWhenNotificationsDisabled (Z)V
 	public final fun setUserRejectedGMSUpdate (Z)V
+}
+
+public final class com/onesignal/core/internal/config/ConfigModel$Companion {
 }
 
 public class com/onesignal/core/internal/config/ConfigModelStore : com/onesignal/common/modeling/SingletonModelStore {

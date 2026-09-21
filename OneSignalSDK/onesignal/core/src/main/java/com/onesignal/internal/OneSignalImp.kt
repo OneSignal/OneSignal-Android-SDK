@@ -828,13 +828,17 @@ internal class OneSignalImp : IOneSignal,
             if (switched.context != null) {
                 val completed = loginHelper.enqueueLogin(switched.context, profile)
                 if (!completed.success) {
-                    return@withContext OneSignalResult.failure(
-                        OneSignalError.fromBackendResponse(
-                            httpStatus = completed.httpStatusCode,
-                            body = completed.httpResponse,
-                            fallbackMessage = loginFailureMessage(completed),
-                        ),
-                    )
+                    val error =
+                        if (completed.httpStatusCode != null) {
+                            OneSignalError.fromBackendResponse(
+                                httpStatus = completed.httpStatusCode,
+                                body = completed.httpResponse,
+                                fallbackMessage = loginFailureMessage(completed),
+                            )
+                        } else {
+                            OneSignalError.of(ErrorCode.UNKNOWN, loginFailureMessage(completed))
+                        }
+                    return@withContext OneSignalResult.failure(error)
                 }
                 return@withContext OneSignalResult.success(
                     loginHelper.loginData(externalId, profile, completed, switched.onesignalId),

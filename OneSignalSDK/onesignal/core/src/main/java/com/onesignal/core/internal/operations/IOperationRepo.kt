@@ -36,6 +36,7 @@ interface IOperationRepo {
 
     /**
      * Same as [enqueueAndWait], plus the HTTP status and body when the executor recorded a backend failure.
+     * Returns failure if the wait exceeds [com.onesignal.core.internal.config.ConfigModel.opRepoAwaitTimeout].
      */
     suspend fun enqueueAndAwaitResult(
         operation: Operation,

@@ -1363,6 +1363,24 @@ class OperationRepoTests : FunSpec({
         result.httpResponse shouldBe """{"errors":["invalid phone"]}"""
     }
 
+    test("enqueueAndAwaitResult returns failure when the await timeout elapses") {
+        val mocks = Mocks()
+        mocks.configModelStore.model.opRepoAwaitTimeout = 50
+        coEvery { mocks.executor.execute(any()) } coAnswers {
+            delay(10_000)
+            ExecutionResponse(ExecutionResult.SUCCESS)
+        }
+
+        mocks.operationRepo.start()
+        val result =
+            withTimeout(1_000) {
+                mocks.operationRepo.enqueueAndAwaitResult(mockOperation())
+            }
+
+        result.success shouldBe false
+        result.httpStatusCode shouldBe null
+    }
+
     test("FAIL_UNAUTHORIZED with IV inactive falls back to default drop-on-fail") {
         val mocks = Mocks()
         mocks.identityVerificationService = CoreInternalMocks.identityVerificationService(

@@ -172,7 +172,13 @@ internal class OperationRepo(
         scope.launch {
             internalEnqueue(OperationQueueItem(operation, waiter, bucket = enqueueIntoBucket), flush, true)
         }
-        return waiter.waitForWake()
+        val timeoutMs = _configModelStore.model.opRepoAwaitTimeout
+        return withTimeoutOrNull(timeoutMs) {
+            waiter.waitForWake()
+        } ?: run {
+            Logging.warn("OperationRepo.enqueueAndWait timed out after $timeoutMs ms: $operation")
+            OperationWaitResult(false)
+        }
     }
 
     /**

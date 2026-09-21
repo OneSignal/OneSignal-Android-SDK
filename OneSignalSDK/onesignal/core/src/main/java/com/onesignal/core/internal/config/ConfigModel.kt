@@ -108,7 +108,7 @@ class ConfigModel : Model() {
      * The timeout in milliseconds for an HTTP connection GET request.
      */
     var httpGetTimeout: Int
-        get() = getIntProperty(::httpGetTimeout.name) { 60000 }
+        get() = getIntProperty(::httpGetTimeout.name) { DEFAULT_TIMEOUT_MS.toInt() }
         set(value) {
             setIntProperty(::httpGetTimeout.name, value)
         }
@@ -174,7 +174,7 @@ class ConfigModel : Model() {
      * to re-create records as a last resort.
      */
     var opRepoPostCreateRetryUpTo: Long
-        get() = getLongProperty(::opRepoPostCreateRetryUpTo.name) { 60_000 }
+        get() = getLongProperty(::opRepoPostCreateRetryUpTo.name) { DEFAULT_TIMEOUT_MS }
         set(value) {
             setLongProperty(::opRepoPostCreateRetryUpTo.name, value)
         }
@@ -189,6 +189,16 @@ class ConfigModel : Model() {
         get() = getLongProperty(::opRepoDefaultFailRetryBackoff.name) { 15_000 }
         set(value) {
             setLongProperty(::opRepoDefaultFailRetryBackoff.name, value)
+        }
+
+    /**
+     * How long [com.onesignal.core.internal.operations.IOperationRepo.enqueueAndAwaitResult] waits.
+     * The operation stays queued after the waiter is released.
+     */
+    var opRepoAwaitTimeout: Long
+        get() = getLongProperty(::opRepoAwaitTimeout.name) { DEFAULT_TIMEOUT_MS }
+        set(value) {
+            setLongProperty(::opRepoAwaitTimeout.name, value)
         }
 
     /**
@@ -376,6 +386,10 @@ class ConfigModel : Model() {
         }
 
         return null
+    }
+
+    companion object {
+        const val DEFAULT_TIMEOUT_MS = 60_000L
     }
 }
 
