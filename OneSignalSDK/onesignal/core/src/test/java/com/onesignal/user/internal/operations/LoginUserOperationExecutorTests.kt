@@ -1190,7 +1190,7 @@ class LoginUserOperationExecutorTests : FunSpec({
         }
     }
 
-    test("composite login alias conflict drops the login op") {
+    test("composite login alias conflict pauses the operation repo") {
         val mockUserBackendService = mockk<IUserBackendService>()
         coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } throws BackendException(409, "CONFLICT")
 
@@ -1199,12 +1199,12 @@ class LoginUserOperationExecutorTests : FunSpec({
                 listOf(LoginUserOperation(appId, localOneSignalId, "externalId", null, OneSignalUserProfile(aliases = mapOf("facebook" to "bob")))),
             )
 
-        response.result shouldBe ExecutionResult.FAIL_NORETRY
+        response.result shouldBe ExecutionResult.FAIL_PAUSE_OPREPO
         response.httpStatusCode shouldBe 409
         response.httpResponse shouldBe "CONFLICT"
     }
 
-    test("composite login malformed email drops the login op") {
+    test("composite login malformed email pauses the operation repo") {
         val mockUserBackendService = mockk<IUserBackendService>()
         coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } throws BackendException(400, "INVALID EMAIL")
 
@@ -1213,12 +1213,12 @@ class LoginUserOperationExecutorTests : FunSpec({
                 listOf(LoginUserOperation(appId, localOneSignalId, "externalId", null, OneSignalUserProfile(email = "not-an-email"))),
             )
 
-        response.result shouldBe ExecutionResult.FAIL_NORETRY
+        response.result shouldBe ExecutionResult.FAIL_PAUSE_OPREPO
         response.httpStatusCode shouldBe 400
         response.httpResponse shouldBe "INVALID EMAIL"
     }
 
-    test("composite login 404 drops the login op") {
+    test("composite login 404 pauses the operation repo") {
         val mockUserBackendService = mockk<IUserBackendService>()
         coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } throws BackendException(404, "NOT FOUND")
 
@@ -1227,7 +1227,7 @@ class LoginUserOperationExecutorTests : FunSpec({
                 listOf(LoginUserOperation(appId, localOneSignalId, "externalId", null, OneSignalUserProfile(email = "a@b.com"))),
             )
 
-        response.result shouldBe ExecutionResult.FAIL_NORETRY
+        response.result shouldBe ExecutionResult.FAIL_PAUSE_OPREPO
         response.httpStatusCode shouldBe 404
     }
 

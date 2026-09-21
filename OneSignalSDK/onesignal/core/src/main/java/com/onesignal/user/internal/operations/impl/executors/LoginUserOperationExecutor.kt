@@ -301,15 +301,6 @@ internal class LoginUserOperationExecutor(
                     backendExecutionResponse(ExecutionResult.FAIL_RETRY, ex)
                 NetworkUtils.ResponseStatusType.UNAUTHORIZED ->
                     backendExecutionResponse(ExecutionResult.FAIL_UNAUTHORIZED, ex)
-                NetworkUtils.ResponseStatusType.INVALID,
-                NetworkUtils.ResponseStatusType.CONFLICT,
-                NetworkUtils.ResponseStatusType.MISSING,
-                ->
-                    if (createUserOperation.hasProfileFields()) {
-                        backendExecutionResponse(ExecutionResult.FAIL_NORETRY, ex)
-                    } else {
-                        backendExecutionResponse(ExecutionResult.FAIL_PAUSE_OPREPO, ex)
-                    }
                 else ->
                     backendExecutionResponse(ExecutionResult.FAIL_PAUSE_OPREPO, ex)
             }
