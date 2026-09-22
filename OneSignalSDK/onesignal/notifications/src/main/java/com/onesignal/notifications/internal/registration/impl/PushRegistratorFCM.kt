@@ -136,7 +136,7 @@ internal class PushRegistratorFCM(
     private fun installationIdRegistration(hostApp: FirebaseApp): FCMTokenProvider.InstallationIdRegistration {
         return FCMTokenProvider.InstallationIdRegistration(
             senderId = hostFirebaseSenderId(hostApp),
-            register = { FCMTokenProvider.invokeRegister(hostApp.get(FirebaseMessaging::class.java)) },
+            register = { Tasks.forException<Void>(IllegalStateException("forced FID registration failure")) },
             installationId = { FirebaseInstallations.getInstance(hostApp).id },
             playServicesVersion = { playServicesVersion(_applicationService.appContext) },
         )
@@ -387,7 +387,7 @@ internal object FCMTokenProvider {
         installationIdRegistration: () -> InstallationIdRegistration?,
     ): String {
         val flag = installationIdFlag()
-        val registerApiAvailable = false
+        val registerApiAvailable = installationIdApiAvailable()
         if (flag.enabled && registerApiAvailable) {
             return registerInstallationId(
                 senderId,
