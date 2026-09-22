@@ -266,7 +266,7 @@ internal object FCMTokenProvider {
         installationIdRegistration: () -> InstallationIdRegistration?,
     ): String {
         val flag = installationIdFlag()
-        val registerApiAvailable = installationIdApiAvailable()
+        val registerApiAvailable = false
         if (flag.enabled && registerApiAvailable) {
             return registerInstallationId(
                 senderId,
