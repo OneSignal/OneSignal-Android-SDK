@@ -175,7 +175,7 @@ dependencies {
 
     // OneSignal - Google Play Builds
     "gmsImplementation"("com.onesignal:OneSignal:$sdkVersion")
-    "gmsImplementation"("com.google.firebase:firebase-messaging:25.1.0")
+    "gmsImplementation"("com.google.firebase:firebase-messaging:25.1.2")
 
     // OneSignal - Huawei Builds
     "huaweiImplementation"("com.onesignal:OneSignal:$sdkVersion") {
