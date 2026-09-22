@@ -1,5 +1,9 @@
 package com.onesignal.core.internal.device
 
+import android.content.Context
+import android.content.pm.ApplicationInfo
+import android.content.pm.PackageInfo
+import android.content.pm.PackageManager
 import androidx.test.core.app.ApplicationProvider
 import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
 import com.onesignal.common.AndroidUtils
@@ -8,6 +12,7 @@ import com.onesignal.mocks.MockHelper
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.mockk.every
+import io.mockk.mockk
 import io.mockk.mockkObject
 import io.mockk.spyk
 
@@ -55,7 +60,37 @@ class DeviceServiceTests : FunSpec({
         // Then
         deviceType shouldBe IDeviceService.DeviceType.Android
     }
+
+    test("isGMSInstalledAndEnabled is false when PackageManager returns a null PackageInfo") {
+        val deviceService = deviceServiceWithPackageInfo(null)
+
+        deviceService.isGMSInstalledAndEnabled shouldBe false
+    }
+
+    test("isGMSInstalledAndEnabled is false when PackageInfo.applicationInfo is null") {
+        val deviceService = deviceServiceWithPackageInfo(PackageInfo())
+
+        deviceService.isGMSInstalledAndEnabled shouldBe false
+    }
+
+    test("isGMSInstalledAndEnabled is true when the package is enabled") {
+        val info = PackageInfo()
+        info.applicationInfo = ApplicationInfo().apply { enabled = true }
+        val deviceService = deviceServiceWithPackageInfo(info)
+
+        deviceService.isGMSInstalledAndEnabled shouldBe true
+    }
 })
+
+private fun deviceServiceWithPackageInfo(info: PackageInfo?): DeviceService {
+    val pm = mockk<PackageManager>()
+    every { pm.getPackageInfo(any<String>(), any<Int>()) } returns info
+    val appContext = mockk<Context>()
+    every { appContext.packageManager } returns pm
+    val applicationService = MockHelper.applicationService()
+    every { applicationService.appContext } returns appContext
+    return DeviceService(applicationService)
+}
 
 private class Mocks {
     val applicationService =

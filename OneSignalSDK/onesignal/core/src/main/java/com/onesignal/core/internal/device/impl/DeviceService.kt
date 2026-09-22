@@ -100,8 +100,11 @@ internal class DeviceService(private val _applicationService: IApplicationServic
         return try {
             val pm = _applicationService.appContext.packageManager
             val info = pm.getPackageInfo(packageName, PackageManager.GET_META_DATA)
-            info.applicationInfo.enabled
+            // OEM PackageManager can return a null PackageInfo, or throw NPE, instead of NameNotFoundException.
+            info?.applicationInfo?.enabled == true
         } catch (e: PackageManager.NameNotFoundException) {
+            false
+        } catch (e: NullPointerException) {
             false
         }
     }
