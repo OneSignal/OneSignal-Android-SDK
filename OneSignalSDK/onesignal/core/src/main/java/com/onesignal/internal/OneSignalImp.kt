@@ -475,9 +475,17 @@ internal class OneSignalImp : IOneSignal,
 
         waitForInit(operationName = "login")
 
+        if (rejectEmptyExternalId(externalId)) return
+
         val context = loginHelper.switchUser(externalId, jwtBearerToken) ?: return
 
         suspendifyOnIO { loginHelper.enqueueLogin(context) }
+    }
+
+    private fun rejectEmptyExternalId(externalId: String): Boolean {
+        if (externalId.isNotEmpty()) return false
+        Logging.error("OneSignal.login called with empty externalId. This is not allowed.")
+        return true
     }
 
     override fun logout() {
@@ -800,6 +808,8 @@ internal class OneSignalImp : IOneSignal,
         // suspendUntilInit throws on NOT_STARTED / FAILED (preserving initFailureException as the
         // cause), and only returns once initState == SUCCESS — so no post-check is needed here.
         suspendUntilInit(operationName = "login")
+
+        if (rejectEmptyExternalId(externalId)) return@withContext
 
         val context = loginHelper.switchUser(externalId, jwtBearerToken) ?: return@withContext
         loginHelper.enqueueLogin(context)
