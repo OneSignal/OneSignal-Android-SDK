@@ -8,6 +8,7 @@ import com.onesignal.common.AndroidUtils
 import com.onesignal.common.DeviceUtils
 import com.onesignal.common.OneSignalUtils
 import com.onesignal.common.modules.IModule
+import com.onesignal.common.rejectNullOrEmpty
 import com.onesignal.common.services.IServiceProvider
 import com.onesignal.common.services.ServiceBuilder
 import com.onesignal.common.services.ServiceProvider
@@ -340,6 +341,8 @@ internal class OneSignalImp : IOneSignal,
     ): Boolean {
         Logging.log(LogLevel.DEBUG, "Calling deprecated initWithContext(context: $context, appId: $appId)")
 
+        if (rejectNullOrEmpty(appId, "initialize: appId")) return false
+
         // Warm OneSignalDispatchers on a dedicated daemon thread so the first production caller
         // of suspendifyOnIO / launchOnSerialIO doesn't pay the ThreadPoolExecutor + dispatcher +
         // scope construction cost on the main thread (observed as 5-20s main-thread blocks at the
@@ -475,17 +478,11 @@ internal class OneSignalImp : IOneSignal,
 
         waitForInit(operationName = "login")
 
-        if (rejectEmptyExternalId(externalId)) return
+        if (rejectNullOrEmpty(externalId, "login: externalId")) return
 
         val context = loginHelper.switchUser(externalId, jwtBearerToken) ?: return
 
         suspendifyOnIO { loginHelper.enqueueLogin(context) }
-    }
-
-    private fun rejectEmptyExternalId(externalId: String): Boolean {
-        if (externalId.isNotEmpty()) return false
-        Logging.error("OneSignal.login called with empty externalId. This is not allowed.")
-        return true
     }
 
     override fun logout() {
@@ -753,6 +750,8 @@ internal class OneSignalImp : IOneSignal,
     ): Boolean {
         Logging.log(LogLevel.DEBUG, "initWithContext(context: $context, appId: $appId)")
 
+        if (appId != null && rejectNullOrEmpty(appId, "initialize: appId")) return false
+
         // Same warm-up as the synchronous variant. Reaching this entry point on the main thread
         // (e.g. SyncJobService.onStartJob -> suspendifyOnIO -> initWithContext(context)) pays the
         // cold-init cost on the dispatcher used to enter [withContext] below, so warm
@@ -809,7 +808,7 @@ internal class OneSignalImp : IOneSignal,
         // cause), and only returns once initState == SUCCESS — so no post-check is needed here.
         suspendUntilInit(operationName = "login")
 
-        if (rejectEmptyExternalId(externalId)) return@withContext
+        if (rejectNullOrEmpty(externalId, "login: externalId")) return@withContext
 
         val context = loginHelper.switchUser(externalId, jwtBearerToken) ?: return@withContext
         loginHelper.enqueueLogin(context)

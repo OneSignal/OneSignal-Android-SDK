@@ -11,6 +11,9 @@ import com.onesignal.common.events.EventProducer
 import com.onesignal.common.exceptions.BackendException
 import com.onesignal.common.modeling.ISingletonModelStoreChangeHandler
 import com.onesignal.common.modeling.ModelChangedArgs
+import com.onesignal.common.rejectNullOrEmpty
+import com.onesignal.common.rejectNullOrEmptyAny
+import com.onesignal.common.rejectNullOrEmptyEntries
 import com.onesignal.common.threading.suspendifyOnDefault
 import com.onesignal.common.threading.suspendifyOnIO
 import com.onesignal.common.threading.suspendifyOnMain
@@ -687,6 +690,8 @@ internal class InAppMessagesManager(
     override fun addTriggers(triggers: Map<String, String>) {
         Logging.debug("InAppMessagesManager.addTriggers(triggers: $triggers)")
 
+        if (rejectNullOrEmptyEntries(triggers, "addTriggers", allowEmptyValue = true)) return
+
         triggers.forEach { addTrigger(it.key, it.value) }
     }
 
@@ -695,6 +700,8 @@ internal class InAppMessagesManager(
         value: String,
     ) {
         Logging.debug("InAppMessagesManager.addTrigger(key: $key, value: $value)")
+
+        if (rejectNullOrEmpty(key, "addTrigger: key")) return
 
         // Track triggers added early on cold start (before first fetch completes) for redisplay logic
         synchronized(earlySessionTriggers) {
@@ -721,11 +728,15 @@ internal class InAppMessagesManager(
     override fun removeTriggers(keys: Collection<String>) {
         Logging.debug("InAppMessagesManager.removeTriggers(keys: $keys)")
 
+        if (rejectNullOrEmptyAny(keys, "removeTriggers: key")) return
+
         keys.forEach { removeTrigger(it) }
     }
 
     override fun removeTrigger(key: String) {
         Logging.debug("InAppMessagesManager.removeTrigger(key: $key)")
+
+        if (rejectNullOrEmpty(key, "removeTrigger: key")) return
 
         synchronized(earlySessionTriggers) {
             if (!hasCompletedFirstFetch) {
