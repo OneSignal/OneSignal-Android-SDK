@@ -171,7 +171,7 @@ class SubscriptionManagerTests : FunSpec({
         }
     }
 
-    test("update push subscription updates model store") {
+    test("changed push token updates the existing subscription instead of adding another") {
         // Given
         val mockSubscriptionModelStore = mockk<SubscriptionModelStore>()
         val mockApplicationService = mockk<IApplicationService>()
@@ -198,8 +198,10 @@ class SubscriptionManagerTests : FunSpec({
         subscriptionManager.addOrUpdatePushSubscriptionToken("pushToken2", SubscriptionStatus.SUBSCRIBED)
 
         // Then
+        pushSubscription.id shouldBe "subscription1"
         pushSubscription.address shouldBe "pushToken2"
         pushSubscription.status shouldBe SubscriptionStatus.SUBSCRIBED
+        verify(exactly = 0) { mockSubscriptionModelStore.add(any()) }
     }
 
     test("remove email subscription removes from model store") {

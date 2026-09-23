@@ -11,6 +11,7 @@ import com.onesignal.common.AndroidUtils
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.device.IDeviceService
+import com.onesignal.debug.internal.logging.Logging
 import java.io.IOException
 import java.lang.reflect.InvocationTargetException
 import java.util.concurrent.ExecutionException
@@ -60,7 +61,7 @@ internal class PushRegistratorFCM(
         return FCMTokenProvider.getToken(
             senderId = senderId,
             installationIdFlag = ::installationIdFlag,
-            legacyToken = { getLegacyToken(senderId) },
+            legacyToken = { getLegacyToken(senderId, hostApp) },
             installationIdApiAvailable = { FCMTokenProvider.hasRegisterMethod(FirebaseMessaging::class.java) },
             installationIdRegistration = { hostApp?.let(::installationIdRegistration) },
         )
@@ -69,11 +70,16 @@ internal class PushRegistratorFCM(
     override fun resolveSenderId(configuredSenderId: String?): String? =
         configuredSenderId ?: hostFirebaseApp()?.let(::hostFirebaseSenderId)
 
-    private fun getLegacyToken(senderId: String): Task<String> {
-        val app = initFirebaseApp(senderId)
-        // We use the named app's FirebaseMessaging instance instead of FirebaseMessaging.getInstance()
-        //   as the latter uses the default Firebase app. We need to use a custom Firebase app as
-        //   the senderId is provided at runtime.
+    private fun getLegacyToken(
+        senderId: String,
+        hostApp: FirebaseApp?,
+    ): Task<String> {
+        val app =
+            hostApp?.takeIf { FCMLegacyAppSelector.matches(it.options, senderId) }
+                ?: run {
+                    Logging.warn(FCMLegacyAppSelector.fallbackMessage(hostApp?.options, senderId))
+                    initFirebaseApp(senderId)
+                }
         return app.get(FirebaseMessaging::class.java).token
     }
 
@@ -183,6 +189,41 @@ private fun requireInstallationIdRegisterApi(diagnostics: FCMInstallationIdDiagn
                 "firebase_messaging_installation_id_enabled through manifest merging, " +
                 "override it to false in your application manifest to use the legacy FCM token API.",
         )
+    }
+}
+
+internal object FCMLegacyAppSelector {
+    private const val MIN_FIREBASE_APPLICATION_ID_PARTS = 4
+
+    fun matches(
+        options: FirebaseOptions,
+        senderId: String,
+    ): Boolean =
+        options.gcmSenderId == senderId &&
+            legacyApplicationIdProjectNumber(options.applicationId) == senderId
+
+    fun fallbackMessage(
+        options: FirebaseOptions?,
+        senderId: String,
+    ): String {
+        val reason =
+            when {
+                options == null -> "the default FirebaseApp is absent"
+                options.gcmSenderId != senderId ->
+                    "its gcmSenderId (${options.gcmSenderId}) does not match $senderId"
+                legacyApplicationIdProjectNumber(options.applicationId) == null ->
+                    "its applicationId (${options.applicationId}) has no parseable project number"
+                else ->
+                    "its applicationId project number " +
+                        "(${legacyApplicationIdProjectNumber(options.applicationId)}) does not match $senderId"
+            }
+        return "FCM legacy token registration is using OneSignal's FirebaseApp because $reason."
+    }
+
+    private fun legacyApplicationIdProjectNumber(applicationId: String): String? {
+        val parts = applicationId.split(":")
+        if (parts.size < MIN_FIREBASE_APPLICATION_ID_PARTS || parts[0] != "1" || parts[2] != "android") return null
+        return parts[1].takeIf { it.isNotEmpty() && it.all(Char::isDigit) }
     }
 }
 
