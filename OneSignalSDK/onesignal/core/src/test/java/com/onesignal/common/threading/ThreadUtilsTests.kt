@@ -139,6 +139,25 @@ class ThreadUtilsTests : FunSpec({
         onCompleteCalled shouldBe true
     }
 
+    test("suspendifyWithCompletion should execute onComplete when block throws") {
+        val latch = CountDownLatch(1)
+        var onCompleteCalled = false
+
+        suspendifyWithCompletion(
+            useIO = true,
+            block = {
+                throw RuntimeException("Test error")
+            },
+            onComplete = {
+                onCompleteCalled = true
+                latch.countDown()
+            },
+        )
+
+        latch.await()
+        onCompleteCalled shouldBe true
+    }
+
     test("suspendifyWithErrorHandling should handle errors properly") {
         var errorHandled = false
         var onCompleteCalled = false
