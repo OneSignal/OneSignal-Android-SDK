@@ -27,39 +27,18 @@ package com.onesignal.notifications.receivers
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import com.onesignal.OneSignal
-import com.onesignal.common.threading.OneSignalDispatchers
-import com.onesignal.common.threading.suspendifyOnIO
-import com.onesignal.debug.internal.logging.Logging
-import com.onesignal.notifications.internal.open.INotificationOpenedProcessor
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import com.onesignal.notifications.internal.ingress.NotificationIngress
 
 class NotificationDismissReceiver : BroadcastReceiver() {
     override fun onReceive(
         context: Context,
         intent: Intent,
     ) {
-        // A dismiss can cold-start the process before initWithContext. Warm dispatchers before
-        // goAsync() so the daemon has lead time before the first suspendifyOnIO dispatch.
-        OneSignalDispatchers.prewarm()
-
-        val pendingResult: BroadcastReceiver.PendingResult? = goAsync()
-
-        suspendifyOnIO {
-            if (!OneSignal.initWithContext(context.applicationContext)) {
-                Logging.warn("NotificationOpenedReceiver skipped due to failed OneSignal init")
-                pendingResult?.finish()
-                return@suspendifyOnIO
-            }
-
-            val notificationOpenedProcessor = OneSignal.getService<INotificationOpenedProcessor>()
-
-            // init OneSignal in background but process in main
-            withContext(Dispatchers.Main) {
-                notificationOpenedProcessor.processFromContext(context, intent)
-            }
-            pendingResult?.finish()
+        runIngressHandoff(
+            "NotificationDismissReceiver",
+            BroadcastCompletion.RECONSTRUCTIBLE_WORK_TIMEOUT_MS,
+        ) {
+            NotificationIngress.persistDismiss(context, intent)
         }
     }
 }
