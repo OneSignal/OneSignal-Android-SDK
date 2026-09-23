@@ -97,7 +97,7 @@ private fun fidRegistration(
     mockkObject(AndroidUtils)
     every { AndroidUtils.getManifestMetaBundle(any()) } returns metaData
     val messaging = mockk<FirebaseMessaging>()
-    val app = defaultApp(SENDER_ID, messaging)
+    val app = defaultApp(SENDER_ID, messaging = messaging)
     val installations = mockk<FirebaseInstallations>()
     every { installations.id } returns installationId
     mockkStatic(FirebaseInstallations::class)
