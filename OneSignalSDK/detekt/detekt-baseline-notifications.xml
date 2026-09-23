@@ -245,6 +245,7 @@
     <ID>TooGenericExceptionCaught:NotificationDisplayBuilder.kt$NotificationDisplayBuilder$t: Throwable</ID>
     <ID>TooGenericExceptionCaught:NotificationDisplayer.kt$NotificationDisplayer$t: Throwable</ID>
     <ID>TooGenericExceptionCaught:NotificationGenerationProcessor.kt$NotificationGenerationProcessor$t: Throwable</ID>
+    <ID>TooGenericExceptionCaught:NotificationGenerationWorkManager.kt$NotificationGenerationWorkManager$e: Exception</ID>
     <ID>TooGenericExceptionCaught:NotificationHelper.kt$NotificationHelper$e: Throwable</ID>
     <ID>TooGenericExceptionCaught:NotificationHelper.kt$NotificationHelper$t: Throwable</ID>
     <ID>TooGenericExceptionCaught:NotificationLimitManager.kt$NotificationLimitManager$t: Throwable</ID>

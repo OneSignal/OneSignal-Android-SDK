@@ -30,11 +30,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.os.Build
-import com.onesignal.OneSignal
-import com.onesignal.common.threading.OneSignalDispatchers
-import com.onesignal.common.threading.suspendifyOnIO
-import com.onesignal.debug.internal.logging.Logging
-import com.onesignal.notifications.internal.restoration.INotificationRestoreWorkManager
+import com.onesignal.notifications.internal.ingress.NotificationIngress
 
 class UpgradeReceiver : BroadcastReceiver() {
     override fun onReceive(
@@ -49,23 +45,12 @@ class UpgradeReceiver : BroadcastReceiver() {
             return
         }
 
-        // App upgrade can cold-start the process before initWithContext. Warm dispatchers before
-        // goAsync() so the daemon has lead time before the first suspendifyOnIO dispatch.
-        OneSignalDispatchers.prewarm()
-
-        val pendingResult: BroadcastReceiver.PendingResult? = goAsync()
-
-        // init OneSignal and enqueue restore work in background
-        suspendifyOnIO {
-            if (!OneSignal.initWithContext(context.applicationContext)) {
-                Logging.warn("UpgradeReceiver skipped due to failed OneSignal init")
-                pendingResult?.finish()
-                return@suspendifyOnIO
-            }
-
-            val restoreWorkManager = OneSignal.getService<INotificationRestoreWorkManager>()
-            restoreWorkManager.beginEnqueueingWork(context, true)
-            pendingResult?.finish()
+        // Persist the reconstructible restore request without waiting for full SDK initialization.
+        runIngressHandoff(
+            "UpgradeReceiver",
+            BroadcastCompletion.RECONSTRUCTIBLE_WORK_TIMEOUT_MS,
+        ) {
+            NotificationIngress.enqueueRestore(context)
         }
     }
 }
