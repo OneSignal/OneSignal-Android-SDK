@@ -82,6 +82,12 @@ private class FidRegistration(
     val messaging: FirebaseMessaging,
 )
 
+private data class FidFailureCase(
+    val failure: Exception,
+    val expectedStatus: SubscriptionStatus,
+    val expectedAttempts: Int,
+)
+
 private fun fidRegistration(
     registerResult: Task<Void>,
     installationId: Task<String> = Tasks.forResult("installation-id"),
@@ -365,10 +371,26 @@ class PushRegistratorFCMTests : FunSpec({
     }
 
     listOf(
-        Triple(IOException("SERVICE_NOT_AVAILABLE"), SubscriptionStatus.FIREBASE_FCM_ERROR_IOEXCEPTION_SERVICE_NOT_AVAILABLE, 3),
-        Triple(IOException("AUTHENTICATION_FAILED"), SubscriptionStatus.FIREBASE_FCM_ERROR_IOEXCEPTION_AUTHENTICATION_FAILED, 3),
-        Triple(IOException("TOO_MANY_REGISTRATIONS"), SubscriptionStatus.FIREBASE_FCM_ERROR_IOEXCEPTION_OTHER, 1),
-        Triple(IllegalStateException("registration failed"), SubscriptionStatus.FIREBASE_FCM_FID_REGISTRATION_FAILED, 1),
+        FidFailureCase(
+            IOException("SERVICE_NOT_AVAILABLE"),
+            SubscriptionStatus.FIREBASE_FCM_ERROR_IOEXCEPTION_SERVICE_NOT_AVAILABLE,
+            expectedAttempts = 3,
+        ),
+        FidFailureCase(
+            IOException("AUTHENTICATION_FAILED"),
+            SubscriptionStatus.FIREBASE_FCM_ERROR_IOEXCEPTION_AUTHENTICATION_FAILED,
+            expectedAttempts = 3,
+        ),
+        FidFailureCase(
+            IOException("TOO_MANY_REGISTRATIONS"),
+            SubscriptionStatus.FIREBASE_FCM_ERROR_IOEXCEPTION_OTHER,
+            expectedAttempts = 1,
+        ),
+        FidFailureCase(
+            IllegalStateException("registration failed"),
+            SubscriptionStatus.FIREBASE_FCM_FID_REGISTRATION_FAILED,
+            expectedAttempts = 1,
+        ),
     ).forEach { (failure, expectedStatus, expectedAttempts) ->
         test("maps a FID register failure of ${failure.javaClass.simpleName}(${failure.message}) to $expectedStatus") {
             val fid = fidRegistration(registerResult = Tasks.forException(failure))
@@ -394,6 +416,8 @@ class PushRegistratorFCMTests : FunSpec({
 
         result.id shouldBe null
         result.status shouldBe SubscriptionStatus.FIREBASE_FCM_ERROR_IOEXCEPTION_OTHER
+        result.isExistingTokenInvalid shouldBe false
+        verify(exactly = 1) { FCMTokenProvider.invokeRegister(fid.messaging) }
     }
 
     test("reports an invalid sender id when FID registration would use a different Firebase project") {
