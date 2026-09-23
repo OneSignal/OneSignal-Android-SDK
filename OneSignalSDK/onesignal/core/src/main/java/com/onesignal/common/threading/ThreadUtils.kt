@@ -110,7 +110,7 @@ fun runOnSerialIO(block: () -> Unit) {
  *
  * @param useIO Whether to use IO scope (true) or Default scope (false)
  * @param block The suspending code to execute
- * @param onComplete Optional callback to execute after completion
+ * @param onComplete Optional callback that always executes after [block], including on failure.
  */
 fun suspendifyWithCompletion(
     useIO: Boolean = true,
@@ -119,12 +119,20 @@ fun suspendifyWithCompletion(
 ) {
     val launch: (suspend () -> Unit) -> Job =
         if (useIO) OneSignalDispatchers::launchOnIO else OneSignalDispatchers::launchOnDefault
-    launch {
+    val job =
+        launch {
+            try {
+                block()
+            } catch (e: Exception) {
+                Logging.error("Exception in suspendifyWithCompletion", e)
+            }
+        }
+    // invokeOnCompletion also fires when the job is cancelled before its body starts.
+    job.invokeOnCompletion {
         try {
-            block()
             onComplete?.invoke()
         } catch (e: Exception) {
-            Logging.error("Exception in suspendifyWithCompletion", e)
+            Logging.error("Exception in suspendifyWithCompletion onComplete", e)
         }
     }
 }
