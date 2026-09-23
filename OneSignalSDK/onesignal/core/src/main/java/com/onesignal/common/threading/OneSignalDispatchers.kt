@@ -48,6 +48,7 @@ object OneSignalDispatchers {
         "$BASE_THREAD_NAME-Default" // Thread name prefix for CPU operations
     private const val SERIAL_IO_THREAD_NAME =
         "$BASE_THREAD_NAME-SerialIO" // Single, named thread for order-sensitive work
+    private const val INGRESS_THREAD_NAME = "$BASE_THREAD_NAME-Ingress"
 
     private class OptimizedThreadFactory(
         private val namePrefix: String,
@@ -113,6 +114,23 @@ object OneSignalDispatchers {
             }
         val serialIOExecutor: ExecutorService get() = serialIOExecutorLazy.value
 
+        /** Single-thread executor kept separate from [ioExecutor] so receiver handoffs never queue behind SDK HTTP. */
+        val ingressExecutorLazy =
+            lazy {
+                try {
+                    Executors.newSingleThreadExecutor(
+                        OptimizedThreadFactory(
+                            namePrefix = INGRESS_THREAD_NAME,
+                            priority = Thread.NORM_PRIORITY - 1,
+                        ),
+                    )
+                } catch (e: Exception) {
+                    Logging.error("OneSignalDispatchers: Failed to create Ingress executor: ${e.message}")
+                    throw e
+                }
+            }
+        val ingressExecutor: ExecutorService get() = ingressExecutorLazy.value
+
         val defaultExecutorLazy =
             lazy {
                 try {
@@ -163,6 +181,16 @@ object OneSignalDispatchers {
             }
         }
 
+        val Ingress: CoroutineDispatcher by lazy {
+            try {
+                ingressExecutor.asCoroutineDispatcher()
+            } catch (e: Exception) {
+                Logging.error("OneSignalDispatchers: Using fallback serialized Dispatchers.IO for Ingress: ${e.message}")
+                @Suppress("OPT_IN_USAGE")
+                Dispatchers.IO.limitedParallelism(1)
+            }
+        }
+
         val ioScopeLazy = lazy { CoroutineScope(SupervisorJob() + IO) }
         val IOScope: CoroutineScope get() = ioScopeLazy.value
 
@@ -171,6 +199,9 @@ object OneSignalDispatchers {
 
         val serialIOScopeLazy = lazy { CoroutineScope(SupervisorJob() + SerialIO) }
         val SerialIOScope: CoroutineScope get() = serialIOScopeLazy.value
+
+        val ingressScopeLazy = lazy { CoroutineScope(SupervisorJob() + Ingress) }
+        val IngressScope: CoroutineScope get() = ingressScopeLazy.value
 
         /**
          * Cancel scopes and forcibly stop executors for this generation. Only touches what was
@@ -182,9 +213,11 @@ object OneSignalDispatchers {
             if (ioScopeLazy.isInitialized()) runCatching { ioScopeLazy.value.cancel() }
             if (defaultScopeLazy.isInitialized()) runCatching { defaultScopeLazy.value.cancel() }
             if (serialIOScopeLazy.isInitialized()) runCatching { serialIOScopeLazy.value.cancel() }
+            if (ingressScopeLazy.isInitialized()) runCatching { ingressScopeLazy.value.cancel() }
             if (ioExecutorLazy.isInitialized()) runCatching { ioExecutorLazy.value.shutdownNow() }
             if (defaultExecutorLazy.isInitialized()) runCatching { defaultExecutorLazy.value.shutdownNow() }
             if (serialIOExecutorLazy.isInitialized()) runCatching { serialIOExecutorLazy.value.shutdownNow() }
+            if (ingressExecutorLazy.isInitialized()) runCatching { ingressExecutorLazy.value.shutdownNow() }
         }
     }
 
@@ -209,6 +242,11 @@ object OneSignalDispatchers {
     /** Launches [block] on the single-thread serial IO dispatcher (FIFO across all callers). */
     fun launchOnSerialIO(block: suspend () -> Unit): Job {
         return pools.SerialIOScope.launch { block() }
+    }
+
+    /** Launches short durable-ingress work on a pool isolated from general SDK I/O. */
+    fun launchOnIngress(block: suspend () -> Unit): Job {
+        return pools.IngressScope.launch { block() }
     }
 
     @Volatile
@@ -276,7 +314,9 @@ object OneSignalDispatchers {
                     try {
                         // Each launch* call below triggers the corresponding lazy chain
                         // (executor -> dispatcher -> scope) and submits an empty coroutine,
-                        // which forces the worker thread(s) to start as well.
+                        // which forces the worker thread(s) to start as well. Ingress goes first
+                        // because receivers have a ~10s broadcast budget.
+                        launchOnIngress { /* warm IngressScope + ingressExecutor */ }
                         launchOnIO { /* warm IOScope + ioExecutor */ }
                         launchOnDefault { /* warm DefaultScope + defaultExecutor */ }
                         launchOnSerialIO { /* warm SerialIOScope + serialIOExecutor */ }

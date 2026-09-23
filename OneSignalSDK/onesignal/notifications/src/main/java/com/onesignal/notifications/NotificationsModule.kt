@@ -34,6 +34,7 @@ import com.onesignal.notifications.internal.generation.INotificationGenerationPr
 import com.onesignal.notifications.internal.generation.INotificationGenerationWorkManager
 import com.onesignal.notifications.internal.generation.impl.NotificationGenerationProcessor
 import com.onesignal.notifications.internal.generation.impl.NotificationGenerationWorkManager
+import com.onesignal.notifications.internal.ingress.NotificationIngressDrainStarter
 import com.onesignal.notifications.internal.lifecycle.INotificationLifecycleService
 import com.onesignal.notifications.internal.lifecycle.impl.NotificationLifecycleService
 import com.onesignal.notifications.internal.limiting.INotificationLimitManager
@@ -141,6 +142,7 @@ internal class NotificationsModule : IModule {
 
         // Startable services
         builder.register<DeviceRegistrationListener>().provides<IStartableService>()
+        builder.register<NotificationIngressDrainStarter>().provides<IStartableService>()
 
         builder.register<NotificationsManager>()
             .provides<INotificationsManager>()

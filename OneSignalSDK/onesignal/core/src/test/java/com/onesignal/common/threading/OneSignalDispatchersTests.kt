@@ -10,6 +10,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
 class OneSignalDispatchersTests : FunSpec({
@@ -22,6 +23,35 @@ class OneSignalDispatchersTests : FunSpec({
         // Access dispatchers to trigger initialization
         OneSignalDispatchers.IO shouldNotBe null
         OneSignalDispatchers.Default shouldNotBe null
+    }
+
+    test("ingress work runs while every IO worker is blocked") {
+        OneSignalDispatchers.resetForTest()
+        val releaseIo = CountDownLatch(1)
+        val ioWorkersBlocked = CountDownLatch(2)
+        val ingressRan = CountDownLatch(1)
+        var ingressThreadName: String? = null
+
+        repeat(2) {
+            OneSignalDispatchers.launchOnIO {
+                ioWorkersBlocked.countDown()
+                releaseIo.await()
+            }
+        }
+        ioWorkersBlocked.await(1, TimeUnit.SECONDS) shouldBe true
+
+        OneSignalDispatchers.launchOnIngress {
+            ingressThreadName = Thread.currentThread().name
+            ingressRan.countDown()
+        }
+
+        try {
+            ingressRan.await(1, TimeUnit.SECONDS) shouldBe true
+            ingressThreadName shouldContain "OneSignal-Ingress"
+        } finally {
+            releaseIo.countDown()
+            OneSignalDispatchers.resetForTest()
+        }
     }
 
     test("IO dispatcher should execute work on background thread") {
