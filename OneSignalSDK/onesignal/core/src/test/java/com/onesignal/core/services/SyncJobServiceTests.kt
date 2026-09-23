@@ -3,7 +3,6 @@ package com.onesignal.core.services
 import android.app.job.JobParameters
 import com.onesignal.OneSignal
 import com.onesignal.common.threading.OneSignalDispatchers
-import com.onesignal.common.threading.suspendifyOnIO
 import com.onesignal.core.internal.background.IBackgroundManager
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
@@ -15,12 +14,15 @@ import io.mockk.clearMocks
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
+import io.mockk.just
 import io.mockk.mockk
 import io.mockk.mockkObject
+import io.mockk.runs
 import io.mockk.spyk
 import io.mockk.unmockkObject
 import io.mockk.verify
 import io.mockk.verifyOrder
+import kotlinx.coroutines.runBlocking
 
 private class Mocks {
     val syncJobService = spyk(SyncJobService(), recordPrivateCalls = true)
@@ -36,6 +38,7 @@ class SyncJobServiceTests : FunSpec({
     beforeAny {
         Logging.logLevel = LogLevel.NONE
         mocks = Mocks() // fresh instance for each test
+        every { mocks.syncJobService.jobFinished(any(), any()) } just runs
         mockkObject(OneSignal)
         every { OneSignal.getService<IBackgroundManager>() } returns mocks.mockBackgroundManager
         // IOMockHelper owns the OneSignalDispatchers object mock (incl. the prewarm() stub) for the
@@ -51,7 +54,7 @@ class SyncJobServiceTests : FunSpec({
         unmockkObject(OneSignal)
     }
 
-    test("onStartJob calls prewarm before suspendifyOnIO") {
+    test("onStartJob calls prewarm before launchOnIO") {
         coEvery { OneSignal.initWithContext(any()) } returns false
 
         mocks.syncJobService.onStartJob(mocks.jobParameters)
@@ -61,7 +64,7 @@ class SyncJobServiceTests : FunSpec({
         // would already be paid on the caller (main) thread by the time the helper is entered.
         verifyOrder {
             OneSignalDispatchers.prewarm()
-            suspendifyOnIO(any<suspend () -> Unit>())
+            OneSignalDispatchers.launchOnIO(any<suspend () -> Unit>())
         }
     }
 
@@ -157,44 +160,50 @@ class SyncJobServiceTests : FunSpec({
         verify { mockBackgroundManager.needsJobReschedule = false }
     }
 
-    test("onStopJob returns false when OneSignal.getService throws") {
-        // Given
-        val syncJobService = mocks.syncJobService
-        val jobParameters = mocks.jobParameters
-        coEvery { OneSignal.getService<Any>() } throws NullPointerException()
+    test("onStopJob matches distinct parameters by job id and cancels the owned coroutine") {
+        val job = mockk<kotlinx.coroutines.Job>(relaxed = true)
+        val stopParameters = mockk<JobParameters>(relaxed = true)
+        every { mocks.jobParameters.jobId } returns 42
+        every { stopParameters.jobId } returns 42
+        every { OneSignalDispatchers.launchOnIO(any<suspend () -> Unit>()) } returns job
 
-        // When
-        val result = syncJobService.onStopJob(jobParameters)
+        mocks.syncJobService.onStartJob(mocks.jobParameters)
+        val result = mocks.syncJobService.onStopJob(stopParameters)
 
-        // Then
-        result shouldBe false
-    }
-
-    test("onStopJob calls cancelRunBackgroundServices and returns its result") {
-        // Given
-        val mockBackgroundManager = mocks.mockBackgroundManager
-        val syncJobService = mocks.syncJobService
-        val jobParameters = mocks.jobParameters
-        every { mockBackgroundManager.cancelRunBackgroundServices() } returns true
-
-        // When
-        val result = syncJobService.onStopJob(jobParameters)
-
-        // Then
         result shouldBe true
-        verify { mockBackgroundManager.cancelRunBackgroundServices() }
+        verify { job.cancel() }
+        verify(exactly = 0) { OneSignal.getService<IBackgroundManager>() }
+        every { OneSignalDispatchers.launchOnIO(any<suspend () -> Unit>()) } answers {
+            runBlocking { firstArg<suspend () -> Unit>().invoke() }
+            mockk(relaxed = true)
+        }
     }
 
-    test("onStopJob returns false when cancelRunBackgroundServices returns false") {
-        // Given
-        val mockBackgroundManager = mocks.mockBackgroundManager
-        every { mockBackgroundManager.cancelRunBackgroundServices() } returns false
+    test("onStopJob returns false when no run is active") {
+        mocks.syncJobService.onStopJob(mocks.jobParameters) shouldBe false
+    }
 
-        // When
-        val result = mocks.syncJobService.onStopJob(mocks.jobParameters)
+    test("onStopJob does not cancel a different job id") {
+        val job = mockk<kotlinx.coroutines.Job>(relaxed = true)
+        val stopParameters = mockk<JobParameters>(relaxed = true)
+        every { mocks.jobParameters.jobId } returns 42
+        every { stopParameters.jobId } returns 43
+        every { OneSignalDispatchers.launchOnIO(any<suspend () -> Unit>()) } returns job
 
-        // Then
-        result shouldBe false
-        verify { mockBackgroundManager.cancelRunBackgroundServices() }
+        mocks.syncJobService.onStartJob(mocks.jobParameters)
+
+        mocks.syncJobService.onStopJob(stopParameters) shouldBe false
+        verify(exactly = 0) { job.cancel() }
+        every { OneSignalDispatchers.launchOnIO(any<suspend () -> Unit>()) } answers {
+            runBlocking { firstArg<suspend () -> Unit>().invoke() }
+            mockk(relaxed = true)
+        }
+    }
+
+    test("onStopJob does not reschedule a run that already completed") {
+        coEvery { OneSignal.initWithContext(any()) } returns false
+        mocks.syncJobService.onStartJob(mocks.jobParameters)
+
+        mocks.syncJobService.onStopJob(mocks.jobParameters) shouldBe false
     }
 })
