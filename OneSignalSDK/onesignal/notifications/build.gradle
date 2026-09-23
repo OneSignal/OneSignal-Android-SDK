@@ -117,6 +117,7 @@ dependencies {
     testImplementation("androidx.test:core:1.4.0")
     testImplementation("io.mockk:mockk:1.13.2")
     testImplementation("org.jetbrains.kotlin:kotlin-reflect:$kotlinVersion")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:$coroutinesVersion")
 
     // com.tdunning:json is needed for non-Robolectric tests.
     testImplementation("com.tdunning:json:$tdunningJsonForTest")

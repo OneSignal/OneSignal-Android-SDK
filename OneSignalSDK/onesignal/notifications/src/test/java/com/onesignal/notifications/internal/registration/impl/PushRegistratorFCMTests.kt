@@ -15,6 +15,7 @@ import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.device.IDeviceService
 import com.onesignal.mocks.MockHelper
+import com.onesignal.notifications.internal.registration.IPushRegistrator
 import com.onesignal.user.internal.subscriptions.SubscriptionStatus
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.FunSpec
@@ -27,7 +28,9 @@ import io.mockk.mockkStatic
 import io.mockk.unmockkAll
 import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withContext
+import java.io.IOException
 
 private const val SENDER_ID = "123456789012"
 
@@ -73,6 +76,59 @@ private fun registrator(
         deviceService,
     )
 }
+
+private class FidRegistration(
+    val registrator: PushRegistratorFCM,
+    val messaging: FirebaseMessaging,
+)
+
+private data class FidFailureCase(
+    val failure: Exception,
+    val expectedStatus: SubscriptionStatus,
+    val expectedAttempts: Int,
+)
+
+private fun fidRegistration(
+    registerResult: Task<Void>,
+    installationId: Task<String> = Tasks.forResult("installation-id"),
+): FidRegistration {
+    val metaData = Bundle().apply { putBoolean("firebase_messaging_installation_id_enabled", true) }
+    mockkObject(AndroidUtils)
+    every { AndroidUtils.getManifestMetaBundle(any()) } returns metaData
+    val messaging = mockk<FirebaseMessaging>()
+    val app = defaultApp(SENDER_ID, messaging)
+    val installations = mockk<FirebaseInstallations>()
+    every { installations.id } returns installationId
+    mockkStatic(FirebaseInstallations::class)
+    every { FirebaseInstallations.getInstance(app) } returns installations
+    mockkObject(FCMTokenProvider)
+    every { FCMTokenProvider.hasRegisterMethod(FirebaseMessaging::class.java) } returns true
+    every { FCMTokenProvider.invokeRegister(messaging) } returns registerResult
+    val configModelStore =
+        MockHelper.configModelStore {
+            it.isInitializedWithRemote = true
+            it.googleProjectNumber = SENDER_ID
+        }
+    val deviceService = mockk<IDeviceService>()
+    every { deviceService.hasFCMLibrary } returns true
+    every { deviceService.isGMSInstalledAndEnabled } returns true
+    val registrator =
+        registrator(
+            legacyToken = Tasks.forResult("unused-fcm-token"),
+            installedApps = listOf(app),
+            configModelStore = configModelStore,
+            deviceService = deviceService,
+        )
+    return FidRegistration(registrator, messaging)
+}
+
+// Tasks.await rejects the main thread, and runTest skips the registrator's retry backoff delays.
+private suspend fun registerSkippingBackoff(registrator: PushRegistratorFCM): IPushRegistrator.RegisterResult =
+    withContext(Dispatchers.IO) {
+        lateinit var result: IPushRegistrator.RegisterResult
+        runTest { result = registrator.registerForPush() }
+        result
+    }
 
 @RobolectricTest
 class PushRegistratorFCMTests : FunSpec({
@@ -312,6 +368,56 @@ class PushRegistratorFCMTests : FunSpec({
         result.id shouldBe null
         result.status shouldBe SubscriptionStatus.FIREBASE_FCM_FID_REGISTRATION_FAILED
         result.isExistingTokenInvalid shouldBe false
+    }
+
+    listOf(
+        FidFailureCase(
+            IOException("SERVICE_NOT_AVAILABLE"),
+            SubscriptionStatus.FIREBASE_FCM_ERROR_IOEXCEPTION_SERVICE_NOT_AVAILABLE,
+            expectedAttempts = 3,
+        ),
+        FidFailureCase(
+            IOException("AUTHENTICATION_FAILED"),
+            SubscriptionStatus.FIREBASE_FCM_ERROR_IOEXCEPTION_AUTHENTICATION_FAILED,
+            expectedAttempts = 3,
+        ),
+        FidFailureCase(
+            IOException("TOO_MANY_REGISTRATIONS"),
+            SubscriptionStatus.FIREBASE_FCM_ERROR_IOEXCEPTION_OTHER,
+            expectedAttempts = 1,
+        ),
+        FidFailureCase(
+            IllegalStateException("registration failed"),
+            SubscriptionStatus.FIREBASE_FCM_FID_REGISTRATION_FAILED,
+            expectedAttempts = 1,
+        ),
+    ).forEach { (failure, expectedStatus, expectedAttempts) ->
+        test("maps a FID register failure of ${failure.javaClass.simpleName}(${failure.message}) to $expectedStatus") {
+            val fid = fidRegistration(registerResult = Tasks.forException(failure))
+
+            val result = registerSkippingBackoff(fid.registrator)
+
+            result.id shouldBe null
+            result.status shouldBe expectedStatus
+            result.isExistingTokenInvalid shouldBe false
+            verify(exactly = expectedAttempts) { FCMTokenProvider.invokeRegister(fid.messaging) }
+            verify(exactly = 0) { FirebaseApp.initializeApp(any(), any<FirebaseOptions>(), any()) }
+        }
+    }
+
+    test("maps an IOException from FID retrieval to the IOException status instead of a FID registration failure") {
+        val fid =
+            fidRegistration(
+                registerResult = Tasks.forResult(null),
+                installationId = Tasks.forException(IOException("INTERNAL_SERVER_ERROR")),
+            )
+
+        val result = registerSkippingBackoff(fid.registrator)
+
+        result.id shouldBe null
+        result.status shouldBe SubscriptionStatus.FIREBASE_FCM_ERROR_IOEXCEPTION_OTHER
+        result.isExistingTokenInvalid shouldBe false
+        verify(exactly = 1) { FCMTokenProvider.invokeRegister(fid.messaging) }
     }
 
     test("reports an invalid sender id when FID registration would use a different Firebase project") {
