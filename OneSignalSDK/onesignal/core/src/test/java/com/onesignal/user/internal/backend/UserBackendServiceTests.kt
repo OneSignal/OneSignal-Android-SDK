@@ -25,7 +25,7 @@ class UserBackendServiceTests : FunSpec({
         coEvery { spyHttpClient.post(any(), any(), any()) } returns HttpResponse(403, "FORBIDDEN")
         val userBackendService = UserBackendService(spyHttpClient)
         val identities = mapOf<String, String>()
-        val properties = mapOf<String, String>()
+        val properties = PropertiesObject()
         val subscriptions = listOf<SubscriptionObject>()
 
         // When
@@ -48,7 +48,7 @@ class UserBackendServiceTests : FunSpec({
         } returns HttpResponse(202, "{identity:{onesignal_id: \"$osId\", aliasLabel1: \"aliasValue1\"}, properties:{timezone_id: \"testTimeZone\", language: \"testLanguage\"}}")
         val userBackendService = UserBackendService(spyHttpClient)
         val identities = mapOf("aliasLabel1" to "aliasValue1")
-        val properties = mapOf("timezone_id" to "testTimeZone", "language" to "testLanguage")
+        val properties = PropertiesObject(timezoneId = "testTimeZone", language = "testLanguage")
         val subscriptions = listOf<SubscriptionObject>()
 
         // When
@@ -68,7 +68,35 @@ class UserBackendServiceTests : FunSpec({
                     it.getJSONObject("identity").has("aliasLabel1") shouldBe true
                     it.getJSONObject("identity").getString("aliasLabel1") shouldBe "aliasValue1"
                     it.has("properties") shouldBe true
+                    it.getJSONObject("properties").has("tags") shouldBe false
                     it.has("subscriptions") shouldBe false
+                },
+                any(),
+            )
+        }
+    }
+
+    test("create user with tags nests them under properties") {
+        val osId = "11111111-1111-1111-1111-111111111111"
+        val spyHttpClient = mockk<IHttpClient>()
+        coEvery {
+            spyHttpClient.post(any(), any(), any())
+        } returns HttpResponse(202, "{identity:{onesignal_id: \"$osId\"}, properties:{timezone_id: \"testTimeZone\"}}")
+        val userBackendService = UserBackendService(spyHttpClient)
+
+        userBackendService.createUser(
+            "appId",
+            mapOf("external_id" to "user-1"),
+            listOf(),
+            PropertiesObject(timezoneId = "testTimeZone", tags = mapOf("plan" to "pro")),
+        )
+
+        coVerify {
+            spyHttpClient.post(
+                "apps/appId/users",
+                withArg {
+                    it.getJSONObject("identity").getString("external_id") shouldBe "user-1"
+                    it.getJSONObject("properties").getJSONObject("tags").getString("plan") shouldBe "pro"
                 },
                 any(),
             )
@@ -85,7 +113,7 @@ class UserBackendServiceTests : FunSpec({
         val userBackendService = UserBackendService(spyHttpClient)
         val identities = mapOf<String, String>()
         val subscriptions = mutableListOf<SubscriptionObject>()
-        val properties = mapOf("timezone_id" to "testTimeZone", "language" to "testLanguage")
+        val properties = PropertiesObject(timezoneId = "testTimeZone", language = "testLanguage")
         subscriptions.add(SubscriptionObject("SHOULDNOTUSE", SubscriptionObjectType.ANDROID_PUSH))
 
         // When

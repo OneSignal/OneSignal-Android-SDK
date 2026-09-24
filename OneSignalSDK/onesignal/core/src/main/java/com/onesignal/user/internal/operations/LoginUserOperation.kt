@@ -1,9 +1,15 @@
 package com.onesignal.user.internal.operations
 
+import com.onesignal.OneSignalUserProfile
 import com.onesignal.common.IDManager
+import com.onesignal.common.putMap
 import com.onesignal.core.internal.operations.GroupComparisonType
 import com.onesignal.core.internal.operations.Operation
+import com.onesignal.debug.internal.logging.Logging
+import com.onesignal.user.internal.backend.IdentityConstants
 import com.onesignal.user.internal.operations.impl.executors.LoginUserOperationExecutor
+import org.json.JSONException
+import org.json.JSONObject
 
 /**
  * An [Operation] to login the user with the [externalId] provided.  Logging in a user will do the
@@ -43,22 +49,107 @@ class LoginUserOperation() : Operation(LoginUserOperationExecutor.LOGIN_USER) {
             setOptStringProperty(::existingOnesignalId.name, value)
         }
 
+    internal var email: String?
+        get() = getOptStringProperty(PROFILE_EMAIL)
+        set(value) {
+            setOptStringProperty(PROFILE_EMAIL, value)
+        }
+
+    internal var phoneNumber: String?
+        get() = getOptStringProperty(PROFILE_PHONE)
+        set(value) {
+            setOptStringProperty(PROFILE_PHONE, value)
+        }
+
+    internal var tags: Map<String, String>
+        get() = decodeMap(getOptStringProperty(PROFILE_TAGS))
+        set(value) {
+            setOptStringProperty(PROFILE_TAGS, encodeMap(value))
+        }
+
+    internal var aliases: Map<String, String>
+        get() = decodeMap(getOptStringProperty(PROFILE_ALIASES))
+        set(value) {
+            setOptStringProperty(PROFILE_ALIASES, encodeMap(value))
+        }
+
     override val createComparisonKey: String get() = "$appId.User.$onesignalId"
     override val modifyComparisonKey: String = ""
     override val groupComparisonType: GroupComparisonType = GroupComparisonType.CREATE
     override val canStartExecute: Boolean get() = existingOnesignalId == null || !IDManager.isLocalId(existingOnesignalId!!)
     override val applyToRecordId: String get() = existingOnesignalId ?: onesignalId
 
-    constructor(appId: String, onesignalId: String, externalId: String?, existingOneSignalId: String? = null) : this() {
+    constructor(
+        appId: String,
+        onesignalId: String,
+        externalId: String?,
+        existingOneSignalId: String? = null,
+        profile: OneSignalUserProfile? = null,
+    ) : this() {
         this.appId = appId
         this.onesignalId = onesignalId
         this.externalId = externalId
         this.existingOnesignalId = existingOneSignalId
+        if (profile != null) {
+            this.email = profile.email?.takeIf { it.isNotBlank() }
+            this.phoneNumber = profile.phoneNumber?.takeIf { it.isNotBlank() }
+            this.tags = profile.tags
+            this.aliases = profile.aliases
+        }
+    }
+
+    internal fun hasProfileFields(): Boolean =
+        !email.isNullOrBlank() || !phoneNumber.isNullOrBlank() || tags.isNotEmpty() || aliases.isNotEmpty()
+
+    internal fun mergeProfileFrom(other: LoginUserOperation) {
+        if (!other.email.isNullOrBlank()) email = other.email
+        if (!other.phoneNumber.isNullOrBlank()) phoneNumber = other.phoneNumber
+        if (other.tags.isNotEmpty()) tags = tags + other.tags
+        if (other.aliases.isNotEmpty()) aliases = aliases + other.aliases
+    }
+
+    override fun toString(): String {
+        val json = toJSON()
+        if (!email.isNullOrBlank()) json.put(PROFILE_EMAIL, "<set>")
+        if (!phoneNumber.isNullOrBlank()) json.put(PROFILE_PHONE, "<set>")
+        if (tags.isNotEmpty()) json.put(PROFILE_TAGS, tags.size)
+        if (aliases.isNotEmpty()) json.put(PROFILE_ALIASES, aliases.size)
+        return json.toString()
     }
 
     override fun translateIds(map: Map<String, String>) {
         if (map.containsKey(existingOnesignalId)) {
             existingOnesignalId = map[existingOnesignalId]!!
         }
+    }
+}
+
+internal fun reservedLoginAliasLabel(label: String): Boolean =
+    label.isBlank() || label == IdentityConstants.ONESIGNAL_ID || label == IdentityConstants.EXTERNAL_ID
+
+private const val PROFILE_EMAIL = "profileEmail"
+private const val PROFILE_PHONE = "profilePhoneNumber"
+private const val PROFILE_TAGS = "profileTags"
+private const val PROFILE_ALIASES = "profileAliases"
+
+private fun encodeMap(map: Map<String, String>): String? {
+    if (map.isEmpty()) return null
+    return JSONObject().putMap(map).toString()
+}
+
+private fun decodeMap(json: String?): Map<String, String> {
+    if (json.isNullOrEmpty()) return emptyMap()
+    return try {
+        val obj = JSONObject(json)
+        val result = mutableMapOf<String, String>()
+        val keys = obj.keys()
+        while (keys.hasNext()) {
+            val key = keys.next()
+            result[key] = obj.optString(key)
+        }
+        result
+    } catch (e: JSONException) {
+        Logging.warn("LoginUserOperation: ignoring malformed profile map", e)
+        emptyMap()
     }
 }

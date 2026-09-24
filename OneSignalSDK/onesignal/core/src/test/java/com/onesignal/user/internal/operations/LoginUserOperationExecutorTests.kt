@@ -1,12 +1,16 @@
 package com.onesignal.user.internal.operations
 
 import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
+import com.onesignal.OneSignalUserProfile
+import com.onesignal.common.PIIHasher
 import com.onesignal.common.exceptions.BackendException
 import com.onesignal.core.internal.operations.ExecutionResponse
 import com.onesignal.core.internal.operations.ExecutionResult
+import com.onesignal.core.internal.operations.LoginWaitMetadata
 import com.onesignal.core.internal.operations.Operation
 import com.onesignal.mocks.AndroidMockHelper
 import com.onesignal.mocks.MockHelper
+import com.onesignal.mocks.MockPreferencesService
 import com.onesignal.user.internal.backend.CreateUserResponse
 import com.onesignal.user.internal.backend.IUserBackendService
 import com.onesignal.user.internal.backend.IdentityConstants
@@ -14,11 +18,14 @@ import com.onesignal.user.internal.backend.PropertiesObject
 import com.onesignal.user.internal.backend.SubscriptionObject
 import com.onesignal.user.internal.backend.SubscriptionObjectType
 import com.onesignal.user.internal.identity.IdentityModel
+import com.onesignal.user.internal.identity.IdentityModelStore
 import com.onesignal.user.internal.operations.ExecutorMocks.Companion.getIdentityVerificationService
 import com.onesignal.user.internal.operations.ExecutorMocks.Companion.getJwtTokenStore
 import com.onesignal.user.internal.operations.impl.executors.IdentityOperationExecutor
 import com.onesignal.user.internal.operations.impl.executors.LoginUserOperationExecutor
+import com.onesignal.user.internal.operations.impl.executors.matchingBackendSubscription
 import com.onesignal.user.internal.properties.PropertiesModel
+import com.onesignal.user.internal.properties.PropertiesModelStore
 import com.onesignal.user.internal.subscriptions.SubscriptionModel
 import com.onesignal.user.internal.subscriptions.SubscriptionModelStore
 import com.onesignal.user.internal.subscriptions.SubscriptionStatus
@@ -942,5 +949,534 @@ class LoginUserOperationExecutorTests : FunSpec({
         // IdentityOperationExecutor must NOT be invoked (strict mock enforces this via kotest's
         // unstubbed-call failure; coVerify(exactly = 0) makes the expectation explicit).
         coVerify(exactly = 0) { mockIdentityOperationExecutor.execute(any()) }
+    }
+
+    fun profileExecutor(
+        backend: IUserBackendService,
+        subscriptions: SubscriptionModelStore = SubscriptionModelStore(MockPreferencesService()),
+        identityStore: IdentityModelStore = MockHelper.identityModelStore { it.onesignalId = localOneSignalId },
+        propertiesStore: PropertiesModelStore = MockHelper.propertiesModelStore { it.onesignalId = localOneSignalId },
+        identityExecutor: IdentityOperationExecutor = mockk(relaxed = true),
+        ivActive: Boolean = false,
+    ) = LoginUserOperationExecutor(
+        identityExecutor,
+        AndroidMockHelper.applicationService(),
+        MockHelper.deviceService(),
+        backend,
+        identityStore,
+        propertiesStore,
+        subscriptions,
+        MockHelper.configModelStore(),
+        MockHelper.languageContext(),
+        getJwtTokenStore(),
+        getIdentityVerificationService(newCodePathsRun = ivActive, ivBehaviorActive = ivActive),
+        mockk(relaxed = true),
+    )
+
+    test("matchingBackendSubscription matches by id even when another sub has the token") {
+        val remaining =
+            setOf(
+                SubscriptionObject(id = "by-id", type = SubscriptionObjectType.EMAIL, token = "other@b.com"),
+                SubscriptionObject(id = "by-token", type = SubscriptionObjectType.EMAIL, token = "a@b.com"),
+            )
+        val local = SubscriptionObject(type = SubscriptionObjectType.EMAIL, token = "a@b.com")
+
+        matchingBackendSubscription(remaining, "by-id", local)?.id shouldBe "by-id"
+    }
+
+    test("matchingBackendSubscription matches by token when ids differ") {
+        val remaining =
+            setOf(
+                SubscriptionObject(id = "email-sub", type = SubscriptionObjectType.EMAIL, token = "a@b.com"),
+                SubscriptionObject(id = "push-sub", type = SubscriptionObjectType.ANDROID_PUSH, token = "push-token"),
+            )
+        val local = SubscriptionObject(type = SubscriptionObjectType.EMAIL, token = "a@b.com")
+
+        matchingBackendSubscription(remaining, "local-email", local)?.id shouldBe "email-sub"
+    }
+
+    test("matchingBackendSubscription matches email tokens case-insensitively") {
+        val remaining =
+            setOf(
+                SubscriptionObject(id = "other-email", type = SubscriptionObjectType.EMAIL, token = "other@b.com"),
+                SubscriptionObject(id = "email-sub", type = SubscriptionObjectType.EMAIL, token = "A@B.COM"),
+            )
+        val local = SubscriptionObject(type = SubscriptionObjectType.EMAIL, token = "a@b.com")
+
+        matchingBackendSubscription(remaining, "local-email", local)?.id shouldBe "email-sub"
+    }
+
+    test("matchingBackendSubscription matches a hashed email or SMS token") {
+        val remaining =
+            setOf(
+                SubscriptionObject(id = "email-sub", type = SubscriptionObjectType.EMAIL, token = PIIHasher.hash("a@b.com")),
+                SubscriptionObject(id = "sms-sub", type = SubscriptionObjectType.SMS, token = PIIHasher.hash("+15555550100")),
+            )
+        val email = SubscriptionObject(type = SubscriptionObjectType.EMAIL, token = "a@b.com")
+        val sms = SubscriptionObject(type = SubscriptionObjectType.SMS, token = "+15555550100")
+
+        matchingBackendSubscription(remaining, "local-email", email)?.id shouldBe "email-sub"
+        matchingBackendSubscription(remaining, "local-sms", sms)?.id shouldBe "sms-sub"
+    }
+
+    test("matchingBackendSubscription maps push by type when id and token do not match") {
+        val remaining =
+            setOf(SubscriptionObject(id = "push-sub", type = SubscriptionObjectType.ANDROID_PUSH, token = null))
+        val local = SubscriptionObject(type = SubscriptionObjectType.ANDROID_PUSH, token = "push-token")
+
+        matchingBackendSubscription(remaining, "local-push", local)?.id shouldBe "push-sub"
+    }
+
+    test("matchingBackendSubscription maps email or SMS by type only when one remains and it has no token") {
+        val emailRemaining =
+            setOf(SubscriptionObject(id = "email-sub", type = SubscriptionObjectType.EMAIL, token = null))
+        val smsRemaining =
+            setOf(SubscriptionObject(id = "sms-sub", type = SubscriptionObjectType.SMS, token = null))
+        val email = SubscriptionObject(type = SubscriptionObjectType.EMAIL, token = "a@b.com")
+        val sms = SubscriptionObject(type = SubscriptionObjectType.SMS, token = "+15555550100")
+
+        matchingBackendSubscription(emailRemaining, "local-email", email)?.id shouldBe "email-sub"
+        matchingBackendSubscription(smsRemaining, "local-sms", sms)?.id shouldBe "sms-sub"
+    }
+
+    test("matchingBackendSubscription does not take another email or SMS whose token did not match") {
+        val remaining =
+            setOf(
+                SubscriptionObject(id = "other-email", type = SubscriptionObjectType.EMAIL, token = "other@b.com"),
+                SubscriptionObject(id = "other-sms", type = SubscriptionObjectType.SMS, token = "+15555550999"),
+            )
+        val email = SubscriptionObject(type = SubscriptionObjectType.EMAIL, token = "a@b.com")
+        val sms = SubscriptionObject(type = SubscriptionObjectType.SMS, token = "+15555550100")
+
+        matchingBackendSubscription(remaining, "local-email", email) shouldBe null
+        matchingBackendSubscription(remaining, "local-sms", sms) shouldBe null
+    }
+
+    test("matchingBackendSubscription does not type-fallback when two emails remain") {
+        val remaining =
+            setOf(
+                SubscriptionObject(id = "blank-email", type = SubscriptionObjectType.EMAIL, token = null),
+                SubscriptionObject(id = "other-email", type = SubscriptionObjectType.EMAIL, token = "other@b.com"),
+            )
+        val local = SubscriptionObject(type = SubscriptionObjectType.EMAIL, token = "a@b.com")
+
+        matchingBackendSubscription(remaining, "local-email", local) shouldBe null
+    }
+
+    test("matchingBackendSubscription returns null when nothing matches") {
+        val remaining =
+            setOf(SubscriptionObject(id = "push-sub", type = SubscriptionObjectType.ANDROID_PUSH, token = "push-token"))
+        val local = SubscriptionObject(type = SubscriptionObjectType.EMAIL, token = "a@b.com")
+
+        matchingBackendSubscription(remaining, "local-email", local) shouldBe null
+    }
+
+    test("composite login with email only sends an Email subscription") {
+        val mockUserBackendService = mockk<IUserBackendService>()
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } returns
+            CreateUserResponse(
+                mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId),
+                PropertiesObject(),
+                listOf(SubscriptionObject(id = "email-sub", type = SubscriptionObjectType.EMAIL, token = "a@b.com")),
+            )
+
+        val response =
+            profileExecutor(mockUserBackendService).execute(
+                listOf(LoginUserOperation(appId, localOneSignalId, "externalId", null, OneSignalUserProfile(email = "a@b.com"))),
+            )
+
+        response.result shouldBe ExecutionResult.SUCCESS
+        response.metadata shouldBe LoginWaitMetadata(remoteOneSignalId, "email-sub")
+        coVerify(exactly = 1) {
+            mockUserBackendService.createUser(
+                appId,
+                mapOf(IdentityConstants.EXTERNAL_ID to "externalId"),
+                withArg { subs ->
+                    subs.single { it.type == SubscriptionObjectType.EMAIL }.token shouldBe "a@b.com"
+                    subs.none { it.type == SubscriptionObjectType.SMS } shouldBe true
+                },
+                any(),
+            )
+        }
+    }
+
+    test("composite login with phone only sends an SMS subscription") {
+        val mockUserBackendService = mockk<IUserBackendService>()
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } returns
+            CreateUserResponse(
+                mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId),
+                PropertiesObject(),
+                listOf(SubscriptionObject(id = "sms-sub", type = SubscriptionObjectType.SMS, token = "+15555550100")),
+            )
+
+        val response =
+            profileExecutor(mockUserBackendService).execute(
+                listOf(LoginUserOperation(appId, localOneSignalId, "externalId", null, OneSignalUserProfile(phoneNumber = "+15555550100"))),
+            )
+
+        response.result shouldBe ExecutionResult.SUCCESS
+        coVerify(exactly = 1) {
+            mockUserBackendService.createUser(
+                appId,
+                mapOf(IdentityConstants.EXTERNAL_ID to "externalId"),
+                withArg { subs ->
+                    subs.single { it.type == SubscriptionObjectType.SMS }.token shouldBe "+15555550100"
+                    subs.none { it.type == SubscriptionObjectType.EMAIL } shouldBe true
+                },
+                any(),
+            )
+        }
+    }
+
+    test("composite login with tags only forwards them on createUser") {
+        val mockUserBackendService = mockk<IUserBackendService>()
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } returns
+            CreateUserResponse(mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId), PropertiesObject(), listOf())
+
+        val response =
+            profileExecutor(mockUserBackendService).execute(
+                listOf(LoginUserOperation(appId, localOneSignalId, "externalId", null, OneSignalUserProfile(tags = mapOf("plan" to "pro")))),
+            )
+
+        response.result shouldBe ExecutionResult.SUCCESS
+        coVerify(exactly = 1) {
+            mockUserBackendService.createUser(
+                appId,
+                mapOf(IdentityConstants.EXTERNAL_ID to "externalId"),
+                any(),
+                withArg { props ->
+                    props.tags shouldBe mapOf("plan" to "pro")
+                },
+            )
+        }
+    }
+
+    test("composite login with aliases includes them on identity and skips reserved labels") {
+        val mockUserBackendService = mockk<IUserBackendService>()
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } returns
+            CreateUserResponse(mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId), PropertiesObject(), listOf())
+
+        val response =
+            profileExecutor(mockUserBackendService).execute(
+                listOf(
+                    LoginUserOperation(
+                        appId,
+                        localOneSignalId,
+                        "externalId",
+                        null,
+                        OneSignalUserProfile(
+                            aliases =
+                            mapOf(
+                                "facebook" to "bob",
+                                IdentityConstants.ONESIGNAL_ID to "should-skip",
+                                IdentityConstants.EXTERNAL_ID to "should-skip",
+                            ),
+                        ),
+                    ),
+                ),
+            )
+
+        response.result shouldBe ExecutionResult.SUCCESS
+        coVerify(exactly = 1) {
+            mockUserBackendService.createUser(
+                appId,
+                mapOf(
+                    IdentityConstants.EXTERNAL_ID to "externalId",
+                    "facebook" to "bob",
+                ),
+                any(),
+                any(),
+            )
+        }
+    }
+
+    test("composite login alias conflict pauses the operation repo") {
+        val mockUserBackendService = mockk<IUserBackendService>()
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } throws BackendException(409, "CONFLICT")
+
+        val response =
+            profileExecutor(mockUserBackendService).execute(
+                listOf(LoginUserOperation(appId, localOneSignalId, "externalId", null, OneSignalUserProfile(aliases = mapOf("facebook" to "bob")))),
+            )
+
+        response.result shouldBe ExecutionResult.FAIL_PAUSE_OPREPO
+        response.httpStatusCode shouldBe 409
+        response.httpResponse shouldBe "CONFLICT"
+    }
+
+    test("composite login malformed email pauses the operation repo") {
+        val mockUserBackendService = mockk<IUserBackendService>()
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } throws BackendException(400, "INVALID EMAIL")
+
+        val response =
+            profileExecutor(mockUserBackendService).execute(
+                listOf(LoginUserOperation(appId, localOneSignalId, "externalId", null, OneSignalUserProfile(email = "not-an-email"))),
+            )
+
+        response.result shouldBe ExecutionResult.FAIL_PAUSE_OPREPO
+        response.httpStatusCode shouldBe 400
+        response.httpResponse shouldBe "INVALID EMAIL"
+    }
+
+    test("composite login 404 pauses the operation repo") {
+        val mockUserBackendService = mockk<IUserBackendService>()
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } throws BackendException(404, "NOT FOUND")
+
+        val response =
+            profileExecutor(mockUserBackendService).execute(
+                listOf(LoginUserOperation(appId, localOneSignalId, "externalId", null, OneSignalUserProfile(email = "a@b.com"))),
+            )
+
+        response.result shouldBe ExecutionResult.FAIL_PAUSE_OPREPO
+        response.httpStatusCode shouldBe 404
+    }
+
+    test("IV composite login missing the claimed email is unauthorized") {
+        val mockUserBackendService = mockk<IUserBackendService>()
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any(), any()) } throws BackendException(401, "UNAUTHORIZED")
+
+        val response =
+            profileExecutor(mockUserBackendService, ivActive = true).execute(
+                listOf(LoginUserOperation(appId, localOneSignalId, "externalId", null, OneSignalUserProfile(email = "a@b.com"))),
+            )
+
+        response.result shouldBe ExecutionResult.FAIL_UNAUTHORIZED
+        response.httpStatusCode shouldBe 401
+        response.httpResponse shouldBe "UNAUTHORIZED"
+    }
+
+    test("composite login does not take another email when the profile address is absent") {
+        val mockUserBackendService = mockk<IUserBackendService>()
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } returns
+            CreateUserResponse(
+                mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId),
+                PropertiesObject(),
+                listOf(SubscriptionObject(id = "other-email", type = SubscriptionObjectType.EMAIL, token = "other@b.com")),
+            )
+
+        val response =
+            profileExecutor(mockUserBackendService).execute(
+                listOf(LoginUserOperation(appId, localOneSignalId, "externalId", null, OneSignalUserProfile(email = "a@b.com"))),
+            )
+
+        response.result shouldBe ExecutionResult.SUCCESS
+        (response.metadata as LoginWaitMetadata).emailSubscriptionId shouldBe null
+    }
+
+    test("composite login matches an email subscription case-insensitively") {
+        val mockUserBackendService = mockk<IUserBackendService>()
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } returns
+            CreateUserResponse(
+                mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId),
+                PropertiesObject(),
+                listOf(
+                    SubscriptionObject(id = "other-email", type = SubscriptionObjectType.EMAIL, token = "other@b.com"),
+                    SubscriptionObject(id = "email-sub", type = SubscriptionObjectType.EMAIL, token = "A@B.COM"),
+                ),
+            )
+
+        val response =
+            profileExecutor(mockUserBackendService).execute(
+                listOf(LoginUserOperation(appId, localOneSignalId, "externalId", null, OneSignalUserProfile(email = "a@b.com"))),
+            )
+
+        response.result shouldBe ExecutionResult.SUCCESS
+        response.metadata shouldBe LoginWaitMetadata(remoteOneSignalId, "email-sub")
+    }
+
+    test("composite login skips hydration when current identity is a different user") {
+        val mockUserBackendService = mockk<IUserBackendService>()
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } returns
+            CreateUserResponse(
+                mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId),
+                PropertiesObject(),
+                listOf(SubscriptionObject(id = "email-sub", type = SubscriptionObjectType.EMAIL, token = "a@b.com")),
+            )
+        val identityStore = MockHelper.identityModelStore { it.onesignalId = "other-user" }
+        val propertiesStore = MockHelper.propertiesModelStore { it.onesignalId = "other-user" }
+
+        val response =
+            profileExecutor(mockUserBackendService, identityStore = identityStore, propertiesStore = propertiesStore).execute(
+                listOf(
+                    LoginUserOperation(
+                        appId,
+                        localOneSignalId,
+                        "externalId",
+                        null,
+                        OneSignalUserProfile(
+                            email = "a@b.com",
+                            tags = mapOf("plan" to "pro"),
+                            aliases = mapOf("facebook" to "bob"),
+                        ),
+                    ),
+                ),
+            )
+
+        response.result shouldBe ExecutionResult.SUCCESS
+        identityStore.model.onesignalId shouldBe "other-user"
+        identityStore.model["facebook"] shouldBe null
+        propertiesStore.model.tags["plan"] shouldBe null
+    }
+
+    test("composite login hydrates aliases tags and email subscription on success") {
+        val mockUserBackendService = mockk<IUserBackendService>()
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } returns
+            CreateUserResponse(
+                mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId),
+                PropertiesObject(),
+                listOf(SubscriptionObject(id = "email-sub", type = SubscriptionObjectType.EMAIL, token = "a@b.com")),
+            )
+        val identityStore = MockHelper.identityModelStore { it.onesignalId = localOneSignalId }
+        val propertiesStore = MockHelper.propertiesModelStore { it.onesignalId = localOneSignalId }
+        val subscriptions = SubscriptionModelStore(MockPreferencesService())
+
+        val response =
+            profileExecutor(mockUserBackendService, subscriptions, identityStore, propertiesStore).execute(
+                listOf(
+                    LoginUserOperation(
+                        appId,
+                        localOneSignalId,
+                        "externalId",
+                        null,
+                        OneSignalUserProfile(
+                            email = "a@b.com",
+                            tags = mapOf("plan" to "pro"),
+                            aliases = mapOf("facebook" to "bob"),
+                        ),
+                    ),
+                ),
+            )
+
+        response.result shouldBe ExecutionResult.SUCCESS
+        identityStore.model.onesignalId shouldBe remoteOneSignalId
+        identityStore.model["facebook"] shouldBe "bob"
+        propertiesStore.model.tags["plan"] shouldBe "pro"
+        subscriptions.list().single { it.type == SubscriptionType.EMAIL }.let {
+            it.id shouldBe "email-sub"
+            it.address shouldBe "a@b.com"
+        }
+    }
+
+    test("composite login hydrates the backend tag set, not just the tags it sent") {
+        val mockUserBackendService = mockk<IUserBackendService>()
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } returns
+            CreateUserResponse(
+                mapOf(
+                    IdentityConstants.ONESIGNAL_ID to remoteOneSignalId,
+                    "crm_id" to "CRM-1",
+                ),
+                PropertiesObject(
+                    tags = mapOf("plan" to "enterprise", "seats" to "40", "dropped" to null),
+                    language = "fr",
+                    country = "FR",
+                ),
+                listOf(),
+            )
+        val identityStore = MockHelper.identityModelStore { it.onesignalId = localOneSignalId }
+        val propertiesStore = MockHelper.propertiesModelStore { it.onesignalId = localOneSignalId }
+
+        val response =
+            profileExecutor(mockUserBackendService, identityStore = identityStore, propertiesStore = propertiesStore).execute(
+                listOf(
+                    LoginUserOperation(
+                        appId,
+                        localOneSignalId,
+                        "externalId",
+                        null,
+                        OneSignalUserProfile(tags = mapOf("plan" to "pro"), aliases = mapOf("facebook" to "bob")),
+                    ),
+                ),
+            )
+
+        response.result shouldBe ExecutionResult.SUCCESS
+        propertiesStore.model.tags["plan"] shouldBe "enterprise"
+        propertiesStore.model.tags["seats"] shouldBe "40"
+        propertiesStore.model.tags["dropped"] shouldBe null
+        propertiesStore.model.language shouldBe "fr"
+        propertiesStore.model.country shouldBe "FR"
+        identityStore.model["crm_id"] shouldBe "CRM-1"
+    }
+
+    test("composite login lets the backend value win over a stale local tag") {
+        val mockUserBackendService = mockk<IUserBackendService>()
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } returns
+            CreateUserResponse(
+                mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId),
+                PropertiesObject(tags = mapOf("tag1" to "value1")),
+                listOf(),
+            )
+        val propertiesStore =
+            MockHelper.propertiesModelStore {
+                it.onesignalId = localOneSignalId
+                it.tags["tag1"] = "value2"
+            }
+
+        val response =
+            profileExecutor(mockUserBackendService, propertiesStore = propertiesStore).execute(
+                listOf(LoginUserOperation(appId, localOneSignalId, "externalId", null, OneSignalUserProfile(tags = mapOf("tag1" to "value3")))),
+            )
+
+        response.result shouldBe ExecutionResult.SUCCESS
+        propertiesStore.model.tags["tag1"] shouldBe "value1"
+    }
+
+    test("composite login with existingOnesignalId still createUsers so the profile is sent") {
+        val mockUserBackendService = mockk<IUserBackendService>()
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } returns
+            CreateUserResponse(
+                mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId),
+                PropertiesObject(),
+                listOf(SubscriptionObject(id = "email-sub", type = SubscriptionObjectType.EMAIL, token = "a@b.com")),
+            )
+        val identityExecutor = mockk<IdentityOperationExecutor>()
+
+        val response =
+            profileExecutor(mockUserBackendService, identityExecutor = identityExecutor).execute(
+                listOf(LoginUserOperation(appId, localOneSignalId, "externalId", "existing-osid", OneSignalUserProfile(email = "a@b.com"))),
+            )
+
+        response.result shouldBe ExecutionResult.SUCCESS
+        coVerify(exactly = 1) { mockUserBackendService.createUser(any(), any(), any(), any()) }
+        coVerify(exactly = 0) { identityExecutor.execute(any()) }
+    }
+
+    test("identity-only login still associates via SetAlias when existingOnesignalId is set") {
+        val mockUserBackendService = mockk<IUserBackendService>()
+        val identityExecutor = mockk<IdentityOperationExecutor>()
+        coEvery { identityExecutor.execute(any()) } returns ExecutionResponse(ExecutionResult.SUCCESS)
+
+        val response =
+            profileExecutor(mockUserBackendService, identityExecutor = identityExecutor).execute(
+                listOf(LoginUserOperation(appId, localOneSignalId, "externalId", "existing-osid")),
+            )
+
+        response.result shouldBe ExecutionResult.SUCCESS_STARTING_ONLY
+        coVerify(exactly = 0) { mockUserBackendService.createUser(any(), any(), any(), any()) }
+        coVerify(exactly = 1) { identityExecutor.execute(any()) }
+    }
+
+    test("LoginUserOperation profile fields survive JSON round trip") {
+        val original =
+            LoginUserOperation(
+                appId,
+                localOneSignalId,
+                "externalId",
+                "existing-osid",
+                OneSignalUserProfile(
+                    email = "a@b.com",
+                    phoneNumber = "+15555550100",
+                    tags = mapOf("plan" to "pro"),
+                    aliases = mapOf("facebook" to "bob"),
+                ),
+            )
+
+        val restored = LoginUserOperation()
+        restored.initializeFromJson(original.toJSON())
+
+        restored.email shouldBe "a@b.com"
+        restored.phoneNumber shouldBe "+15555550100"
+        restored.tags shouldBe mapOf("plan" to "pro")
+        restored.aliases shouldBe mapOf("facebook" to "bob")
+        restored.existingOnesignalId shouldBe "existing-osid"
     }
 })

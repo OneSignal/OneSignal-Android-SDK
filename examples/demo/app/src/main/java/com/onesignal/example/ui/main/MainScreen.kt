@@ -138,6 +138,9 @@ fun MainScreen(viewModel: MainViewModel) {
                     useIdentityVerification = useIdentityVerification,
                     onUseIdentityVerificationChange = { viewModel.setUseIdentityVerification(it) },
                     onLogin = { userId, jwt -> viewModel.loginUser(userId, jwt) },
+                    onLoginWithProfile = { userId, email, phone, jwt ->
+                        viewModel.loginUserWithProfile(userId, email, phone, jwt)
+                    },
                     onLogout = { viewModel.logoutUser() },
                     onUpdateJwt = { externalId, token -> viewModel.updateUserJwt(externalId, token) },
                     isLoading = isLoading
