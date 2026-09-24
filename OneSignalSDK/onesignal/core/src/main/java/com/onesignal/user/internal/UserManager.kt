@@ -6,6 +6,9 @@ import com.onesignal.common.OneSignalUtils
 import com.onesignal.common.events.EventProducer
 import com.onesignal.common.modeling.ISingletonModelStoreChangeHandler
 import com.onesignal.common.modeling.ModelChangedArgs
+import com.onesignal.common.rejectNullOrEmpty
+import com.onesignal.common.rejectNullOrEmptyAny
+import com.onesignal.common.rejectNullOrEmptyEntries
 import com.onesignal.core.internal.language.ILanguageContext
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
@@ -54,6 +57,7 @@ internal open class UserManager(
         get() = _propertiesModelStore.model
 
     override fun setLanguage(value: String) {
+        // Empty string is the reset to the device language. LanguageContext applies that.
         _languageContext.language = value
     }
 
@@ -67,8 +71,7 @@ internal open class UserManager(
     ) {
         Logging.log(LogLevel.DEBUG, "setAlias(label: $label, id: $id)")
 
-        if (label.isEmpty()) {
-            Logging.log(LogLevel.ERROR, "Cannot add empty alias")
+        if (rejectNullOrEmpty(label, "addAlias: label") || rejectNullOrEmpty(id, "addAlias: id")) {
             return
         }
 
@@ -83,12 +86,9 @@ internal open class UserManager(
     override fun addAliases(aliases: Map<String, String>) {
         Logging.log(LogLevel.DEBUG, "addAliases(aliases: $aliases")
 
-        aliases.forEach {
-            if (it.key.isEmpty()) {
-                Logging.log(LogLevel.ERROR, "Cannot add empty alias")
-                return
-            }
+        if (rejectNullOrEmptyEntries(aliases, "addAliases", allowEmptyValue = false)) return
 
+        aliases.forEach {
             if (it.key == IdentityConstants.ONESIGNAL_ID) {
                 Logging.log(LogLevel.ERROR, "Cannot add '${IdentityConstants.ONESIGNAL_ID}' alias")
                 return
@@ -103,10 +103,7 @@ internal open class UserManager(
     override fun removeAlias(label: String) {
         Logging.log(LogLevel.DEBUG, "removeAlias(label: $label)")
 
-        if (label.isEmpty()) {
-            Logging.log(LogLevel.ERROR, "Cannot remove empty alias")
-            return
-        }
+        if (rejectNullOrEmpty(label, "removeAlias: label")) return
 
         if (label == IdentityConstants.ONESIGNAL_ID) {
             Logging.log(LogLevel.ERROR, "Cannot remove '${IdentityConstants.ONESIGNAL_ID}' alias")
@@ -119,12 +116,9 @@ internal open class UserManager(
     override fun removeAliases(labels: Collection<String>) {
         Logging.log(LogLevel.DEBUG, "removeAliases(labels: $labels)")
 
-        labels.forEach {
-            if (it.isEmpty()) {
-                Logging.log(LogLevel.ERROR, "Cannot remove empty alias")
-                return
-            }
+        if (rejectNullOrEmptyAny(labels, "removeAliases: label")) return
 
+        labels.forEach {
             if (it == IdentityConstants.ONESIGNAL_ID) {
                 Logging.log(LogLevel.ERROR, "Cannot remove '${IdentityConstants.ONESIGNAL_ID}' alias")
                 return
@@ -186,10 +180,7 @@ internal open class UserManager(
     ) {
         Logging.log(LogLevel.DEBUG, "setTag(key: $key, value: $value)")
 
-        if (key.isEmpty()) {
-            Logging.log(LogLevel.ERROR, "Cannot add tag with empty key")
-            return
-        }
+        if (rejectNullOrEmpty(key, "addTag: key")) return
 
         _propertiesModel.tags[key] = value
     }
@@ -197,12 +188,7 @@ internal open class UserManager(
     override fun addTags(tags: Map<String, String>) {
         Logging.log(LogLevel.DEBUG, "setTags(tags: $tags)")
 
-        tags.forEach {
-            if (it.key.isEmpty()) {
-                Logging.log(LogLevel.ERROR, "Cannot add tag with empty key")
-                return
-            }
-        }
+        if (rejectNullOrEmptyEntries(tags, "addTags", allowEmptyValue = true)) return
 
         tags.forEach {
             _propertiesModel.tags[it.key] = it.value
@@ -212,10 +198,7 @@ internal open class UserManager(
     override fun removeTag(key: String) {
         Logging.log(LogLevel.DEBUG, "removeTag(key: $key)")
 
-        if (key.isEmpty()) {
-            Logging.log(LogLevel.ERROR, "Cannot remove tag with empty key")
-            return
-        }
+        if (rejectNullOrEmpty(key, "removeTag: key")) return
 
         _propertiesModel.tags.remove(key)
     }
@@ -223,12 +206,7 @@ internal open class UserManager(
     override fun removeTags(keys: Collection<String>) {
         Logging.log(LogLevel.DEBUG, "removeTags(keys: $keys)")
 
-        keys.forEach {
-            if (it.isEmpty()) {
-                Logging.log(LogLevel.ERROR, "Cannot remove tag with empty key")
-                return
-            }
-        }
+        if (rejectNullOrEmptyAny(keys, "removeTags: key")) return
 
         keys.forEach {
             _propertiesModel.tags.remove(it)
@@ -251,6 +229,7 @@ internal open class UserManager(
         name: String,
         properties: Map<String, Any?>?,
     ) {
+        if (rejectNullOrEmpty(name, "trackEvent: name")) return
         if (!JSONUtils.isValidJsonObject(properties)) {
             Logging.log(LogLevel.ERROR, "Custom event properties are not JSON-serializable")
             return
