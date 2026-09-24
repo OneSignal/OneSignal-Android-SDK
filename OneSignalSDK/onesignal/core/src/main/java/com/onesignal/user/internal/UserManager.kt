@@ -57,7 +57,7 @@ internal open class UserManager(
         get() = _propertiesModelStore.model
 
     override fun setLanguage(value: String) {
-        if (rejectNullOrEmpty(value, "setLanguage: language")) return
+        // Empty string is the reset to the device language. LanguageContext applies that.
         _languageContext.language = value
     }
 
