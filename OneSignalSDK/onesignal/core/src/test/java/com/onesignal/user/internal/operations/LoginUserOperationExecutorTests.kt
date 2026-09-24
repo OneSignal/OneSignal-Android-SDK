@@ -1397,6 +1397,29 @@ class LoginUserOperationExecutorTests : FunSpec({
         identityStore.model["crm_id"] shouldBe "CRM-1"
     }
 
+    test("composite login lets the backend value win over a stale local tag") {
+        val mockUserBackendService = mockk<IUserBackendService>()
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } returns
+            CreateUserResponse(
+                mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId),
+                PropertiesObject(tags = mapOf("tag1" to "value1")),
+                listOf(),
+            )
+        val propertiesStore =
+            MockHelper.propertiesModelStore {
+                it.onesignalId = localOneSignalId
+                it.tags["tag1"] = "value2"
+            }
+
+        val response =
+            profileExecutor(mockUserBackendService, propertiesStore = propertiesStore).execute(
+                listOf(LoginUserOperation(appId, localOneSignalId, "externalId", null, OneSignalUserProfile(tags = mapOf("tag1" to "value3")))),
+            )
+
+        response.result shouldBe ExecutionResult.SUCCESS
+        propertiesStore.model.tags["tag1"] shouldBe "value1"
+    }
+
     test("composite login with existingOnesignalId still createUsers so the profile is sent") {
         val mockUserBackendService = mockk<IUserBackendService>()
         coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } returns
