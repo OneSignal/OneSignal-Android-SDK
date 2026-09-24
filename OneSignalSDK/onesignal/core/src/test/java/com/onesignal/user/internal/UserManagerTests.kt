@@ -37,6 +37,22 @@ class UserManagerTests : FunSpec({
         languageSlot.captured shouldBe "new-language"
     }
 
+    test("empty language is forwarded so the context can reset to the device language") {
+        val mockSubscriptionManager = mockk<ISubscriptionManager>()
+        val languageContext = mockk<ILanguageContext>()
+
+        val languageSlot = slot<String>()
+        every { languageContext.language } returns "custom-language"
+        every { languageContext.language = capture(languageSlot) } answers { }
+
+        val userManager =
+            UserManager(mockSubscriptionManager, MockHelper.identityModelStore(), MockHelper.propertiesModelStore(), MockHelper.customEventController(), languageContext)
+
+        userManager.setLanguage("")
+
+        languageSlot.captured shouldBe ""
+    }
+
     test("externalId is backed by the identity model") {
         // Given
         val mockSubscriptionManager = mockk<ISubscriptionManager>()
