@@ -1,6 +1,7 @@
 package com.onesignal.inAppMessages.internal.display
 
 import android.app.Activity
+import android.view.View
 import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.debug.LogLevel
@@ -334,7 +335,7 @@ class WebViewManagerDismissCleanupTests : FunSpec({
         getMessageViewField(manager).shouldNotBeNull()
     }
 
-    test("full screen setup applies immersive flags and still cleans up on dismiss") {
+    test("full-bleed WebView lays out behind system bars without hiding navigation, then cleans up") {
         val activity = Robolectric.buildActivity(Activity::class.java).setup().get()
         val applicationService = mockApplicationService(activity)
         val manager =
@@ -349,7 +350,14 @@ class WebViewManagerDismissCleanupTests : FunSpec({
             manager.setupWebView(activity, "", true)
         }
 
-        getWebViewField(manager).shouldNotBeNull()
+        val webView = getWebViewField(manager) as OSWebView
+        val visibility = webView.systemUiVisibility
+        (visibility and View.SYSTEM_UI_FLAG_HIDE_NAVIGATION) shouldBe 0
+        (visibility and View.SYSTEM_UI_FLAG_IMMERSIVE) shouldBe 0
+        (visibility and View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION) shouldBe
+            View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+        (visibility and View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN) shouldBe
+            View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
 
         runBlocking { manager.dismissAndAwaitNextMessage() }
 
