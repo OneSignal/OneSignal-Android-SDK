@@ -456,9 +456,12 @@ internal class WebViewManager(
         // Setup receiver for page events / data from JS
         localWebView.addJavascriptInterface(OSJavaScriptInterface(), JS_OBJ_NAME)
         if (isFullScreen) {
-            localWebView.systemUiVisibility = View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or
-                View.SYSTEM_UI_FLAG_IMMERSIVE or
-                View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+            // Draw behind the bars. Hiding them changes the activity insets, so the
+            // host's own bottom bar shifts for as long as the message is up.
+            localWebView.systemUiVisibility =
+                View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
+                View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or
+                View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 localWebView.fitsSystemWindows = false
             }
