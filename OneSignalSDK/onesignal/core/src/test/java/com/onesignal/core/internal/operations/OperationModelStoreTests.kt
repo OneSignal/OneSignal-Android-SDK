@@ -100,6 +100,22 @@ class OperationModelStoreTests : FunSpec({
         operationModelStore.get(legacy.id)?.createdAt shouldBe LOAD_TIME
     }
 
+    test("the load-time stamp is persisted, so a second load keeps it") {
+        // Given
+        val prefs = MockPreferencesService()
+        val legacy = SetPropertyOperation("appId", "onesignal-id", null, "property", "value")
+        legacy.id = UUID.randomUUID().toString()
+        prefs.saveString(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.MODEL_STORE_PREFIX + "operations", JSONArray().put(legacy.toJSON()).toString())
+        OperationModelStore(prefs, MockHelper.time(LOAD_TIME)).loadOperations()
+
+        // When
+        val later = OperationModelStore(prefs, MockHelper.time(LOAD_TIME + 1_000))
+        later.loadOperations()
+
+        // Then
+        later.get(legacy.id)?.createdAt shouldBe LOAD_TIME
+    }
+
     test("a persisted string over MAX_PERSISTED_LENGTH is not parsed and the preference is reset") {
         // Given
         val prefs = MockPreferencesService()

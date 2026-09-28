@@ -20,6 +20,7 @@ import com.onesignal.user.internal.jwt.JwtTokenStore
 import com.onesignal.user.internal.operations.DeleteAliasOperation
 import com.onesignal.user.internal.operations.DeleteTagOperation
 import com.onesignal.user.internal.operations.LoginUserOperation
+import com.onesignal.user.internal.operations.RefreshUserOperation
 import com.onesignal.user.internal.operations.SetAliasOperation
 import com.onesignal.user.internal.operations.SetPropertyOperation
 import com.onesignal.user.internal.operations.SetTagOperation
@@ -236,6 +237,26 @@ internal class OperationRepo(
                         Logging.debug("OperationRepo: internalEnqueue - LoginUserOperation for onesignalId: ${op.onesignalId} already exists in the queue.")
                     }
                     // Transfer the waiter so enqueueAndWait callers see the queued op's real execution result.
+                    if (queueItem.waiter != null && existing.waiter == null) {
+                        existing.waiter = queueItem.waiter
+                    } else {
+                        queueItem.waiter?.wake(true)
+                    }
+                    if (!addToStore) {
+                        _operationModelStore.remove(queueItem.operation.id)
+                    }
+                    return
+                }
+            }
+
+            // One refresh per user is enough: UserRefreshService enqueues one every session, and a parked queue would hold them all.
+            if (op is RefreshUserOperation) {
+                val existing =
+                    queue.firstOrNull {
+                        it.operation is RefreshUserOperation && it.operation.onesignalId == op.onesignalId
+                    }
+                if (existing != null) {
+                    Logging.debug("OperationRepo: internalEnqueue - RefreshUserOperation for onesignalId: ${op.onesignalId} already exists in the queue.")
                     if (queueItem.waiter != null && existing.waiter == null) {
                         existing.waiter = queueItem.waiter
                     } else {
@@ -643,8 +664,8 @@ internal class OperationRepo(
     }
 
     /**
-     * Drops every queued operation past its age limit, at the top of each [getNextOps] pass, whether or
-     * not it could execute.
+     * Drops every queued operation past its age limit, at the top of each [getNextOps] pass once the
+     * Identity Verification requirement is known, whether or not it could execute.
      */
     private fun dropStaleOperations() {
         val now = _time.currentTimeMillis
@@ -662,8 +683,9 @@ internal class OperationRepo(
 
     /**
      * Call inside the queue lock. At [ConfigModel.opRepoMaxQueueSize], drops the oldest operation the
-     * age limits cover, [incoming] included so a load of an over-cap store keeps its newest. With nothing
-     * droppable queued, [incoming] is added anyway.
+     * age limits cover, [incoming] included, which prunes an over-cap store to the cap at load. With
+     * nothing droppable queued, [incoming] is added anyway. Retries and executor-returned operations go
+     * straight back into the queue, so they can overshoot the cap by one batch.
      *
      * @return whether to add [incoming].
      */

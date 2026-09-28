@@ -18,6 +18,7 @@ import com.onesignal.user.internal.jwt.JwtTokenStore
 import com.onesignal.user.internal.operations.CreateSubscriptionOperation
 import com.onesignal.user.internal.operations.ExecutorMocks.Companion.getNewRecordState
 import com.onesignal.user.internal.operations.LoginUserOperation
+import com.onesignal.user.internal.operations.RefreshUserOperation
 import com.onesignal.user.internal.operations.SetAliasOperation
 import com.onesignal.user.internal.operations.SetTagOperation
 import com.onesignal.user.internal.operations.TrackCustomEventOperation
@@ -1181,6 +1182,27 @@ class OperationRepoTests : FunSpec({
         invalidatedFired shouldBe false
         // Default behavior: drop the op.
         verify(exactly = 1) { mocks.operationModelStore.remove(opId) }
+    }
+
+    test("enqueue dedupes RefreshUserOperation for the same onesignalId and wakes the caller") {
+        val mocks = Mocks()
+        val queued = RefreshUserOperation("appId", "onesignal-id", CURRENT_USER)
+        queued.id = UUID.randomUUID().toString()
+        // Already has a waiter, so the incoming caller is woken rather than handed over to it.
+        synchronized(mocks.operationRepo.queue) {
+            mocks.operationRepo.queue.add(OperationQueueItem(queued, WaiterWithValue(), bucket = 0))
+        }
+        val sameUser = RefreshUserOperation("appId", "onesignal-id", CURRENT_USER)
+        val otherUser = RefreshUserOperation("appId", "other-onesignal-id", CURRENT_USER)
+
+        // The loop is not running, so only a deduped enqueue can return.
+        val deduped = withTimeout(1_000) { mocks.operationRepo.enqueueAndWait(sameUser) }
+        mocks.operationRepo.enqueue(otherUser)
+        mocks.waitForInternalEnqueue()
+
+        deduped shouldBe true
+        mocks.operationRepo.queue.map { it.operation } shouldBe listOf(queued, otherUser)
+        verify(exactly = 0) { mocks.operationModelStore.add(sameUser) }
     }
 
     //

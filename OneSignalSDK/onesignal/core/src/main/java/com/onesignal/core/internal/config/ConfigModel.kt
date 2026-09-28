@@ -201,7 +201,8 @@ class ConfigModel : Model() {
         }
 
     /**
-     * Age in milliseconds past which the operation repo drops a queued operation owned by a user other than the current one.
+     * Age in milliseconds past which the operation repo drops a queued tag, property, session, purchase,
+     * custom event or alias operation owned by a user other than the current one.
      */
     var opRepoNonCurrentUserOpMaxAge: Long
         get() = getLongProperty(::opRepoNonCurrentUserOpMaxAge.name) { 30L * 24 * 60 * 60 * 1_000 }

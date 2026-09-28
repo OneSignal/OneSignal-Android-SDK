@@ -36,14 +36,22 @@ internal class OperationModelStore(
     private val prefs: IPreferencesService,
     private val time: ITime,
 ) : ModelStore<Operation>(STORE_NAME, prefs) {
+    /** Set by [create] while [load] runs, since [load] only re-persists when the store already held models. */
+    private var stampedAtLoad = false
+
     fun loadOperations() {
         discardOversizedStore()
+        stampedAtLoad = false
         load()
+        if (stampedAtLoad) {
+            persist()
+        }
     }
 
     /**
-     * Resets a persisted array over [MAX_PERSISTED_LENGTH] instead of parsing it. The queue cap keeps a
-     * store written by this SDK far below it.
+     * Resets a persisted array over [MAX_PERSISTED_LENGTH] characters instead of parsing it, login and
+     * subscription operations included. The queue cap keeps a store written by this SDK below it unless
+     * custom event payloads are very large.
      */
     private fun discardOversizedStore() {
         val key = PreferenceOneSignalKeys.MODEL_STORE_PREFIX + STORE_NAME
@@ -93,6 +101,7 @@ internal class OperationModelStore(
         // Persisted before createdAt existed, so its clock starts now.
         if (operation.createdAt == null) {
             operation.createdAt = time.currentTimeMillis
+            stampedAtLoad = true
         }
 
         return operation
