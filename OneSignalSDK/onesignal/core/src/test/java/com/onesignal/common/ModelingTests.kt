@@ -191,7 +191,7 @@ class ModelingTests : FunSpec({
     test("ensure Model Store load pulls cached operations and doesn't duplicate models") {
         // Given
         val prefs = MockPreferencesService()
-        val operationModelStore = OperationModelStore(prefs)
+        val operationModelStore = OperationModelStore(prefs, MockHelper.time(0))
         val jsonArray = JSONArray()
 
         val cachedOperation = LoginUserFromSubscriptionOperation()
