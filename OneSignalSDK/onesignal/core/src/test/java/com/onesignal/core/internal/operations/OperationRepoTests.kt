@@ -7,7 +7,7 @@ import com.onesignal.core.internal.operations.impl.OperationRepo
 import com.onesignal.core.internal.operations.impl.OperationRepo.OperationQueueItem
 import com.onesignal.core.internal.preferences.PreferenceOneSignalKeys
 import com.onesignal.core.internal.preferences.PreferenceStores
-import com.onesignal.core.internal.time.impl.Time
+import com.onesignal.core.internal.time.ITime
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.mocks.CoreInternalMocks
@@ -15,8 +15,14 @@ import com.onesignal.mocks.MockHelper
 import com.onesignal.mocks.MockPreferencesService
 import com.onesignal.user.internal.jwt.JwtRequirement
 import com.onesignal.user.internal.jwt.JwtTokenStore
+import com.onesignal.user.internal.operations.CreateSubscriptionOperation
 import com.onesignal.user.internal.operations.ExecutorMocks.Companion.getNewRecordState
 import com.onesignal.user.internal.operations.LoginUserOperation
+import com.onesignal.user.internal.operations.SetAliasOperation
+import com.onesignal.user.internal.operations.SetTagOperation
+import com.onesignal.user.internal.operations.TrackCustomEventOperation
+import com.onesignal.user.internal.subscriptions.SubscriptionStatus
+import com.onesignal.user.internal.subscriptions.SubscriptionType
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.ints.shouldBeGreaterThan
 import io.kotest.matchers.ints.shouldBeLessThan
@@ -40,6 +46,10 @@ import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.withTimeoutOrNull
 import org.json.JSONArray
 import java.util.UUID
+
+private const val CURRENT_USER = "current-user"
+private const val OTHER_USER = "other-user"
+private const val DAY = 86_400_000L
 
 // Mocks used by every test in this file
 private class Mocks {
@@ -78,16 +88,28 @@ private class Mocks {
 
     var identityVerificationService = CoreInternalMocks.identityVerificationService()
 
+    /** The clock the repo reads. Tests move it to age operations. */
+    var now: Long = 1_700_000_000_000L
+    val time: ITime =
+        run {
+            val mockTime = mockk<ITime>()
+            every { mockTime.currentTimeMillis } answers { now }
+            mockTime
+        }
+
+    val identityModelStore = MockHelper.identityModelStore { it.externalId = CURRENT_USER }
+
     val operationRepo: OperationRepo by lazy {
         spyk(
             OperationRepo(
                 listOf(executor),
                 operationModelStore,
                 configModelStore,
-                Time(),
+                time,
                 getNewRecordState(configModelStore),
                 jwtTokenStore,
                 identityVerificationService,
+                identityModelStore,
             ),
             recordPrivateCalls = true,
         )
@@ -104,17 +126,18 @@ class OperationRepoTests : FunSpec({
         // Given
         val prefs = MockPreferencesService()
         val mocks = Mocks()
-        val operationModelStore: OperationModelStore = spyk(OperationModelStore(prefs))
+        val operationModelStore: OperationModelStore = spyk(OperationModelStore(prefs, mocks.time))
         val operationRepo =
             spyk(
                 OperationRepo(
                     listOf(mocks.executor),
                     operationModelStore,
                     mocks.configModelStore,
-                    Time(),
+                    mocks.time,
                     getNewRecordState(mocks.configModelStore),
                     JwtTokenStore(MockPreferencesService()),
                     CoreInternalMocks.identityVerificationService(),
+                    mocks.identityModelStore,
                 ),
             )
 
@@ -1159,6 +1182,193 @@ class OperationRepoTests : FunSpec({
         // Default behavior: drop the op.
         verify(exactly = 1) { mocks.operationModelStore.remove(opId) }
     }
+
+    //
+    // ---- Age limits and the queue cap ----
+    //
+
+    test("loadSavedOperations drops a SetTagOperation 91 days old and enqueues one 89 days old") {
+        val mocks = Mocks()
+        val stale = setTag(mocks, CURRENT_USER, daysOld = 91)
+        val fresh = setTag(mocks, CURRENT_USER, daysOld = 89)
+        mocks.operationModelStore.add(stale)
+        mocks.operationModelStore.add(fresh)
+
+        mocks.operationRepo.loadSavedOperations()
+
+        mocks.operationRepo.queue.map { it.operation } shouldBe listOf(fresh)
+        verify(exactly = 1) { mocks.operationModelStore.remove(stale.id) }
+        mocks.operationModelStore.list() shouldBe listOf(fresh)
+    }
+
+    test("operations owned by a user other than the current one are dropped at 31 days and kept at 29") {
+        val mocks = Mocks()
+        val dropped =
+            listOf(
+                setTag(mocks, OTHER_USER, daysOld = 31),
+                setAlias(mocks, OTHER_USER, daysOld = 31),
+                customEvent(mocks, OTHER_USER, daysOld = 31),
+            )
+        val kept =
+            listOf(
+                setTag(mocks, OTHER_USER, daysOld = 29),
+                setAlias(mocks, OTHER_USER, daysOld = 29),
+                customEvent(mocks, OTHER_USER, daysOld = 29),
+                setTag(mocks, CURRENT_USER, daysOld = 31),
+                setTag(mocks, null, daysOld = 31),
+            )
+        (dropped + kept).forEach { mocks.operationModelStore.add(it) }
+
+        mocks.operationRepo.loadSavedOperations()
+
+        mocks.operationRepo.queue.map { it.operation } shouldBe kept
+        dropped.forEach { verify(exactly = 1) { mocks.operationModelStore.remove(it.id) } }
+    }
+
+    test("a TrackCustomEventOperation owned by the current user is dropped at 31 days") {
+        val mocks = Mocks()
+        val event = customEvent(mocks, CURRENT_USER, daysOld = 31)
+        mocks.operationModelStore.add(event)
+
+        mocks.operationRepo.loadSavedOperations()
+
+        mocks.operationRepo.queue.size shouldBe 0
+        verify(exactly = 1) { mocks.operationModelStore.remove(event.id) }
+    }
+
+    test("LoginUserOperation and CreateSubscriptionOperation 91 days old are kept") {
+        val mocks = Mocks()
+        val login = stamped(LoginUserOperation("appId", "onesignal-id", OTHER_USER, null), mocks, daysOld = 91)
+        val subscription =
+            stamped(
+                CreateSubscriptionOperation("appId", "onesignal-id", OTHER_USER, "subscription-id", SubscriptionType.PUSH, true, "address", SubscriptionStatus.SUBSCRIBED),
+                mocks,
+                daysOld = 91,
+            )
+        mocks.operationModelStore.add(login)
+        mocks.operationModelStore.add(subscription)
+
+        mocks.operationRepo.loadSavedOperations()
+
+        mocks.operationRepo.queue.map { it.operation } shouldBe listOf(login, subscription)
+        verify(exactly = 0) { mocks.operationModelStore.remove(any()) }
+    }
+
+    test("a SetTagOperation parked without a JWT is dropped on the getNextOps pass after it passes 90 days") {
+        val mocks = Mocks()
+        mocks.identityVerificationService = CoreInternalMocks.identityVerificationService(newCodePathsRun = true, ivBehaviorActive = true)
+        mocks.configModelStore.model.useIdentityVerification = JwtRequirement.REQUIRED
+        val op = setTag(mocks, CURRENT_USER, daysOld = 89)
+        val waiter = WaiterWithValue<Boolean>()
+        mocks.operationModelStore.add(op)
+        synchronized(mocks.operationRepo.queue) {
+            mocks.operationRepo.queue.add(OperationQueueItem(op, waiter, bucket = 0))
+        }
+
+        // Parked, since nothing in the JWT store can sign for its owner.
+        mocks.operationRepo.getNextOps(0) shouldBe null
+        mocks.operationRepo.queue.size shouldBe 1
+
+        mocks.now += 2 * DAY
+        mocks.operationRepo.getNextOps(0) shouldBe null
+
+        mocks.operationRepo.queue.size shouldBe 0
+        verify(exactly = 1) { mocks.operationModelStore.remove(op.id) }
+        withTimeout(1_000) { waiter.waitForWake() } shouldBe false
+    }
+
+    test("an operation with createdAt ahead of the clock is kept") {
+        val mocks = Mocks()
+        val op = setTag(mocks, OTHER_USER, daysOld = -365)
+        mocks.operationModelStore.add(op)
+
+        mocks.operationRepo.loadSavedOperations()
+
+        mocks.operationRepo.queue.map { it.operation } shouldBe listOf(op)
+    }
+
+    test("an operation persisted without createdAt loads with createdAt equal to the load time and is kept") {
+        val mocks = Mocks()
+        val prefs = MockPreferencesService()
+        val legacy = SetTagOperation("appId", "onesignal-id", CURRENT_USER, "key", "value")
+        legacy.id = UUID.randomUUID().toString()
+        prefs.saveString(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.MODEL_STORE_PREFIX + "operations", JSONArray().put(legacy.toJSON()).toString())
+        val operationRepo =
+            OperationRepo(
+                listOf(mocks.executor),
+                OperationModelStore(prefs, mocks.time),
+                mocks.configModelStore,
+                mocks.time,
+                getNewRecordState(mocks.configModelStore),
+                mocks.jwtTokenStore,
+                mocks.identityVerificationService,
+                mocks.identityModelStore,
+            )
+
+        operationRepo.loadSavedOperations()
+
+        operationRepo.queue.size shouldBe 1
+        operationRepo.queue.first().operation.createdAt shouldBe mocks.now
+    }
+
+    test("at opRepoMaxQueueSize an enqueue drops the oldest aging-rule operation and keeps an older LoginUserOperation") {
+        val mocks = Mocks()
+        mocks.configModelStore.model.opRepoMaxQueueSize = 3
+        val login = stamped(LoginUserOperation("appId", "onesignal-id", CURRENT_USER, null), mocks, daysOld = 10)
+        val oldest = setTag(mocks, CURRENT_USER, daysOld = 5)
+        val newer = setTag(mocks, CURRENT_USER, daysOld = 1)
+        val oldestWaiter = WaiterWithValue<Boolean>()
+        listOf(login, oldest, newer).forEach { mocks.operationModelStore.add(it) }
+        synchronized(mocks.operationRepo.queue) {
+            mocks.operationRepo.queue.add(OperationQueueItem(login, bucket = 0))
+            mocks.operationRepo.queue.add(OperationQueueItem(oldest, oldestWaiter, bucket = 0))
+            mocks.operationRepo.queue.add(OperationQueueItem(newer, bucket = 0))
+        }
+        val incoming = SetTagOperation("appId", "onesignal-id", CURRENT_USER, "key2", "value2")
+
+        mocks.operationRepo.enqueue(incoming)
+        mocks.waitForInternalEnqueue()
+
+        mocks.operationRepo.queue.map { it.operation } shouldBe listOf(login, newer, incoming)
+        verify(exactly = 1) { mocks.operationModelStore.remove(oldest.id) }
+        mocks.operationModelStore.list() shouldBe listOf(login, newer, incoming)
+        withTimeout(1_000) { oldestWaiter.waitForWake() } shouldBe false
+    }
+
+    test("at opRepoMaxQueueSize with nothing droppable queued the new operation is still added") {
+        val mocks = Mocks()
+        mocks.configModelStore.model.opRepoMaxQueueSize = 2
+        val logins =
+            listOf(
+                stamped(LoginUserOperation("appId", "onesignal-id-1", CURRENT_USER, null), mocks, daysOld = 2),
+                stamped(LoginUserOperation("appId", "onesignal-id-2", CURRENT_USER, null), mocks, daysOld = 1),
+            )
+        synchronized(mocks.operationRepo.queue) {
+            logins.forEach { mocks.operationRepo.queue.add(OperationQueueItem(it, bucket = 0)) }
+        }
+        val incoming = SetTagOperation("appId", "onesignal-id", CURRENT_USER, "key", "value")
+
+        mocks.operationRepo.enqueue(incoming)
+        mocks.waitForInternalEnqueue()
+
+        mocks.operationRepo.queue.map { it.operation } shouldBe logins + incoming
+        verify(exactly = 0) { mocks.operationModelStore.remove(any()) }
+    }
+
+    test("loading a store above opRepoMaxQueueSize prunes it to the cap") {
+        val mocks = Mocks()
+        mocks.configModelStore.model.opRepoMaxQueueSize = 2
+        val oldest = setTag(mocks, CURRENT_USER, daysOld = 3)
+        val middle = setTag(mocks, CURRENT_USER, daysOld = 2)
+        val newest = setTag(mocks, CURRENT_USER, daysOld = 1)
+        listOf(oldest, middle, newest).forEach { mocks.operationModelStore.add(it) }
+
+        mocks.operationRepo.loadSavedOperations()
+
+        mocks.operationRepo.queue.map { it.operation } shouldBe listOf(middle, newest)
+        verify(exactly = 1) { mocks.operationModelStore.remove(oldest.id) }
+        mocks.operationModelStore.list() shouldBe listOf(middle, newest)
+    }
 }) {
     companion object {
         private fun mockOperation(
@@ -1187,7 +1397,38 @@ class OperationRepoTests : FunSpec({
             every { operation.applyToRecordId } returns applyToRecordId
             every { operation.externalId } returns externalId
             every { operation.requiresJwt } returns requiresJwt
+            every { operation.createdAt } returns null
+            every { operation.createdAt = any() } just runs
 
+            return operation
+        }
+
+        private fun setTag(
+            mocks: Mocks,
+            externalId: String?,
+            daysOld: Long,
+        ) = stamped(SetTagOperation("appId", "onesignal-id", externalId, "key", "value"), mocks, daysOld)
+
+        private fun setAlias(
+            mocks: Mocks,
+            externalId: String?,
+            daysOld: Long,
+        ) = stamped(SetAliasOperation("appId", "onesignal-id", externalId, "label", "value"), mocks, daysOld)
+
+        private fun customEvent(
+            mocks: Mocks,
+            externalId: String?,
+            daysOld: Long,
+        ) = stamped(TrackCustomEventOperation("appId", "onesignal-id", externalId, mocks.now, "event", null), mocks, daysOld)
+
+        /** As the repo would have persisted it. A negative [daysOld] puts `createdAt` ahead of the clock. */
+        private fun <T : Operation> stamped(
+            operation: T,
+            mocks: Mocks,
+            daysOld: Long,
+        ): T {
+            operation.id = UUID.randomUUID().toString()
+            operation.createdAt = mocks.now - daysOld * DAY
             return operation
         }
 

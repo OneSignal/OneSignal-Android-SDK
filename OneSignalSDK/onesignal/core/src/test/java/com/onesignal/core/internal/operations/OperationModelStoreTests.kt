@@ -5,6 +5,7 @@ import com.onesignal.core.internal.preferences.PreferenceOneSignalKeys
 import com.onesignal.core.internal.preferences.PreferenceStores
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
+import com.onesignal.mocks.MockHelper
 import com.onesignal.mocks.MockPreferencesService
 import com.onesignal.user.internal.operations.LoginUserOperation
 import com.onesignal.user.internal.operations.SetPropertyOperation
@@ -15,6 +16,8 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.util.UUID
 
+private const val LOAD_TIME = 1_700_000_000_000L
+
 class OperationModelStoreTests : FunSpec({
 
     beforeAny {
@@ -24,7 +27,7 @@ class OperationModelStoreTests : FunSpec({
     test("does not load invalid cached operations") {
         // Given
         val prefs = MockPreferencesService()
-        val operationModelStore = OperationModelStore(prefs)
+        val operationModelStore = OperationModelStore(prefs, MockHelper.time(LOAD_TIME))
         val jsonArray = JSONArray()
 
         // 1. Create a VALID Operation with onesignalId
@@ -62,5 +65,54 @@ class OperationModelStoreTests : FunSpec({
         operationModelStore.get(validOperationMissingOnesignalId.id) shouldNotBe null
         operationModelStore.get(invalidOperationMissingOnesignalId.id) shouldBe null
         operationModelStore.get(invalidOperationMissingName["id"] as String) shouldBe null
+    }
+
+    test("createdAt round-trips through persist and load") {
+        // Given
+        val prefs = MockPreferencesService()
+        val operation = SetPropertyOperation("appId", "onesignal-id", null, "property", "value")
+        operation.id = UUID.randomUUID().toString()
+        operation.createdAt = 1_234L
+        val writer = OperationModelStore(prefs, MockHelper.time(LOAD_TIME))
+        writer.loadOperations()
+        writer.add(operation)
+
+        // When
+        val reader = OperationModelStore(prefs, MockHelper.time(LOAD_TIME))
+        reader.loadOperations()
+
+        // Then
+        reader.get(operation.id)?.createdAt shouldBe 1_234L
+    }
+
+    test("an operation persisted without createdAt is stamped with the load time") {
+        // Given
+        val prefs = MockPreferencesService()
+        val legacy = SetPropertyOperation("appId", "onesignal-id", null, "property", "value")
+        legacy.id = UUID.randomUUID().toString()
+        prefs.saveString(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.MODEL_STORE_PREFIX + "operations", JSONArray().put(legacy.toJSON()).toString())
+        val operationModelStore = OperationModelStore(prefs, MockHelper.time(LOAD_TIME))
+
+        // When
+        operationModelStore.loadOperations()
+
+        // Then
+        operationModelStore.get(legacy.id)?.createdAt shouldBe LOAD_TIME
+    }
+
+    test("a persisted string over MAX_PERSISTED_LENGTH is not parsed and the preference is reset") {
+        // Given
+        val prefs = MockPreferencesService()
+        val key = PreferenceOneSignalKeys.MODEL_STORE_PREFIX + "operations"
+        // Not JSON, so parsing it would throw.
+        prefs.saveString(PreferenceStores.ONESIGNAL, key, "[" + "x".repeat(OperationModelStore.MAX_PERSISTED_LENGTH) + "]")
+        val operationModelStore = OperationModelStore(prefs, MockHelper.time(LOAD_TIME))
+
+        // When
+        operationModelStore.loadOperations()
+
+        // Then
+        operationModelStore.list().count() shouldBe 0
+        prefs.getString(PreferenceStores.ONESIGNAL, key, null) shouldBe "[]"
     }
 })

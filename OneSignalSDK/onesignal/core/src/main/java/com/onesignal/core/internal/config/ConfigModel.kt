@@ -192,6 +192,42 @@ class ConfigModel : Model() {
         }
 
     /**
+     * Age in milliseconds past which the operation repo drops a queued tag, property, session or purchase operation.
+     */
+    var opRepoPropertyOpMaxAge: Long
+        get() = getLongProperty(::opRepoPropertyOpMaxAge.name) { 90L * 24 * 60 * 60 * 1_000 }
+        set(value) {
+            setLongProperty(::opRepoPropertyOpMaxAge.name, value)
+        }
+
+    /**
+     * Age in milliseconds past which the operation repo drops a queued operation owned by a user other than the current one.
+     */
+    var opRepoNonCurrentUserOpMaxAge: Long
+        get() = getLongProperty(::opRepoNonCurrentUserOpMaxAge.name) { 30L * 24 * 60 * 60 * 1_000 }
+        set(value) {
+            setLongProperty(::opRepoNonCurrentUserOpMaxAge.name, value)
+        }
+
+    /**
+     * Age in milliseconds past which the operation repo drops a queued custom event.
+     */
+    var opRepoCustomEventOpMaxAge: Long
+        get() = getLongProperty(::opRepoCustomEventOpMaxAge.name) { 30L * 24 * 60 * 60 * 1_000 }
+        set(value) {
+            setLongProperty(::opRepoCustomEventOpMaxAge.name, value)
+        }
+
+    /**
+     * Queue size at which an enqueue drops the oldest operation the age limits cover to make room.
+     */
+    var opRepoMaxQueueSize: Int
+        get() = getIntProperty(::opRepoMaxQueueSize.name) { 2_000 }
+        set(value) {
+            setIntProperty(::opRepoMaxQueueSize.name, value)
+        }
+
+    /**
      * The minimum number of milliseconds required to pass to allow the fetching of IAM to occur.
      */
     var fetchIAMMinInterval: Long
