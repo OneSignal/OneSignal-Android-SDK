@@ -6,9 +6,9 @@ import com.onesignal.common.OneSignalUtils
 import com.onesignal.common.events.EventProducer
 import com.onesignal.common.modeling.ISingletonModelStoreChangeHandler
 import com.onesignal.common.modeling.ModelChangedArgs
-import com.onesignal.common.rejectNullOrEmpty
-import com.onesignal.common.rejectNullOrEmptyAny
-import com.onesignal.common.rejectNullOrEmptyEntries
+import com.onesignal.common.hasMissingEntries
+import com.onesignal.common.isMissing
+import com.onesignal.common.isMissingAny
 import com.onesignal.core.internal.language.ILanguageContext
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
@@ -71,7 +71,7 @@ internal open class UserManager(
     ) {
         Logging.log(LogLevel.DEBUG, "setAlias(label: $label, id: $id)")
 
-        if (rejectNullOrEmpty(label, "addAlias: label") || rejectNullOrEmpty(id, "addAlias: id")) {
+        if (isMissing(label, "addAlias: label") || isMissing(id, "addAlias: id")) {
             return
         }
 
@@ -86,7 +86,7 @@ internal open class UserManager(
     override fun addAliases(aliases: Map<String, String>) {
         Logging.log(LogLevel.DEBUG, "addAliases(aliases: $aliases")
 
-        if (rejectNullOrEmptyEntries(aliases, "addAliases", allowEmptyValue = false)) return
+        if (hasMissingEntries(aliases, "addAliases", allowEmptyValue = false)) return
 
         aliases.forEach {
             if (it.key == IdentityConstants.ONESIGNAL_ID) {
@@ -103,7 +103,7 @@ internal open class UserManager(
     override fun removeAlias(label: String) {
         Logging.log(LogLevel.DEBUG, "removeAlias(label: $label)")
 
-        if (rejectNullOrEmpty(label, "removeAlias: label")) return
+        if (isMissing(label, "removeAlias: label")) return
 
         if (label == IdentityConstants.ONESIGNAL_ID) {
             Logging.log(LogLevel.ERROR, "Cannot remove '${IdentityConstants.ONESIGNAL_ID}' alias")
@@ -116,7 +116,7 @@ internal open class UserManager(
     override fun removeAliases(labels: Collection<String>) {
         Logging.log(LogLevel.DEBUG, "removeAliases(labels: $labels)")
 
-        if (rejectNullOrEmptyAny(labels, "removeAliases: label")) return
+        if (isMissingAny(labels, "removeAliases: label")) return
 
         labels.forEach {
             if (it == IdentityConstants.ONESIGNAL_ID) {
@@ -180,7 +180,7 @@ internal open class UserManager(
     ) {
         Logging.log(LogLevel.DEBUG, "setTag(key: $key, value: $value)")
 
-        if (rejectNullOrEmpty(key, "addTag: key")) return
+        if (isMissing(key, "addTag: key")) return
 
         _propertiesModel.tags[key] = value
     }
@@ -188,7 +188,7 @@ internal open class UserManager(
     override fun addTags(tags: Map<String, String>) {
         Logging.log(LogLevel.DEBUG, "setTags(tags: $tags)")
 
-        if (rejectNullOrEmptyEntries(tags, "addTags", allowEmptyValue = true)) return
+        if (hasMissingEntries(tags, "addTags", allowEmptyValue = true)) return
 
         tags.forEach {
             _propertiesModel.tags[it.key] = it.value
@@ -198,7 +198,7 @@ internal open class UserManager(
     override fun removeTag(key: String) {
         Logging.log(LogLevel.DEBUG, "removeTag(key: $key)")
 
-        if (rejectNullOrEmpty(key, "removeTag: key")) return
+        if (isMissing(key, "removeTag: key")) return
 
         _propertiesModel.tags.remove(key)
     }
@@ -206,7 +206,7 @@ internal open class UserManager(
     override fun removeTags(keys: Collection<String>) {
         Logging.log(LogLevel.DEBUG, "removeTags(keys: $keys)")
 
-        if (rejectNullOrEmptyAny(keys, "removeTags: key")) return
+        if (isMissingAny(keys, "removeTags: key")) return
 
         keys.forEach {
             _propertiesModel.tags.remove(it)
@@ -229,7 +229,7 @@ internal open class UserManager(
         name: String,
         properties: Map<String, Any?>?,
     ) {
-        if (rejectNullOrEmpty(name, "trackEvent: name")) return
+        if (isMissing(name, "trackEvent: name")) return
         if (!JSONUtils.isValidJsonObject(properties)) {
             Logging.log(LogLevel.ERROR, "Custom event properties are not JSON-serializable")
             return
