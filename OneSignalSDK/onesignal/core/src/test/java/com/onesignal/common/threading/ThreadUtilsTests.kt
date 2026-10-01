@@ -8,7 +8,9 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import kotlinx.coroutines.delay
 import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicReference
 
 class ThreadUtilsTests : FunSpec({
 
@@ -137,6 +139,38 @@ class ThreadUtilsTests : FunSpec({
         Thread.sleep(20)
         completed shouldBe true
         onCompleteCalled shouldBe true
+    }
+
+    test("linkage errors stay inside suspendify helpers") {
+        val uncaught = AtomicReference<Throwable>()
+        val previous = Thread.getDefaultUncaughtExceptionHandler()
+        val escaped = CountDownLatch(1)
+        Thread.setDefaultUncaughtExceptionHandler { _, error ->
+            uncaught.set(error)
+            escaped.countDown()
+        }
+        val finished = CountDownLatch(2)
+        try {
+            suspendifyOnIO {
+                try {
+                    throw NoSuchMethodError("forNamespace")
+                } finally {
+                    finished.countDown()
+                }
+            }
+            suspendifyOnSerialIO {
+                try {
+                    throw ExceptionInInitializerError("Module with the Main dispatcher is missing")
+                } finally {
+                    finished.countDown()
+                }
+            }
+            finished.await(2, TimeUnit.SECONDS) shouldBe true
+            escaped.await(300, TimeUnit.MILLISECONDS)
+            uncaught.get() shouldBe null
+        } finally {
+            Thread.setDefaultUncaughtExceptionHandler(previous)
+        }
     }
 
     test("suspendifyWithErrorHandling should handle errors properly") {

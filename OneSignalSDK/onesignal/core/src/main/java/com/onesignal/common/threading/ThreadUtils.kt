@@ -25,10 +25,8 @@ import kotlinx.coroutines.withContext
  */
 fun suspendifyOnMain(block: suspend () -> Unit) {
     OneSignalDispatchers.launchOnIO {
-        try {
+        catchSuspendifyFailure("suspendifyOnMain") {
             withContext(Dispatchers.Main) { block() }
-        } catch (e: Exception) {
-            Logging.error("Exception in suspendifyOnMain", e)
         }
     }
 }
@@ -87,10 +85,8 @@ fun suspendifyOnDefault(block: suspend () -> Unit) {
  */
 fun suspendifyOnSerialIO(block: suspend () -> Unit) {
     OneSignalDispatchers.launchOnSerialIO {
-        try {
+        catchSuspendifyFailure("suspendifyOnSerialIO") {
             block()
-        } catch (e: Exception) {
-            Logging.error("Exception in suspendifyOnSerialIO", e)
         }
     }
 }
@@ -120,11 +116,9 @@ fun suspendifyWithCompletion(
     val launch: (suspend () -> Unit) -> Job =
         if (useIO) OneSignalDispatchers::launchOnIO else OneSignalDispatchers::launchOnDefault
     launch {
-        try {
+        catchSuspendifyFailure("suspendifyWithCompletion") {
             block()
             onComplete?.invoke()
-        } catch (e: Exception) {
-            Logging.error("Exception in suspendifyWithCompletion", e)
         }
     }
 }
@@ -153,6 +147,8 @@ fun suspendifyWithErrorHandling(
         } catch (e: Exception) {
             Logging.error("Exception in suspendifyWithErrorHandling", e)
             onError?.invoke(e)
+        } catch (e: LinkageError) {
+            Logging.error("Exception in suspendifyWithErrorHandling", e)
         }
     }
 }
@@ -166,10 +162,8 @@ fun suspendifyWithErrorHandling(
  */
 fun launchOnIO(block: suspend () -> Unit): Job {
     return OneSignalDispatchers.launchOnIO {
-        try {
+        catchSuspendifyFailure("launchOnIO") {
             block()
-        } catch (e: Exception) {
-            Logging.error("Exception in launchOnIO", e)
         }
     }
 }
@@ -183,10 +177,22 @@ fun launchOnIO(block: suspend () -> Unit): Job {
  */
 fun launchOnDefault(block: suspend () -> Unit): Job {
     return OneSignalDispatchers.launchOnDefault {
-        try {
+        catchSuspendifyFailure("launchOnDefault") {
             block()
-        } catch (e: Exception) {
-            Logging.error("Exception in launchOnDefault", e)
         }
+    }
+}
+
+/**
+ * LinkageError is not an Exception. NoSuchMethodError and ExceptionInInitializerError
+ * skip `catch (Exception)` and kill the process.
+ */
+private inline fun catchSuspendifyFailure(label: String, block: () -> Unit) {
+    try {
+        block()
+    } catch (e: Exception) {
+        Logging.error("Exception in $label", e)
+    } catch (e: LinkageError) {
+        Logging.error("Exception in $label", e)
     }
 }
