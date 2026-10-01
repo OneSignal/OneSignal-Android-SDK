@@ -2,6 +2,7 @@ package com.onesignal
 
 import android.os.Build
 import androidx.annotation.RequiresApi
+import com.onesignal.common.threading.mainDispatcherOrNull
 import kotlinx.coroutines.Dispatchers
 import java.util.function.Consumer
 import kotlin.coroutines.Continuation
@@ -61,7 +62,7 @@ object Continue {
     @JvmStatic
     fun <R> with(
         onFinished: Consumer<ContinueResult<R>>,
-        context: CoroutineContext = Dispatchers.Main,
+        context: CoroutineContext = mainDispatcherOrNull() ?: Dispatchers.Default,
     ): Continuation<R> {
         return object : Continuation<R> {
             override val context: CoroutineContext
@@ -82,7 +83,7 @@ object Continue {
     fun <R> none(): Continuation<R> {
         return object : Continuation<R> {
             override val context: CoroutineContext
-                get() = Dispatchers.Main
+                get() = mainDispatcherOrNull() ?: Dispatchers.Default
 
             override fun resumeWith(result: Result<R>) {
             }

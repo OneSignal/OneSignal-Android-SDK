@@ -10,6 +10,7 @@ import com.onesignal.common.events.CallbackProducer
 import com.onesignal.common.events.EventProducer
 import com.onesignal.common.exceptions.BackendException
 import com.onesignal.common.threading.suspendifyWithErrorHandling
+import com.onesignal.common.threading.withMain
 import com.onesignal.core.internal.application.AppEntryAction
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.config.ConfigModelStore
@@ -35,9 +36,7 @@ import com.onesignal.notifications.internal.lifecycle.INotificationLifecycleServ
 import com.onesignal.notifications.internal.receivereceipt.IReceiveReceiptWorkManager
 import com.onesignal.session.internal.influence.IInfluenceManager
 import com.onesignal.user.internal.subscriptions.ISubscriptionManager
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
@@ -305,7 +304,7 @@ internal class NotificationLifecycleService(
             val intent = intentGenerator.getIntentVisible()
             if (intent != null) {
                 Logging.debug("SDK running startActivity with Intent: $intent")
-                withContext(Dispatchers.Main) {
+                withMain {
                     activity.startActivity(intent)
                 }
             } else {
@@ -316,6 +315,8 @@ internal class NotificationLifecycleService(
         } catch (e: ActivityNotFoundException) {
             Logging.warn("No activity found to handle notification open intent.", e)
         } catch (e: Exception) {
+            Logging.error("Could not open notification activity.", e)
+        } catch (e: LinkageError) {
             Logging.error("Could not open notification activity.", e)
         }
     }

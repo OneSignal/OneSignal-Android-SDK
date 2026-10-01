@@ -32,18 +32,24 @@ internal class NotificationRestoreWorkManager : INotificationRestoreWorkManager 
             restored = true
         }
 
-        // When boot or upgrade, add a 15 second delay to alleviate app doing to much work all at once
-        val restoreDelayInSeconds = if (shouldDelay) 15 else 0
-        val workRequest =
-            OneTimeWorkRequest.Builder(NotificationRestoreWorker::class.java)
-                .setInitialDelay(restoreDelayInSeconds.toLong(), TimeUnit.SECONDS)
-                .build()
-        OSWorkManagerHelper.getInstance(context!!)
-            .enqueueUniqueWork(
-                NOTIFICATION_RESTORE_WORKER_IDENTIFIER,
-                ExistingWorkPolicy.KEEP,
-                workRequest,
-            )
+        try {
+            // When boot or upgrade, add a 15 second delay to alleviate app doing to much work all at once
+            val restoreDelayInSeconds = if (shouldDelay) 15 else 0
+            val workRequest =
+                OneTimeWorkRequest.Builder(NotificationRestoreWorker::class.java)
+                    .setInitialDelay(restoreDelayInSeconds.toLong(), TimeUnit.SECONDS)
+                    .build()
+            OSWorkManagerHelper.getInstance(context)
+                .enqueueUniqueWork(
+                    NOTIFICATION_RESTORE_WORKER_IDENTIFIER,
+                    ExistingWorkPolicy.KEEP,
+                    workRequest,
+                )
+        } catch (t: Throwable) {
+            // Enqueue failed after the flag was set. Clear it so the next focus can retry.
+            synchronized(lock) { restored = false }
+            throw t
+        }
     }
 
     class NotificationRestoreWorker(context: Context, workerParams: WorkerParameters) : CoroutineWorker(context, workerParams) {

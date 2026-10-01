@@ -4,6 +4,7 @@ import android.app.Activity
 import com.onesignal.common.events.EventProducer
 import com.onesignal.common.threading.runOnSerialIO
 import com.onesignal.common.threading.suspendifyOnIO
+import com.onesignal.common.threading.withMain
 import com.onesignal.core.internal.application.IApplicationLifecycleHandler
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.debug.internal.logging.Logging
@@ -18,8 +19,6 @@ import com.onesignal.notifications.internal.permissions.INotificationPermissionC
 import com.onesignal.notifications.internal.permissions.INotificationPermissionController
 import com.onesignal.notifications.internal.restoration.INotificationRestoreWorkManager
 import com.onesignal.notifications.internal.summary.INotificationSummaryManager
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import org.json.JSONArray
 
 interface INotificationActivityOpener {
@@ -81,7 +80,13 @@ internal class NotificationsManager(
      */
     private fun refreshNotificationState() {
         // ensure all notifications for this app have been restored to the notification panel
-        _notificationRestoreWorkManager.beginEnqueueingWork(_applicationService.appContext, false)
+        try {
+            _notificationRestoreWorkManager.beginEnqueueingWork(_applicationService.appContext, false)
+        } catch (e: Exception) {
+            Logging.error("Notification restore enqueue failed", e)
+        } catch (e: LinkageError) {
+            Logging.error("Notification restore enqueue failed", e)
+        }
 
         val isEnabled = NotificationHelper.areNotificationsEnabled(_applicationService.appContext)
         setPermissionStatusAndFire(isEnabled)
@@ -90,9 +95,9 @@ internal class NotificationsManager(
     override suspend fun requestPermission(fallbackToSettings: Boolean): Boolean {
         Logging.debug("NotificationsManager.requestPermission()")
 
-        return withContext(Dispatchers.Main) {
-            return@withContext _notificationPermissionController.prompt(fallbackToSettings)
-        }
+        return withMain {
+            _notificationPermissionController.prompt(fallbackToSettings)
+        } ?: false
     }
 
     private fun setPermissionStatusAndFire(isEnabled: Boolean) {

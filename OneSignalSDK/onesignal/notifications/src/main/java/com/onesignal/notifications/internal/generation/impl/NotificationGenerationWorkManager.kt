@@ -40,6 +40,25 @@ internal class NotificationGenerationWorkManager : INotificationGenerationWorkMa
             return true
         }
 
+        try {
+            enqueueWork(context, osNotificationId, androidNotificationId, jsonPayload, timestamp, restoreReason, id)
+        } catch (t: Throwable) {
+            // The worker never starts when enqueue throws, so its finally will not drop this id.
+            removeNotificationIdProcessed(id)
+            throw t
+        }
+        return true
+    }
+
+    private fun enqueueWork(
+        context: Context,
+        osNotificationId: String,
+        androidNotificationId: Int,
+        jsonPayload: JSONObject?,
+        timestamp: Long,
+        restoreReason: NotificationRestoreReason?,
+        id: String,
+    ) {
         // TODO: Need to figure out how to implement the isHighPriority param
         val inputData =
             Data.Builder()
@@ -58,8 +77,6 @@ internal class NotificationGenerationWorkManager : INotificationGenerationWorkMa
         )
         OSWorkManagerHelper.getInstance(context)
             .enqueueUniqueWork(osNotificationId, ExistingWorkPolicy.KEEP, workRequest)
-
-        return true
     }
 
     class NotificationGenerationWorker(context: Context, workerParams: WorkerParameters) : CoroutineWorker(context, workerParams) {

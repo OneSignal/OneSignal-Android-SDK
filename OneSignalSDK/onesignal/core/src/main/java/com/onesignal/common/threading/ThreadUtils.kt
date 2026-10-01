@@ -1,9 +1,12 @@
 package com.onesignal.common.threading
 
 import com.onesignal.debug.internal.logging.Logging
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.withContext
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Modernized ThreadUtils that leverages OneSignalDispatchers for better thread management.
@@ -26,7 +29,8 @@ import kotlinx.coroutines.withContext
 fun suspendifyOnMain(block: suspend () -> Unit) {
     OneSignalDispatchers.launchOnIO {
         catchSuspendifyFailure("suspendifyOnMain") {
-            withContext(Dispatchers.Main) { block() }
+            val main = mainDispatcherOrNull() ?: return@catchSuspendifyFailure
+            withContext(main) { block() }
         }
     }
 }
@@ -148,7 +152,8 @@ fun suspendifyWithErrorHandling(
             Logging.error("Exception in suspendifyWithErrorHandling", e)
             onError?.invoke(e)
         } catch (e: LinkageError) {
-            Logging.error("Exception in suspendifyWithErrorHandling", e)
+            Logging.error("LinkageError in suspendifyWithErrorHandling", e)
+            onError?.invoke(Exception(e))
         }
     }
 }
@@ -193,6 +198,33 @@ private inline fun catchSuspendifyFailure(label: String, block: () -> Unit) {
     } catch (e: Exception) {
         Logging.error("Exception in $label", e)
     } catch (e: LinkageError) {
-        Logging.error("Exception in $label", e)
+        Logging.error("LinkageError in $label", e)
     }
+}
+
+private val mainDispatcherMissing = AtomicBoolean(false)
+
+/**
+ * Null after Main's class init fails. That failure sticks, and the next read is NoClassDefFoundError.
+ */
+fun mainDispatcherOrNull(): CoroutineDispatcher? = resolveMainDispatcher { Dispatchers.Main }
+
+internal fun resolveMainDispatcher(resolve: () -> CoroutineDispatcher): CoroutineDispatcher? {
+    if (mainDispatcherMissing.get()) return null
+    return try {
+        resolve()
+    } catch (e: LinkageError) {
+        mainDispatcherMissing.set(true)
+        Logging.error("Dispatchers.Main unavailable", e)
+        null
+    }
+}
+
+internal fun clearMainDispatcherFailureForTest() {
+    mainDispatcherMissing.set(false)
+}
+
+suspend fun <T> withMain(block: suspend CoroutineScope.() -> T): T? {
+    val main = mainDispatcherOrNull() ?: return null
+    return withContext(main, block)
 }
