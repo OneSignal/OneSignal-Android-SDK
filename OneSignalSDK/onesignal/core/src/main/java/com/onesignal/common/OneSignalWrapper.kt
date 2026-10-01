@@ -12,4 +12,13 @@ object OneSignalWrapper {
      */
     @JvmStatic
     var sdkVersion: String? = null
+
+    /**
+     * Set by wrappers whose host activity cannot host an activity result launcher.
+     * Only consulted when [com.onesignal.core.activities.PermissionsActivity] is missing
+     * from the merged manifest.
+     */
+    @JvmStatic
+    @Volatile
+    var hostPermissionPrompt: IHostPermissionPrompt? = null
 }
