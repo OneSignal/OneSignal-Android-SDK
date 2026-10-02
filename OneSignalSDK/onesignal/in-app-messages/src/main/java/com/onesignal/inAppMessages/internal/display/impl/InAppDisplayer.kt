@@ -4,6 +4,7 @@ import android.annotation.TargetApi
 import android.app.Activity
 import android.os.Build
 import android.util.Base64
+import com.onesignal.common.threading.withMain
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.language.ILanguageContext
@@ -17,9 +18,7 @@ import com.onesignal.inAppMessages.internal.display.IInAppDisplayer
 import com.onesignal.inAppMessages.internal.lifecycle.IInAppLifecycleService
 import com.onesignal.inAppMessages.internal.prompt.IInAppMessagePromptFactory
 import com.onesignal.session.internal.influence.IInfluenceManager
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.withContext
 import java.io.UnsupportedEncodingException
 import java.util.concurrent.atomic.AtomicReference
 
@@ -148,7 +147,7 @@ internal class InAppDisplayer(
             }
 
             // Web view must be created on the main thread.
-            withContext(Dispatchers.Main) {
+            withMain {
                 // Handles exception "MissingWebViewPackageException: Failed to load WebView provider: No WebView installed"
                 try {
                     webViewManager.setupWebView(currentActivity, base64Str, content.isFullBleed)

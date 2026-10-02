@@ -3,6 +3,7 @@ package com.onesignal.location.internal
 import android.os.Build
 import com.onesignal.common.AndroidUtils
 import com.onesignal.common.threading.suspendifyOnIO
+import com.onesignal.common.threading.withMain
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.preferences.IPreferencesService
 import com.onesignal.core.internal.preferences.PreferenceOneSignalKeys
@@ -17,8 +18,6 @@ import com.onesignal.location.internal.common.LocationUtils
 import com.onesignal.location.internal.controller.ILocationController
 import com.onesignal.location.internal.permissions.ILocationPermissionChangedHandler
 import com.onesignal.location.internal.permissions.LocationPermissionController
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 
 internal class LocationManager(
     private val _applicationService: IApplicationService,
@@ -76,7 +75,7 @@ internal class LocationManager(
         Logging.log(LogLevel.DEBUG, "LocationManager.requestPermission()")
 
         var result = false
-        withContext(Dispatchers.Main) {
+        withMain {
             if (!isShared) {
                 Logging.warn("Requesting location permission, but location sharing must also be enabled by setting isShared to true")
             }
@@ -104,7 +103,7 @@ internal class LocationManager(
                 if (!hasFinePermissionGranted && !hasCoarsePermissionGranted) {
                     // Permission missing on manifest
                     Logging.info("Location permissions not added on AndroidManifest file < M")
-                    return@withContext false
+                    return@withMain false
                 }
 
                 startGetLocation()

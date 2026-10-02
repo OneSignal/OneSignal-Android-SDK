@@ -57,15 +57,17 @@ class UpgradeReceiver : BroadcastReceiver() {
 
         // init OneSignal and enqueue restore work in background
         suspendifyOnIO {
-            if (!OneSignal.initWithContext(context.applicationContext)) {
-                Logging.warn("UpgradeReceiver skipped due to failed OneSignal init")
-                pendingResult?.finish()
-                return@suspendifyOnIO
-            }
+            try {
+                if (!OneSignal.initWithContext(context.applicationContext)) {
+                    Logging.warn("UpgradeReceiver skipped due to failed OneSignal init")
+                    return@suspendifyOnIO
+                }
 
-            val restoreWorkManager = OneSignal.getService<INotificationRestoreWorkManager>()
-            restoreWorkManager.beginEnqueueingWork(context, true)
-            pendingResult?.finish()
+                val restoreWorkManager = OneSignal.getService<INotificationRestoreWorkManager>()
+                restoreWorkManager.beginEnqueueingWork(context, true)
+            } finally {
+                pendingResult?.finish()
+            }
         }
     }
 }

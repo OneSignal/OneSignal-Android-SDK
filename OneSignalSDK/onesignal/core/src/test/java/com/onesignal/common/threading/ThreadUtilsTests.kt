@@ -2,13 +2,24 @@ package com.onesignal.common.threading
 
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
+import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import io.kotest.matchers.types.shouldBeInstanceOf
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.setMain
 import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicReference
+import kotlin.coroutines.CoroutineContext
 
 class ThreadUtilsTests : FunSpec({
 
@@ -137,6 +148,135 @@ class ThreadUtilsTests : FunSpec({
         Thread.sleep(20)
         completed shouldBe true
         onCompleteCalled shouldBe true
+    }
+
+    test("linkage errors stay inside suspendify helpers") {
+        clearMainDispatcherFailureForTest()
+        @OptIn(ExperimentalCoroutinesApi::class)
+        Dispatchers.setMain(UnconfinedTestDispatcher())
+        val uncaught = AtomicReference<Throwable>()
+        val previous = Thread.getDefaultUncaughtExceptionHandler()
+        val escaped = CountDownLatch(1)
+        Thread.setDefaultUncaughtExceptionHandler { _, error ->
+            uncaught.set(error)
+            escaped.countDown()
+        }
+        val finished = CountDownLatch(6)
+        val reported = AtomicReference<Exception>()
+        try {
+            mainDispatcherOrNull() shouldNotBe null
+            suspendifyOnIO {
+                try {
+                    throw NoSuchMethodError("forNamespace")
+                } finally {
+                    finished.countDown()
+                }
+            }
+            suspendifyOnSerialIO {
+                try {
+                    throw ExceptionInInitializerError("Module with the Main dispatcher is missing")
+                } finally {
+                    finished.countDown()
+                }
+            }
+            suspendifyOnMain {
+                try {
+                    throw NoSuchMethodError("Main")
+                } finally {
+                    finished.countDown()
+                }
+            }
+            launchOnIO {
+                try {
+                    throw NoSuchMethodError("launchOnIO")
+                } finally {
+                    finished.countDown()
+                }
+            }
+            launchOnDefault {
+                try {
+                    throw ExceptionInInitializerError("launchOnDefault")
+                } finally {
+                    finished.countDown()
+                }
+            }
+            suspendifyWithErrorHandling(
+                block = { throw NoSuchMethodError("errorHandling") },
+                onError = {
+                    reported.set(it)
+                    finished.countDown()
+                },
+            )
+            finished.await(2, TimeUnit.SECONDS) shouldBe true
+            escaped.await(300, TimeUnit.MILLISECONDS)
+            uncaught.get() shouldBe null
+            reported.get().cause.shouldBeInstanceOf<NoSuchMethodError>()
+        } finally {
+            Thread.setDefaultUncaughtExceptionHandler(previous)
+            @OptIn(ExperimentalCoroutinesApi::class)
+            Dispatchers.resetMain()
+            clearMainDispatcherFailureForTest()
+        }
+    }
+
+    test("a failed Main dispatcher is remembered and withMain skips the block") {
+        try {
+            resolveMainDispatcher { throw ExceptionInInitializerError("missing") } shouldBe null
+            resolveMainDispatcher { throw AssertionError("resolve ran after Main was marked missing") } shouldBe null
+            var ran = false
+            withMain { ran = true }
+            ran shouldBe false
+        } finally {
+            clearMainDispatcherFailureForTest()
+        }
+    }
+
+    test("withMain marks Main missing when the dispatcher cannot dispatch") {
+        clearMainDispatcherFailureForTest()
+        try {
+            var ran = false
+            withMainDispatcher({ UndispatchableDispatcher }) { ran = true } shouldBe null
+            ran shouldBe false
+
+            var laterRan = false
+            withMain { laterRan = true }
+            laterRan shouldBe false
+        } finally {
+            clearMainDispatcherFailureForTest()
+        }
+    }
+
+    test("withMain lets the block's own failure through without blaming Main") {
+        clearMainDispatcherFailureForTest()
+        @OptIn(ExperimentalCoroutinesApi::class)
+        Dispatchers.setMain(UnconfinedTestDispatcher())
+        try {
+            shouldThrow<IllegalStateException> {
+                withMain { throw IllegalStateException("from the block") }
+            }
+
+            var ran = false
+            withMain { ran = true }
+            ran shouldBe true
+        } finally {
+            @OptIn(ExperimentalCoroutinesApi::class)
+            Dispatchers.resetMain()
+            clearMainDispatcherFailureForTest()
+        }
+    }
+
+    test("withMain runs the block when Main is available") {
+        clearMainDispatcherFailureForTest()
+        @OptIn(ExperimentalCoroutinesApi::class)
+        Dispatchers.setMain(UnconfinedTestDispatcher())
+        try {
+            var ran = false
+            withMain { ran = true }
+            ran shouldBe true
+        } finally {
+            @OptIn(ExperimentalCoroutinesApi::class)
+            Dispatchers.resetMain()
+        }
     }
 
     test("suspendifyWithErrorHandling should handle errors properly") {
@@ -342,3 +482,15 @@ class ThreadUtilsTests : FunSpec({
         results shouldContain "default"
     }
 })
+
+/**
+ * Stands in for coroutines' MissingMainCoroutineDispatcher: reading it is fine, dispatching is not.
+ */
+private object UndispatchableDispatcher : CoroutineDispatcher() {
+    override fun dispatch(
+        context: CoroutineContext,
+        block: Runnable,
+    ) {
+        throw IllegalStateException("Module with the Main dispatcher is missing")
+    }
+}

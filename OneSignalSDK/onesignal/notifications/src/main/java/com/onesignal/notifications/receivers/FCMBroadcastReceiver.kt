@@ -31,47 +31,56 @@ class FCMBroadcastReceiver : BroadcastReceiver() {
         // likely to be warm by the time the suspendifyOnIO below submits its work.
         OneSignalDispatchers.prewarm()
 
+        // goAsync() detaches the pending result, after which isOrderedBroadcast reports false and
+        // the result code and abort below would silently do nothing.
+        val ordered = isOrderedBroadcast
         val pendingResult: BroadcastReceiver.PendingResult? = goAsync()
         // process in background
         suspendifyOnIO {
-            if (!OneSignal.initWithContext(context.applicationContext)) {
-                Logging.warn("FCMBroadcastReceiver skipped due to failed OneSignal init")
+            try {
+                if (!OneSignal.initWithContext(context.applicationContext)) {
+                    Logging.warn("FCMBroadcastReceiver skipped due to failed OneSignal init")
+                    return@suspendifyOnIO
+                }
+
+                val bundleProcessor = OneSignal.getService<INotificationBundleProcessor>()
+
+                if (!isFCMMessage(intent)) {
+                    setSuccessfulResultCode(pendingResult, ordered)
+                    return@suspendifyOnIO
+                }
+
+                val processedResult = bundleProcessor.processBundleFromReceiver(context, bundle)
+
+                // Prevent other FCM receivers from firing if work manager is processing the notification
+                if (processedResult?.isWorkManagerProcessing == true) {
+                    setAbort(pendingResult, ordered)
+                    return@suspendifyOnIO
+                }
+
+                setSuccessfulResultCode(pendingResult, ordered)
+            } finally {
                 pendingResult?.finish()
-                return@suspendifyOnIO
             }
-
-            val bundleProcessor = OneSignal.getService<INotificationBundleProcessor>()
-
-            if (!isFCMMessage(intent)) {
-                setSuccessfulResultCode()
-                pendingResult?.finish()
-                return@suspendifyOnIO
-            }
-
-            val processedResult = bundleProcessor.processBundleFromReceiver(context, bundle)
-
-            // Prevent other FCM receivers from firing if work manager is processing the notification
-            if (processedResult?.isWorkManagerProcessing == true) {
-                setAbort()
-                pendingResult?.finish()
-                return@suspendifyOnIO
-            }
-
-            setSuccessfulResultCode()
-            pendingResult?.finish()
         }
     }
 
-    private fun setSuccessfulResultCode() {
-        if (isOrderedBroadcast) {
-            resultCode = Activity.RESULT_OK
+    private fun setSuccessfulResultCode(
+        pendingResult: BroadcastReceiver.PendingResult?,
+        ordered: Boolean,
+    ) {
+        if (ordered && pendingResult != null) {
+            pendingResult.resultCode = Activity.RESULT_OK
         }
     }
 
-    private fun setAbort() {
-        if (isOrderedBroadcast) {
+    private fun setAbort(
+        pendingResult: BroadcastReceiver.PendingResult?,
+        ordered: Boolean,
+    ) {
+        if (ordered && pendingResult != null) {
             // Prevents other BroadcastReceivers from firing
-            abortBroadcast()
+            pendingResult.abortBroadcast()
 
             // TODO: Previous error and related to this Github issue ticket
             //    https://github.com/OneSignal/OneSignal-Android-SDK/issues/307
@@ -81,7 +90,7 @@ class FCMBroadcastReceiver : BroadcastReceiver() {
             //    flg=0x10000000
             //    pkg=com.onesignal.sdktest (has extras)
             // }
-            resultCode = Activity.RESULT_OK
+            pendingResult.resultCode = Activity.RESULT_OK
         }
     }
 

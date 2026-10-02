@@ -1,5 +1,7 @@
 package com.onesignal.notifications.receivers
 
+import android.app.Activity
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import androidx.test.core.app.ApplicationProvider
@@ -8,9 +10,12 @@ import com.onesignal.OneSignal
 import com.onesignal.common.threading.OneSignalDispatchers
 import com.onesignal.common.threading.suspendifyOnIO
 import com.onesignal.mocks.IOMockHelper
+import com.onesignal.notifications.internal.bundle.INotificationBundleProcessor
 import io.kotest.core.spec.style.FunSpec
 import io.mockk.clearMocks
 import io.mockk.coEvery
+import io.mockk.every
+import io.mockk.mockk
 import io.mockk.mockkObject
 import io.mockk.unmockkObject
 import io.mockk.verify
@@ -68,4 +73,57 @@ class FCMBroadcastReceiverTests : FunSpec({
 
         verify(exactly = 0) { OneSignalDispatchers.prewarm() }
     }
+
+    test("an ordered broadcast gets its result code through the pending result") {
+        coEvery { OneSignal.initWithContext(any()) } returns true
+        every { OneSignal.getService<INotificationBundleProcessor>() } returns mockk(relaxed = true)
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val intent = Intent("some.other.action").apply { putExtra("from", "sender") }
+        val receiver = FCMBroadcastReceiver()
+        val pendingResult = receiver.attachOrderedPendingResult()
+
+        receiver.onReceive(context, intent)
+
+        verify(exactly = 1) { pendingResult.resultCode = Activity.RESULT_OK }
+        verify(exactly = 1) { pendingResult.finish() }
+    }
+
+    test("work manager processing aborts the ordered broadcast") {
+        coEvery { OneSignal.initWithContext(any()) } returns true
+        every { OneSignal.getService<INotificationBundleProcessor>() } returns
+            mockk {
+                coEvery { processBundleFromReceiver(any(), any()) } returns
+                    INotificationBundleProcessor.ProcessedBundleResult().apply { isWorkManagerProcessing = true }
+            }
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val intent =
+            Intent("com.google.android.c2dm.intent.RECEIVE").apply {
+                putExtra("from", "sender")
+                putExtra("message_type", "gcm")
+            }
+        val receiver = FCMBroadcastReceiver()
+        val pendingResult = receiver.attachOrderedPendingResult()
+
+        receiver.onReceive(context, intent)
+
+        verify(exactly = 1) { pendingResult.abortBroadcast() }
+        verify(exactly = 1) { pendingResult.resultCode = Activity.RESULT_OK }
+    }
 })
+
+/**
+ * The framework only hands a receiver its PendingResult during a real dispatch, and the ordered
+ * flag is a field rather than a method, so neither can be stubbed.
+ */
+private fun BroadcastReceiver.attachOrderedPendingResult(): BroadcastReceiver.PendingResult {
+    val pendingResult = mockk<BroadcastReceiver.PendingResult>(relaxed = true)
+    BroadcastReceiver.PendingResult::class.java.getDeclaredField("mOrderedHint").apply {
+        isAccessible = true
+        setBoolean(pendingResult, true)
+    }
+    BroadcastReceiver::class.java.getDeclaredField("mPendingResult").apply {
+        isAccessible = true
+        set(this@attachOrderedPendingResult, pendingResult)
+    }
+    return pendingResult
+}
