@@ -29,8 +29,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 fun suspendifyOnMain(block: suspend () -> Unit) {
     OneSignalDispatchers.launchOnIO {
         catchSuspendifyFailure("suspendifyOnMain") {
-            val main = mainDispatcherOrNull() ?: return@catchSuspendifyFailure
-            withContext(main) { block() }
+            withMain { block() }
         }
     }
 }
@@ -205,7 +204,8 @@ private inline fun catchSuspendifyFailure(label: String, block: () -> Unit) {
 private val mainDispatcherMissing = AtomicBoolean(false)
 
 /**
- * Null after Main's class init fails. That failure sticks, and the next read is NoClassDefFoundError.
+ * Null only once Main is known bad. Reading it proves nothing: with no Main module, coroutines
+ * returns a stub that throws on dispatch, so [withMain] is what discovers the failure.
  */
 fun mainDispatcherOrNull(): CoroutineDispatcher? = resolveMainDispatcher { Dispatchers.Main }
 
@@ -214,17 +214,45 @@ internal fun resolveMainDispatcher(resolve: () -> CoroutineDispatcher): Coroutin
     return try {
         resolve()
     } catch (e: LinkageError) {
-        mainDispatcherMissing.set(true)
-        Logging.error("Dispatchers.Main unavailable", e)
+        markMainDispatcherMissing(e)
         null
     }
+}
+
+private fun markMainDispatcherMissing(cause: Throwable) {
+    mainDispatcherMissing.set(true)
+    Logging.error("Dispatchers.Main unavailable", cause)
 }
 
 internal fun clearMainDispatcherFailureForTest() {
     mainDispatcherMissing.set(false)
 }
 
-suspend fun <T> withMain(block: suspend CoroutineScope.() -> T): T? {
-    val main = mainDispatcherOrNull() ?: return null
-    return withContext(main, block)
+/**
+ * Null when the main thread cannot be reached. Returns whatever [block] returns otherwise, so a
+ * nullable result of its own is indistinguishable from a skip.
+ */
+suspend fun <T> withMain(block: suspend CoroutineScope.() -> T): T? = withMainDispatcher(::mainDispatcherOrNull, block)
+
+internal suspend fun <T> withMainDispatcher(
+    resolve: () -> CoroutineDispatcher?,
+    block: suspend CoroutineScope.() -> T,
+): T? {
+    val main = resolve() ?: return null
+    var started = false
+    return try {
+        withContext(main) {
+            started = true
+            block()
+        }
+    } catch (e: IllegalStateException) {
+        // Not started means the dispatcher never ran us, so this is its failure and not the block's.
+        if (started) throw e
+        markMainDispatcherMissing(e)
+        null
+    } catch (e: LinkageError) {
+        if (started) throw e
+        markMainDispatcherMissing(e)
+        null
+    }
 }

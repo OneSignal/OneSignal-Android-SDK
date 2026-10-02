@@ -2,11 +2,13 @@ package com.onesignal.common.threading
 
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
+import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.types.shouldBeInstanceOf
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
@@ -17,6 +19,7 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
+import kotlin.coroutines.CoroutineContext
 
 class ThreadUtilsTests : FunSpec({
 
@@ -224,6 +227,40 @@ class ThreadUtilsTests : FunSpec({
             withMain { ran = true }
             ran shouldBe false
         } finally {
+            clearMainDispatcherFailureForTest()
+        }
+    }
+
+    test("withMain marks Main missing when the dispatcher cannot dispatch") {
+        clearMainDispatcherFailureForTest()
+        try {
+            var ran = false
+            withMainDispatcher({ UndispatchableDispatcher }) { ran = true } shouldBe null
+            ran shouldBe false
+
+            var laterRan = false
+            withMain { laterRan = true }
+            laterRan shouldBe false
+        } finally {
+            clearMainDispatcherFailureForTest()
+        }
+    }
+
+    test("withMain lets the block's own failure through without blaming Main") {
+        clearMainDispatcherFailureForTest()
+        @OptIn(ExperimentalCoroutinesApi::class)
+        Dispatchers.setMain(UnconfinedTestDispatcher())
+        try {
+            shouldThrow<IllegalStateException> {
+                withMain { throw IllegalStateException("from the block") }
+            }
+
+            var ran = false
+            withMain { ran = true }
+            ran shouldBe true
+        } finally {
+            @OptIn(ExperimentalCoroutinesApi::class)
+            Dispatchers.resetMain()
             clearMainDispatcherFailureForTest()
         }
     }
@@ -445,3 +482,15 @@ class ThreadUtilsTests : FunSpec({
         results shouldContain "default"
     }
 })
+
+/**
+ * Stands in for coroutines' MissingMainCoroutineDispatcher: reading it is fine, dispatching is not.
+ */
+private object UndispatchableDispatcher : CoroutineDispatcher() {
+    override fun dispatch(
+        context: CoroutineContext,
+        block: Runnable,
+    ) {
+        throw IllegalStateException("Module with the Main dispatcher is missing")
+    }
+}
