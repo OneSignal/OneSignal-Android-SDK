@@ -7,7 +7,7 @@ fun isMissing(
     api: String,
 ): Boolean {
     if (!value.isNullOrEmpty()) return false
-    Logging.error("OneSignal: $api is required")
+    Logging.error("[OneSignal] $api is required")
     return true
 }
 
@@ -31,7 +31,7 @@ fun hasMissingEntries(
         val raw = item as String?
         if (allowEmptyValue) {
             if (raw != null) continue
-            Logging.error("OneSignal: $api: value is required")
+            Logging.error("[OneSignal] $api: value is required")
             return true
         }
         if (isMissing(raw, "$api: value")) return true
