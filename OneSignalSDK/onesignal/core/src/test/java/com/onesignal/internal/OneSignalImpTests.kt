@@ -65,6 +65,15 @@ class OneSignalImpTests : FunSpec({
         os.login("")
     }
 
+    test("updateUserJwt with empty externalId or token after init does not store the token") {
+        val os = OneSignalImp()
+        markInitialized(os)
+        Logging.logLevel = LogLevel.NONE
+
+        os.updateUserJwt("", "token")
+        os.updateUserJwt("user", "")
+    }
+
     test("attempting logout before initWithContext throws exception") {
         // Given
         val os = OneSignalImp()
