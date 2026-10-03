@@ -503,6 +503,8 @@ internal class OneSignalImp : IOneSignal,
 
         waitForInit(operationName = "updateUserJwt")
 
+        if (isMissing(externalId, "updateUserJwt: externalId") || isMissing(token, "updateUserJwt: token")) return
+
         jwtTokenStore.putJwt(externalId, token)
         // Wake the queue so any deferred ops can dispatch with the fresh token.
         operationRepo.forceExecuteOperations()
@@ -824,6 +826,10 @@ internal class OneSignalImp : IOneSignal,
 
         if (!isInitialized) {
             throw IllegalStateException("'initWithContext failed' before 'updateUserJwt'")
+        }
+
+        if (isMissing(externalId, "updateUserJwt: externalId") || isMissing(token, "updateUserJwt: token")) {
+            return@withContext
         }
 
         jwtTokenStore.putJwt(externalId, token)
