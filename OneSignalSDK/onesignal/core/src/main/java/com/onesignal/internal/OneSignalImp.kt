@@ -7,6 +7,7 @@ import com.onesignal.IUserJwtInvalidatedListener
 import com.onesignal.common.AndroidUtils
 import com.onesignal.common.DeviceUtils
 import com.onesignal.common.OneSignalUtils
+import com.onesignal.common.isMissing
 import com.onesignal.common.modules.IModule
 import com.onesignal.common.services.IServiceProvider
 import com.onesignal.common.services.ServiceBuilder
@@ -340,6 +341,8 @@ internal class OneSignalImp : IOneSignal,
     ): Boolean {
         Logging.log(LogLevel.DEBUG, "Calling deprecated initWithContext(context: $context, appId: $appId)")
 
+        if (isMissing(appId, "initialize: appId")) return false
+
         // Warm OneSignalDispatchers on a dedicated daemon thread so the first production caller
         // of suspendifyOnIO / launchOnSerialIO doesn't pay the ThreadPoolExecutor + dispatcher +
         // scope construction cost on the main thread (observed as 5-20s main-thread blocks at the
@@ -475,6 +478,8 @@ internal class OneSignalImp : IOneSignal,
 
         waitForInit(operationName = "login")
 
+        if (isMissing(externalId, "login: externalId")) return
+
         val context = loginHelper.switchUser(externalId, jwtBearerToken) ?: return
 
         suspendifyOnIO { loginHelper.enqueueLogin(context) }
@@ -497,6 +502,8 @@ internal class OneSignalImp : IOneSignal,
         Logging.log(LogLevel.DEBUG, "updateUserJwt(externalId: $externalId, token: ...${token.takeLast(8)})")
 
         waitForInit(operationName = "updateUserJwt")
+
+        if (isMissing(externalId, "updateUserJwt: externalId") || isMissing(token, "updateUserJwt: token")) return
 
         jwtTokenStore.putJwt(externalId, token)
         // Wake the queue so any deferred ops can dispatch with the fresh token.
@@ -745,6 +752,8 @@ internal class OneSignalImp : IOneSignal,
     ): Boolean {
         Logging.log(LogLevel.DEBUG, "initWithContext(context: $context, appId: $appId)")
 
+        if (appId != null && isMissing(appId, "initialize: appId")) return false
+
         // Same warm-up as the synchronous variant. Reaching this entry point on the main thread
         // (e.g. SyncJobService.onStartJob -> suspendifyOnIO -> initWithContext(context)) pays the
         // cold-init cost on the dispatcher used to enter [withContext] below, so warm
@@ -801,6 +810,8 @@ internal class OneSignalImp : IOneSignal,
         // cause), and only returns once initState == SUCCESS — so no post-check is needed here.
         suspendUntilInit(operationName = "login")
 
+        if (isMissing(externalId, "login: externalId")) return@withContext
+
         val context = loginHelper.switchUser(externalId, jwtBearerToken) ?: return@withContext
         loginHelper.enqueueLogin(context)
     }
@@ -815,6 +826,10 @@ internal class OneSignalImp : IOneSignal,
 
         if (!isInitialized) {
             throw IllegalStateException("'initWithContext failed' before 'updateUserJwt'")
+        }
+
+        if (isMissing(externalId, "updateUserJwt: externalId") || isMissing(token, "updateUserJwt: token")) {
+            return@withContext
         }
 
         jwtTokenStore.putJwt(externalId, token)

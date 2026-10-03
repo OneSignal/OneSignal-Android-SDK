@@ -45,6 +45,35 @@ class OneSignalImpTests : FunSpec({
         exception.message shouldBe "Must call 'initWithContext' before 'login'"
     }
 
+    test("login with empty externalId before init still throws") {
+        val os = OneSignalImp()
+
+        val exception =
+            shouldThrowUnit<Exception> {
+                os.login("")
+            }
+
+        exception.message shouldBe "Must call 'initWithContext' before 'login'"
+    }
+
+    test("login with empty externalId after init does not switch user") {
+        val os = OneSignalImp()
+        markInitialized(os)
+        // NONE: otherwise Logging.error calls the unmocked android.util.Log.
+        Logging.logLevel = LogLevel.NONE
+
+        os.login("")
+    }
+
+    test("updateUserJwt with empty externalId or token after init does not store the token") {
+        val os = OneSignalImp()
+        markInitialized(os)
+        Logging.logLevel = LogLevel.NONE
+
+        os.updateUserJwt("", "token")
+        os.updateUserJwt("user", "")
+    }
+
     test("attempting logout before initWithContext throws exception") {
         // Given
         val os = OneSignalImp()
