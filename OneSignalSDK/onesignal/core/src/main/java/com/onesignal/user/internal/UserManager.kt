@@ -4,11 +4,11 @@ import com.onesignal.common.IDManager
 import com.onesignal.common.JSONUtils
 import com.onesignal.common.OneSignalUtils
 import com.onesignal.common.events.EventProducer
-import com.onesignal.common.modeling.ISingletonModelStoreChangeHandler
-import com.onesignal.common.modeling.ModelChangedArgs
 import com.onesignal.common.hasMissingEntries
 import com.onesignal.common.isMissing
 import com.onesignal.common.isMissingAny
+import com.onesignal.common.modeling.ISingletonModelStoreChangeHandler
+import com.onesignal.common.modeling.ModelChangedArgs
 import com.onesignal.core.internal.language.ILanguageContext
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging

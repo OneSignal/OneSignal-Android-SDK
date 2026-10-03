@@ -9,11 +9,11 @@ import com.onesignal.common.consistency.RywData
 import com.onesignal.common.consistency.models.IConsistencyManager
 import com.onesignal.common.events.EventProducer
 import com.onesignal.common.exceptions.BackendException
-import com.onesignal.common.modeling.ISingletonModelStoreChangeHandler
-import com.onesignal.common.modeling.ModelChangedArgs
 import com.onesignal.common.hasMissingEntries
 import com.onesignal.common.isMissing
 import com.onesignal.common.isMissingAny
+import com.onesignal.common.modeling.ISingletonModelStoreChangeHandler
+import com.onesignal.common.modeling.ModelChangedArgs
 import com.onesignal.common.threading.suspendifyOnDefault
 import com.onesignal.common.threading.suspendifyOnIO
 import com.onesignal.common.threading.suspendifyOnMain
