@@ -8,6 +8,7 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import kotlinx.coroutines.delay
 import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
 class ThreadUtilsTests : FunSpec({
@@ -43,13 +44,46 @@ class ThreadUtilsTests : FunSpec({
         val mainThreadId = Thread.currentThread().id
         var backgroundThreadId: Long? = null
 
+        val ran = CountDownLatch(1)
+
         suspendifyOnIO {
             backgroundThreadId = Thread.currentThread().id
+            ran.countDown()
         }
 
-        Thread.sleep(10)
+        ran.await(2, TimeUnit.SECONDS) shouldBe true
         backgroundThreadId shouldNotBe null
         backgroundThreadId shouldNotBe mainThreadId
+    }
+
+    test("suspendifyOnIngress runs onSuccess after the block completes") {
+        val succeeded = CountDownLatch(1)
+        var blockRan = false
+
+        suspendifyOnIngress(
+            block = { blockRan = true },
+            onSuccess = { succeeded.countDown() },
+        )
+
+        succeeded.await(2, TimeUnit.SECONDS) shouldBe true
+        blockRan shouldBe true
+    }
+
+    test("suspendifyOnIngress skips onSuccess when the block fails") {
+        val failed = CountDownLatch(1)
+        var onSuccessCalled = false
+
+        suspendifyOnIngress(
+            block = {
+                failed.countDown()
+                throw IllegalStateException("journal unavailable")
+            },
+            onSuccess = { onSuccessCalled = true },
+        )
+
+        failed.await(2, TimeUnit.SECONDS) shouldBe true
+        Thread.sleep(50)
+        onSuccessCalled shouldBe false
     }
 
     test("suspendifyOnThread with completion should execute onComplete callback") {
@@ -75,11 +109,14 @@ class ThreadUtilsTests : FunSpec({
         val mainThreadId = Thread.currentThread().id
         var backgroundThreadId: Long? = null
 
+        val ran = CountDownLatch(1)
+
         suspendifyOnIO {
             backgroundThreadId = Thread.currentThread().id
+            ran.countDown()
         }
 
-        Thread.sleep(10)
+        ran.await(2, TimeUnit.SECONDS) shouldBe true
         backgroundThreadId shouldNotBe null
         backgroundThreadId shouldNotBe mainThreadId
     }
@@ -88,11 +125,14 @@ class ThreadUtilsTests : FunSpec({
         val mainThreadId = Thread.currentThread().id
         var backgroundThreadId: Long? = null
 
+        val ran = CountDownLatch(1)
+
         suspendifyOnIO {
             backgroundThreadId = Thread.currentThread().id
+            ran.countDown()
         }
 
-        Thread.sleep(10)
+        ran.await(2, TimeUnit.SECONDS) shouldBe true
         backgroundThreadId shouldNotBe null
         backgroundThreadId shouldNotBe mainThreadId
     }
@@ -101,11 +141,14 @@ class ThreadUtilsTests : FunSpec({
         val mainThreadId = Thread.currentThread().id
         var backgroundThreadId: Long? = null
 
+        val ran = CountDownLatch(1)
+
         suspendifyOnDefault {
             backgroundThreadId = Thread.currentThread().id
+            ran.countDown()
         }
 
-        Thread.sleep(10)
+        ran.await(2, TimeUnit.SECONDS) shouldBe true
         backgroundThreadId shouldNotBe null
         backgroundThreadId shouldNotBe mainThreadId
     }

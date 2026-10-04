@@ -12,7 +12,7 @@ import com.onesignal.notifications.internal.ingress.NotificationIngress
 import io.kotest.core.spec.style.FunSpec
 import io.mockk.clearMocks
 import io.mockk.coEvery
-import io.mockk.every
+import io.mockk.coVerify
 import io.mockk.mockkObject
 import io.mockk.unmockkObject
 import io.mockk.verify
@@ -30,7 +30,7 @@ class FCMBroadcastReceiverTests : FunSpec({
         mockkObject(OneSignal)
         coEvery { OneSignal.initWithContext(any()) } returns false
         mockkObject(NotificationIngress)
-        every { NotificationIngress.persistFcm(any(), any(), any()) } returns true
+        coEvery { NotificationIngress.persistFcm(any(), any(), any()) } returns true
     }
 
     afterAny {
@@ -81,11 +81,11 @@ class FCMBroadcastReceiverTests : FunSpec({
                 putExtra("from", "sender")
                 putExtra("message_type", "gcm")
             }
-        every { NotificationIngress.persistFcm(any(), any(), any()) } returns false
+        coEvery { NotificationIngress.persistFcm(any(), any(), any()) } returns false
 
         FCMBroadcastReceiver().onReceive(context, intent)
 
-        verify(exactly = 1) { NotificationIngress.persistFcm(context, intent, any()) }
+        coVerify(exactly = 1) { NotificationIngress.persistFcm(context, intent, any()) }
     }
 
     test("FCMBroadcastReceiver ignores non-GCM message types") {
@@ -98,6 +98,6 @@ class FCMBroadcastReceiverTests : FunSpec({
 
         FCMBroadcastReceiver().onReceive(context, intent)
 
-        verify(exactly = 0) { NotificationIngress.persistFcm(any(), any(), any()) }
+        coVerify(exactly = 0) { NotificationIngress.persistFcm(any(), any(), any()) }
     }
 })

@@ -11,6 +11,7 @@ import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequest
 import androidx.work.Operation
 import androidx.work.WorkerParameters
+import androidx.work.await
 import com.onesignal.OneSignal
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.startup.IStartableService
@@ -22,15 +23,19 @@ import com.onesignal.notifications.internal.common.OSWorkManagerHelper
 import com.onesignal.notifications.internal.open.INotificationOpenedProcessor
 import com.onesignal.notifications.internal.restoration.impl.NotificationRestoreWorkManager
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.withTimeoutOrNull
 import org.json.JSONObject
 
 internal object NotificationIngress {
     private const val DRAIN_WORK_NAME = "OneSignalNotificationIngressDrain"
 
+    // Must stay under the 8s broadcast deadline so a handoff can still finish as a success.
+    internal const val ENQUEUE_TIMEOUT_MS = 5_000L
+
     @Volatile
     internal var drainSchedulerForTest: ((Context) -> Unit)? = null
 
-    fun persistFcm(
+    suspend fun persistFcm(
         context: Context,
         intent: Intent,
         bundle: Bundle,
@@ -49,7 +54,7 @@ internal object NotificationIngress {
         return true
     }
 
-    fun persistDismiss(
+    suspend fun persistDismiss(
         context: Context,
         intent: Intent,
     ) {
@@ -69,19 +74,37 @@ internal object NotificationIngress {
         scheduleDrainDurably(context)
     }
 
-    fun enqueueRestore(context: Context) {
-        NotificationRestoreWorkManager().beginEnqueueingWork(context, true)
+    @Suppress("TooGenericExceptionCaught")
+    suspend fun enqueueRestore(context: Context) {
+        val operation = NotificationRestoreWorkManager.enqueueWork(context, shouldDelay = true) ?: return
+        try {
+            awaitEnqueue(operation, "restore")
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            NotificationRestoreWorkManager.onEnqueueFailed()
+            throw e
+        }
     }
 
-    fun scheduleDrain(context: Context) {
-        enqueueDrain(context)
+    private suspend fun scheduleDrainDurably(context: Context) {
+        enqueueDrain(context)?.let { awaitEnqueue(it, "drain") }
     }
 
-    private fun scheduleDrainDurably(context: Context) {
-        enqueueDrain(context)?.result?.get()
+    /**
+     * Suspends rather than blocks so a slow WorkManager does not hold the single ingress thread.
+     * On timeout the journal row is still committed and a later drain picks it up.
+     */
+    private suspend fun awaitEnqueue(
+        operation: Operation,
+        name: String,
+    ) {
+        if (withTimeoutOrNull(ENQUEUE_TIMEOUT_MS) { operation.await() } == null) {
+            Logging.warn("Notification ingress $name enqueue not confirmed within ${ENQUEUE_TIMEOUT_MS}ms")
+        }
     }
 
-    private fun enqueueDrain(context: Context): Operation? {
+    fun enqueueDrain(context: Context): Operation? {
         drainSchedulerForTest?.let {
             it(context)
             return null
@@ -120,7 +143,7 @@ internal class NotificationIngressDrainStarter(
     @Suppress("TooGenericExceptionCaught")
     override fun start() {
         try {
-            NotificationIngress.scheduleDrain(applicationService.appContext)
+            NotificationIngress.enqueueDrain(applicationService.appContext)
         } catch (e: Exception) {
             Logging.warn("Notification ingress startup drain scheduling failed", e)
         }

@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequest
+import androidx.work.Operation
 import androidx.work.WorkerParameters
 import com.onesignal.OneSignal
 import com.onesignal.debug.internal.logging.Logging
@@ -15,29 +16,11 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 
 internal class NotificationRestoreWorkManager : INotificationRestoreWorkManager {
-    @Suppress("TooGenericExceptionCaught")
     override fun beginEnqueueingWork(
         context: Context,
         shouldDelay: Boolean,
     ) {
-        if (!restored.compareAndSet(false, true)) return
-
-        try {
-            val restoreDelayInSeconds = if (shouldDelay) 15 else 0
-            val workRequest =
-                OneTimeWorkRequest.Builder(NotificationRestoreWorker::class.java)
-                    .setInitialDelay(restoreDelayInSeconds.toLong(), TimeUnit.SECONDS)
-                    .build()
-            OSWorkManagerHelper.getInstance(context)
-                .enqueueUniqueWork(
-                    NOTIFICATION_RESTORE_WORKER_IDENTIFIER,
-                    ExistingWorkPolicy.KEEP,
-                    workRequest,
-                )
-        } catch (e: Exception) {
-            restored.set(false)
-            throw e
-        }
+        enqueueWork(context, shouldDelay)
     }
 
     class NotificationRestoreWorker(context: Context, workerParams: WorkerParameters) : CoroutineWorker(context, workerParams) {
@@ -65,7 +48,40 @@ internal class NotificationRestoreWorkManager : INotificationRestoreWorkManager 
     companion object {
         private val NOTIFICATION_RESTORE_WORKER_IDENTIFIER =
             NotificationRestoreWorker::class.java.canonicalName ?: NotificationRestoreWorker::class.java.name
+        private const val DELAYED_RESTORE_SECONDS = 15L
         private val restored = AtomicBoolean(false)
+
+        /** Returns null when restore work was already enqueued by this process. */
+        @Suppress("TooGenericExceptionCaught")
+        internal fun enqueueWork(
+            context: Context,
+            shouldDelay: Boolean,
+        ): Operation? {
+            if (!restored.compareAndSet(false, true)) return null
+
+            return try {
+                // Boot and upgrade delay restore so the app is not doing too much work at once.
+                val restoreDelayInSeconds = if (shouldDelay) DELAYED_RESTORE_SECONDS else 0L
+                val workRequest =
+                    OneTimeWorkRequest.Builder(NotificationRestoreWorker::class.java)
+                        .setInitialDelay(restoreDelayInSeconds, TimeUnit.SECONDS)
+                        .build()
+                OSWorkManagerHelper.getInstance(context)
+                    .enqueueUniqueWork(
+                        NOTIFICATION_RESTORE_WORKER_IDENTIFIER,
+                        ExistingWorkPolicy.KEEP,
+                        workRequest,
+                    )
+            } catch (e: Exception) {
+                onEnqueueFailed()
+                throw e
+            }
+        }
+
+        /** Lets a later caller retry after WorkManager rejected the enqueue. */
+        internal fun onEnqueueFailed() {
+            restored.set(false)
+        }
 
         internal fun resetForTest() {
             restored.set(false)

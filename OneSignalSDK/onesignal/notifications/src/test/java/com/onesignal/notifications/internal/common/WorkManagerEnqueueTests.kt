@@ -3,8 +3,10 @@ package com.onesignal.notifications.internal.common
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import androidx.work.OneTimeWorkRequest
+import androidx.work.Operation
 import androidx.work.WorkManager
 import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
+import com.google.common.util.concurrent.SettableFuture
 import com.onesignal.notifications.internal.generation.impl.NotificationGenerationWorkManager
 import com.onesignal.notifications.internal.restoration.impl.NotificationRestoreWorkManager
 import io.kotest.assertions.throwables.shouldThrow
@@ -16,6 +18,7 @@ import io.mockk.mockkObject
 import io.mockk.unmockkObject
 import io.mockk.verify
 import org.json.JSONObject
+import java.util.concurrent.ExecutionException
 
 @RobolectricTest
 class WorkManagerEnqueueTests : FunSpec({
@@ -54,6 +57,25 @@ class WorkManagerEnqueueTests : FunSpec({
             workManager.enqueueUniqueWork(any(), any(), any<OneTimeWorkRequest>())
         }
         NotificationGenerationWorkManager.removeNotificationIdProcessed("notification-id")
+    }
+
+    test("notification generation waits for WorkManager to persist the request") {
+        val manager = NotificationGenerationWorkManager()
+        val payload = JSONObject().put("custom", """{"i":"pending-id"}""")
+        val failed = SettableFuture.create<Operation.State.SUCCESS>().apply { setException(IllegalStateException("db full")) }
+        every {
+            workManager.enqueueUniqueWork(any(), any(), any<OneTimeWorkRequest>())
+        } returns mockk<Operation> { every { result } returns failed }
+
+        shouldThrow<ExecutionException> {
+            manager.beginEnqueueingWork(context, "pending-id", 42, payload, 1L, null, false)
+        }
+
+        every {
+            workManager.enqueueUniqueWork(any(), any(), any<OneTimeWorkRequest>())
+        } returns mockk(relaxed = true)
+        manager.beginEnqueueingWork(context, "pending-id", 42, payload, 1L, null, false) shouldBe true
+        NotificationGenerationWorkManager.removeNotificationIdProcessed("pending-id")
     }
 
     test("notification restore can be enqueued again after WorkManager rejects it") {

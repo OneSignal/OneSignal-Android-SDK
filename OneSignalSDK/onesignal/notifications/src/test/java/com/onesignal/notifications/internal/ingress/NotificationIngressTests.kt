@@ -14,6 +14,7 @@ import com.google.common.util.concurrent.SettableFuture
 import com.onesignal.OneSignal
 import com.onesignal.notifications.internal.bundle.INotificationBundleProcessor
 import com.onesignal.notifications.internal.common.OSWorkManagerHelper
+import com.onesignal.notifications.internal.restoration.impl.NotificationRestoreWorkManager
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
@@ -22,8 +23,15 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkObject
 import io.mockk.unmockkObject
+import io.mockk.verify
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
 
@@ -112,7 +120,7 @@ class NotificationIngressTests : FunSpec({
 
         Thread {
             try {
-                NotificationIngress.persistFcm(context, Intent(), bundle)
+                runBlocking { NotificationIngress.persistFcm(context, Intent(), bundle) }
             } catch (error: Throwable) {
                 failure.set(error)
             } finally {
@@ -125,6 +133,71 @@ class NotificationIngressTests : FunSpec({
         operationResult.set(Operation.SUCCESS)
         completed.await(1, TimeUnit.SECONDS) shouldBe true
         failure.get() shouldBe null
+    }
+
+    test("a pending drain enqueue does not hold the ingress thread") {
+        val workManager = mockk<WorkManager>()
+        val firstResult = SettableFuture.create<Operation.State.SUCCESS>()
+        val secondResult = SettableFuture.create<Operation.State.SUCCESS>()
+        val results = ArrayDeque(listOf(firstResult, secondResult))
+        val secondEnqueued = CountDownLatch(1)
+        mockkObject(OSWorkManagerHelper)
+        every { OSWorkManagerHelper.getInstance(any()) } returns workManager
+        every {
+            workManager.enqueueUniqueWork(any(), any(), any<OneTimeWorkRequest>())
+        } answers {
+            val result = results.removeFirst()
+            if (result === secondResult) secondEnqueued.countDown()
+            mockk<Operation> { every { this@mockk.result } returns result }
+        }
+        val executor = Executors.newSingleThreadExecutor()
+        val ingressScope = CoroutineScope(executor.asCoroutineDispatcher())
+
+        try {
+            val first =
+                ingressScope.launch {
+                    NotificationIngress.persistFcm(context, Intent(), Bundle().apply { putString("custom", """{"i":"first"}""") })
+                }
+            val second =
+                ingressScope.launch {
+                    NotificationIngress.persistFcm(context, Intent(), Bundle().apply { putString("custom", """{"i":"second"}""") })
+                }
+
+            secondEnqueued.await(1, TimeUnit.SECONDS) shouldBe true
+            first.isCompleted shouldBe false
+            firstResult.set(Operation.SUCCESS)
+            secondResult.set(Operation.SUCCESS)
+            first.join()
+            second.join()
+        } finally {
+            ingressScope.cancel()
+            executor.shutdownNow()
+        }
+    }
+
+    test("failed restore enqueue can be retried by a later boot handoff") {
+        val workManager = mockk<WorkManager>()
+        val failed = SettableFuture.create<Operation.State.SUCCESS>().apply { setException(IllegalStateException("db full")) }
+        val succeeded = SettableFuture.create<Operation.State.SUCCESS>().apply { set(Operation.SUCCESS) }
+        val results = ArrayDeque(listOf(failed, succeeded))
+        mockkObject(OSWorkManagerHelper)
+        every { OSWorkManagerHelper.getInstance(any()) } returns workManager
+        every {
+            workManager.enqueueUniqueWork(any(), any(), any<OneTimeWorkRequest>())
+        } answers {
+            val result = results.removeFirst()
+            mockk<Operation> { every { this@mockk.result } returns result }
+        }
+        NotificationRestoreWorkManager.resetForTest()
+
+        try {
+            shouldThrow<IllegalStateException> { NotificationIngress.enqueueRestore(context) }
+            NotificationIngress.enqueueRestore(context)
+
+            verify(exactly = 2) { workManager.enqueueUniqueWork(any(), any(), any<OneTimeWorkRequest>()) }
+        } finally {
+            NotificationRestoreWorkManager.resetForTest()
+        }
     }
 
     test("unknown record kind is discarded without blocking the drain") {

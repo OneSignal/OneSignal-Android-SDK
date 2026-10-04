@@ -139,13 +139,10 @@ object IOMockHelper : BeforeSpecListener, AfterSpecListener, BeforeTestListener,
 
         every { suspendifyOnIngress(any<suspend () -> Unit>(), any<() -> Unit>()) } answers {
             val block = firstArg<suspend () -> Unit>()
-            val onComplete = secondArg<() -> Unit>()
+            val onSuccess = secondArg<() -> Unit>()
             trackAsyncWork {
-                try {
-                    block()
-                } finally {
-                    onComplete()
-                }
+                block()
+                onSuccess()
             }
         }
 

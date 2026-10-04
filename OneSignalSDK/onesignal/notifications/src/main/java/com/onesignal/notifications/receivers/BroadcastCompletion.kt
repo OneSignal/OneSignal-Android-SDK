@@ -11,12 +11,13 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 internal fun BroadcastReceiver.runIngressHandoff(
     receiverName: String,
-    timeoutMs: Long? = null,
+    timeoutMs: Long,
     block: suspend () -> Unit,
 ) {
     OneSignalDispatchers.prewarm()
     val completion = BroadcastCompletion(receiverName, goAsync(), timeoutMs)
-    suspendifyOnIngress(block = block, onComplete = { completion.finish() })
+    // A failed handoff is left open so only the deadline finishes it, never a success path.
+    suspendifyOnIngress(block = block, onSuccess = { completion.finish() })
 }
 
 internal class BroadcastCompletion(

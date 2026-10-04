@@ -12,7 +12,6 @@ import com.onesignal.notifications.internal.ingress.NotificationIngress
 import io.kotest.core.spec.style.FunSpec
 import io.mockk.clearMocks
 import io.mockk.coEvery
-import io.mockk.every
 import io.mockk.mockkObject
 import io.mockk.unmockkObject
 import io.mockk.verify
@@ -40,8 +39,8 @@ class PrewarmEntryPointTests : FunSpec({
         mockkObject(OneSignal)
         coEvery { OneSignal.initWithContext(any()) } returns false
         mockkObject(NotificationIngress)
-        every { NotificationIngress.enqueueRestore(any()) } returns Unit
-        every { NotificationIngress.persistDismiss(any(), any()) } returns Unit
+        coEvery { NotificationIngress.enqueueRestore(any()) } returns Unit
+        coEvery { NotificationIngress.persistDismiss(any(), any()) } returns Unit
     }
 
     afterAny {
