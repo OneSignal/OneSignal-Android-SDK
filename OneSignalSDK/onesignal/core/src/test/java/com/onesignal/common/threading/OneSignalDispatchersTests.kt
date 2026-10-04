@@ -6,10 +6,13 @@ import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.string.shouldContain
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import java.util.concurrent.CountDownLatch
+import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
@@ -97,6 +100,63 @@ class OneSignalDispatchersTests : FunSpec({
         OneSignalDispatchers.beforeFallbackCreateForTest = null
         OneSignalDispatchers.launchOnDefault { defaultWorkRan.countDown() }
         defaultWorkRan.await(1, TimeUnit.SECONDS) shouldBe true
+    }
+
+    test("Error during worker prestart shuts down the partial executor and uses the fallback") {
+        OneSignalDispatchers.resetForTest()
+        val workRan = CountDownLatch(1)
+        var partial: ThreadPoolExecutor? = null
+        OneSignalDispatchers.afterExecutorCreateForTest = { lane, executor ->
+            if (lane == "IO") {
+                partial = executor
+                executor.prestartCoreThread()
+                throw OutOfMemoryError("unable to create native thread")
+            }
+        }
+
+        OneSignalDispatchers.launchOnIO { workRan.countDown() }
+
+        workRan.await(1, TimeUnit.SECONDS) shouldBe true
+        partial!!.isShutdown shouldBe true
+        OneSignalDispatchers.resetForTest()
+    }
+
+    test("a closed generation is not reopened when its in-flight bootstrap fails") {
+        OneSignalDispatchers.resetForTest()
+        val createStarted = CountDownLatch(1)
+        val allowCreate = CountDownLatch(1)
+        val bootstrapFinished = CountDownLatch(1)
+        val ioCreateCount = AtomicInteger()
+        OneSignalDispatchers.beforeLaneCreateForTest = { lane ->
+            if (lane == "IO") {
+                ioCreateCount.incrementAndGet()
+                createStarted.countDown()
+                allowCreate.await()
+                throw IllegalStateException("primary failed")
+            }
+        }
+        OneSignalDispatchers.beforeFallbackCreateForTest = { lane ->
+            if (lane == "IO") {
+                bootstrapFinished.countDown()
+                throw AssertionError("fallback failed")
+            }
+        }
+        val oldIO = OneSignalDispatchers.IO
+
+        OneSignalDispatchers.launchOnIO {}
+        createStarted.await(1, TimeUnit.SECONDS) shouldBe true
+        val hooks = OneSignalDispatchers.beforeLaneCreateForTest to OneSignalDispatchers.beforeFallbackCreateForTest
+        OneSignalDispatchers.resetForTest()
+        OneSignalDispatchers.beforeLaneCreateForTest = hooks.first
+        OneSignalDispatchers.beforeFallbackCreateForTest = hooks.second
+        allowCreate.countDown()
+        bootstrapFinished.await(1, TimeUnit.SECONDS) shouldBe true
+
+        val rejected = CountDownLatch(1)
+        CoroutineScope(oldIO).launch {}.invokeOnCompletion { rejected.countDown() }
+        rejected.await(1, TimeUnit.SECONDS) shouldBe true
+        ioCreateCount.get() shouldBe 1
+        OneSignalDispatchers.resetForTest()
     }
 
     test("IO dispatcher should execute work on background thread") {

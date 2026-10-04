@@ -58,6 +58,9 @@ object OneSignalDispatchers {
     internal var beforeLaneCreateForTest: ((String) -> Unit)? = null
 
     @Volatile
+    internal var afterExecutorCreateForTest: ((String, ThreadPoolExecutor) -> Unit)? = null
+
+    @Volatile
     internal var beforeFallbackCreateForTest: ((String) -> Unit)? = null
 
     private class OptimizedThreadFactory(
@@ -165,23 +168,21 @@ object OneSignalDispatchers {
             createTargetOrFallback()?.let(::drainPending)
         }
 
+        // Catches Throwable because thread creation in prestartAllCoreThreads fails with OutOfMemoryError,
+        // which is exactly the case the Dispatchers fallback exists for.
         @Suppress("TooGenericExceptionCaught")
         private fun createTargetOrFallback(): LaneTarget? =
             try {
                 createTarget(lane)
-            } catch (e: Exception) {
-                Logging.warn("OneSignalDispatchers: Using fallback for $lane lane: ${e.message}", e)
+            } catch (t: Throwable) {
+                Logging.warn("OneSignalDispatchers: Using fallback for $lane lane: ${t.message}", t)
                 try {
                     createFallbackTarget(lane)
-                } catch (t: Throwable) {
-                    Logging.warn("OneSignalDispatchers: Fallback failed for $lane lane: ${t.message}", t)
+                } catch (fallbackError: Throwable) {
+                    Logging.warn("OneSignalDispatchers: Fallback failed for $lane lane: ${fallbackError.message}", fallbackError)
                     failPending("OneSignal $lane dispatcher fallback failed")
                     null
                 }
-            } catch (t: Throwable) {
-                Logging.warn("OneSignalDispatchers: Failed to initialize $lane lane: ${t.message}", t)
-                failPending("OneSignal $lane dispatcher failed to initialize")
-                null
             }
 
         private fun drainPending(newTarget: LaneTarget) {
@@ -247,7 +248,9 @@ object OneSignalDispatchers {
                 synchronized(lock) {
                     val copy = pending.toList()
                     pending.clear()
-                    state = LaneState.COLD
+                    // CLOSED is terminal: reopening would let a discarded generation build an executor
+                    // that no later reset tears down.
+                    if (state != LaneState.CLOSED) state = LaneState.COLD
                     copy
                 }
             queued.forEach { cancelAndComplete(it.first, it.second, reason) }
@@ -349,6 +352,7 @@ object OneSignalDispatchers {
         }
     }
 
+    @Suppress("TooGenericExceptionCaught")
     private fun createTarget(lane: Lane): LaneTarget {
         beforeLaneCreateForTest?.invoke(lane.name)
         val config = lane.config()
@@ -361,8 +365,14 @@ object OneSignalDispatchers {
                 LinkedBlockingQueue(config.queueCapacity),
                 OptimizedThreadFactory(config.threadName, config.priority),
             )
-        executor.allowCoreThreadTimeOut(false)
-        executor.prestartAllCoreThreads()
+        try {
+            executor.allowCoreThreadTimeOut(false)
+            afterExecutorCreateForTest?.invoke(lane.name, executor)
+            executor.prestartAllCoreThreads()
+        } catch (t: Throwable) {
+            executor.shutdownNow()
+            throw t
+        }
         return LaneTarget(executor.asCoroutineDispatcher(), executor)
     }
 
@@ -494,6 +504,7 @@ object OneSignalDispatchers {
         }
         resetPrewarmForTest()
         beforeLaneCreateForTest = null
+        afterExecutorCreateForTest = null
         beforeFallbackCreateForTest = null
     }
 
