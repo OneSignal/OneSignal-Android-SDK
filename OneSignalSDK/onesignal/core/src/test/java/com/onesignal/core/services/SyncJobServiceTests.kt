@@ -22,6 +22,8 @@ import io.mockk.spyk
 import io.mockk.unmockkObject
 import io.mockk.verify
 import io.mockk.verifyOrder
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.runBlocking
 
 private class Mocks {
@@ -52,6 +54,11 @@ class SyncJobServiceTests : FunSpec({
         // are owned by IOMockHelper and torn down in its afterSpec — unmockkAll() here would strip
         // them after the first test and break the remaining ones.
         unmockkObject(OneSignal)
+        // Some tests replace IOMockHelper's inline launchOnIO with a non-running stub.
+        every { OneSignalDispatchers.launchOnIO(any<suspend () -> Unit>()) } answers {
+            runBlocking { firstArg<suspend () -> Unit>().invoke() }
+            mockk(relaxed = true)
+        }
     }
 
     test("onStartJob calls prewarm before launchOnIO") {
@@ -161,7 +168,7 @@ class SyncJobServiceTests : FunSpec({
     }
 
     test("onStopJob matches distinct parameters by job id and cancels the owned coroutine") {
-        val job = mockk<kotlinx.coroutines.Job>(relaxed = true)
+        val job = mockk<Job>(relaxed = true)
         val stopParameters = mockk<JobParameters>(relaxed = true)
         every { mocks.jobParameters.jobId } returns 42
         every { stopParameters.jobId } returns 42
@@ -173,10 +180,6 @@ class SyncJobServiceTests : FunSpec({
         result shouldBe true
         verify { job.cancel() }
         verify(exactly = 0) { OneSignal.getService<IBackgroundManager>() }
-        every { OneSignalDispatchers.launchOnIO(any<suspend () -> Unit>()) } answers {
-            runBlocking { firstArg<suspend () -> Unit>().invoke() }
-            mockk(relaxed = true)
-        }
     }
 
     test("onStopJob returns false when no run is active") {
@@ -184,7 +187,7 @@ class SyncJobServiceTests : FunSpec({
     }
 
     test("onStopJob does not cancel a different job id") {
-        val job = mockk<kotlinx.coroutines.Job>(relaxed = true)
+        val job = mockk<Job>(relaxed = true)
         val stopParameters = mockk<JobParameters>(relaxed = true)
         every { mocks.jobParameters.jobId } returns 42
         every { stopParameters.jobId } returns 43
@@ -194,10 +197,6 @@ class SyncJobServiceTests : FunSpec({
 
         mocks.syncJobService.onStopJob(stopParameters) shouldBe false
         verify(exactly = 0) { job.cancel() }
-        every { OneSignalDispatchers.launchOnIO(any<suspend () -> Unit>()) } answers {
-            runBlocking { firstArg<suspend () -> Unit>().invoke() }
-            mockk(relaxed = true)
-        }
     }
 
     test("onStopJob does not reschedule a run that already completed") {
@@ -205,5 +204,56 @@ class SyncJobServiceTests : FunSpec({
         mocks.syncJobService.onStartJob(mocks.jobParameters)
 
         mocks.syncJobService.onStopJob(mocks.jobParameters) shouldBe false
+    }
+
+    test("onStartJob reschedules when runBackgroundServices throws") {
+        coEvery { OneSignal.initWithContext(any()) } returns true
+        coEvery { mocks.mockBackgroundManager.runBackgroundServices() } throws RuntimeException("boom")
+
+        mocks.syncJobService.onStartJob(mocks.jobParameters)
+        awaitIO()
+
+        verify(exactly = 1) { mocks.syncJobService.jobFinished(mocks.jobParameters, true) }
+    }
+
+    test("a winning onStopJob does not also call jobFinished") {
+        lateinit var block: suspend () -> Unit
+        every { mocks.jobParameters.jobId } returns 42
+        every { OneSignalDispatchers.launchOnIO(any<suspend () -> Unit>()) } answers {
+            block = firstArg()
+            mockk<Job>(relaxed = true)
+        }
+        coEvery { OneSignal.initWithContext(any()) } throws CancellationException("stopped")
+
+        mocks.syncJobService.onStartJob(mocks.jobParameters)
+        mocks.syncJobService.onStopJob(mocks.jobParameters) shouldBe true
+        runCatching { runBlocking { block() } }
+
+        verify(exactly = 0) { mocks.syncJobService.jobFinished(any(), any()) }
+    }
+
+    test("onStartJob cancels the previous run's coroutine") {
+        val firstJob = mockk<Job>(relaxed = true)
+        val secondJob = mockk<Job>(relaxed = true)
+        every { OneSignalDispatchers.launchOnIO(any<suspend () -> Unit>()) } returnsMany listOf(firstJob, secondJob)
+
+        mocks.syncJobService.onStartJob(mocks.jobParameters)
+        mocks.syncJobService.onStartJob(mocks.jobParameters)
+
+        verify { firstJob.cancel() }
+        verify(exactly = 0) { secondJob.cancel() }
+    }
+
+    test("onStartJob cancels the coroutine when stopped before the job is recorded") {
+        val job = mockk<Job>(relaxed = true)
+        every { mocks.jobParameters.jobId } returns 42
+        every { OneSignalDispatchers.launchOnIO(any<suspend () -> Unit>()) } answers {
+            mocks.syncJobService.onStopJob(mocks.jobParameters) shouldBe true
+            job
+        }
+
+        mocks.syncJobService.onStartJob(mocks.jobParameters)
+
+        verify { job.cancel() }
     }
 })
