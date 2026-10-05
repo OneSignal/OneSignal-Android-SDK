@@ -39,9 +39,11 @@ internal class NotificationRestoreWorkManager : INotificationRestoreWorkManager 
             }
 
             val processor = OneSignal.getService<INotificationRestoreProcessor>()
-            processor.process()
-
-            return Result.success()
+            return when {
+                processor.process() -> Result.success()
+                runAttemptCount + 1 >= MAX_RESTORE_ATTEMPTS -> Result.failure()
+                else -> Result.retry()
+            }
         }
     }
 
@@ -49,6 +51,7 @@ internal class NotificationRestoreWorkManager : INotificationRestoreWorkManager 
         private val NOTIFICATION_RESTORE_WORKER_IDENTIFIER =
             NotificationRestoreWorker::class.java.canonicalName ?: NotificationRestoreWorker::class.java.name
         private const val DELAYED_RESTORE_SECONDS = 15L
+        internal const val MAX_RESTORE_ATTEMPTS = 3
         private val restored = AtomicBoolean(false)
 
         /** Returns null when restore work was already enqueued by this process. */

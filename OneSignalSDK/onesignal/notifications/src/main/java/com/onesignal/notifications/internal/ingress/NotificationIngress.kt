@@ -30,7 +30,10 @@ internal object NotificationIngress {
     private const val DRAIN_WORK_NAME = "OneSignalNotificationIngressDrain"
 
     // Must stay under the 8s broadcast deadline so a handoff can still finish as a success.
-    internal const val ENQUEUE_TIMEOUT_MS = 5_000L
+    private const val ENQUEUE_TIMEOUT_MS = 5_000L
+
+    @Volatile
+    internal var enqueueTimeoutMs = ENQUEUE_TIMEOUT_MS
 
     @Volatile
     internal var drainSchedulerForTest: ((Context) -> Unit)? = null
@@ -74,33 +77,29 @@ internal object NotificationIngress {
         scheduleDrainDurably(context)
     }
 
-    @Suppress("TooGenericExceptionCaught")
+    /**
+     * Boot and upgrade have no journal row, so an unconfirmed enqueue fails the handoff and lets a
+     * later handoff in this process retry.
+     */
     suspend fun enqueueRestore(context: Context) {
         val operation = NotificationRestoreWorkManager.enqueueWork(context, shouldDelay = true) ?: return
+        var confirmed = false
         try {
-            awaitEnqueue(operation, "restore")
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            NotificationRestoreWorkManager.onEnqueueFailed()
-            throw e
+            confirmed = withTimeoutOrNull(enqueueTimeoutMs) { operation.await() } != null
+        } finally {
+            if (!confirmed) NotificationRestoreWorkManager.onEnqueueFailed()
         }
-    }
-
-    private suspend fun scheduleDrainDurably(context: Context) {
-        enqueueDrain(context)?.let { awaitEnqueue(it, "drain") }
+        check(confirmed) { "Notification restore enqueue not confirmed within ${enqueueTimeoutMs}ms" }
     }
 
     /**
      * Suspends rather than blocks so a slow WorkManager does not hold the single ingress thread.
      * On timeout the journal row is still committed and a later drain picks it up.
      */
-    private suspend fun awaitEnqueue(
-        operation: Operation,
-        name: String,
-    ) {
-        if (withTimeoutOrNull(ENQUEUE_TIMEOUT_MS) { operation.await() } == null) {
-            Logging.warn("Notification ingress $name enqueue not confirmed within ${ENQUEUE_TIMEOUT_MS}ms")
+    private suspend fun scheduleDrainDurably(context: Context) {
+        val operation = enqueueDrain(context) ?: return
+        if (withTimeoutOrNull(enqueueTimeoutMs) { operation.await() } == null) {
+            Logging.warn("Notification ingress drain enqueue not confirmed within ${enqueueTimeoutMs}ms")
         }
     }
 
@@ -118,6 +117,7 @@ internal object NotificationIngress {
 
     internal fun resetForTest(context: Context) {
         drainSchedulerForTest = null
+        enqueueTimeoutMs = ENQUEUE_TIMEOUT_MS
         IngressStore.get(context).clear()
     }
 

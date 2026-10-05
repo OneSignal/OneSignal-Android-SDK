@@ -200,6 +200,32 @@ class NotificationIngressTests : FunSpec({
         }
     }
 
+    test("unconfirmed restore enqueue fails the handoff and can be retried") {
+        val workManager = mockk<WorkManager>()
+        val pending = SettableFuture.create<Operation.State.SUCCESS>()
+        val succeeded = SettableFuture.create<Operation.State.SUCCESS>().apply { set(Operation.SUCCESS) }
+        val results = ArrayDeque(listOf(pending, succeeded))
+        mockkObject(OSWorkManagerHelper)
+        every { OSWorkManagerHelper.getInstance(any()) } returns workManager
+        every {
+            workManager.enqueueUniqueWork(any(), any(), any<OneTimeWorkRequest>())
+        } answers {
+            val result = results.removeFirst()
+            mockk<Operation> { every { this@mockk.result } returns result }
+        }
+        NotificationRestoreWorkManager.resetForTest()
+        NotificationIngress.enqueueTimeoutMs = 50
+
+        try {
+            shouldThrow<IllegalStateException> { NotificationIngress.enqueueRestore(context) }
+            NotificationIngress.enqueueRestore(context)
+
+            verify(exactly = 2) { workManager.enqueueUniqueWork(any(), any(), any<OneTimeWorkRequest>()) }
+        } finally {
+            NotificationRestoreWorkManager.resetForTest()
+        }
+    }
+
     test("unknown record kind is discarded without blocking the drain") {
         NotificationIngress.putRawForTest(context, "unknown", "UNKNOWN", "{}")
 
