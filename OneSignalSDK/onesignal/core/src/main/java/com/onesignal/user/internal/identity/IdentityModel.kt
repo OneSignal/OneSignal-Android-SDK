@@ -31,7 +31,11 @@ class IdentityModel : MapModel<String>() {
             setOptStringProperty(IdentityConstants.EXTERNAL_ID, value)
         }
 
-    // replace() rewrites this instance in place, so the check has to hold the same lock as the write.
+    /**
+     * Clears [externalId] only if both ids still match the expected values.
+     *
+     * replace() rewrites this instance in place, so the check has to hold the same lock as the write.
+     */
     fun clearExternalIdIf(
         expectedExternalId: String,
         expectedOnesignalId: String,

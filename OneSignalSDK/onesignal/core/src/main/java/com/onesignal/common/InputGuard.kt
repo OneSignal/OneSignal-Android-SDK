@@ -4,44 +4,51 @@ import com.onesignal.debug.internal.logging.Logging
 
 internal fun hasNullByte(value: String?): Boolean = value != null && '\u0000' in value
 
+/**
+ * Returns true and logs an error naming [api] when [value] is null, empty, or contains a null byte.
+ */
 fun isMissing(
     value: String?,
     api: String,
 ): Boolean {
     // NUL cannot be stored in a text column, so it never counts as a usable value.
-    if (hasNullByte(value)) {
-        Logging.error("$api contains a null byte")
-        return true
-    }
-    if (!value.isNullOrEmpty()) return false
-    Logging.error("$api is required")
-    return true
+    val error =
+        when {
+            hasNullByte(value) -> "$api contains a null byte"
+            value.isNullOrEmpty() -> "$api is required"
+            else -> null
+        }
+    error?.let { Logging.error(it) }
+    return error != null
 }
 
+/**
+ * Returns true when any of [values] is missing, per [isMissing].
+ */
 fun isMissingAny(
     values: Collection<String>,
     api: String,
-): Boolean {
-    for (value in values) {
-        if (isMissing(value, api)) return true
-    }
-    return false
-}
+): Boolean = values.any { isMissing(it, api) }
 
+/**
+ * Returns true when any key in [values] is missing, or any value is missing. With [allowEmptyValue],
+ * only null values count as missing.
+ */
 fun hasMissingEntries(
     values: Map<String, String>,
     api: String,
     allowEmptyValue: Boolean,
-): Boolean {
-    for ((key, item) in values) {
-        if (isMissing(key, "$api: key")) return true
-        val raw = item as String?
-        if (allowEmptyValue) {
-            if (raw != null) continue
-            Logging.error("$api: value is required")
-            return true
-        }
-        if (isMissing(raw, "$api: value")) return true
+): Boolean =
+    values.any { (key, item) ->
+        isMissing(key, "$api: key") || isMissingValue(item as String?, "$api: value", allowEmptyValue)
     }
-    return false
+
+private fun isMissingValue(
+    value: String?,
+    api: String,
+    allowEmpty: Boolean,
+): Boolean {
+    if (!allowEmpty) return isMissing(value, api)
+    if (value == null) Logging.error("$api is required")
+    return value == null
 }

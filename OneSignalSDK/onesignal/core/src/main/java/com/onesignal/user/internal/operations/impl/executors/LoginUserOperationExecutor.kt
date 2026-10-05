@@ -75,13 +75,7 @@ internal class LoginUserOperationExecutor(
         loginUserOp: LoginUserOperation,
         operations: List<Operation>,
     ): ExecutionResponse {
-        // NUL cannot be stored as an alias. Leave it on the op so the user binding stays intact.
-        val rawExternalId = loginUserOp.externalId
-        if (rawExternalId != null && hasNullByte(rawExternalId)) {
-            Logging.error("login: externalId contains a null byte; dropping the alias")
-            _identityModelStore.model.clearExternalIdIf(rawExternalId, loginUserOp.onesignalId)
-        }
-        val alias = rawExternalId?.takeUnless { hasNullByte(it) }
+        val alias = resolveAlias(loginUserOp)
 
         // Handle a bad state that can happen in User Model 5.1.27 or earlier versions that old Login
         // request is not removed after processing if app is force-closed within the PostCreateDelay.
@@ -162,6 +156,15 @@ internal class LoginUserOperationExecutor(
                 else -> ExecutionResponse(result.result)
             }
         }
+    }
+
+    // NUL cannot be stored as an alias. Leave it on the op so the user binding stays intact.
+    private fun resolveAlias(loginUserOp: LoginUserOperation): String? {
+        val rawExternalId = loginUserOp.externalId
+        if (rawExternalId == null || !hasNullByte(rawExternalId)) return rawExternalId
+        Logging.error("login: externalId contains a null byte; dropping the alias")
+        _identityModelStore.model.clearExternalIdIf(rawExternalId, loginUserOp.onesignalId)
+        return null
     }
 
     private suspend fun createUser(
