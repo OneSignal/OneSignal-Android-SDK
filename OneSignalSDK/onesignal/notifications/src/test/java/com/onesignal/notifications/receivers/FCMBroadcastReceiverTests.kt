@@ -1,7 +1,6 @@
 package com.onesignal.notifications.receivers
 
 import android.app.Activity
-import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import androidx.test.core.app.ApplicationProvider
@@ -80,7 +79,7 @@ class FCMBroadcastReceiverTests : FunSpec({
         val context = ApplicationProvider.getApplicationContext<Context>()
         val intent = Intent("some.other.action").apply { putExtra("from", "sender") }
         val receiver = FCMBroadcastReceiver()
-        val pendingResult = receiver.attachOrderedPendingResult()
+        val pendingResult = receiver.attachPendingResult(ordered = true)
 
         receiver.onReceive(context, intent)
 
@@ -102,28 +101,34 @@ class FCMBroadcastReceiverTests : FunSpec({
                 putExtra("message_type", "gcm")
             }
         val receiver = FCMBroadcastReceiver()
-        val pendingResult = receiver.attachOrderedPendingResult()
+        val pendingResult = receiver.attachPendingResult(ordered = true)
 
         receiver.onReceive(context, intent)
 
         verify(exactly = 1) { pendingResult.abortBroadcast() }
         verify(exactly = 1) { pendingResult.resultCode = Activity.RESULT_OK }
     }
-})
+    test("a non ordered broadcast is only finished, never given a result code") {
+        coEvery { OneSignal.initWithContext(any()) } returns true
+        every { OneSignal.getService<INotificationBundleProcessor>() } returns
+            mockk {
+                coEvery { processBundleFromReceiver(any(), any()) } returns
+                    INotificationBundleProcessor.ProcessedBundleResult().apply { isWorkManagerProcessing = true }
+            }
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val intent =
+            Intent("com.google.android.c2dm.intent.RECEIVE").apply {
+                putExtra("from", "sender")
+                putExtra("message_type", "gcm")
+            }
+        val receiver = FCMBroadcastReceiver()
+        val pendingResult = receiver.attachPendingResult(ordered = false)
 
-/**
- * The framework only hands a receiver its PendingResult during a real dispatch, and the ordered
- * flag is a field rather than a method, so neither can be stubbed.
- */
-private fun BroadcastReceiver.attachOrderedPendingResult(): BroadcastReceiver.PendingResult {
-    val pendingResult = mockk<BroadcastReceiver.PendingResult>(relaxed = true)
-    BroadcastReceiver.PendingResult::class.java.getDeclaredField("mOrderedHint").apply {
-        isAccessible = true
-        setBoolean(pendingResult, true)
+        receiver.onReceive(context, intent)
+
+        // The framework throws from these when the broadcast was never ordered.
+        verify(exactly = 0) { pendingResult.resultCode = any() }
+        verify(exactly = 0) { pendingResult.abortBroadcast() }
+        verify(exactly = 1) { pendingResult.finish() }
     }
-    BroadcastReceiver::class.java.getDeclaredField("mPendingResult").apply {
-        isAccessible = true
-        set(this@attachOrderedPendingResult, pendingResult)
-    }
-    return pendingResult
-}
+})

@@ -55,8 +55,14 @@ class NotificationDismissReceiver : BroadcastReceiver() {
                 val notificationOpenedProcessor = OneSignal.getService<INotificationOpenedProcessor>()
 
                 // init OneSignal in background but process in main
-                withMain {
-                    notificationOpenedProcessor.processFromContext(context, intent)
+                val processed =
+                    withMain {
+                        notificationOpenedProcessor.processFromContext(context, intent)
+                    }
+
+                if (processed == null) {
+                    // finish() below still reports the broadcast handled, so say the work was lost.
+                    Logging.error("Notification dismiss was not processed, the main thread is unavailable")
                 }
             } finally {
                 pendingResult?.finish()

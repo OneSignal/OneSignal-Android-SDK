@@ -472,13 +472,20 @@ internal class InAppMessageView(
      * when using smoothSlideViewTo on Android 4.4
      */
     private suspend fun finishAfterDelay() {
-        withMain {
-            delay(ACTIVITY_FINISH_AFTER_DISMISS_DELAY_MS.toLong())
-            if (hasBackground && parentRelativeLayout != null) {
-                animateAndDismissLayout(parentRelativeLayout!!)
-            } else {
-                cleanupViewsAfterDismiss()
+        val finished =
+            withMain {
+                delay(ACTIVITY_FINISH_AFTER_DISMISS_DELAY_MS.toLong())
+                if (hasBackground && parentRelativeLayout != null) {
+                    animateAndDismissLayout(parentRelativeLayout!!)
+                } else {
+                    cleanupViewsAfterDismiss()
+                }
             }
+
+        if (finished == null) {
+            // This is the only path to onMessageWasDismissed, so the queue would stall otherwise.
+            Logging.error("Could not animate the in app message dismiss, counting it as dismissed")
+            messageController?.onMessageWasDismissed()
         }
     }
 

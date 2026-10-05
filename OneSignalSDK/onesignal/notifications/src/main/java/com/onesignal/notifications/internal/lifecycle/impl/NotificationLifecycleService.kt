@@ -296,6 +296,7 @@ internal class NotificationLifecycleService(
         activity: Activity,
         pushPayloads: JSONArray,
     ) {
+        @Suppress("TooGenericExceptionCaught")
         try {
             // Always use the top most notification if user tapped on the summary notification
             val firstPayloadItem = pushPayloads.getJSONObject(0)
@@ -304,8 +305,8 @@ internal class NotificationLifecycleService(
             val intent = intentGenerator.getIntentVisible()
             if (intent != null) {
                 Logging.debug("SDK running startActivity with Intent: $intent")
-                withMain {
-                    activity.startActivity(intent)
+                if (withMain { activity.startActivity(intent) } == null) {
+                    Logging.error("Could not open notification activity, the main thread is unavailable")
                 }
             } else {
                 Logging.debug("SDK not showing an Activity automatically due to it's settings.")

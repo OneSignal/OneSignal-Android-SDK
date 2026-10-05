@@ -8,15 +8,20 @@ import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.types.shouldBeInstanceOf
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.coroutines.CoroutineContext
@@ -150,8 +155,25 @@ class ThreadUtilsTests : FunSpec({
         onCompleteCalled shouldBe true
     }
 
+    test("the default arguments of the completion helpers reach the IO scope") {
+        val finished = CountDownLatch(4)
+
+        suspendifyWithCompletion(block = { finished.countDown() })
+        suspendifyWithErrorHandling(block = { finished.countDown() })
+        suspendifyOnIO(block = { finished.countDown() }, onComplete = { finished.countDown() })
+
+        finished.await(2, TimeUnit.SECONDS) shouldBe true
+    }
+
+    test("launchOnDefault returns a job that can be joined") {
+        var ran = false
+
+        runBlocking { launchOnDefault { ran = true }.join() }
+
+        ran shouldBe true
+    }
+
     test("linkage errors stay inside suspendify helpers") {
-        clearMainDispatcherFailureForTest()
         @OptIn(ExperimentalCoroutinesApi::class)
         Dispatchers.setMain(UnconfinedTestDispatcher())
         val uncaught = AtomicReference<Throwable>()
@@ -215,39 +237,64 @@ class ThreadUtilsTests : FunSpec({
             Thread.setDefaultUncaughtExceptionHandler(previous)
             @OptIn(ExperimentalCoroutinesApi::class)
             Dispatchers.resetMain()
-            clearMainDispatcherFailureForTest()
         }
     }
 
-    test("a failed Main dispatcher is remembered and withMain skips the block") {
+    test("a LinkageError reading Main is contained") {
+        usableMainDispatcher { throw ExceptionInInitializerError("missing") } shouldBe null
+        usableMainDispatcher { throw NoClassDefFoundError("Dispatchers") } shouldBe null
+    }
+
+    test("a dispatcher that cannot dispatch is reported unusable") {
+        usableMainDispatcher { UndispatchableDispatcher } shouldBe null
+    }
+
+    test("a LinkageError from the dispatch probe is contained") {
+        usableMainDispatcher { UnlinkableDispatcher } shouldBe null
+    }
+
+    test("withMain skips the block when Main cannot dispatch") {
+        var ran = false
+
+        withMain { ran = true } shouldBe null
+
+        ran shouldBe false
+    }
+
+    test("a cancelled caller is not mistaken for a missing Main") {
+        @OptIn(ExperimentalCoroutinesApi::class)
+        Dispatchers.setMain(UnconfinedTestDispatcher())
         try {
-            resolveMainDispatcher { throw ExceptionInInitializerError("missing") } shouldBe null
-            resolveMainDispatcher { throw AssertionError("resolve ran after Main was marked missing") } shouldBe null
+            val cancelled = AtomicReference<Throwable>()
+            val skipped = AtomicBoolean(false)
+
+            runBlocking {
+                val job =
+                    launch(Dispatchers.Default) {
+                        cancel()
+                        try {
+                            if (withMain { } == null) skipped.set(true)
+                        } catch (e: CancellationException) {
+                            cancelled.set(e)
+                        }
+                    }
+                job.join()
+            }
+
+            skipped.get() shouldBe false
+            cancelled.get().shouldBeInstanceOf<CancellationException>()
+
+            // The cancellation must not have left Main poisoned for everyone else.
             var ran = false
             withMain { ran = true }
-            ran shouldBe false
+            ran shouldBe true
         } finally {
-            clearMainDispatcherFailureForTest()
+            @OptIn(ExperimentalCoroutinesApi::class)
+            Dispatchers.resetMain()
         }
     }
 
-    test("withMain marks Main missing when the dispatcher cannot dispatch") {
-        clearMainDispatcherFailureForTest()
-        try {
-            var ran = false
-            withMainDispatcher({ UndispatchableDispatcher }) { ran = true } shouldBe null
-            ran shouldBe false
-
-            var laterRan = false
-            withMain { laterRan = true }
-            laterRan shouldBe false
-        } finally {
-            clearMainDispatcherFailureForTest()
-        }
-    }
-
-    test("withMain lets the block's own failure through without blaming Main") {
-        clearMainDispatcherFailureForTest()
+    test("withMain lets the block's own failure through") {
         @OptIn(ExperimentalCoroutinesApi::class)
         Dispatchers.setMain(UnconfinedTestDispatcher())
         try {
@@ -261,12 +308,10 @@ class ThreadUtilsTests : FunSpec({
         } finally {
             @OptIn(ExperimentalCoroutinesApi::class)
             Dispatchers.resetMain()
-            clearMainDispatcherFailureForTest()
         }
     }
 
     test("withMain runs the block when Main is available") {
-        clearMainDispatcherFailureForTest()
         @OptIn(ExperimentalCoroutinesApi::class)
         Dispatchers.setMain(UnconfinedTestDispatcher())
         try {
@@ -484,13 +529,32 @@ class ThreadUtilsTests : FunSpec({
 })
 
 /**
- * Stands in for coroutines' MissingMainCoroutineDispatcher: reading it is fine, dispatching is not.
+ * Stands in for coroutines' MissingMainCoroutineDispatcher, which can be read and then throws from
+ * both of these the moment anything tries to use it.
  */
 private object UndispatchableDispatcher : CoroutineDispatcher() {
+    override fun isDispatchNeeded(context: CoroutineContext): Boolean {
+        throw IllegalStateException("Module with the Main dispatcher is missing")
+    }
+
     override fun dispatch(
         context: CoroutineContext,
         block: Runnable,
     ) {
         throw IllegalStateException("Module with the Main dispatcher is missing")
+    }
+}
+
+/** A Main backed by a half-installed coroutines-android, which fails to link rather than to throw. */
+private object UnlinkableDispatcher : CoroutineDispatcher() {
+    override fun isDispatchNeeded(context: CoroutineContext): Boolean {
+        throw NoSuchMethodError("HandlerContext.isDispatchNeeded")
+    }
+
+    override fun dispatch(
+        context: CoroutineContext,
+        block: Runnable,
+    ) {
+        throw NoSuchMethodError("HandlerContext.dispatch")
     }
 }

@@ -4,9 +4,11 @@ import com.onesignal.debug.internal.logging.Logging
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.withContext
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.coroutines.EmptyCoroutineContext
 
 /**
  * Modernized ThreadUtils that leverages OneSignalDispatchers for better thread management.
@@ -201,58 +203,51 @@ private inline fun catchSuspendifyFailure(label: String, block: () -> Unit) {
     }
 }
 
-private val mainDispatcherMissing = AtomicBoolean(false)
+private val mainDispatcherReported = AtomicBoolean(false)
 
 /**
- * Null only once Main is known bad. Reading it proves nothing: with no Main module, coroutines
- * returns a stub that throws on dispatch, so [withMain] is what discovers the failure.
+ * Null when the main thread cannot be reached. Reading [Dispatchers.Main] proves nothing: with no
+ * Main module, coroutines returns a stub that only fails when dispatched to.
  */
-fun mainDispatcherOrNull(): CoroutineDispatcher? = resolveMainDispatcher { Dispatchers.Main }
+fun mainDispatcherOrNull(): CoroutineDispatcher? = usableMainDispatcher { Dispatchers.Main }
 
-internal fun resolveMainDispatcher(resolve: () -> CoroutineDispatcher): CoroutineDispatcher? {
-    if (mainDispatcherMissing.get()) return null
-    return try {
-        resolve()
-    } catch (e: LinkageError) {
-        markMainDispatcherMissing(e)
-        null
-    }
-}
-
-private fun markMainDispatcherMissing(cause: Throwable) {
-    mainDispatcherMissing.set(true)
-    Logging.error("Dispatchers.Main unavailable", cause)
-}
-
-internal fun clearMainDispatcherFailureForTest() {
-    mainDispatcherMissing.set(false)
-}
-
-/**
- * Null when the main thread cannot be reached. Returns whatever [block] returns otherwise, so a
- * nullable result of its own is indistinguishable from a skip.
- */
-suspend fun <T> withMain(block: suspend CoroutineScope.() -> T): T? = withMainDispatcher(::mainDispatcherOrNull, block)
-
-internal suspend fun <T> withMainDispatcher(
-    resolve: () -> CoroutineDispatcher?,
-    block: suspend CoroutineScope.() -> T,
-): T? {
-    val main = resolve() ?: return null
-    var started = false
-    return try {
-        withContext(main) {
-            started = true
-            block()
+internal fun usableMainDispatcher(resolve: () -> CoroutineDispatcher): CoroutineDispatcher? {
+    val main =
+        try {
+            resolve()
+        } catch (e: LinkageError) {
+            reportMainDispatcherUnavailable(e)
+            return null
         }
+
+    return try {
+        // Probe rather than dispatch. The stub throws here, and a real Main answers without
+        // scheduling anything, so a cancelled caller is never mistaken for a missing Main.
+        @OptIn(ExperimentalCoroutinesApi::class)
+        main.isDispatchNeeded(EmptyCoroutineContext)
+        main
     } catch (e: IllegalStateException) {
-        // Not started means the dispatcher never ran us, so this is its failure and not the block's.
-        if (started) throw e
-        markMainDispatcherMissing(e)
+        reportMainDispatcherUnavailable(e)
         null
     } catch (e: LinkageError) {
-        if (started) throw e
-        markMainDispatcherMissing(e)
+        reportMainDispatcherUnavailable(e)
         null
     }
+}
+
+private fun reportMainDispatcherUnavailable(cause: Throwable) {
+    if (mainDispatcherReported.compareAndSet(false, true)) {
+        Logging.error("Dispatchers.Main unavailable, skipping main thread work", cause)
+    } else {
+        Logging.warn("Dispatchers.Main unavailable, skipping main thread work")
+    }
+}
+
+/**
+ * Null when the main thread cannot be reached. A nullable [block] result is indistinguishable from
+ * a skip, so callers that need to tell them apart should check [mainDispatcherOrNull] themselves.
+ */
+suspend fun <T> withMain(block: suspend CoroutineScope.() -> T): T? {
+    val main = mainDispatcherOrNull() ?: return null
+    return withContext(main, block)
 }

@@ -2,6 +2,7 @@ package com.onesignal.location.internal
 
 import android.os.Build
 import com.onesignal.common.AndroidUtils
+import com.onesignal.common.threading.mainDispatcherOrNull
 import com.onesignal.common.threading.suspendifyOnIO
 import com.onesignal.common.threading.withMain
 import com.onesignal.core.internal.application.IApplicationService
@@ -73,6 +74,11 @@ internal class LocationManager(
      */
     override suspend fun requestPermission(): Boolean {
         Logging.log(LogLevel.DEBUG, "LocationManager.requestPermission()")
+
+        if (mainDispatcherOrNull() == null) {
+            Logging.error("Could not prompt for location permission, the main thread is unavailable")
+            return false
+        }
 
         var result = false
         withMain {

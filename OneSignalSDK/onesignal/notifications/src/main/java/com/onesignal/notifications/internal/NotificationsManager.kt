@@ -80,12 +80,13 @@ internal class NotificationsManager(
      */
     private fun refreshNotificationState() {
         // ensure all notifications for this app have been restored to the notification panel
+        @Suppress("TooGenericExceptionCaught")
         try {
             _notificationRestoreWorkManager.beginEnqueueingWork(_applicationService.appContext, false)
         } catch (e: Exception) {
-            Logging.error("Notification restore enqueue failed", e)
+            Logging.error("Exception in notification restore enqueue", e)
         } catch (e: LinkageError) {
-            Logging.error("Notification restore enqueue failed", e)
+            Logging.error("LinkageError in notification restore enqueue", e)
         }
 
         val isEnabled = NotificationHelper.areNotificationsEnabled(_applicationService.appContext)
@@ -95,9 +96,18 @@ internal class NotificationsManager(
     override suspend fun requestPermission(fallbackToSettings: Boolean): Boolean {
         Logging.debug("NotificationsManager.requestPermission()")
 
-        return withMain {
-            _notificationPermissionController.prompt(fallbackToSettings)
-        } ?: false
+        val granted =
+            withMain {
+                _notificationPermissionController.prompt(fallbackToSettings)
+            }
+
+        if (granted == null) {
+            // Reported as not granted because the prompt never ran, which is not a user denial.
+            Logging.error("Could not prompt for notification permission, the main thread is unavailable")
+            return false
+        }
+
+        return granted
     }
 
     private fun setPermissionStatusAndFire(isEnabled: Boolean) {

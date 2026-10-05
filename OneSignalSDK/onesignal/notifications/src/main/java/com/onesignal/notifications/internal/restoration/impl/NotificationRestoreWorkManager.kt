@@ -32,6 +32,7 @@ internal class NotificationRestoreWorkManager : INotificationRestoreWorkManager 
             restored = true
         }
 
+        @Suppress("TooGenericExceptionCaught")
         try {
             // When boot or upgrade, add a 15 second delay to alleviate app doing to much work all at once
             val restoreDelayInSeconds = if (shouldDelay) 15 else 0

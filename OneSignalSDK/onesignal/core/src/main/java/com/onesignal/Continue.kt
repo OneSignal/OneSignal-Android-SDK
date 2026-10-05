@@ -52,7 +52,8 @@ object Continue {
      * @param onFinished Called when the coroutine has completed, passing in the result ([ContinueResult])
      * of the coroutine for the java code to continue processing.
      * @param context The optional coroutine context to run the [onFinished] lambda under. If not
-     * specified a context confined to the main thread will be used.
+     * specified the main thread is used, falling back to [Dispatchers.Default] on hosts where the
+     * main dispatcher is unavailable. Do not assume [onFinished] runs on the main thread.
      *
      * @return The [Continuation] which should be provided to the Kotlin coroutine, and will be executed
      * once that coroutine has completed.

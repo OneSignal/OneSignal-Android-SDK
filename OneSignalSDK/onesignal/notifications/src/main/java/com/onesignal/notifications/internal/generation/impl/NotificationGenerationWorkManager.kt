@@ -40,43 +40,32 @@ internal class NotificationGenerationWorkManager : INotificationGenerationWorkMa
             return true
         }
 
+        @Suppress("TooGenericExceptionCaught")
         try {
-            enqueueWork(context, osNotificationId, androidNotificationId, jsonPayload, timestamp, restoreReason, id)
+            // TODO: Need to figure out how to implement the isHighPriority param
+            val inputData =
+                Data.Builder()
+                    .putString(OS_ID_DATA_PARAM, id)
+                    .putInt(ANDROID_NOTIF_ID_WORKER_DATA_PARAM, androidNotificationId)
+                    .putString(JSON_PAYLOAD_WORKER_DATA_PARAM, jsonPayload.toString())
+                    .putLong(TIMESTAMP_WORKER_DATA_PARAM, timestamp)
+                    .putString(RESTORE_REASON_WORKER_DATA_PARAM, restoreReason?.name)
+                    .build()
+            val workRequest =
+                OneTimeWorkRequest.Builder(NotificationGenerationWorker::class.java)
+                    .setInputData(inputData)
+                    .build()
+            Logging.debug(
+                "NotificationWorkManager enqueueing notification work with notificationId: $osNotificationId and jsonPayload: $jsonPayload",
+            )
+            OSWorkManagerHelper.getInstance(context)
+                .enqueueUniqueWork(osNotificationId, ExistingWorkPolicy.KEEP, workRequest)
         } catch (t: Throwable) {
             // The worker never starts when enqueue throws, so its finally will not drop this id.
             removeNotificationIdProcessed(id)
             throw t
         }
         return true
-    }
-
-    private fun enqueueWork(
-        context: Context,
-        osNotificationId: String,
-        androidNotificationId: Int,
-        jsonPayload: JSONObject?,
-        timestamp: Long,
-        restoreReason: NotificationRestoreReason?,
-        id: String,
-    ) {
-        // TODO: Need to figure out how to implement the isHighPriority param
-        val inputData =
-            Data.Builder()
-                .putString(OS_ID_DATA_PARAM, id)
-                .putInt(ANDROID_NOTIF_ID_WORKER_DATA_PARAM, androidNotificationId)
-                .putString(JSON_PAYLOAD_WORKER_DATA_PARAM, jsonPayload.toString())
-                .putLong(TIMESTAMP_WORKER_DATA_PARAM, timestamp)
-                .putString(RESTORE_REASON_WORKER_DATA_PARAM, restoreReason?.name)
-                .build()
-        val workRequest =
-            OneTimeWorkRequest.Builder(NotificationGenerationWorker::class.java)
-                .setInputData(inputData)
-                .build()
-        Logging.debug(
-            "NotificationWorkManager enqueueing notification work with notificationId: $osNotificationId and jsonPayload: $jsonPayload",
-        )
-        OSWorkManagerHelper.getInstance(context)
-            .enqueueUniqueWork(osNotificationId, ExistingWorkPolicy.KEEP, workRequest)
     }
 
     class NotificationGenerationWorker(context: Context, workerParams: WorkerParameters) : CoroutineWorker(context, workerParams) {

@@ -17,6 +17,7 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkObject
 import io.mockk.unmockkObject
+import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -24,6 +25,11 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
 import org.robolectric.annotation.Config
 
+/**
+ * A receiver that calls goAsync() and never finishes keeps the process alive until the framework
+ * kills it, so every exit path has to reach finish(). IOMockHelper only catches Exception, so the
+ * Errors below escape onReceive after the finally block, which production's suspendify swallows.
+ */
 @RobolectricTest
 @Config(sdk = [28])
 class PendingResultFinishTests : FunSpec({
@@ -45,10 +51,14 @@ class PendingResultFinishTests : FunSpec({
                 every { beginEnqueueingWork(any(), any()) } throws NoSuchMethodError("forNamespace")
             }
         val context = ApplicationProvider.getApplicationContext<Context>()
+        val receiver = BootUpReceiver()
+        val pendingResult = receiver.attachPendingResult()
 
         shouldThrow<NoSuchMethodError> {
-            BootUpReceiver().onReceive(context, Intent())
+            receiver.onReceive(context, Intent())
         }
+
+        verify(exactly = 1) { pendingResult.finish() }
     }
 
     test("upgrade restore finishes the pending result when enqueue throws") {
@@ -58,17 +68,25 @@ class PendingResultFinishTests : FunSpec({
                 every { beginEnqueueingWork(any(), any()) } throws NoSuchMethodError("forNamespace")
             }
         val context = ApplicationProvider.getApplicationContext<Context>()
+        val receiver = UpgradeReceiver()
+        val pendingResult = receiver.attachPendingResult()
 
         shouldThrow<NoSuchMethodError> {
-            UpgradeReceiver().onReceive(context, Intent())
+            receiver.onReceive(context, Intent())
         }
+
+        verify(exactly = 1) { pendingResult.finish() }
     }
 
     test("dismiss finishes the pending result when init fails") {
         coEvery { OneSignal.initWithContext(any()) } returns false
         val context = ApplicationProvider.getApplicationContext<Context>()
+        val receiver = NotificationDismissReceiver()
+        val pendingResult = receiver.attachPendingResult()
 
-        NotificationDismissReceiver().onReceive(context, Intent())
+        receiver.onReceive(context, Intent())
+
+        verify(exactly = 1) { pendingResult.finish() }
     }
 
     test("dismiss finishes the pending result when opened processing throws") {
@@ -78,15 +96,19 @@ class PendingResultFinishTests : FunSpec({
                 coEvery { processFromContext(any(), any()) } throws NoSuchMethodError("Main")
             }
         val context = ApplicationProvider.getApplicationContext<Context>()
+        val receiver = NotificationDismissReceiver()
+        val pendingResult = receiver.attachPendingResult()
         @OptIn(ExperimentalCoroutinesApi::class)
         Dispatchers.setMain(UnconfinedTestDispatcher())
         try {
             shouldThrow<NoSuchMethodError> {
-                NotificationDismissReceiver().onReceive(context, Intent())
+                receiver.onReceive(context, Intent())
             }
         } finally {
             @OptIn(ExperimentalCoroutinesApi::class)
             Dispatchers.resetMain()
         }
+
+        verify(exactly = 1) { pendingResult.finish() }
     }
 })

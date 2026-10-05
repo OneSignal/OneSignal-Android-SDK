@@ -4,6 +4,7 @@ import androidx.test.core.app.ApplicationProvider
 import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
 import com.onesignal.common.threading.runOnSerialIO
 import com.onesignal.common.threading.suspendifyOnIO
+import com.onesignal.common.threading.withMain
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
@@ -13,15 +14,22 @@ import com.onesignal.notifications.internal.permissions.INotificationPermissionC
 import com.onesignal.notifications.internal.restoration.INotificationRestoreWorkManager
 import com.onesignal.notifications.internal.summary.INotificationSummaryManager
 import com.onesignal.notifications.shadows.ShadowRoboNotificationManager
+import io.kotest.assertions.throwables.shouldNotThrowAny
 import io.kotest.core.spec.style.FunSpec
+import io.kotest.matchers.shouldBe
+import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.mockkStatic
 import io.mockk.runs
+import io.mockk.slot
 import io.mockk.unmockkStatic
 import io.mockk.verify
 import io.mockk.verifyOrder
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.runBlocking
 import org.robolectric.annotation.Config
 
 /**
@@ -68,16 +76,19 @@ class NotificationsManagerTests : FunSpec({
         unmockkStatic(threadUtilsPath)
     }
 
-    fun newManager(): NotificationsManager {
+    fun newManager(
+        restoreWorkManager: INotificationRestoreWorkManager =
+            mockk {
+                every { beginEnqueueingWork(any(), any()) } just runs
+            },
+        permissionController: INotificationPermissionController =
+            mockk {
+                every { subscribe(any()) } just runs
+            },
+    ): NotificationsManager {
         val mockAppService = mockk<IApplicationService>()
         every { mockAppService.addApplicationLifecycleHandler(any()) } just runs
         every { mockAppService.appContext } returns ApplicationProvider.getApplicationContext()
-
-        val permissionController = mockk<INotificationPermissionController>()
-        every { permissionController.subscribe(any()) } just runs
-
-        val restoreWorkManager = mockk<INotificationRestoreWorkManager>()
-        every { restoreWorkManager.beginEnqueueingWork(any(), any()) } just runs
 
         val lifecycleService = mockk<INotificationLifecycleService>(relaxed = true)
         val dataController = mockk<INotificationRepository>(relaxed = true)
@@ -117,5 +128,67 @@ class NotificationsManagerTests : FunSpec({
             runOnSerialIO(any<() -> Unit>())
             runOnSerialIO(any<() -> Unit>())
         }
+    }
+
+    test("the dispatched refresh enqueues the restore work") {
+        val dispatched = slot<() -> Unit>()
+        every { runOnSerialIO(capture(dispatched)) } just runs
+        val restoreWorkManager = mockk<INotificationRestoreWorkManager>(relaxed = true)
+        val manager = newManager(restoreWorkManager)
+        manager.onFocus(firedOnSubscribe = false)
+
+        dispatched.captured()
+
+        verify(exactly = 1) { restoreWorkManager.beginEnqueueingWork(any(), false) }
+    }
+
+    test("an exception from the restore enqueue stays inside the refresh") {
+        val dispatched = slot<() -> Unit>()
+        every { runOnSerialIO(capture(dispatched)) } just runs
+        val manager =
+            newManager(
+                restoreWorkManager =
+                mockk {
+                    // WorkManager's own initialization is what throws in the field.
+                    every { beginEnqueueingWork(any(), any()) } throws IllegalStateException("WorkManager is not initialized")
+                },
+            )
+        manager.onFocus(firedOnSubscribe = false)
+
+        // The refresh runs on the serial IO dispatcher, where an escape would take the process down.
+        shouldNotThrowAny { dispatched.captured() }
+    }
+
+    test("a LinkageError from the restore enqueue stays inside the refresh") {
+        val dispatched = slot<() -> Unit>()
+        every { runOnSerialIO(capture(dispatched)) } just runs
+        val manager =
+            newManager(
+                restoreWorkManager =
+                mockk {
+                    every { beginEnqueueingWork(any(), any()) } throws NoSuchMethodError("forNamespace")
+                },
+            )
+        manager.onFocus(firedOnSubscribe = false)
+
+        shouldNotThrowAny { dispatched.captured() }
+    }
+
+    test("requestPermission reports not granted when the main thread is unavailable") {
+        val permissionController = mockk<INotificationPermissionController>(relaxed = true)
+        val manager = newManager(permissionController = permissionController)
+        coEvery { withMain(any<suspend CoroutineScope.() -> Boolean>()) } returns null
+
+        val granted = runBlocking { manager.requestPermission(true) }
+
+        granted shouldBe false
+        coVerify(exactly = 0) { permissionController.prompt(any()) }
+    }
+
+    test("requestPermission returns what the prompt answered") {
+        val manager = newManager()
+        coEvery { withMain(any<suspend CoroutineScope.() -> Boolean>()) } returns true
+
+        runBlocking { manager.requestPermission(true) } shouldBe true
     }
 })
