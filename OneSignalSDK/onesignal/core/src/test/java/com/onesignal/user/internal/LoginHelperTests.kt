@@ -406,4 +406,33 @@ class LoginHelperTests : FunSpec({
         jwtTokenStore.getJwt(currentExternalId) shouldBe "new-jwt"
         verify(exactly = 1) { mockOperationRepo.forceExecuteOperations() }
     }
+
+    test("login with same externalId + empty JWT keeps the stored token") {
+        val mockIdentityModelStore =
+            MockHelper.identityModelStore { model ->
+                model.externalId = currentExternalId
+                model.onesignalId = currentOneSignalId
+            }
+        val mockOperationRepo = mockk<IOperationRepo>(relaxed = true)
+        val mockConfigModel = mockk<ConfigModel>()
+        every { mockConfigModel.appId } returns appId
+        every { mockConfigModel.useIdentityVerification } returns JwtRequirement.NOT_REQUIRED
+        val jwtTokenStore = JwtTokenStore(MockPreferencesService())
+        jwtTokenStore.putJwt(currentExternalId, "old-jwt")
+
+        val loginHelper =
+            LoginHelper(
+                identityModelStore = mockIdentityModelStore,
+                userSwitcher = mockk(relaxed = true),
+                operationRepo = mockOperationRepo,
+                configModel = mockConfigModel,
+                jwtTokenStore = jwtTokenStore,
+                lock = Any(),
+            )
+
+        loginHelper.switchUser(currentExternalId, jwtBearerToken = "") shouldBe null
+
+        jwtTokenStore.getJwt(currentExternalId) shouldBe "old-jwt"
+        verify(exactly = 0) { mockOperationRepo.forceExecuteOperations() }
+    }
 })
