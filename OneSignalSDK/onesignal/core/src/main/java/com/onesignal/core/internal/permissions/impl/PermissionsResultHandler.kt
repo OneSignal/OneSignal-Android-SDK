@@ -6,25 +6,35 @@ import com.onesignal.core.internal.preferences.PreferenceStores
 import com.onesignal.debug.internal.logging.Logging
 
 /**
- * Resolves a permission grant into the settings-fallback decision and the registered
- * [com.onesignal.core.internal.permissions.IRequestPermissionService.PermissionCallback].
+ * One prompt's inputs. Held per request so overlapping prompts resolve independently.
  *
- * Shared by every surface that can host the OS prompt: `PermissionsActivity`, the host
- * activity's result registry, and a wrapper-supplied [com.onesignal.common.IHostPermissionPrompt].
+ * @param permission null when the OS returned no permissions, which is always a denial.
+ */
+internal data class PermissionPromptRequest(
+    val permissionRequestType: String?,
+    val permission: String?,
+    val fallbackToSettings: Boolean,
+    val rationaleBefore: Boolean,
+)
+
+/**
+ * Turns a permission grant into the settings-fallback decision and the registered callback.
+ * Shared by `PermissionsActivity`, the host result registry, and wrapper-supplied prompts.
  */
 internal class PermissionsResultHandler(
     private val _requestPermissionService: RequestPermissionService,
     private val _preferences: IPreferencesService,
 ) {
     /**
-     * @param permission null when the OS returned no permissions, which is always a denial.
+     * @param rationaleAfter null when no activity was available to read it from. Unknown is not
+     *   the same as false: a false reading is what marks a permission permanently denied.
      */
     fun handleResult(
-        permissionRequestType: String?,
-        permission: String?,
+        request: PermissionPromptRequest,
         granted: Boolean,
-        shouldShowRationaleAfter: Boolean,
+        rationaleAfter: Boolean?,
     ) {
+        val permission = request.permission
         var isGranted = granted
         var showSettings = false
 
@@ -38,7 +48,7 @@ internal class PermissionsResultHandler(
                     true,
                 )
             } else {
-                showSettings = shouldShowSettings(permission, shouldShowRationaleAfter)
+                showSettings = shouldShowSettings(request, permission, rationaleAfter)
             }
 
             // Must be persisted after shouldShowSettings() reads it so the recovery path
@@ -50,7 +60,7 @@ internal class PermissionsResultHandler(
             )
         }
 
-        executeCallback(permissionRequestType, isGranted, showSettings)
+        executeCallback(request.permissionRequestType, isGranted, showSettings)
     }
 
     private fun executeCallback(
@@ -78,37 +88,41 @@ internal class PermissionsResultHandler(
      * `shouldShowRequestPermissionRationale` going true -> false across a denied request.
      */
     private fun shouldShowSettings(
+        request: PermissionPromptRequest,
         permission: String,
-        shouldShowRationaleAfter: Boolean,
+        rationaleAfter: Boolean?,
     ): Boolean {
-        if (!_requestPermissionService.fallbackToSettings) {
+        if (!request.fallbackToSettings) {
             return false
         }
 
         val resolvedKey = "${PreferenceOneSignalKeys.PREFS_OS_USER_RESOLVED_PERMISSION_PREFIX}$permission"
-        val rationaleBefore = _requestPermissionService.shouldShowRequestPermissionRationaleBeforeRequest
+        val alreadyResolved = _preferences.getBool(PreferenceStores.ONESIGNAL, resolvedKey, false) ?: false
 
-        if (rationaleBefore && !shouldShowRationaleAfter) {
+        // No reading means no transition to infer, so report only what was already known.
+        if (rationaleAfter == null) {
+            return alreadyResolved
+        }
+
+        if (request.rationaleBefore && !rationaleAfter) {
             _preferences.saveBool(PreferenceStores.ONESIGNAL, resolvedKey, true)
             return false
         }
 
-        // Recovery path for an already permanently-denied permission. If the OS won't surface
-        // its prompt (rationale is false before and after a denied request) but OneSignal has
-        // requested this permission before, the permission is permanently blocked even though
-        // we never witnessed the true -> false transition (e.g. it was denied across a prior
-        // session or outside OneSignal's flow). Remember it so the fallback is no longer stuck.
+        // Recovery path for an already permanently-denied permission: rationale false before and
+        // after a denied request means the OS will not prompt again, even though we never saw the
+        // true -> false transition.
         val hasPromptedBefore =
             _preferences.getBool(
                 PreferenceStores.ONESIGNAL,
                 "${PreferenceOneSignalKeys.PREFS_OS_PROMPTED_PERMISSION_PREFIX}$permission",
                 false,
             ) ?: false
-        if (hasPromptedBefore && !rationaleBefore && !shouldShowRationaleAfter) {
+        if (hasPromptedBefore && !request.rationaleBefore && !rationaleAfter) {
             _preferences.saveBool(PreferenceStores.ONESIGNAL, resolvedKey, true)
             return true
         }
 
-        return _preferences.getBool(PreferenceStores.ONESIGNAL, resolvedKey, false) ?: false
+        return alreadyResolved
     }
 }

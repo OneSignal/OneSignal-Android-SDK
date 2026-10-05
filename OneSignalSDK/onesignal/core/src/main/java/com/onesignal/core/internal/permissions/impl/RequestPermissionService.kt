@@ -3,14 +3,7 @@ package com.onesignal.core.internal.permissions.impl
 import android.app.Activity
 import android.content.ActivityNotFoundException
 import android.content.Intent
-import android.os.Handler
-import android.os.Looper
 import androidx.activity.ComponentActivity
-import androidx.activity.result.ActivityResultLauncher
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.core.app.ActivityCompat
-import com.onesignal.common.AndroidUtils
-import com.onesignal.common.IHostPermissionPrompt
 import com.onesignal.common.OneSignalWrapper
 import com.onesignal.core.R
 import com.onesignal.core.activities.PermissionsActivity
@@ -20,7 +13,8 @@ import com.onesignal.core.internal.permissions.IRequestPermissionService
 import com.onesignal.core.internal.permissions.PermissionsViewModel
 import com.onesignal.core.internal.preferences.IPreferencesService
 import com.onesignal.debug.internal.logging.Logging
-import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicBoolean
 
 internal class RequestPermissionService(
     private val _application: IApplicationService,
@@ -30,7 +24,7 @@ internal class RequestPermissionService(
     var fallbackToSettings = false
     var shouldShowRequestPermissionRationaleBeforeRequest = false
     private val callbackMap = HashMap<String?, IRequestPermissionService.PermissionCallback>()
-    private val hostPromptCount = AtomicInteger()
+    private val hostPromptsInFlight = ConcurrentHashMap<String, Prompt>()
 
     val resultHandler: PermissionsResultHandler by lazy { PermissionsResultHandler(this, _preferences) }
 
@@ -63,153 +57,153 @@ internal class RequestPermissionService(
         // an activity becomes available, until our permission activity is the one that's
         // available.
         _application.addActivityLifecycleHandler(
-            object : IActivityLifecycleHandler {
-                override fun onActivityAvailable(activity: Activity) {
-                    if (activity is PermissionsActivity) {
-                        _application.removeActivityLifecycleHandler(this)
-                        return
-                    }
-
-                    val intent = Intent(activity, PermissionsActivity::class.java)
-                    intent.flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
-                    intent.putExtra(PermissionsViewModel.INTENT_EXTRA_PERMISSION_TYPE, permissionRequestType)
-                        .putExtra(PermissionsViewModel.INTENT_EXTRA_ANDROID_PERMISSION_STRING, androidPermissionString)
-                        .putExtra(PermissionsViewModel.INTENT_EXTRA_CALLBACK_CLASS, callbackClass.name)
-
-                    // Host tools:node=replace can drop this activity. Do not retry on later activities.
-                    if (intent.resolveActivity(activity.packageManager) == null) {
-                        onPermissionsActivityMissing(this, activity, permissionRequestType, androidPermissionString)
-                        return
-                    }
-
-                    try {
-                        activity.startActivity(intent)
-                        activity.overridePendingTransition(
-                            R.anim.onesignal_fade_in,
-                            R.anim.onesignal_fade_out,
-                        )
-                    } catch (e: ActivityNotFoundException) {
-                        onPermissionsActivityMissing(this, activity, permissionRequestType, androidPermissionString, e)
-                    }
-                }
-
-                override fun onActivityStopped(activity: Activity) {
-                }
-            },
+            Prompt(permissionRequestType, androidPermissionString, callbackClass, fallbackCondition),
         )
     }
 
     /**
-     * Falls back to prompting on the host's own activity, which survives `tools:node="replace"`.
-     * Only when no host can report a grant back do we complete the prompt as denied.
+     * One prompt attempt. All request state lives here rather than on the service so that
+     * overlapping prompts cannot overwrite each other's settings fallback or rationale.
      */
-    private fun onPermissionsActivityMissing(
-        handler: IActivityLifecycleHandler,
-        activity: Activity,
-        permissionRequestType: String?,
-        androidPermissionString: String?,
-        cause: Throwable? = null,
-    ) {
-        _application.removeActivityLifecycleHandler(handler)
-        Logging.error(
-            "PermissionsActivity is missing from the merged manifest. " +
-                "<application tools:node=\"replace\"> drops library activities. " +
-                "Use tools:replace on the specific attribute instead.",
-            cause,
-        )
+    internal inner class Prompt(
+        private val permissionRequestType: String?,
+        private val permission: String?,
+        private val callbackClass: Class<*>,
+        private val fallbackToSettings: Boolean,
+    ) : IActivityLifecycleHandler {
+        private val completed = AtomicBoolean(false)
+        private var hostPrompt: HostPrompt? = null
 
-        val permission = androidPermissionString
-        val wrapperPrompt = OneSignalWrapper.hostPermissionPrompt
-        if (permission == null || (wrapperPrompt == null && activity !is ComponentActivity)) {
-            Logging.error("No host activity can prompt for $permission. Completing the prompt as denied.")
-            completeAsDenied(permissionRequestType)
-            return
-        }
-
-        // Both the result registry and ActivityCompat.requestPermissions are main-thread only.
-        runOnMain {
-            promptOnHost(activity, permissionRequestType, permission, wrapperPrompt)
-        }
-    }
-
-    private fun runOnMain(block: () -> Unit) {
-        if (AndroidUtils.isRunningOnMainThread()) {
-            block()
-        } else {
-            Handler(Looper.getMainLooper()).post(block)
-        }
-    }
-
-    private fun promptOnHost(
-        activity: Activity,
-        permissionRequestType: String?,
-        permission: String,
-        wrapperPrompt: IHostPermissionPrompt?,
-    ) {
-        shouldShowRequestPermissionRationaleBeforeRequest =
-            ActivityCompat.shouldShowRequestPermissionRationale(activity, permission)
-
-        try {
-            if (wrapperPrompt != null) {
-                val accepted =
-                    wrapperPrompt.request(permission) { granted ->
-                        onHostPromptResult(permissionRequestType, permission, granted)
-                    }
-                if (accepted) {
-                    return
-                }
-                Logging.warn("Wrapper host prompt declined the request for $permission.")
-            }
-
-            if (activity is ComponentActivity) {
-                launchOnHostRegistry(activity, permissionRequestType, permission)
+        override fun onActivityAvailable(activity: Activity) {
+            if (completed.get()) {
                 return
             }
-        } catch (e: Exception) {
-            // A prompt that throws here would otherwise strand the caller suspended forever.
-            Logging.error("Host permission prompt failed for $permission.", e)
+
+            val host = hostPrompt
+            if (host != null) {
+                runOnMainThread { host.rebind(activity) }
+                return
+            }
+
+            if (activity is PermissionsActivity) {
+                _application.removeActivityLifecycleHandler(this)
+                return
+            }
+
+            launchPermissionsActivity(activity)
         }
 
-        completeAsDenied(permissionRequestType)
-    }
+        override fun onActivityStopped(activity: Activity) {
+        }
 
-    private fun launchOnHostRegistry(
-        activity: ComponentActivity,
-        permissionRequestType: String?,
-        permission: String,
-    ) {
-        // The no-LifecycleOwner overload is required: OneSignal routinely reaches this point
-        // after the host activity is already STARTED, which the lifecycle-aware overload rejects.
-        // Reusing a key would silently replace an in-flight prompt's callback, stranding it.
-        var launcher: ActivityResultLauncher<String>? = null
-        launcher =
-            activity.activityResultRegistry.register(
-                "$HOST_REGISTRY_KEY#${hostPromptCount.incrementAndGet()}",
-                ActivityResultContracts.RequestPermission(),
-            ) { granted ->
-                launcher?.unregister()
-                onHostPromptResult(permissionRequestType, permission, granted)
+        private fun launchPermissionsActivity(activity: Activity) {
+            val intent = Intent(activity, PermissionsActivity::class.java)
+            intent.flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
+            intent.putExtra(PermissionsViewModel.INTENT_EXTRA_PERMISSION_TYPE, permissionRequestType)
+                .putExtra(PermissionsViewModel.INTENT_EXTRA_ANDROID_PERMISSION_STRING, permission)
+                .putExtra(PermissionsViewModel.INTENT_EXTRA_CALLBACK_CLASS, callbackClass.name)
+
+            // Host tools:node=replace can drop this activity. Do not retry on later activities.
+            if (intent.resolveActivity(activity.packageManager) == null) {
+                onPermissionsActivityMissing(activity, null)
+                return
             }
-        launcher.launch(permission)
-    }
 
-    private fun onHostPromptResult(
-        permissionRequestType: String?,
-        permission: String,
-        granted: Boolean,
-    ) {
-        val current = _application.current
-        val shouldShowRationaleAfter =
-            current != null && ActivityCompat.shouldShowRequestPermissionRationale(current, permission)
+            try {
+                activity.startActivity(intent)
+                activity.overridePendingTransition(
+                    R.anim.onesignal_fade_in,
+                    R.anim.onesignal_fade_out,
+                )
+            } catch (e: ActivityNotFoundException) {
+                onPermissionsActivityMissing(activity, e)
+            }
+        }
 
-        resultHandler.handleResult(permissionRequestType, permission, granted, shouldShowRationaleAfter)
-    }
+        /**
+         * Falls back to prompting on the host's own activity, which survives `tools:node="replace"`.
+         * Only when no host can report a grant back do we complete the prompt as denied.
+         */
+        private fun onPermissionsActivityMissing(
+            activity: Activity,
+            cause: Throwable?,
+        ) {
+            Logging.warn(
+                "PermissionsActivity is missing from the merged manifest. " +
+                    "<application tools:node=\"replace\"> drops library activities. " +
+                    "Use tools:replace on the specific attribute instead.",
+                cause,
+            )
 
-    private fun completeAsDenied(permissionRequestType: String?) {
-        permissionRequestType?.let { getCallback(it)?.onReject(fallbackToSettings) }
-    }
+            val wrapper = OneSignalWrapper.hostPermissionPrompt
+            if (permission == null || (wrapper == null && activity !is ComponentActivity)) {
+                Logging.error("No host activity can prompt for $permission. Completing the prompt as denied.")
+                completeAsDenied()
+                return
+            }
 
-    private companion object {
-        const val HOST_REGISTRY_KEY = "com.onesignal.core.permissions.HOST_PROMPT"
+            // A second prompt for the same permission would take over this one's registry key.
+            if (hostPromptsInFlight.putIfAbsent(permission, this) != null) {
+                Logging.warn("A host prompt for $permission is already in flight. Completing this one as denied.")
+                completeAsDenied()
+                return
+            }
+
+            val host =
+                HostPrompt(
+                    permission,
+                    wrapper,
+                    { _application.current },
+                    { completed.get() },
+                ) { granted, rationaleAfter -> completeWith(granted, rationaleAfter) }
+            hostPrompt = host
+
+            runOnMainThread {
+                val prompted = runCatching { host.start(activity) }
+                if (prompted.isFailure) {
+                    // A prompt that throws would otherwise strand the caller suspended forever.
+                    Logging.error("Host permission prompt failed for $permission.", prompted.exceptionOrNull())
+                }
+                if (prompted.getOrDefault(false).not()) {
+                    completeAsDenied()
+                }
+            }
+        }
+
+        private fun completeWith(
+            granted: Boolean,
+            rationaleAfter: Boolean?,
+        ) {
+            val host = hostPrompt
+            if (!claimCompletion()) {
+                return
+            }
+            resultHandler.handleResult(
+                PermissionPromptRequest(
+                    permissionRequestType,
+                    permission,
+                    fallbackToSettings,
+                    host?.rationaleBefore ?: false,
+                ),
+                granted,
+                rationaleAfter,
+            )
+        }
+
+        private fun completeAsDenied() {
+            if (!claimCompletion()) {
+                return
+            }
+            permissionRequestType?.let { getCallback(it)?.onReject(fallbackToSettings) }
+        }
+
+        private fun claimCompletion(): Boolean {
+            if (!completed.compareAndSet(false, true)) {
+                return false
+            }
+            _application.removeActivityLifecycleHandler(this)
+            permission?.let { hostPromptsInFlight.remove(it, this) }
+            return true
+        }
     }
 }

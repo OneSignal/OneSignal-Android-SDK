@@ -5,6 +5,7 @@ import android.content.pm.PackageManager
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.onesignal.OneSignal
+import com.onesignal.core.internal.permissions.impl.PermissionPromptRequest
 import com.onesignal.core.internal.permissions.impl.PermissionsResultHandler
 import com.onesignal.core.internal.permissions.impl.RequestPermissionService
 import com.onesignal.core.internal.preferences.IPreferencesService
@@ -120,8 +121,12 @@ class PermissionsViewModel : ViewModel() {
             val granted = grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED
 
             resultHandler.handleResult(
-                permissionRequestType,
-                permissions.firstOrNull(),
+                PermissionPromptRequest(
+                    permissionRequestType,
+                    permissions.firstOrNull(),
+                    requestPermissionService.fallbackToSettings,
+                    requestPermissionService.shouldShowRequestPermissionRationaleBeforeRequest,
+                ),
                 granted,
                 shouldShowRationaleAfter,
             )

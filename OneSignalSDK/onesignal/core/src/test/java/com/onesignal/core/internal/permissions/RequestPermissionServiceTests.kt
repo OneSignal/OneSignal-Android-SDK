@@ -2,6 +2,7 @@ package com.onesignal.core.internal.permissions
 
 import android.app.Activity
 import android.content.ActivityNotFoundException
+import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.result.ActivityResultRegistry
 import androidx.activity.result.contract.ActivityResultContract
@@ -93,30 +94,25 @@ class RequestPermissionServiceTests : FunSpec({
         verify(exactly = 0) { env.callback.onReject(any()) }
     }
 
-    test("a denied wrapper host prompt still drives onReject") {
+    test("a denied wrapper host prompt reports the settings fallback decision") {
         val env = Env()
+        env.markPreviouslyPrompted()
         every { env.hostActivity.startActivity(any()) } throws ActivityNotFoundException("missing")
         val prompt = RecordingPrompt(granted = false)
         OneSignalWrapper.hostPermissionPrompt = prompt
 
-        env.service.startPrompt(false, PERMISSION_TYPE, ANDROID_PERMISSION, Env.Callback::class.java)
+        env.service.startPrompt(true, PERMISSION_TYPE, ANDROID_PERMISSION, Env.Callback::class.java)
         env.handler.onActivityAvailable(env.hostActivity)
 
         prompt.requested shouldBe ANDROID_PERMISSION
-        verify(exactly = 1) { env.callback.onReject(any()) }
+        verify(exactly = 1) { env.callback.onReject(true) }
         verify(exactly = 0) { env.callback.onAccept() }
     }
 
     test("a wrapper host prompt with no activity completes the prompt as denied") {
         val env = Env()
         every { env.hostActivity.startActivity(any()) } throws ActivityNotFoundException("missing")
-        OneSignalWrapper.hostPermissionPrompt =
-            object : IHostPermissionPrompt {
-                override fun request(
-                    androidPermission: String,
-                    callback: IHostPermissionPrompt.Callback,
-                ): Boolean = false
-            }
+        OneSignalWrapper.hostPermissionPrompt = DecliningPrompt()
 
         env.service.startPrompt(true, PERMISSION_TYPE, ANDROID_PERMISSION, Env.Callback::class.java)
         env.handler.onActivityAvailable(env.hostActivity)
@@ -128,13 +124,7 @@ class RequestPermissionServiceTests : FunSpec({
     test("a wrapper host prompt that throws completes the prompt as denied") {
         val env = Env()
         every { env.hostActivity.startActivity(any()) } throws ActivityNotFoundException("missing")
-        OneSignalWrapper.hostPermissionPrompt =
-            object : IHostPermissionPrompt {
-                override fun request(
-                    androidPermission: String,
-                    callback: IHostPermissionPrompt.Callback,
-                ): Boolean = throw IllegalStateException("boom")
-            }
+        OneSignalWrapper.hostPermissionPrompt = ThrowingPrompt()
 
         env.service.startPrompt(true, PERMISSION_TYPE, ANDROID_PERMISSION, Env.Callback::class.java)
         env.handler.onActivityAvailable(env.hostActivity)
@@ -142,55 +132,119 @@ class RequestPermissionServiceTests : FunSpec({
         verify(exactly = 1) { env.callback.onReject(true) }
     }
 
-    test("a ComponentActivity host prompts through its own result registry") {
+    test("a successful wrapper host prompt does not also prompt on the registry") {
         val env = Env()
-        val componentActivity = mockk<ComponentActivity>(relaxed = true)
-        val registry = TestRegistry(granted = true)
-        every { componentActivity.startActivity(any()) } throws ActivityNotFoundException("missing")
-        every { componentActivity.activityResultRegistry } returns registry
+        val registry = TestRegistry(result = true)
+        val activity = env.componentActivity(registry)
+        OneSignalWrapper.hostPermissionPrompt = RecordingPrompt(granted = true)
 
         env.service.startPrompt(true, PERMISSION_TYPE, ANDROID_PERMISSION, Env.Callback::class.java)
-        env.handler.onActivityAvailable(componentActivity)
+        env.handler.onActivityAvailable(activity)
 
-        registry.launchedInput shouldBe ANDROID_PERMISSION
+        registry.launched.shouldBeEmpty()
+        verify(exactly = 1) { env.callback.onAccept() }
+    }
+
+    test("a ComponentActivity host prompts through its own result registry") {
+        val env = Env()
+        val registry = TestRegistry(result = true)
+        val activity = env.componentActivity(registry)
+
+        env.service.startPrompt(true, PERMISSION_TYPE, ANDROID_PERMISSION, Env.Callback::class.java)
+        env.handler.onActivityAvailable(activity)
+
+        registry.lastInput shouldBe ANDROID_PERMISSION
         verify(exactly = 1) { env.callback.onAccept() }
         verify(exactly = 0) { env.callback.onReject(any()) }
     }
 
-    test("a denied ComponentActivity host prompt drives onReject") {
+    test("a denied ComponentActivity host prompt reports the settings fallback decision") {
         val env = Env()
-        val componentActivity = mockk<ComponentActivity>(relaxed = true)
-        val registry = TestRegistry(granted = false)
-        every { componentActivity.startActivity(any()) } throws ActivityNotFoundException("missing")
-        every { componentActivity.activityResultRegistry } returns registry
+        env.markPreviouslyPrompted()
+        val registry = TestRegistry(result = false)
+        val activity = env.componentActivity(registry)
 
-        env.service.startPrompt(false, PERMISSION_TYPE, ANDROID_PERMISSION, Env.Callback::class.java)
-        env.handler.onActivityAvailable(componentActivity)
+        env.service.startPrompt(true, PERMISSION_TYPE, ANDROID_PERMISSION, Env.Callback::class.java)
+        env.handler.onActivityAvailable(activity)
 
-        registry.launchedInput shouldBe ANDROID_PERMISSION
-        verify(exactly = 1) { env.callback.onReject(any()) }
+        registry.lastInput shouldBe ANDROID_PERMISSION
+        verify(exactly = 1) { env.callback.onReject(true) }
         verify(exactly = 0) { env.callback.onAccept() }
     }
 
-    test("two host prompts in flight each deliver their own result") {
+    test("a result that arrives after the host activity is recreated still reaches the caller") {
         val env = Env()
+        val registry = TestRegistry(result = null)
+        val activity = env.componentActivity(registry)
+
+        env.service.startPrompt(false, PERMISSION_TYPE, ANDROID_PERMISSION, Env.Callback::class.java)
+        env.handler.onActivityAvailable(activity)
+
+        // The host is recreated: androidx restores the key but not our callback, and the OS
+        // delivers the answer into the fresh registry before we get a chance to rebind.
+        val savedState = Bundle()
+        registry.onSaveInstanceState(savedState)
+        val recreatedRegistry = TestRegistry(result = null)
+        recreatedRegistry.onRestoreInstanceState(savedState)
+        recreatedRegistry.dispatchResult(registry.launched.single(), true)
+
+        env.handler.onActivityAvailable(env.componentActivity(recreatedRegistry))
+
+        verify(exactly = 1) { env.callback.onAccept() }
+        recreatedRegistry.launched.shouldBeEmpty()
+    }
+
+    test("a replaced host activity with no pending answer prompts again") {
+        val env = Env()
+        val registry = TestRegistry(result = null)
+
+        env.service.startPrompt(false, PERMISSION_TYPE, ANDROID_PERMISSION, Env.Callback::class.java)
+        env.handler.onActivityAvailable(env.componentActivity(registry))
+
+        val replacementRegistry = TestRegistry(result = true)
+        env.handler.onActivityAvailable(env.componentActivity(replacementRegistry))
+
+        replacementRegistry.lastInput shouldBe ANDROID_PERMISSION
+        verify(exactly = 1) { env.callback.onAccept() }
+    }
+
+    test("two host prompts in flight each keep their own settings fallback") {
+        val env = Env()
+        env.markPreviouslyPrompted()
         val locationCallback = mockk<IRequestPermissionService.PermissionCallback>(relaxed = true)
         env.service.registerAsCallback(LOCATION_PERMISSION_TYPE, locationCallback)
 
-        val componentActivity = mockk<ComponentActivity>(relaxed = true)
-        val registry = DeferringRegistry()
-        every { componentActivity.startActivity(any()) } throws ActivityNotFoundException("missing")
-        every { componentActivity.activityResultRegistry } returns registry
+        val registry = TestRegistry(result = null)
+        val activity = env.componentActivity(registry)
+
+        // Only the notification prompt asks for the settings fallback.
+        env.service.startPrompt(true, PERMISSION_TYPE, ANDROID_PERMISSION, Env.Callback::class.java)
+        env.handlers[0].onActivityAvailable(activity)
+        env.service.startPrompt(false, LOCATION_PERMISSION_TYPE, LOCATION_PERMISSION, Env.Callback::class.java)
+        env.handlers[1].onActivityAvailable(activity)
+
+        registry.launched.distinct().size shouldBe 2
+        registry.launched.forEach { registry.dispatchResult(it, false) }
+
+        verify(exactly = 1) { env.callback.onReject(true) }
+        verify(exactly = 1) { locationCallback.onReject(false) }
+    }
+
+    test("a second prompt for the same permission completes as denied rather than hanging") {
+        val env = Env()
+        val registry = TestRegistry(result = null)
+        val activity = env.componentActivity(registry)
 
         env.service.startPrompt(false, PERMISSION_TYPE, ANDROID_PERMISSION, Env.Callback::class.java)
-        env.handlers[0].onActivityAvailable(componentActivity)
-        env.service.startPrompt(false, LOCATION_PERMISSION_TYPE, LOCATION_PERMISSION, Env.Callback::class.java)
-        env.handlers[1].onActivityAvailable(componentActivity)
+        env.handlers[0].onActivityAvailable(activity)
+        env.service.startPrompt(false, PERMISSION_TYPE, ANDROID_PERMISSION, Env.Callback::class.java)
+        env.handlers[1].onActivityAvailable(activity)
 
-        registry.dispatchAll(granted = true)
+        registry.launched.size shouldBe 1
+        verify(exactly = 1) { env.callback.onReject(false) }
 
+        registry.dispatchResult(registry.launched.single(), true)
         verify(exactly = 1) { env.callback.onAccept() }
-        verify(exactly = 1) { locationCallback.onAccept() }
     }
 })
 
@@ -198,10 +252,14 @@ private const val PERMISSION_TYPE = "NOTIFICATION"
 private const val ANDROID_PERMISSION = "android.permission.POST_NOTIFICATIONS"
 private const val LOCATION_PERMISSION_TYPE = "LOCATION"
 private const val LOCATION_PERMISSION = "android.permission.ACCESS_FINE_LOCATION"
+private const val PROMPTED_PREFIX = "PROMPTED_PERMISSION_"
 
-/** Dispatches the contract result inline so the prompt path stays synchronous under test. */
-private class TestRegistry(private val granted: Boolean) : ActivityResultRegistry() {
-    var launchedInput: Any? = null
+private fun List<Int>.shouldBeEmpty() = isEmpty() shouldBe true
+
+/** Dispatches inline when [result] is set, otherwise holds the request so the test can drive it. */
+private class TestRegistry(private val result: Boolean?) : ActivityResultRegistry() {
+    val launched = mutableListOf<Int>()
+    var lastInput: Any? = null
 
     override fun <I, O> onLaunch(
         requestCode: Int,
@@ -209,29 +267,11 @@ private class TestRegistry(private val granted: Boolean) : ActivityResultRegistr
         input: I,
         options: ActivityOptionsCompat?,
     ) {
-        launchedInput = input
+        launched.add(requestCode)
+        lastInput = input
 
         @Suppress("UNCHECKED_CAST")
-        dispatchResult(requestCode, granted as O)
-    }
-}
-
-/** Holds results so two prompts can be in flight at once. */
-private class DeferringRegistry : ActivityResultRegistry() {
-    private val pending = mutableListOf<Int>()
-
-    override fun <I, O> onLaunch(
-        requestCode: Int,
-        contract: ActivityResultContract<I, O>,
-        input: I,
-        options: ActivityOptionsCompat?,
-    ) {
-        pending.add(requestCode)
-    }
-
-    fun dispatchAll(granted: Boolean) {
-        pending.forEach { dispatchResult(it, granted) }
-        pending.clear()
+        result?.let { dispatchResult(requestCode, it as O) }
     }
 }
 
@@ -246,6 +286,20 @@ private class RecordingPrompt(private val granted: Boolean) : IHostPermissionPro
         callback.onResult(granted)
         return true
     }
+}
+
+private class DecliningPrompt : IHostPermissionPrompt {
+    override fun request(
+        androidPermission: String,
+        callback: IHostPermissionPrompt.Callback,
+    ): Boolean = false
+}
+
+private class ThrowingPrompt : IHostPermissionPrompt {
+    override fun request(
+        androidPermission: String,
+        callback: IHostPermissionPrompt.Callback,
+    ): Boolean = throw IllegalStateException("boom")
 }
 
 private class Env {
@@ -264,5 +318,21 @@ private class Env {
     init {
         every { app.addActivityLifecycleHandler(capture(handlers)) } just runs
         service.registerAsCallback(PERMISSION_TYPE, callback)
+    }
+
+    /** A ComponentActivity host whose PermissionsActivity launch fails, as a stripped manifest does. */
+    fun componentActivity(registry: ActivityResultRegistry): ComponentActivity {
+        val activity = mockk<ComponentActivity>(relaxed = true)
+        every { activity.startActivity(any()) } throws ActivityNotFoundException("missing")
+        every { activity.activityResultRegistry } returns registry
+        return activity
+    }
+
+    /**
+     * Makes the settings fallback reachable: a denial only offers settings once OneSignal has
+     * prompted for that permission before.
+     */
+    fun markPreviouslyPrompted() {
+        every { preferences.getBool(any(), match { it.startsWith(PROMPTED_PREFIX) }, any()) } returns true
     }
 }

@@ -90,6 +90,8 @@
     <ID>ConstructorParameterNaming:OutcomeEventsController.kt$OutcomeEventsController$private val _time: ITime</ID>
     <ID>ConstructorParameterNaming:OutcomeEventsRepository.kt$OutcomeEventsRepository$private val _databaseProvider: IDatabaseProvider</ID>
     <ID>ConstructorParameterNaming:ParamsBackendService.kt$ParamsBackendService$private val _http: IHttpClient</ID>
+    <ID>ConstructorParameterNaming:PermissionsResultHandler.kt$PermissionsResultHandler$private val _preferences: IPreferencesService</ID>
+    <ID>ConstructorParameterNaming:PermissionsResultHandler.kt$PermissionsResultHandler$private val _requestPermissionService: RequestPermissionService</ID>
     <ID>ConstructorParameterNaming:PreferencesService.kt$PreferencesService$private val _applicationService: IApplicationService</ID>
     <ID>ConstructorParameterNaming:PreferencesService.kt$PreferencesService$private val _time: ITime</ID>
     <ID>ConstructorParameterNaming:PropertiesModelStoreListener.kt$PropertiesModelStoreListener$private val _configModelStore: ConfigModelStore</ID>
@@ -113,6 +115,7 @@
     <ID>ConstructorParameterNaming:RefreshUserOperationExecutor.kt$RefreshUserOperationExecutor$private val _subscriptionsModelStore: SubscriptionModelStore</ID>
     <ID>ConstructorParameterNaming:RefreshUserOperationExecutor.kt$RefreshUserOperationExecutor$private val _userBackend: IUserBackendService</ID>
     <ID>ConstructorParameterNaming:RequestPermissionService.kt$RequestPermissionService$private val _application: IApplicationService</ID>
+    <ID>ConstructorParameterNaming:RequestPermissionService.kt$RequestPermissionService$private val _preferences: IPreferencesService</ID>
     <ID>ConstructorParameterNaming:SessionListener.kt$SessionListener$private val _configModelStore: ConfigModelStore</ID>
     <ID>ConstructorParameterNaming:SessionListener.kt$SessionListener$private val _identityModelStore: IdentityModelStore</ID>
     <ID>ConstructorParameterNaming:SessionListener.kt$SessionListener$private val _operationRepo: IOperationRepo</ID>
@@ -311,6 +314,7 @@
     <ID>ReturnCount:ExecutorsIvExtensions.kt$internal fun resolveIvBackendParams( op: Operation, onesignalId: String, jwtTokenStore: JwtTokenStore, ivBehaviorActive: Boolean, ): IvBackendParams</ID>
     <ID>ReturnCount:ExecutorsIvExtensions.kt$internal fun resolveIvJwt( op: Operation, jwtTokenStore: JwtTokenStore, ivBehaviorActive: Boolean, ): String?</ID>
     <ID>ReturnCount:FeatureFlagsRefreshService.kt$FeatureFlagsRefreshService$private suspend fun fetchAndApply(appId: String)</ID>
+    <ID>ReturnCount:HostPrompt.kt$HostPrompt$fun start(activity: Activity): Boolean</ID>
     <ID>ReturnCount:HttpClient.kt$HttpClient$private suspend fun makeRequest( url: String, method: String?, jsonBody: JSONObject?, timeout: Int, headers: OptionalHeaders?, ): HttpResponse</ID>
     <ID>ReturnCount:IdentityOperationExecutor.kt$IdentityOperationExecutor$override suspend fun execute(operations: List&lt;Operation>): ExecutionResponse</ID>
     <ID>ReturnCount:JSONUtils.kt$JSONUtils$fun compareJSONArrays( jsonArray1: JSONArray?, jsonArray2: JSONArray?, ): Boolean</ID>
@@ -330,12 +334,13 @@
     <ID>ReturnCount:OperationRepoIvExtensions.kt$internal fun OperationRepo.hasValidJwtIfRequired( jwtTokenStore: JwtTokenStore, op: com.onesignal.core.internal.operations.Operation, ivBehaviorActive: Boolean, ): Boolean</ID>
     <ID>ReturnCount:OutcomeEventsController.kt$OutcomeEventsController$private suspend fun sendAndCreateOutcomeEvent( name: String, weight: Float, // Note: this is optional sessionTime: Long, influences: List&lt;Influence>, ): OutcomeEvent?</ID>
     <ID>ReturnCount:OutcomeEventsController.kt$OutcomeEventsController$private suspend fun sendUniqueOutcomeEvent( name: String, sessionInfluences: List&lt;Influence>, ): OutcomeEvent?</ID>
-    <ID>ReturnCount:PermissionsViewModel.kt$PermissionsViewModel$private fun shouldShowSettings( permission: String, shouldShowRationaleAfter: Boolean, ): Boolean</ID>
+    <ID>ReturnCount:PermissionsResultHandler.kt$PermissionsResultHandler$private fun shouldShowSettings( request: PermissionPromptRequest, permission: String, rationaleAfter: Boolean?, ): Boolean</ID>
     <ID>ReturnCount:PermissionsViewModel.kt$PermissionsViewModel$suspend fun initialize( activity: Activity, permissionType: String?, androidPermission: String?, ): Boolean</ID>
     <ID>ReturnCount:PreferenceStoreFix.kt$PreferenceStoreFix$fun ensureNoObfuscatedPrefStore(context: Context)</ID>
     <ID>ReturnCount:PreferencesService.kt$PreferencesService$private fun get( store: String, key: String, type: Class&lt;*>, defValue: Any?, ): Any?</ID>
     <ID>ReturnCount:PropertiesModelStoreListener.kt$PropertiesModelStoreListener$override fun getUpdateOperation( model: PropertiesModel, path: String, property: String, oldValue: Any?, newValue: Any?, ): Operation?</ID>
     <ID>ReturnCount:RefreshUserOperationExecutor.kt$RefreshUserOperationExecutor$private suspend fun getUser(op: RefreshUserOperation): ExecutionResponse</ID>
+    <ID>ReturnCount:RequestPermissionService.kt$RequestPermissionService.Prompt$override fun onActivityAvailable(activity: Activity)</ID>
     <ID>ReturnCount:ServiceRegistration.kt$ServiceRegistrationReflection$private fun doesHaveAllParameters( constructor: Constructor&lt;*>, provider: IServiceProvider, ): Boolean</ID>
     <ID>ReturnCount:SubscriptionOperationExecutor.kt$SubscriptionOperationExecutor$private suspend fun createSubscription( createOperation: CreateSubscriptionOperation, operations: List&lt;Operation>, ): ExecutionResponse</ID>
     <ID>ReturnCount:SubscriptionOperationExecutor.kt$SubscriptionOperationExecutor$private suspend fun updateSubscription( startingOperation: UpdateSubscriptionOperation, operations: List&lt;Operation>, ): ExecutionResponse</ID>
@@ -387,7 +392,7 @@
     <ID>TooGenericExceptionThrown:OperationRepo.kt$OperationRepo$throw Exception("Both comparison keys can not be blank!")</ID>
     <ID>TooGenericExceptionThrown:OperationRepo.kt$OperationRepo$throw Exception("Could not find executor for operation ${startingOp.operation.name}")</ID>
     <ID>TooGenericExceptionThrown:PermissionsActivity.kt$PermissionsActivity$throw RuntimeException( "Could not find callback class for PermissionActivity: $className", )</ID>
-    <ID>TooGenericExceptionThrown:PermissionsViewModel.kt$PermissionsViewModel$throw RuntimeException("Missing handler for permissionRequestType: $type")</ID>
+    <ID>TooGenericExceptionThrown:PermissionsResultHandler.kt$PermissionsResultHandler$throw RuntimeException("Missing handler for permissionRequestType: $type")</ID>
     <ID>TooGenericExceptionThrown:PreferencesService.kt$PreferencesService$throw Exception("Store not found: $store")</ID>
     <ID>TooGenericExceptionThrown:RefreshUserOperationExecutor.kt$RefreshUserOperationExecutor$throw Exception("Unrecognized operation(s)! Attempted operations:\n$operations")</ID>
     <ID>TooGenericExceptionThrown:RefreshUserOperationExecutor.kt$RefreshUserOperationExecutor$throw Exception("Unrecognized operation: $startingOp")</ID>
