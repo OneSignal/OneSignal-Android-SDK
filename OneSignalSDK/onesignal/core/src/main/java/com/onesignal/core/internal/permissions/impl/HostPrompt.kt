@@ -37,6 +37,7 @@ internal class HostPrompt(
         private set
 
     /** @return false when no surface could be asked, so the caller can complete as denied. */
+    @Suppress("ReturnCount")
     fun start(activity: Activity): Boolean {
         rationaleBefore = rationaleOn(activity) ?: false
 

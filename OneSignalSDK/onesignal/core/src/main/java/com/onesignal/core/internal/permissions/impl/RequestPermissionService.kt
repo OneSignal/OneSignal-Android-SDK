@@ -18,6 +18,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 internal class RequestPermissionService(
     private val _application: IApplicationService,
+    @Suppress("ConstructorParameterNaming")
     private val _preferences: IPreferencesService,
 ) : IRequestPermissionService {
     var waiting = false
@@ -74,6 +75,7 @@ internal class RequestPermissionService(
         private val completed = AtomicBoolean(false)
         private var hostPrompt: HostPrompt? = null
 
+        @Suppress("ReturnCount")
         override fun onActivityAvailable(activity: Activity) {
             if (completed.get()) {
                 return

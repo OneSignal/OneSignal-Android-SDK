@@ -21,6 +21,7 @@ internal data class PermissionPromptRequest(
  * Turns a permission grant into the settings-fallback decision and the registered callback.
  * Shared by `PermissionsActivity`, the host result registry, and wrapper-supplied prompts.
  */
+@Suppress("ConstructorParameterNaming")
 internal class PermissionsResultHandler(
     private val _requestPermissionService: RequestPermissionService,
     private val _preferences: IPreferencesService,
@@ -63,6 +64,7 @@ internal class PermissionsResultHandler(
         executeCallback(request.permissionRequestType, isGranted, showSettings)
     }
 
+    @Suppress("TooGenericExceptionThrown")
     private fun executeCallback(
         permissionRequestType: String?,
         granted: Boolean,
@@ -87,6 +89,7 @@ internal class PermissionsResultHandler(
      * Settings is offered once the OS stops showing its prompt. That shows up as
      * `shouldShowRequestPermissionRationale` going true -> false across a denied request.
      */
+    @Suppress("ReturnCount")
     private fun shouldShowSettings(
         request: PermissionPromptRequest,
         permission: String,
