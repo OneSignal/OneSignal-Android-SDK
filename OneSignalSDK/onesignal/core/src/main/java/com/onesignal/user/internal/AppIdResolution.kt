@@ -1,5 +1,6 @@
 package com.onesignal.user.internal
 
+import com.onesignal.common.isMissing
 import com.onesignal.core.internal.config.ConfigModel
 import com.onesignal.core.internal.preferences.IPreferencesService
 import com.onesignal.core.internal.preferences.PreferenceOneSignalKeys
@@ -16,10 +17,12 @@ fun resolveAppId(
     configModel: ConfigModel,
     preferencesService: IPreferencesService,
 ): AppIdResolution {
+    val validInputAppId = inputAppId?.takeUnless { isMissing(it, "initialize: appId") }
+
     // Case 1: AppId provided as input
-    if (inputAppId != null) {
-        val forceCreateUser = !configModel.hasProperty(ConfigModel::appId.name) || configModel.appId != inputAppId
-        return AppIdResolution(appId = inputAppId, forceCreateUser = forceCreateUser, failed = false)
+    if (validInputAppId != null) {
+        val forceCreateUser = !configModel.hasProperty(ConfigModel::appId.name) || configModel.appId != validInputAppId
+        return AppIdResolution(appId = validInputAppId, forceCreateUser = forceCreateUser, failed = false)
     }
 
     // Case 2: No appId provided, but configModel has one
@@ -31,6 +34,11 @@ fun resolveAppId(
     val legacyAppId = preferencesService.getString(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.PREFS_LEGACY_APP_ID)
     if (legacyAppId != null) {
         return AppIdResolution(appId = legacyAppId, forceCreateUser = true, failed = false)
+    }
+
+    // An invalid input with nothing cached still initializes, so later SDK calls don't throw.
+    if (inputAppId != null) {
+        return AppIdResolution(appId = inputAppId, forceCreateUser = true, failed = false)
     }
 
     return AppIdResolution(appId = null, forceCreateUser = false, failed = true)

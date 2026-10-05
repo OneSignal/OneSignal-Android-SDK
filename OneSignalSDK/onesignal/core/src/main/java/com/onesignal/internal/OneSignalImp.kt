@@ -341,8 +341,6 @@ internal class OneSignalImp : IOneSignal,
     ): Boolean {
         Logging.log(LogLevel.DEBUG, "Calling deprecated initWithContext(context: $context, appId: $appId)")
 
-        if (isMissing(appId, "initialize: appId")) return false
-
         // Warm OneSignalDispatchers on a dedicated daemon thread so the first production caller
         // of suspendifyOnIO / launchOnSerialIO doesn't pay the ThreadPoolExecutor + dispatcher +
         // scope construction cost on the main thread (observed as 5-20s main-thread blocks at the
@@ -751,8 +749,6 @@ internal class OneSignalImp : IOneSignal,
         appId: String?,
     ): Boolean {
         Logging.log(LogLevel.DEBUG, "initWithContext(context: $context, appId: $appId)")
-
-        if (appId != null && isMissing(appId, "initialize: appId")) return false
 
         // Same warm-up as the synchronous variant. Reaching this entry point on the main thread
         // (e.g. SyncJobService.onStartJob -> suspendifyOnIO -> initWithContext(context)) pays the
