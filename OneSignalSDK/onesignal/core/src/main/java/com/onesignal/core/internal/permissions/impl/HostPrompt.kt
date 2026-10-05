@@ -78,20 +78,27 @@ internal class HostPrompt(
 
         Logging.debug("Host activity changed while prompting for $permission. Rebinding.")
         bindTo(activity)
-        if (!isComplete()) {
-            launcher?.launch(permission)
-        }
+        launcher?.launch(permission)
     }
 
     private fun bindTo(activity: ComponentActivity) {
         boundActivity = activity
         // The no-LifecycleOwner overload is required: OneSignal routinely reaches this point
         // after the host activity is already STARTED, which the lifecycle-aware overload rejects.
-        launcher =
+        val registered =
             activity.activityResultRegistry.register(
                 "$REGISTRY_KEY_PREFIX$permission",
                 ActivityResultContracts.RequestPermission(),
             ) { granted -> deliver(granted) }
+
+        // register() hands back an answer parked by an earlier process before it returns. Leaving
+        // the launcher null then keeps callers from prompting again for a question already answered.
+        if (isComplete()) {
+            registered.unregister()
+            launcher = null
+        } else {
+            launcher = registered
+        }
     }
 
     private fun deliver(granted: Boolean) {

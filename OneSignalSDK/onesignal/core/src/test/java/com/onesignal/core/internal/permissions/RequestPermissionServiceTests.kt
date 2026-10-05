@@ -230,6 +230,29 @@ class RequestPermissionServiceTests : FunSpec({
         verify(exactly = 1) { locationCallback.onReject(false) }
     }
 
+    test("an answer parked by a dead process is delivered without prompting again") {
+        // The first process launches and dies before the user answers.
+        val first = Env()
+        val registry = TestRegistry(result = null)
+        first.service.startPrompt(false, PERMISSION_TYPE, ANDROID_PERMISSION, Env.Callback::class.java)
+        first.handler.onActivityAvailable(first.componentActivity(registry))
+
+        val savedState = Bundle()
+        registry.onSaveInstanceState(savedState)
+
+        // The new process restores the key, and the OS answer parks because nothing is registered.
+        val restoredRegistry = TestRegistry(result = null)
+        restoredRegistry.onRestoreInstanceState(savedState)
+        restoredRegistry.dispatchResult(registry.launched.single(), true)
+
+        val second = Env()
+        second.service.startPrompt(false, PERMISSION_TYPE, ANDROID_PERMISSION, Env.Callback::class.java)
+        second.handler.onActivityAvailable(second.componentActivity(restoredRegistry))
+
+        verify(exactly = 1) { second.callback.onAccept() }
+        restoredRegistry.launched.shouldBeEmpty()
+    }
+
     test("a second prompt for the same permission completes as denied rather than hanging") {
         val env = Env()
         val registry = TestRegistry(result = null)
