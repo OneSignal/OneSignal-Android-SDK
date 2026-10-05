@@ -2,6 +2,7 @@ package com.onesignal.inAppMessages.internal.display
 
 import android.app.Activity
 import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
+import com.onesignal.common.threading.withMain
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
@@ -23,8 +24,11 @@ import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
+import io.mockk.mockkStatic
 import io.mockk.runs
+import io.mockk.unmockkStatic
 import io.mockk.verify
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
@@ -80,6 +84,26 @@ class InAppDisplayerDismissCleanupTests : FunSpec({
 
         getLastInstance(displayer).shouldBeNull()
         verify(atLeast = 1) { lifecycle.messageWasDismissed(message) }
+    }
+
+    test("a web view that never reached the main thread does not stay the dismiss target") {
+        val activity = Robolectric.buildActivity(Activity::class.java).setup().get()
+        val applicationService = mockApplicationService(activity)
+        val displayer = createDisplayer(applicationService, mockk(relaxed = true), mockBackend())
+        val threadUtilsPath = "com.onesignal.common.threading.ThreadUtilsKt"
+        mockkStatic(threadUtilsPath)
+        try {
+            coEvery { withMain(any<suspend CoroutineScope.() -> Unit>()) } returns null
+
+            runBlocking {
+                displayer.displayMessage(InAppMessage("test-iam", MockHelper.time(1)))
+            }
+
+            // Nothing was displayed, so dismissCurrentInAppMessage must not find an instance.
+            getLastInstance(displayer).shouldBeNull()
+        } finally {
+            unmockkStatic(threadUtilsPath)
+        }
     }
 
     test("preview dismisses the displaying message and takes over lastInstance") {

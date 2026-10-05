@@ -193,7 +193,10 @@ fun launchOnDefault(block: suspend () -> Unit): Job {
  * LinkageError is not an Exception. NoSuchMethodError and ExceptionInInitializerError
  * skip `catch (Exception)` and kill the process.
  */
-private inline fun catchSuspendifyFailure(label: String, block: () -> Unit) {
+private suspend fun catchSuspendifyFailure(
+    label: String,
+    block: suspend () -> Unit,
+) {
     try {
         block()
     } catch (e: Exception) {
