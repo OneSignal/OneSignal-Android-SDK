@@ -11,6 +11,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
+import java.util.Collections
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
@@ -27,6 +28,49 @@ class OneSignalDispatchersTests : FunSpec({
         // Access dispatchers to trigger initialization
         OneSignalDispatchers.IO shouldNotBe null
         OneSignalDispatchers.Default shouldNotBe null
+    }
+
+    test("ingress work runs while every IO worker is blocked") {
+        OneSignalDispatchers.resetForTest()
+        val releaseIo = CountDownLatch(1)
+        val ioWorkersBlocked = CountDownLatch(2)
+        val ingressRan = CountDownLatch(1)
+        var ingressThreadName: String? = null
+
+        repeat(2) {
+            OneSignalDispatchers.launchOnIO {
+                ioWorkersBlocked.countDown()
+                releaseIo.await()
+            }
+        }
+        ioWorkersBlocked.await(1, TimeUnit.SECONDS) shouldBe true
+
+        OneSignalDispatchers.launchOnIngress {
+            ingressThreadName = Thread.currentThread().name
+            ingressRan.countDown()
+        }
+
+        try {
+            ingressRan.await(1, TimeUnit.SECONDS) shouldBe true
+            ingressThreadName shouldContain "OneSignal-Ingress"
+        } finally {
+            releaseIo.countDown()
+            OneSignalDispatchers.resetForTest()
+        }
+    }
+
+    test("prewarm bootstraps the ingress lane before the other lanes") {
+        OneSignalDispatchers.resetForTest()
+        val created = Collections.synchronizedList(mutableListOf<String>())
+        OneSignalDispatchers.beforeLaneCreateForTest = { created += it }
+
+        try {
+            OneSignalDispatchers.prewarm()
+            OneSignalDispatchers.awaitReadyForTest() shouldBe true
+            created.first() shouldBe "INGRESS"
+        } finally {
+            OneSignalDispatchers.resetForTest()
+        }
     }
 
     test("first launch returns while its lane is still being created off caller") {
@@ -223,6 +267,8 @@ class OneSignalDispatchersTests : FunSpec({
         status shouldContain "IO Scope: Active"
         status shouldContain "Default Scope: Active"
         status shouldContain "SerialIO Scope: Active"
+        status shouldContain "Ingress Executor: Active"
+        status shouldContain "Ingress Scope: Active"
     }
 
     test("getPerformanceMetrics should include SerialIO queue and total completed task counters") {

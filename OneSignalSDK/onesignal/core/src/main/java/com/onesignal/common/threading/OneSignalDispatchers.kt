@@ -53,6 +53,7 @@ object OneSignalDispatchers {
         "$BASE_THREAD_NAME-Default" // Thread name prefix for CPU operations
     private const val SERIAL_IO_THREAD_NAME =
         "$BASE_THREAD_NAME-SerialIO" // Single, named thread for order-sensitive work
+    private const val INGRESS_THREAD_NAME = "$BASE_THREAD_NAME-Ingress"
 
     @Volatile
     internal var beforeLaneCreateForTest: ((String) -> Unit)? = null
@@ -81,6 +82,7 @@ object OneSignalDispatchers {
         IO,
         DEFAULT,
         SERIAL_IO,
+        INGRESS,
     }
 
     private enum class LaneState {
@@ -336,11 +338,15 @@ object OneSignalDispatchers {
         val IO = GateDispatcher(Lane.IO, coordinator::request)
         val Default = GateDispatcher(Lane.DEFAULT, coordinator::request)
         val SerialIO = GateDispatcher(Lane.SERIAL_IO, coordinator::request)
+        val Ingress = GateDispatcher(Lane.INGRESS, coordinator::request)
         val IOScope = CoroutineScope(SupervisorJob() + IO)
         val DefaultScope = CoroutineScope(SupervisorJob() + Default)
         val SerialIOScope = CoroutineScope(SupervisorJob() + SerialIO)
-        private val gates = listOf(IO, Default, SerialIO)
-        private val scopes = listOf(IOScope, DefaultScope, SerialIOScope)
+        val IngressScope = CoroutineScope(SupervisorJob() + Ingress)
+
+        // Ingress bootstraps first because receivers have a ~10s broadcast budget.
+        private val gates = listOf(Ingress, IO, Default, SerialIO)
+        private val scopes = listOf(IngressScope, IOScope, DefaultScope, SerialIOScope)
 
         fun prewarm() {
             gates.forEach { it.requestWarmup() }
@@ -400,6 +406,15 @@ object OneSignalDispatchers {
                     // Unbounded like Executors.newSingleThreadExecutor; rejecting would drop ordered lifecycle work.
                     Int.MAX_VALUE,
                 )
+            // Kept separate from IO so receiver handoffs never queue behind SDK HTTP.
+            Lane.INGRESS ->
+                LaneConfig(
+                    1,
+                    1,
+                    INGRESS_THREAD_NAME,
+                    Thread.NORM_PRIORITY - 1,
+                    Int.MAX_VALUE,
+                )
         }
 
     private fun createFallbackTarget(lane: Lane): LaneTarget {
@@ -408,7 +423,7 @@ object OneSignalDispatchers {
             when (lane) {
                 Lane.IO -> Dispatchers.IO
                 Lane.DEFAULT -> Dispatchers.Default
-                Lane.SERIAL_IO -> {
+                Lane.SERIAL_IO, Lane.INGRESS -> {
                     @Suppress("OPT_IN_USAGE")
                     Dispatchers.IO.limitedParallelism(1)
                 }
@@ -438,6 +453,11 @@ object OneSignalDispatchers {
     /** Launches [block] on the single-thread serial IO dispatcher (FIFO across all callers). */
     fun launchOnSerialIO(block: suspend () -> Unit): Job {
         return pools.SerialIOScope.launch { block() }
+    }
+
+    /** Launches short durable-ingress work on a lane isolated from general SDK I/O. */
+    fun launchOnIngress(block: suspend () -> Unit): Job {
+        return pools.IngressScope.launch { block() }
     }
 
     @Volatile
@@ -514,6 +534,7 @@ object OneSignalDispatchers {
         val io = current.IO.executor()
         val default = current.Default.executor()
         val serial = current.SerialIO.executor()
+        val ingress = current.Ingress.executor()
         return """
             OneSignalDispatchers Performance Metrics:
             - IO Pool: ${io?.let { "${it.activeCount}/${it.corePoolSize}" } ?: "n/a"} active/core threads
@@ -521,8 +542,9 @@ object OneSignalDispatchers {
             - Default Pool: ${default?.let { "${it.activeCount}/${it.corePoolSize}" } ?: "n/a"} active/core threads
             - Default Queue: ${default?.queue?.size ?: "n/a"} pending tasks
             - SerialIO Queue: ${serial?.queue?.size ?: "n/a"} pending tasks
-            - Total completed tasks: ${(io?.completedTaskCount ?: 0L) + (default?.completedTaskCount ?: 0L) + (serial?.completedTaskCount ?: 0L)}
-            - Memory usage: ~${((io?.activeCount ?: 0) + (default?.activeCount ?: 0) + (serial?.activeCount ?: 0)) * 1024}KB (thread stacks, ~1MB each)
+            - Ingress Queue: ${ingress?.queue?.size ?: "n/a"} pending tasks
+            - Total completed tasks: ${listOfNotNull(io, default, serial, ingress).sumOf { it.completedTaskCount }}
+            - Memory usage: ~${listOfNotNull(io, default, serial, ingress).sumOf { it.activeCount } * 1024}KB (thread stacks, ~1MB each)
         """.trimIndent()
     }
 
@@ -533,9 +555,11 @@ object OneSignalDispatchers {
             - IO Executor: ${current.IO.status()}
             - Default Executor: ${current.Default.status()}
             - SerialIO Executor: ${current.SerialIO.status()}
+            - Ingress Executor: ${current.Ingress.status()}
             - IO Scope: ${scopeStatus("IOScope") { current.IOScope.isActive }}
             - Default Scope: ${scopeStatus("DefaultScope") { current.DefaultScope.isActive }}
             - SerialIO Scope: ${scopeStatus("SerialIOScope") { current.SerialIOScope.isActive }}
+            - Ingress Scope: ${scopeStatus("IngressScope") { current.IngressScope.isActive }}
         """.trimIndent()
     }
 
@@ -543,7 +567,7 @@ object OneSignalDispatchers {
         val deadline = System.currentTimeMillis() + timeoutMs
         while (System.currentTimeMillis() < deadline) {
             val current = pools
-            if (listOf(current.IO, current.Default, current.SerialIO).all { it.status() == "Active" }) {
+            if (listOf(current.IO, current.Default, current.SerialIO, current.Ingress).all { it.status() == "Active" }) {
                 return true
             }
             Thread.sleep(TEST_READY_POLL_MS)
