@@ -78,7 +78,7 @@ internal class LoginUserOperationExecutor(
         // NUL cannot be stored as an alias. Leave it on the op so the user binding stays intact.
         val rawExternalId = loginUserOp.externalId
         if (rawExternalId != null && hasNullByte(rawExternalId)) {
-            Logging.error("[OneSignal] login: externalId contains a null byte; dropping the alias")
+            Logging.error("login: externalId contains a null byte; dropping the alias")
             _identityModelStore.model.clearExternalIdIf(rawExternalId, loginUserOp.onesignalId)
         }
         val alias = rawExternalId?.takeUnless { hasNullByte(it) }

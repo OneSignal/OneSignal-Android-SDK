@@ -10,11 +10,11 @@ fun isMissing(
 ): Boolean {
     // NUL cannot be stored in a text column, so it never counts as a usable value.
     if (hasNullByte(value)) {
-        Logging.error("[OneSignal] $api contains a null byte")
+        Logging.error("$api contains a null byte")
         return true
     }
     if (!value.isNullOrEmpty()) return false
-    Logging.error("[OneSignal] $api is required")
+    Logging.error("$api is required")
     return true
 }
 
@@ -38,7 +38,7 @@ fun hasMissingEntries(
         val raw = item as String?
         if (allowEmptyValue) {
             if (raw != null) continue
-            Logging.error("[OneSignal] $api: value is required")
+            Logging.error("$api: value is required")
             return true
         }
         if (isMissing(raw, "$api: value")) return true
