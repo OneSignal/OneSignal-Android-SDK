@@ -751,6 +751,12 @@ internal class OneSignalImp : IOneSignal,
         // OneSignalDispatchers on a background thread before we touch [ioDispatcher].
         OneSignalDispatchers.prewarm()
 
+        // A completed init has nothing left to dispatch, and SUCCESS is terminal. Answering here
+        // keeps callers off the bounded IO pool, which blocking HTTP can hold for minutes.
+        if (initState == InitState.SUCCESS) {
+            return true
+        }
+
         // Use IO dispatcher for initialization to prevent ANRs and optimize for I/O operations
         return withContext(ioDispatcher) {
             val shouldRunInit: Boolean

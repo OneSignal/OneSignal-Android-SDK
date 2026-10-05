@@ -585,6 +585,27 @@ class SDKInitTests : FunSpec({
         }
     }
 
+    test("initWithContextSuspend returns once init is SUCCESS even when the IO dispatcher is saturated") {
+        // Same defect as the accessors above, in the entry point PermissionsActivity awaits before
+        // it can call requestPermissions. Without the fast-path the permission dialog does not
+        // appear until an IO worker frees up, which blocking HTTP can delay for minutes.
+        val context = getApplicationContext<Context>()
+        val os = OneSignalImp()
+
+        os.initWithContext(context, "appId")
+        waitForInitialization(os)
+
+        withSaturatedOneSignalIo {
+            val result =
+                runBlocking {
+                    withTimeoutOrNull(3_000) { os.initWithContextSuspend(context, "appId") }
+                }
+
+            // null means the call never got a worker and is still queued behind the busy pool.
+            result shouldBe true
+        }
+    }
+
     test("login should throw exception when initWithContext is never called") {
         // Given
         val oneSignalImp = OneSignalImp()
