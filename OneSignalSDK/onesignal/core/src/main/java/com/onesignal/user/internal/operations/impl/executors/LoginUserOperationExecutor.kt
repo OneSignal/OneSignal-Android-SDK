@@ -75,27 +75,22 @@ internal class LoginUserOperationExecutor(
         loginUserOp: LoginUserOperation,
         operations: List<Operation>,
     ): ExecutionResponse {
-        // NUL cannot be stored as an alias. Drop it so a queued login does not retry the create.
-        if (hasNullByte(loginUserOp.externalId)) {
-            Logging.error("[OneSignal] login: externalId contains a null byte")
-            if (_identityModelStore.model.externalId == loginUserOp.externalId) {
-                _identityModelStore.model.setOptStringProperty(
-                    IdentityConstants.EXTERNAL_ID,
-                    null,
-                    ModelChangeTags.HYDRATE,
-                )
-            }
-            loginUserOp.externalId = null
+        // NUL cannot be stored as an alias. Leave it on the op so the user binding stays intact.
+        val rawExternalId = loginUserOp.externalId
+        if (rawExternalId != null && hasNullByte(rawExternalId)) {
+            Logging.error("[OneSignal] login: externalId contains a null byte; dropping the alias")
+            _identityModelStore.model.clearExternalIdIf(rawExternalId, loginUserOp.onesignalId)
         }
+        val alias = rawExternalId?.takeUnless { hasNullByte(it) }
 
         // Handle a bad state that can happen in User Model 5.1.27 or earlier versions that old Login
         // request is not removed after processing if app is force-closed within the PostCreateDelay.
         // Anonymous Login being processed alone will surely be rejected, so we need to drop the request
         val containsSubscriptionOperation = operations.any { it is CreateSubscriptionOperation || it is TransferSubscriptionOperation }
-        if (!containsSubscriptionOperation && loginUserOp.externalId == null) {
+        if (!containsSubscriptionOperation && alias == null) {
             return ExecutionResponse(ExecutionResult.FAIL_NORETRY)
         }
-        if (loginUserOp.existingOnesignalId == null || loginUserOp.externalId == null ||
+        if (loginUserOp.existingOnesignalId == null || alias == null ||
             _identityVerificationService.ivBehaviorActive
         ) {
             // When there is no existing user to attempt to associate with the externalId provided, we go right to
@@ -179,9 +174,10 @@ internal class LoginUserOperationExecutor(
         properties["timezone_id"] = TimeUtils.getTimeZoneId()
         properties["language"] = _languageContext.language
 
-        if (createUserOperation.externalId != null) {
+        val externalId = createUserOperation.externalId?.takeUnless { hasNullByte(it) }
+        if (externalId != null) {
             val mutableIdentities = identities.toMutableMap()
-            mutableIdentities[IdentityConstants.EXTERNAL_ID] = createUserOperation.externalId!!
+            mutableIdentities[IdentityConstants.EXTERNAL_ID] = externalId
             identities = mutableIdentities
         }
 

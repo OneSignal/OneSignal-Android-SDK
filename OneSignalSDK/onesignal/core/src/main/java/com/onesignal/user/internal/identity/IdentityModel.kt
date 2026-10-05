@@ -1,6 +1,7 @@
 package com.onesignal.user.internal.identity
 
 import com.onesignal.common.modeling.MapModel
+import com.onesignal.common.modeling.ModelChangeTags
 import com.onesignal.user.internal.backend.IdentityConstants
 
 /**
@@ -29,4 +30,15 @@ class IdentityModel : MapModel<String>() {
         set(value) {
             setOptStringProperty(IdentityConstants.EXTERNAL_ID, value)
         }
+
+    // replace() rewrites this instance in place, so the check has to hold the same lock as the write.
+    fun clearExternalIdIf(
+        expectedExternalId: String,
+        expectedOnesignalId: String,
+    ) {
+        synchronized(data) {
+            if (externalId != expectedExternalId || onesignalId != expectedOnesignalId) return
+            setOptStringProperty(IdentityConstants.EXTERNAL_ID, null, ModelChangeTags.HYDRATE)
+        }
+    }
 }
