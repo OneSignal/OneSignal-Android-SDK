@@ -2,10 +2,17 @@ package com.onesignal.common
 
 import com.onesignal.debug.internal.logging.Logging
 
+internal fun hasNullByte(value: String?): Boolean = value != null && '\u0000' in value
+
 fun isMissing(
     value: String?,
     api: String,
 ): Boolean {
+    // NUL cannot be stored in a text column, so it never counts as a usable value.
+    if (hasNullByte(value)) {
+        Logging.error("[OneSignal] $api contains a null byte")
+        return true
+    }
     if (!value.isNullOrEmpty()) return false
     Logging.error("[OneSignal] $api is required")
     return true

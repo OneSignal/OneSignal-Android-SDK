@@ -1,6 +1,8 @@
 package com.onesignal.user.internal
 
 import com.onesignal.core.internal.language.ILanguageContext
+import com.onesignal.debug.LogLevel
+import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.mocks.MockHelper
 import com.onesignal.user.internal.subscriptions.ISubscriptionManager
 import com.onesignal.user.internal.subscriptions.SubscriptionList
@@ -106,6 +108,20 @@ class UserManagerTests : FunSpec({
         identityModelStore.model["my-alias-key5"] shouldBe "my-alias-value5"
         identityModelStore.model["my-alias-key6"] shouldBe "my-alias-value6-1"
         identityModelStore.model["my-alias-key1"] shouldBe null
+    }
+
+    test("addAlias rejects a label or id that contains a null byte") {
+        Logging.logLevel = LogLevel.NONE
+        val mockSubscriptionManager = mockk<ISubscriptionManager>()
+        val identityModelStore = MockHelper.identityModelStore()
+        val userManager =
+            UserManager(mockSubscriptionManager, identityModelStore, MockHelper.propertiesModelStore(), MockHelper.customEventController(), MockHelper.languageContext())
+
+        userManager.addAlias("external_id", "\u0000: 1")
+        userManager.addAlias("\u0000", "1")
+
+        identityModelStore.model.externalId shouldBe null
+        identityModelStore.model.containsKey("\u0000") shouldBe false
     }
 
     test("tags are backed by the properties model") {

@@ -11,6 +11,7 @@ import com.onesignal.common.TimeUtils
 import com.onesignal.common.consistency.enums.IamFetchRywTokenKey
 import com.onesignal.common.consistency.models.IConsistencyManager
 import com.onesignal.common.exceptions.BackendException
+import com.onesignal.common.hasNullByte
 import com.onesignal.common.modeling.ModelChangeTags
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.config.ConfigModelStore
@@ -74,6 +75,19 @@ internal class LoginUserOperationExecutor(
         loginUserOp: LoginUserOperation,
         operations: List<Operation>,
     ): ExecutionResponse {
+        // NUL cannot be stored as an alias. Drop it so a queued login does not retry the create.
+        if (hasNullByte(loginUserOp.externalId)) {
+            Logging.error("[OneSignal] login: externalId contains a null byte")
+            if (_identityModelStore.model.externalId == loginUserOp.externalId) {
+                _identityModelStore.model.setOptStringProperty(
+                    IdentityConstants.EXTERNAL_ID,
+                    null,
+                    ModelChangeTags.HYDRATE,
+                )
+            }
+            loginUserOp.externalId = null
+        }
+
         // Handle a bad state that can happen in User Model 5.1.27 or earlier versions that old Login
         // request is not removed after processing if app is force-closed within the PostCreateDelay.
         // Anonymous Login being processed alone will surely be rejected, so we need to drop the request
