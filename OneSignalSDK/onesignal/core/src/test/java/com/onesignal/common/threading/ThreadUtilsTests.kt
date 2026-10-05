@@ -27,7 +27,7 @@ class ThreadUtilsTests : FunSpec({
             latch.countDown()
         }
 
-        latch.await()
+        latch.await(5, TimeUnit.SECONDS) shouldBe true
         completed shouldBe true
     }
 
@@ -178,7 +178,7 @@ class ThreadUtilsTests : FunSpec({
             }
         }
 
-        latch.await()
+        latch.await(5, TimeUnit.SECONDS) shouldBe true
         results.sorted() shouldBe expectedResults
     }
 
@@ -204,7 +204,7 @@ class ThreadUtilsTests : FunSpec({
             latch.countDown()
         }
 
-        latch.await()
+        latch.await(5, TimeUnit.SECONDS) shouldBe true
         completed.get() shouldBe 3
     }
 
@@ -225,7 +225,7 @@ class ThreadUtilsTests : FunSpec({
             latch.countDown()
         }
 
-        latch.await()
+        latch.await(5, TimeUnit.SECONDS) shouldBe true
         ioCompleted.get() shouldBe 1
         defaultCompleted.get() shouldBe 1
     }
@@ -253,7 +253,7 @@ class ThreadUtilsTests : FunSpec({
             },
         )
 
-        latch.await()
+        latch.await(5, TimeUnit.SECONDS) shouldBe true
         ioErrors.get() shouldBe 1
         defaultErrors.get() shouldBe 1
     }
@@ -270,7 +270,7 @@ class ThreadUtilsTests : FunSpec({
             }
         }
 
-        latch.await()
+        latch.await(5, TimeUnit.SECONDS) shouldBe true
         completed.get() shouldBe 5
     }
 
@@ -298,7 +298,7 @@ class ThreadUtilsTests : FunSpec({
             latch.countDown()
         }
 
-        latch.await()
+        latch.await(5, TimeUnit.SECONDS) shouldBe true
         results.size shouldBe 4
         results shouldContain "blocking"
         results shouldContain "thread"
