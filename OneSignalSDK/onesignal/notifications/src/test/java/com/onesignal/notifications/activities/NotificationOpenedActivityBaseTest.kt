@@ -147,7 +147,7 @@ class NotificationOpenedActivityTest : FunSpec({
     }
 
     // When processing throws, the exception still propagates (production logs it via
-    // suspendifyWithCompletion), but the trampoline must be finished before it unwinds.
+    // suspendifyOnIO), but the trampoline must be finished before it unwinds.
     test("always finishes the base trampoline even when open processing throws") {
         val serviceProvider = mockk<IServiceProvider>(relaxed = true)
         val processor = mockk<INotificationOpenedProcessor>(relaxed = true)

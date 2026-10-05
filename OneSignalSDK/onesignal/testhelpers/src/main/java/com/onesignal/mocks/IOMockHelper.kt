@@ -94,8 +94,8 @@ object IOMockHelper : BeforeSpecListener, AfterSpecListener, BeforeTestListener,
 
         // Helper function to track async work (suspendifyOnIO, launchOnIO, launchOnDefault)
         // Note: We use runBlocking with Dispatchers.Unconfined to execute synchronously and deterministically
-        // instead of suspendifyWithCompletion to avoid circular dependency
-        // (suspendifyWithCompletion calls OneSignalDispatchers.launchOnIO which we're mocking)
+        // instead of the real suspendify helpers to avoid circular dependency
+        // (they call OneSignalDispatchers.launchOnIO which we're mocking)
         fun trackAsyncWork(block: suspend () -> Unit) {
             // New async wave: if we are going from 0 -> 1, create a new waiter
             val previous = pendingIo.getAndIncrement()
