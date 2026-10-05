@@ -9,6 +9,7 @@ import com.google.android.gms.tasks.Tasks
 import com.google.firebase.FirebaseApp
 import com.google.firebase.FirebaseOptions
 import com.google.firebase.installations.FirebaseInstallations
+import com.google.firebase.installations.FirebaseInstallationsException
 import com.google.firebase.messaging.FirebaseMessaging
 import com.onesignal.common.AndroidUtils
 import com.onesignal.core.internal.application.IApplicationService
@@ -31,6 +32,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withContext
 import java.io.IOException
+import java.util.concurrent.ExecutionException
 
 private const val SENDER_ID = "123456789012"
 
@@ -123,6 +125,10 @@ private fun fidRegistration(
     return FidRegistration(registrator, messaging)
 }
 
+// Matches how FirebaseMessaging.blockingGetToken wraps registration failures.
+private fun fcmRegistrationFailure(cause: Exception): IOException =
+    IOException("FCM Registration failed!", ExecutionException(cause))
+
 // Tasks.await rejects the main thread, and runTest skips the registrator's retry backoff delays.
 private suspend fun registerSkippingBackoff(registrator: PushRegistratorFCM): IPushRegistrator.RegisterResult =
     withContext(Dispatchers.IO) {
@@ -209,6 +215,91 @@ class PushRegistratorFCMTests : FunSpec({
 
         thrown shouldBe failure
         verify(exactly = 0) { FirebaseApp.initializeApp(any(), any<FirebaseOptions>(), any()) }
+    }
+
+    listOf(
+        fcmRegistrationFailure(IOException("FIS_AUTH_ERROR")),
+        fcmRegistrationFailure(FirebaseInstallationsException(FirebaseInstallationsException.Status.BAD_CONFIG)),
+    ).forEach { failure ->
+        test("falls back to OneSignal's FirebaseApp when Firebase rejects the default app credentials (${failure.cause?.cause})") {
+            val messaging = mockk<FirebaseMessaging>()
+            every { messaging.token } returns Tasks.forException(failure)
+            val registrator =
+                registrator(
+                    legacyToken = Tasks.forResult("fallback-token"),
+                    installedApps = listOf(defaultApp(SENDER_ID, messaging = messaging)),
+                )
+
+            val token = withContext(Dispatchers.IO) { registrator.getToken(SENDER_ID) }
+
+            token shouldBe "fallback-token"
+            verify(exactly = 1) { messaging.token }
+            verify(exactly = 1) { FirebaseApp.initializeApp(any(), any<FirebaseOptions>(), any()) }
+        }
+    }
+
+    listOf("SERVICE_NOT_AVAILABLE", "INTERNAL_SERVER_ERROR", "AUTHENTICATION_FAILED").forEach { message ->
+        test("keeps the default FirebaseApp after a transient $message failure") {
+            val failure = fcmRegistrationFailure(IOException(message))
+            val messaging = mockk<FirebaseMessaging>()
+            every { messaging.token } returns Tasks.forException(failure)
+            val registrator =
+                registrator(
+                    legacyToken = Tasks.forResult("fallback-token"),
+                    installedApps = listOf(defaultApp(SENDER_ID, messaging = messaging)),
+                )
+
+            val thrown =
+                withContext(Dispatchers.IO) {
+                    shouldThrow<IOException> { registrator.getToken(SENDER_ID) }
+                }
+
+            thrown shouldBe failure
+            verify(exactly = 0) { FirebaseApp.initializeApp(any(), any<FirebaseOptions>(), any()) }
+        }
+    }
+
+    test("skips the default FirebaseApp after Firebase rejected its credentials") {
+        val messaging = mockk<FirebaseMessaging>()
+        every { messaging.token } returns Tasks.forException(fcmRegistrationFailure(IOException("FIS_AUTH_ERROR")))
+        val registrator =
+            registrator(
+                legacyToken = Tasks.forResult("fallback-token"),
+                installedApps = listOf(defaultApp(SENDER_ID, messaging = messaging)),
+            )
+
+        val firstToken = withContext(Dispatchers.IO) { registrator.getToken(SENDER_ID) }
+        val secondToken = withContext(Dispatchers.IO) { registrator.getToken(SENDER_ID) }
+
+        firstToken shouldBe "fallback-token"
+        secondToken shouldBe "fallback-token"
+        verify(exactly = 1) { messaging.token }
+        verify(exactly = 1) { FirebaseApp.initializeApp(any(), any<FirebaseOptions>(), any()) }
+    }
+
+    test("subscribes through OneSignal's FirebaseApp when the default app credentials are rejected") {
+        val messaging = mockk<FirebaseMessaging>()
+        every { messaging.token } returns Tasks.forException(fcmRegistrationFailure(IOException("FIS_AUTH_ERROR")))
+        val configModelStore =
+            MockHelper.configModelStore {
+                it.isInitializedWithRemote = true
+                it.googleProjectNumber = SENDER_ID
+            }
+        val deviceService = mockk<IDeviceService>()
+        every { deviceService.hasFCMLibrary } returns true
+        every { deviceService.isGMSInstalledAndEnabled } returns true
+        val registrator =
+            registrator(
+                legacyToken = Tasks.forResult("fallback-token"),
+                installedApps = listOf(defaultApp(SENDER_ID, messaging = messaging)),
+                configModelStore = configModelStore,
+                deviceService = deviceService,
+            )
+
+        val result = withContext(Dispatchers.IO) { registrator.registerForPush() }
+
+        result.id shouldBe "fallback-token"
+        result.status shouldBe SubscriptionStatus.SUBSCRIBED
     }
 
     test("recreates OneSignal's FirebaseApp when the sender id changes") {
