@@ -6,6 +6,9 @@ import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import io.mockk.every
+import io.mockk.mockkStatic
+import io.mockk.unmockkStatic
 import kotlinx.coroutines.delay
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
@@ -84,6 +87,19 @@ class ThreadUtilsTests : FunSpec({
         failed.await(2, TimeUnit.SECONDS) shouldBe true
         Thread.sleep(50)
         onSuccessCalled shouldBe false
+    }
+
+    test("suspendifyOnIO logs exceptions thrown by the block") {
+        val latch = CountDownLatch(1)
+        mockkStatic(Logging::class)
+        every { Logging.error("Exception in suspendify", any<RuntimeException>()) } answers { latch.countDown() }
+        try {
+            suspendifyOnIO { throw RuntimeException("Test error") }
+
+            latch.await(5, TimeUnit.SECONDS) shouldBe true
+        } finally {
+            unmockkStatic(Logging::class)
+        }
     }
 
     test("suspendifyOnIO should execute work asynchronously") {
