@@ -1,6 +1,7 @@
 package com.onesignal.common.threading
 
 import com.onesignal.debug.internal.logging.Logging
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.withContext
@@ -65,6 +66,32 @@ fun suspendifyOnIO(
  */
 fun suspendifyOnIO(block: suspend () -> Unit) {
     suspendifyWithCompletion(useIO = true, block = block, onComplete = null)
+}
+
+/**
+ * Runs short, deadline-sensitive ingress work on its isolated serial dispatcher.
+ * [onSuccess] runs only when [block] completes normally, so callers never treat a failed or
+ * cancelled handoff as done.
+ */
+fun suspendifyOnIngress(
+    block: suspend () -> Unit,
+    onSuccess: () -> Unit,
+) {
+    OneSignalDispatchers.launchOnIngress {
+        try {
+            block()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Logging.error("Exception in suspendifyOnIngress", e)
+            return@launchOnIngress
+        }
+        try {
+            onSuccess()
+        } catch (e: Exception) {
+            Logging.error("Exception in suspendifyOnIngress onSuccess", e)
+        }
+    }
 }
 
 /**
