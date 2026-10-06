@@ -195,8 +195,7 @@ class AppIdHelperTests : FunSpec({
         result.failed shouldBe false
     }
 
-    test("empty string appId is treated as null") {
-        // Given - config model with no appId
+    test("empty appId falls back to the legacy appId") {
         val configModel = ConfigModel()
 
         val mockPreferencesService = mockk<IPreferencesService>()
@@ -204,18 +203,52 @@ class AppIdHelperTests : FunSpec({
             mockPreferencesService.getString(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.PREFS_LEGACY_APP_ID)
         } returns legacyAppId
 
-        // When - pass empty string (which should be treated similar to null in practice)
         val result = resolveAppId("", configModel, mockPreferencesService)
 
-        // Then - empty string is still treated as a valid input appId
+        result.appId shouldBe legacyAppId
+        result.forceCreateUser shouldBe true
+        result.failed shouldBe false
+    }
+
+    test("empty appId falls back to the cached appId without resetting the user") {
+        val configModel = ConfigModel()
+        configModel.appId = differentAppId
+
+        val mockPreferencesService = mockk<IPreferencesService>(relaxed = true)
+
+        val result = resolveAppId("", configModel, mockPreferencesService)
+
+        result.appId shouldBe differentAppId
+        result.forceCreateUser shouldBe false
+        result.failed shouldBe false
+    }
+
+    test("appId with a null byte falls back to the cached appId") {
+        val configModel = ConfigModel()
+        configModel.appId = differentAppId
+
+        val mockPreferencesService = mockk<IPreferencesService>(relaxed = true)
+
+        val result = resolveAppId("app\u0000id", configModel, mockPreferencesService)
+
+        result.appId shouldBe differentAppId
+        result.forceCreateUser shouldBe false
+        result.failed shouldBe false
+    }
+
+    test("empty appId with nothing cached still resolves so init does not fail") {
+        val configModel = ConfigModel()
+
+        val mockPreferencesService = mockk<IPreferencesService>()
+        every {
+            mockPreferencesService.getString(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.PREFS_LEGACY_APP_ID)
+        } returns null
+
+        val result = resolveAppId("", configModel, mockPreferencesService)
+
         result.appId shouldBe ""
         result.forceCreateUser shouldBe true
         result.failed shouldBe false
-
-        // Should not check legacy preferences when appId is provided (even if empty)
-        verify(exactly = 0) {
-            mockPreferencesService.getString(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.PREFS_LEGACY_APP_ID)
-        }
     }
 
     test("resolveAppId with existing appId property but same value") {

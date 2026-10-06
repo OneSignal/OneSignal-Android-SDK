@@ -211,6 +211,16 @@ class SDKInitTests : FunSpec({
         os.isInitialized shouldBe true
     }
 
+    test("initWithContext with an empty appId still initializes so later calls do not throw") {
+        val context = getApplicationContext<Context>()
+        val os = OneSignalImp()
+
+        os.initWithContext(context, "") shouldBe true
+
+        waitForInitialization(os)
+        os.login("user")
+    }
+
     test("initWithContext returns immediately and completes init asynchronously") {
         // Background-threaded init is the default: initWithContext dispatches internalInit to a
         // background dispatcher and returns immediately, even while internalInit is parked on a

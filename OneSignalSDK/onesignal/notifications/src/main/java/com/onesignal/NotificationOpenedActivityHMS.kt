@@ -94,7 +94,7 @@ class NotificationOpenedActivityHMS :
                 // the stale-entry reset is skipped and the NOTIFICATION_CLICK set here lingers —
                 // mis-attributing the next organic launch as a direct notification session. Running in
                 // finally guarantees the trampoline is always dismissed even when init fails or
-                // processing throws (suspendifyWithCompletion catches and logs exceptions).
+                // processing throws (suspendifyOnIO catches and logs exceptions).
                 runOnUiThread {
                     AndroidUtils.finishSafely(this)
                 }
