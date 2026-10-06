@@ -761,28 +761,26 @@ internal class OneSignalImp : IOneSignal,
             return true
         }
 
-        val shouldRunInit: Boolean
         // Local-capture under the lock so that even if a concurrent retry-after-FAILED
         // resets `suspendCompletion`, we await on the same generation we observed.
-        val completionToAwait: CompletableDeferred<Unit>?
-        synchronized(initLock) {
-            if (initState.isSDKAccessible()) {
-                shouldRunInit = false
-                completionToAwait = suspendCompletion
-            } else {
-                shouldRunInit = true
-                completionToAwait = null
-                initState = InitState.IN_PROGRESS
-                // Fresh latch for this init attempt.
-                suspendCompletion = CompletableDeferred()
-                // Only the call that actually starts init owns the failure-attribution exception.
-                // Re-entrant callers must not overwrite it -- otherwise the failure stack trace
-                // would point at the SyncJobService coroutine instead of the original initiator.
-                initFailureException = IllegalStateException("OneSignal initWithContext failed.")
+        // Null means this caller is the one that starts init.
+        val completionToAwait: CompletableDeferred<Unit>? =
+            synchronized(initLock) {
+                if (initState.isSDKAccessible()) {
+                    suspendCompletion
+                } else {
+                    initState = InitState.IN_PROGRESS
+                    // Fresh latch for this init attempt.
+                    suspendCompletion = CompletableDeferred()
+                    // Only the call that actually starts init owns the failure-attribution exception.
+                    // Re-entrant callers must not overwrite it -- otherwise the failure stack trace
+                    // would point at the SyncJobService coroutine instead of the original initiator.
+                    initFailureException = IllegalStateException("OneSignal initWithContext failed.")
+                    null
+                }
             }
-        }
 
-        if (!shouldRunInit) {
+        if (completionToAwait != null) {
             // Another caller has already started (or completed) init. Honor this method's
             // contract by suspending until initialization is *fully* completed -- not just
             // kicked off. This closes a race where re-entrant suspend callers (e.g. the
@@ -792,7 +790,7 @@ internal class OneSignalImp : IOneSignal,
             Logging.log(LogLevel.DEBUG, "initWithContext: init already in progress or completed, awaiting completion")
             // Awaited on the caller's own context: waiting for, and resuming from, another
             // caller's init must not queue behind the work that init itself is doing.
-            completionToAwait!!.await()
+            completionToAwait.await()
             return initState == InitState.SUCCESS
         }
 
