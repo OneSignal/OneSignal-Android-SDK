@@ -48,6 +48,7 @@ internal class PushRegistratorFCM(
     // Firebase rejects the same credentials on every attempt, so retrying the host app each time
     //   would only add a failing network call before the fallback.
     private var rejectedHostApp: FirebaseApp? = null
+    private var rejectedHostSignal: String? = null
     override val providerName: String
         get() = "FCM"
 
@@ -80,7 +81,11 @@ internal class PushRegistratorFCM(
         hostApp: FirebaseApp?,
     ): Task<String> =
         when {
-            hostApp != null && hostApp === rejectedHostApp -> oneSignalLegacyToken(senderId)
+            hostApp != null && hostApp === rejectedHostApp ->
+                FCMLegacyAppSelector.logFallbackOutcome(
+                    oneSignalLegacyToken(senderId),
+                    "the default FirebaseApp credentials were rejected earlier this session ($rejectedHostSignal)",
+                )
             hostApp != null && FCMLegacyAppSelector.matches(hostApp.options, senderId) ->
                 hostLegacyToken(senderId, hostApp)
             else -> {
@@ -101,11 +106,15 @@ internal class PushRegistratorFCM(
             } catch (e: ExecutionException) {
                 hostToken.exception ?: e
             }
-        if (failure == null || !FCMLegacyAppSelector.isHostCredentialFailure(failure)) return hostToken
+        val signal = failure?.let(FCMLegacyAppSelector::hostCredentialFailureSignal) ?: return hostToken
 
-        Logging.error(FCMLegacyAppSelector.credentialFailureMessage(), failure)
+        Logging.error(FCMLegacyAppSelector.credentialFailureMessage(signal, hostApp.options), failure)
         rejectedHostApp = hostApp
-        return oneSignalLegacyToken(senderId)
+        rejectedHostSignal = signal
+        return FCMLegacyAppSelector.logFallbackOutcome(
+            oneSignalLegacyToken(senderId),
+            "Firebase rejected the default FirebaseApp credentials ($signal)",
+        )
     }
 
     private fun oneSignalLegacyToken(senderId: String): Task<String> =
@@ -223,6 +232,7 @@ private fun requireInstallationIdRegisterApi(diagnostics: FCMInstallationIdDiagn
 internal object FCMLegacyAppSelector {
     private const val MIN_FIREBASE_APPLICATION_ID_PARTS = 4
     private const val FIS_AUTH_ERROR = "FIS_AUTH_ERROR"
+    private const val BAD_CONFIG = "BAD_CONFIG"
 
     fun matches(
         options: FirebaseOptions,
@@ -250,23 +260,48 @@ internal object FCMLegacyAppSelector {
     }
 
     /**
-     * Whether a token request through the host app failed because Firebase rejected its
-     * google-services.json credentials. A rejected API key or app id does not fail the Firebase
+     * The signal showing a token request through the host app failed because Firebase rejected its
+     * google-services.json credentials, or null for any other failure. A rejected API key or app id does not fail the Firebase
      * Installations ID lookup, only its auth token, so FCM sends the registration without one and
      * the server answers with FIS_AUTH_ERROR. This is not confirmed with another auth token request
      * because Firebase Installations blocks requests for 24 hours after rejecting its config, so
      * that request would fail with UNAVAILABLE without reaching the server.
      */
-    fun isHostCredentialFailure(throwable: Throwable): Boolean =
-        causes(throwable).any {
-            (it is IOException && it.message == FIS_AUTH_ERROR) ||
-                (it is FirebaseInstallationsException && it.status == FirebaseInstallationsException.Status.BAD_CONFIG)
+    fun hostCredentialFailureSignal(throwable: Throwable): String? =
+        causes(throwable).firstNotNullOfOrNull {
+            when {
+                it is IOException && it.message == FIS_AUTH_ERROR -> FIS_AUTH_ERROR
+                it is FirebaseInstallationsException &&
+                    it.status == FirebaseInstallationsException.Status.BAD_CONFIG -> BAD_CONFIG
+                else -> null
+            }
         }
 
-    fun credentialFailureMessage(): String =
-        "FCM legacy token registration through the default FirebaseApp was rejected by Firebase " +
-            "because its API key or application id is invalid. Using OneSignal's FirebaseApp " +
-            "instead. Check the api_key and mobilesdk_app_id in google-services.json."
+    fun credentialFailureMessage(
+        signal: String,
+        options: FirebaseOptions,
+    ): String =
+        "FCM legacy token registration through the default FirebaseApp (gcmSenderId=${options.gcmSenderId}, " +
+            "applicationId=${options.applicationId}) was rejected by Firebase with $signal because its " +
+            "API key or application id is invalid. Using OneSignal's FirebaseApp instead. Check the " +
+            "api_key and mobilesdk_app_id in google-services.json."
+
+    // Runs on the registration background thread, which awaits this token right after anyway.
+    fun logFallbackOutcome(
+        token: Task<String>,
+        reason: String,
+    ): Task<String> {
+        try {
+            Tasks.await(token)
+            Logging.warn("FCM legacy token obtained through OneSignal's FirebaseApp because $reason.")
+        } catch (e: ExecutionException) {
+            Logging.error(
+                "FCM legacy token registration through OneSignal's FirebaseApp failed after $reason.",
+                token.exception ?: e,
+            )
+        }
+        return token
+    }
 
     private fun causes(throwable: Throwable): Sequence<Throwable> =
         generateSequence(throwable) { cause -> cause.cause?.takeIf { it !== cause } }

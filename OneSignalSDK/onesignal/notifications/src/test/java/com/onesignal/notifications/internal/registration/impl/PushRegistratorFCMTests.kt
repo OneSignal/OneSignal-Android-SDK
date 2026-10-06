@@ -15,6 +15,10 @@ import com.onesignal.common.AndroidUtils
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.device.IDeviceService
+import com.onesignal.debug.ILogListener
+import com.onesignal.debug.LogLevel
+import com.onesignal.debug.OneSignalLogEvent
+import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.mocks.MockHelper
 import com.onesignal.notifications.internal.registration.IPushRegistrator
 import com.onesignal.user.internal.subscriptions.SubscriptionStatus
@@ -32,6 +36,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withContext
 import java.io.IOException
+import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.ExecutionException
 
 private const val SENDER_ID = "123456789012"
@@ -143,6 +148,18 @@ private fun pushCapableDeviceService(): IDeviceService {
     every { deviceService.hasFCMLibrary } returns true
     every { deviceService.isGMSInstalledAndEnabled } returns true
     return deviceService
+}
+
+private suspend fun capturingLogs(block: suspend () -> Unit): List<OneSignalLogEvent> {
+    val logs = CopyOnWriteArrayList<OneSignalLogEvent>()
+    val listener = ILogListener { logs.add(it) }
+    Logging.addListener(listener)
+    try {
+        block()
+    } finally {
+        Logging.removeListener(listener)
+    }
+    return logs
 }
 
 // Tasks.await rejects the main thread, and runTest skips the registrator's retry backoff delays.
@@ -287,6 +304,63 @@ class PushRegistratorFCMTests : FunSpec({
             verify(exactly = 2) { messaging.token }
             verify(exactly = 0) { FirebaseApp.initializeApp(any(), any<FirebaseOptions>(), any()) }
         }
+    }
+
+    test("logs the rejected credential signal and the fallback token outcome") {
+        val messaging = mockk<FirebaseMessaging>()
+        every { messaging.token } returns Tasks.forException(fcmRegistrationFailure(IOException("FIS_AUTH_ERROR")))
+        val registrator =
+            registrator(
+                legacyToken = Tasks.forResult("fallback-token"),
+                installedApps = listOf(defaultApp(SENDER_ID, messaging = messaging)),
+            )
+
+        val logs =
+            capturingLogs {
+                withContext(Dispatchers.IO) { registrator.getToken(SENDER_ID) }
+                withContext(Dispatchers.IO) { registrator.getToken(SENDER_ID) }
+            }
+
+        logs.count {
+            it.level == LogLevel.ERROR &&
+                it.entry.contains("rejected by Firebase with FIS_AUTH_ERROR") &&
+                it.entry.contains("gcmSenderId=$SENDER_ID") &&
+                it.entry.contains("applicationId=1:$SENDER_ID:android:abc")
+        } shouldBe 1
+        logs.count {
+            it.level == LogLevel.WARN &&
+                it.entry.contains("obtained through OneSignal's FirebaseApp") &&
+                it.entry.contains("rejected the default FirebaseApp credentials (FIS_AUTH_ERROR)")
+        } shouldBe 1
+        logs.count {
+            it.level == LogLevel.WARN &&
+                it.entry.contains("obtained through OneSignal's FirebaseApp") &&
+                it.entry.contains("rejected earlier this session (FIS_AUTH_ERROR)")
+        } shouldBe 1
+    }
+
+    test("logs an error when OneSignal's FirebaseApp fails after the credential fallback") {
+        val messaging = mockk<FirebaseMessaging>()
+        every { messaging.token } returns Tasks.forException(fcmRegistrationFailure(badConfigFailure()))
+        val registrator =
+            registrator(
+                legacyToken = Tasks.forException(fcmRegistrationFailure(IOException("SERVICE_NOT_AVAILABLE"))),
+                installedApps = listOf(defaultApp(SENDER_ID, messaging = messaging)),
+            )
+
+        val logs =
+            capturingLogs {
+                withContext(Dispatchers.IO) {
+                    shouldThrow<IOException> { registrator.getToken(SENDER_ID) }
+                }
+            }
+
+        logs.count {
+            it.level == LogLevel.ERROR &&
+                it.entry.contains("through OneSignal's FirebaseApp failed") &&
+                it.entry.contains("rejected the default FirebaseApp credentials (BAD_CONFIG)") &&
+                it.entry.contains("SERVICE_NOT_AVAILABLE")
+        } shouldBe 1
     }
 
     test("skips the default FirebaseApp after Firebase rejected its credentials") {
