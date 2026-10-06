@@ -1,6 +1,10 @@
 package com.onesignal.session.internal.session.impl
 
+import com.onesignal.common.IDManager
 import com.onesignal.common.events.EventProducer
+import com.onesignal.common.modeling.ISingletonModelStoreChangeHandler
+import com.onesignal.common.modeling.Model
+import com.onesignal.common.modeling.ModelChangedArgs
 import com.onesignal.common.threading.runOnSerialIO
 import com.onesignal.core.internal.application.IApplicationLifecycleHandler
 import com.onesignal.core.internal.application.IApplicationService
@@ -21,6 +25,7 @@ import com.onesignal.session.internal.session.SessionModelStore
 import com.onesignal.user.internal.backend.IdentityConstants
 import com.onesignal.user.internal.identity.IdentityModelStore
 import java.util.UUID
+import kotlin.reflect.KMutableProperty1
 
 /**
  * The implementation for [ISessionService] will continue a session as long as the app remains
@@ -76,6 +81,38 @@ internal class SessionService(
 
     override fun start() {
         _applicationService.addApplicationLifecycleHandler(this)
+        identityModelStore.subscribe(PinnedLocalIdTranslator(IdentityConstants.ONESIGNAL_ID, SessionModel::onesignalId))
+        _configModelStore.subscribe(PinnedLocalIdTranslator(ConfigModel::pushSubscriptionId.name, SessionModel::subscriptionId))
+    }
+
+    /**
+     * A session that starts before the user is created pins local IDs. When the backend replaces
+     * a local ID in place, carry it over to the pinned copy. Changes from a non-local ID, such as a
+     * login or user switch, leave the pinned IDs alone.
+     */
+    private inner class PinnedLocalIdTranslator<TModel : Model>(
+        private val sourceProperty: String,
+        private val pinnedId: KMutableProperty1<SessionModel, String?>,
+    ) : ISingletonModelStoreChangeHandler<TModel> {
+        override fun onModelReplaced(
+            model: TModel,
+            tag: String,
+        ) = Unit
+
+        override fun onModelUpdated(
+            args: ModelChangedArgs,
+            tag: String,
+        ) {
+            val localId =
+                (args.oldValue as? String)?.takeIf { args.property == sourceProperty && IDManager.isLocalId(it) }
+            val backendId = (args.newValue as? String)?.takeUnless { IDManager.isLocalId(it) }
+            if (localId == null || backendId == null) return
+
+            runOnSerialIO {
+                val session = this@SessionService.session ?: return@runOnSerialIO
+                if (pinnedId.get(session) == localId) pinnedId.set(session, backendId)
+            }
+        }
     }
 
     /** NOTE: This triggers more often than scheduleBackgroundRunIn defined above,

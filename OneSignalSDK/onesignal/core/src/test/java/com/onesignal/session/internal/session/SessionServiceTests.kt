@@ -1,7 +1,11 @@
 package com.onesignal.session.internal.session
 
+import com.onesignal.common.modeling.ISingletonModelStoreChangeHandler
+import com.onesignal.common.modeling.ModelChangeTags
+import com.onesignal.common.modeling.ModelChangedArgs
 import com.onesignal.common.threading.OneSignalDispatchers
 import com.onesignal.common.threading.runOnSerialIO
+import com.onesignal.core.internal.config.ConfigModel
 import com.onesignal.core.internal.features.IFeatureManager
 import com.onesignal.core.internal.time.ITime
 import com.onesignal.features.FeatureFlag
@@ -9,6 +13,8 @@ import com.onesignal.mocks.IOMockHelper
 import com.onesignal.mocks.MockHelper
 import com.onesignal.mocks.MockPreferencesService
 import com.onesignal.session.internal.session.impl.SessionService
+import com.onesignal.user.internal.backend.IdentityConstants
+import com.onesignal.user.internal.identity.IdentityModel
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.mockk.every
@@ -17,6 +23,7 @@ import io.mockk.mockk
 import io.mockk.mockkObject
 import io.mockk.mockkStatic
 import io.mockk.runs
+import io.mockk.slot
 import io.mockk.spyk
 import io.mockk.unmockkObject
 import io.mockk.unmockkStatic
@@ -46,6 +53,35 @@ private class Mocks(
 
     val identityModelStore = MockHelper.identityModelStore { it.onesignalId = ONESIGNAL_ID }
     val configModelStore = MockHelper.configModelStore { it.pushSubscriptionId = SUBSCRIPTION_ID }
+
+    val identityChangeHandler = slot<ISingletonModelStoreChangeHandler<IdentityModel>>()
+    val configChangeHandler = slot<ISingletonModelStoreChangeHandler<ConfigModel>>()
+
+    init {
+        every { identityModelStore.subscribe(capture(identityChangeHandler)) } just runs
+        every { configModelStore.subscribe(capture(configChangeHandler)) } just runs
+    }
+
+    /** Mirrors the user-create executor replacing a local ID with the backend ID in place. */
+    fun hydrateOnesignalId(backendId: String) {
+        val model = identityModelStore.model
+        val localId = model.onesignalId
+        model.onesignalId = backendId
+        identityChangeHandler.captured.onModelUpdated(
+            ModelChangedArgs(model, IdentityConstants.ONESIGNAL_ID, IdentityConstants.ONESIGNAL_ID, localId, backendId),
+            ModelChangeTags.HYDRATE,
+        )
+    }
+
+    fun hydratePushSubscriptionId(backendId: String) {
+        val model = configModelStore.model
+        val localId = model.pushSubscriptionId
+        model.pushSubscriptionId = backendId
+        configChangeHandler.captured.onModelUpdated(
+            ModelChangedArgs(model, ConfigModel::pushSubscriptionId.name, ConfigModel::pushSubscriptionId.name, localId, backendId),
+            ModelChangeTags.NORMAL,
+        )
+    }
 
     fun sessionModelStore(action: ((SessionModel) -> Unit)? = null): SessionModelStore {
         if (action != null) action(mockSessionModelStore.model)
@@ -303,6 +339,79 @@ class SessionServiceTests : FunSpec({
         // Then
         sessionModelStore.model.onesignalId shouldBe Mocks.ONESIGNAL_ID
         sessionModelStore.model.subscriptionId shouldBe Mocks.SUBSCRIPTION_ID
+    }
+
+    test("pinned local IDs are replaced with backend IDs when the user is created") {
+        // Given
+        val mocks = Mocks()
+        mocks.identityModelStore.model.onesignalId = "local-user"
+        mocks.configModelStore.model.pushSubscriptionId = "local-subscription"
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        val sessionModelStore = mocks.sessionModelStore { it.isValid = false }
+        sessionService.onFocus(false)
+
+        // When
+        mocks.hydrateOnesignalId("backend-user")
+        mocks.hydratePushSubscriptionId("backend-subscription")
+
+        // Then
+        sessionModelStore.model.onesignalId shouldBe "backend-user"
+        sessionModelStore.model.subscriptionId shouldBe "backend-subscription"
+    }
+
+    test("pinned backend IDs are not replaced by later ID changes") {
+        // Given
+        val mocks = Mocks()
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        val sessionModelStore = mocks.sessionModelStore { it.isValid = false }
+        sessionService.onFocus(false)
+
+        // When
+        mocks.hydrateOnesignalId("other-user")
+        mocks.hydratePushSubscriptionId("other-subscription")
+
+        // Then
+        sessionModelStore.model.onesignalId shouldBe Mocks.ONESIGNAL_ID
+        sessionModelStore.model.subscriptionId shouldBe Mocks.SUBSCRIPTION_ID
+    }
+
+    test("pinned local IDs are not replaced when a different local ID is translated") {
+        // Given
+        val mocks = Mocks()
+        mocks.identityModelStore.model.onesignalId = "local-user"
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        val sessionModelStore = mocks.sessionModelStore { it.isValid = false }
+        sessionService.onFocus(false)
+
+        // When
+        mocks.identityModelStore.model.onesignalId = "local-next-user"
+        mocks.hydrateOnesignalId("backend-next-user")
+
+        // Then
+        sessionModelStore.model.onesignalId shouldBe "local-user"
+    }
+
+    test("pinned local IDs are not replaced by another local ID") {
+        // Given
+        val mocks = Mocks()
+        mocks.identityModelStore.model.onesignalId = "local-user"
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        val sessionModelStore = mocks.sessionModelStore { it.isValid = false }
+        sessionService.onFocus(false)
+
+        // When
+        mocks.hydrateOnesignalId("local-next-user")
+
+        // Then
+        sessionModelStore.model.onesignalId shouldBe "local-user"
     }
 
     test("sessions v2 active duration uses the monotonic clock") {
