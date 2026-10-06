@@ -585,16 +585,16 @@ internal class OneSignalImp : IOneSignal,
         // Local-capture state + deferred under initLock so we await on the same generation
         // we observed (a concurrent retry-after-FAILED can replace `suspendCompletion`).
         val observedState: InitState
-        val completionToAwait: CompletableDeferred<Unit>?
+        val completionToAwait: CompletableDeferred<Unit>
         synchronized(initLock) {
             observedState = initState
-            completionToAwait = if (observedState == InitState.IN_PROGRESS) suspendCompletion else null
+            completionToAwait = suspendCompletion
         }
 
         when (observedState) {
             InitState.NOT_STARTED -> throw IllegalStateException(notInitializedMessage(operationName))
 
-            InitState.IN_PROGRESS -> awaitInitCompletion(completionToAwait!!, operationName)
+            InitState.IN_PROGRESS -> awaitInitCompletion(completionToAwait, operationName)
 
             InitState.FAILED -> {
                 throw initFailureException ?: IllegalStateException("Initialization failed. Cannot proceed.")
