@@ -17,6 +17,7 @@ import com.onesignal.notifications.internal.generation.INotificationGenerationWo
 import org.json.JSONException
 import org.json.JSONObject
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.TimeUnit
 
 internal class NotificationGenerationWorkManager : INotificationGenerationWorkManager {
     override fun beginEnqueueingWork(
@@ -40,8 +41,7 @@ internal class NotificationGenerationWorkManager : INotificationGenerationWorkMa
             return true
         }
 
-        @Suppress("TooGenericExceptionCaught")
-        try {
+        return try {
             // TODO: Need to figure out how to implement the isHighPriority param
             val inputData =
                 Data.Builder()
@@ -58,14 +58,20 @@ internal class NotificationGenerationWorkManager : INotificationGenerationWorkMa
             Logging.debug(
                 "NotificationWorkManager enqueueing notification work with notificationId: $osNotificationId and jsonPayload: $jsonPayload",
             )
+            // Wait for WorkManager to persist the request so callers can safely drop their own copy.
             OSWorkManagerHelper.getInstance(context)
                 .enqueueUniqueWork(osNotificationId, ExistingWorkPolicy.KEEP, workRequest)
-        } catch (t: Throwable) {
+                .result
+                .get(ENQUEUE_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+            true
+        } catch (e: Exception) {
+            removeNotificationIdProcessed(id)
+            throw e
+        } catch (e: LinkageError) {
             // The worker never starts when enqueue throws, so its finally will not drop this id.
             removeNotificationIdProcessed(id)
-            throw t
+            throw e
         }
-        return true
     }
 
     class NotificationGenerationWorker(context: Context, workerParams: WorkerParameters) : CoroutineWorker(context, workerParams) {
@@ -113,6 +119,7 @@ internal class NotificationGenerationWorkManager : INotificationGenerationWorkMa
         private const val TIMESTAMP_WORKER_DATA_PARAM = "timestamp"
         private const val RESTORE_REASON_WORKER_DATA_PARAM = "restore_reason"
         private const val LEGACY_IS_RESTORING_WORKER_DATA_PARAM = "is_restoring"
+        private const val ENQUEUE_TIMEOUT_MS = 10_000L
 
         private val notificationIds = ConcurrentHashMap<String, Boolean>()
 

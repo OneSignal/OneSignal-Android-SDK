@@ -4,11 +4,7 @@ import android.app.Activity
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import com.onesignal.OneSignal
-import com.onesignal.common.threading.OneSignalDispatchers
-import com.onesignal.common.threading.suspendifyOnIO
-import com.onesignal.debug.internal.logging.Logging
-import com.onesignal.notifications.internal.bundle.INotificationBundleProcessor
+import com.onesignal.notifications.internal.ingress.NotificationIngress
 
 // This is the entry point when a FCM payload is received from the Google Play services app
 // OneSignal does not use FirebaseMessagingService.onMessageReceived as it does not allow multiple
@@ -26,61 +22,33 @@ class FCMBroadcastReceiver : BroadcastReceiver() {
             return
         }
 
-        // FCM can cold-start the process before initWithContext. Warm dispatchers before goAsync()
-        // so the prewarm daemon gets a head start during the handoff, making the dispatchers more
-        // likely to be warm by the time the suspendifyOnIO below submits its work.
-        OneSignalDispatchers.prewarm()
+        runIngressHandoff(
+            "FCMBroadcastReceiver",
+            BroadcastCompletion.RECONSTRUCTIBLE_WORK_TIMEOUT_MS,
+        ) {
+            if (!isFCMMessage(intent)) {
+                setSuccessfulResultCode()
+                return@runIngressHandoff
+            }
 
-        // goAsync() detaches the pending result, after which isOrderedBroadcast reports false and
-        // the result code and abort below would silently do nothing.
-        val ordered = isOrderedBroadcast
-        val pendingResult: BroadcastReceiver.PendingResult? = goAsync()
-        // process in background
-        suspendifyOnIO {
-            try {
-                if (!OneSignal.initWithContext(context.applicationContext)) {
-                    Logging.warn("FCMBroadcastReceiver skipped due to failed OneSignal init")
-                    return@suspendifyOnIO
-                }
-
-                val bundleProcessor = OneSignal.getService<INotificationBundleProcessor>()
-
-                if (!isFCMMessage(intent)) {
-                    setSuccessfulResultCode(pendingResult, ordered)
-                    return@suspendifyOnIO
-                }
-
-                val processedResult = bundleProcessor.processBundleFromReceiver(context, bundle)
-
-                // Prevent other FCM receivers from firing if work manager is processing the notification
-                if (processedResult?.isWorkManagerProcessing == true) {
-                    setAbort(pendingResult, ordered)
-                    return@suspendifyOnIO
-                }
-
-                setSuccessfulResultCode(pendingResult, ordered)
-            } finally {
-                pendingResult?.finish()
+            if (NotificationIngress.persistFcm(context, intent, bundle)) {
+                setAbort()
+            } else {
+                setSuccessfulResultCode()
             }
         }
     }
 
-    private fun setSuccessfulResultCode(
-        pendingResult: BroadcastReceiver.PendingResult?,
-        ordered: Boolean,
-    ) {
-        if (ordered && pendingResult != null) {
-            pendingResult.resultCode = Activity.RESULT_OK
+    private fun setSuccessfulResultCode() {
+        if (isOrderedBroadcast) {
+            resultCode = Activity.RESULT_OK
         }
     }
 
-    private fun setAbort(
-        pendingResult: BroadcastReceiver.PendingResult?,
-        ordered: Boolean,
-    ) {
-        if (ordered && pendingResult != null) {
+    private fun setAbort() {
+        if (isOrderedBroadcast) {
             // Prevents other BroadcastReceivers from firing
-            pendingResult.abortBroadcast()
+            abortBroadcast()
 
             // TODO: Previous error and related to this Github issue ticket
             //    https://github.com/OneSignal/OneSignal-Android-SDK/issues/307
@@ -90,7 +58,7 @@ class FCMBroadcastReceiver : BroadcastReceiver() {
             //    flg=0x10000000
             //    pkg=com.onesignal.sdktest (has extras)
             // }
-            pendingResult.resultCode = Activity.RESULT_OK
+            resultCode = Activity.RESULT_OK
         }
     }
 

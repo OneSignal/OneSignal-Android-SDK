@@ -194,6 +194,69 @@ class LoginUserOperationExecutorTests : FunSpec({
         ) { mockUserBackendService.createUser(appId, mapOf(IdentityConstants.EXTERNAL_ID to "externalId"), any(), any()) }
     }
 
+    test("login with a null byte in externalId creates the user without that alias") {
+        val badExternalId = "\u0000: 1"
+        val mockUserBackendService = mockk<IUserBackendService>()
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } returns
+            CreateUserResponse(mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId), PropertiesObject(), listOf())
+
+        val mockIdentityOperationExecutor = mockk<IdentityOperationExecutor>()
+        val mockIdentityModelStore =
+            MockHelper.identityModelStore {
+                it.onesignalId = localOneSignalId
+                it.externalId = badExternalId
+            }
+        val mockPropertiesModelStore = MockHelper.propertiesModelStore()
+        val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
+
+        val loginUserOperationExecutor =
+            LoginUserOperationExecutor(mockIdentityOperationExecutor, AndroidMockHelper.applicationService(), MockHelper.deviceService(), mockUserBackendService, mockIdentityModelStore, mockPropertiesModelStore, mockSubscriptionsModelStore, MockHelper.configModelStore(), MockHelper.languageContext(), getJwtTokenStore(), getIdentityVerificationService(), mockk<com.onesignal.common.consistency.models.IConsistencyManager>(relaxed = true))
+        val operations =
+            listOf<Operation>(
+                LoginUserOperation(appId, localOneSignalId, badExternalId, null),
+                createSubscriptionOperation,
+            )
+
+        val response = loginUserOperationExecutor.execute(operations)
+
+        response.result shouldBe ExecutionResult.SUCCESS
+        mockIdentityModelStore.model.externalId shouldBe null
+        coVerify(exactly = 1) { mockUserBackendService.createUser(appId, mapOf(), any(), any()) }
+    }
+
+    test("a null byte login does not clear a different user's external id") {
+        val badExternalId = "\u0000: 1"
+        val mockUserBackendService = mockk<IUserBackendService>()
+        val mockIdentityModelStore =
+            MockHelper.identityModelStore {
+                it.externalId = badExternalId
+            }
+        val loginUserOperationExecutor =
+            LoginUserOperationExecutor(
+                mockk<IdentityOperationExecutor>(),
+                MockHelper.applicationService(),
+                MockHelper.deviceService(),
+                mockUserBackendService,
+                mockIdentityModelStore,
+                MockHelper.propertiesModelStore(),
+                mockk<SubscriptionModelStore>(),
+                MockHelper.configModelStore(),
+                MockHelper.languageContext(),
+                getJwtTokenStore(),
+                getIdentityVerificationService(),
+                mockk<com.onesignal.common.consistency.models.IConsistencyManager>(relaxed = true),
+            )
+
+        val response =
+            loginUserOperationExecutor.execute(
+                listOf(LoginUserOperation(appId, localOneSignalId, badExternalId, null)),
+            )
+
+        response.result shouldBe ExecutionResult.FAIL_NORETRY
+        mockIdentityModelStore.model.externalId shouldBe badExternalId
+        coVerify(exactly = 0) { mockUserBackendService.createUser(any(), any(), any(), any()) }
+    }
+
     // If the User is identified then the backend may have found an existing User, if so
     // we need to refresh it so we get all it's full subscription list
     test("login identified user returns result with RefreshUser") {

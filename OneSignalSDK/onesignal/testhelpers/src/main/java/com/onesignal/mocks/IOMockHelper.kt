@@ -3,6 +3,7 @@ package com.onesignal.mocks
 import com.onesignal.common.threading.OneSignalDispatchers
 import com.onesignal.common.threading.runOnSerialIO
 import com.onesignal.common.threading.suspendifyOnIO
+import com.onesignal.common.threading.suspendifyOnIngress
 import com.onesignal.common.threading.suspendifyOnMain
 import com.onesignal.common.threading.suspendifyOnSerialIO
 import io.kotest.core.listeners.AfterSpecListener
@@ -93,8 +94,8 @@ object IOMockHelper : BeforeSpecListener, AfterSpecListener, BeforeTestListener,
 
         // Helper function to track async work (suspendifyOnIO, launchOnIO, launchOnDefault)
         // Note: We use runBlocking with Dispatchers.Unconfined to execute synchronously and deterministically
-        // instead of suspendifyWithCompletion to avoid circular dependency
-        // (suspendifyWithCompletion calls OneSignalDispatchers.launchOnIO which we're mocking)
+        // instead of the real suspendify helpers to avoid circular dependency
+        // (they call OneSignalDispatchers.launchOnIO which we're mocking)
         fun trackAsyncWork(block: suspend () -> Unit) {
             // New async wave: if we are going from 0 -> 1, create a new waiter
             val previous = pendingIo.getAndIncrement()
@@ -136,6 +137,15 @@ object IOMockHelper : BeforeSpecListener, AfterSpecListener, BeforeTestListener,
             trackAsyncWork(block)
         }
 
+        every { suspendifyOnIngress(any<suspend () -> Unit>(), any<() -> Unit>()) } answers {
+            val block = firstArg<suspend () -> Unit>()
+            val onSuccess = secondArg<() -> Unit>()
+            trackAsyncWork {
+                block()
+                onSuccess()
+            }
+        }
+
         every { suspendifyOnSerialIO(any<suspend () -> Unit>()) } answers {
             val block = firstArg<suspend () -> Unit>()
             trackAsyncWork(block)
@@ -172,6 +182,12 @@ object IOMockHelper : BeforeSpecListener, AfterSpecListener, BeforeTestListener,
             val block = firstArg<suspend () -> Unit>()
             trackAsyncWork(block)
             // Return a mock Job (launchOnDefault returns a Job)
+            mockk<Job>(relaxed = true)
+        }
+
+        every { OneSignalDispatchers.launchOnIngress(any<suspend () -> Unit>()) } answers {
+            val block = firstArg<suspend () -> Unit>()
+            trackAsyncWork(block)
             mockk<Job>(relaxed = true)
         }
     }

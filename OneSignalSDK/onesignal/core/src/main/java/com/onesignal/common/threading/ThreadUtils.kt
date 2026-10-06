@@ -1,6 +1,7 @@
 package com.onesignal.common.threading
 
 import com.onesignal.debug.internal.logging.Logging
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -40,26 +41,6 @@ fun suspendifyOnMain(block: suspend () -> Unit) {
  * Allows a non suspending function to create a scope that can
  * call suspending functions.  This is a nonblocking call, which
  * means the scope will run on a background thread.  This will
- * return immediately!!! Also provides an optional onComplete.
- **
- * @param block A suspending lambda to be executed on the background thread.
- *              This is where you put your suspending code.
- *
- * @param onComplete An optional lambda that will be invoked on the same
- *                   background thread after [block] has finished executing.
- *                   Useful for cleanup or follow-up logic.
- */
-fun suspendifyOnIO(
-    block: suspend () -> Unit,
-    onComplete: (() -> Unit)? = null,
-) {
-    suspendifyWithCompletion(useIO = true, block = block, onComplete = onComplete)
-}
-
-/**
- * Allows a non suspending function to create a scope that can
- * call suspending functions.  This is a nonblocking call, which
- * means the scope will run on a background thread.  This will
  * return immediately!!!
  * Uses OneSignal's centralized thread management for better resource control.
  *
@@ -67,7 +48,38 @@ fun suspendifyOnIO(
  *
  */
 fun suspendifyOnIO(block: suspend () -> Unit) {
-    suspendifyWithCompletion(useIO = true, block = block, onComplete = null)
+    suspendify(useIO = true, block = block)
+}
+
+/**
+ * Runs short, deadline-sensitive ingress work on its isolated serial dispatcher.
+ * [onSuccess] runs only when [block] completes normally, so callers never treat a failed or
+ * cancelled handoff as done.
+ */
+fun suspendifyOnIngress(
+    block: suspend () -> Unit,
+    onSuccess: () -> Unit,
+) {
+    OneSignalDispatchers.launchOnIngress {
+        try {
+            block()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Logging.error("Exception in suspendifyOnIngress", e)
+            return@launchOnIngress
+        } catch (e: LinkageError) {
+            Logging.error("LinkageError in suspendifyOnIngress", e)
+            return@launchOnIngress
+        }
+        try {
+            onSuccess()
+        } catch (e: Exception) {
+            Logging.error("Exception in suspendifyOnIngress onSuccess", e)
+        } catch (e: LinkageError) {
+            Logging.error("LinkageError in suspendifyOnIngress onSuccess", e)
+        }
+    }
 }
 
 /**
@@ -77,7 +89,7 @@ fun suspendifyOnIO(block: suspend () -> Unit) {
  * @param block The suspending code to execute
  */
 fun suspendifyOnDefault(block: suspend () -> Unit) {
-    suspendifyWithCompletion(useIO = false, block = block, onComplete = null)
+    suspendify(useIO = false, block = block)
 }
 
 /**
@@ -105,25 +117,15 @@ fun runOnSerialIO(block: () -> Unit) {
     suspendifyOnSerialIO { block() }
 }
 
-/**
- * Modern utility for executing suspending code with completion callback.
- * Uses OneSignal's centralized thread management for better resource control.
- *
- * @param useIO Whether to use IO scope (true) or Default scope (false)
- * @param block The suspending code to execute
- * @param onComplete Optional callback to execute after completion
- */
-fun suspendifyWithCompletion(
-    useIO: Boolean = true,
+private fun suspendify(
+    useIO: Boolean,
     block: suspend () -> Unit,
-    onComplete: (() -> Unit)? = null,
 ) {
     val launch: (suspend () -> Unit) -> Job =
         if (useIO) OneSignalDispatchers::launchOnIO else OneSignalDispatchers::launchOnDefault
     launch {
-        catchSuspendifyFailure("suspendifyWithCompletion") {
+        catchSuspendifyFailure("suspendify") {
             block()
-            onComplete?.invoke()
         }
     }
 }
@@ -135,20 +137,17 @@ fun suspendifyWithCompletion(
  * @param useIO Whether to use IO scope (true) or Default scope (false)
  * @param block The suspending code to execute
  * @param onError Optional error handler
- * @param onComplete Optional completion handler
  */
 fun suspendifyWithErrorHandling(
     useIO: Boolean = true,
     block: suspend () -> Unit,
     onError: ((Exception) -> Unit)? = null,
-    onComplete: (() -> Unit)? = null,
 ) {
     val launch: (suspend () -> Unit) -> Job =
         if (useIO) OneSignalDispatchers::launchOnIO else OneSignalDispatchers::launchOnDefault
     launch {
         try {
             block()
-            onComplete?.invoke()
         } catch (e: Exception) {
             Logging.error("Exception in suspendifyWithErrorHandling", e)
             onError?.invoke(e)
