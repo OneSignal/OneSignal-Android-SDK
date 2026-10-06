@@ -743,6 +743,27 @@ class PushRegistratorFCMTests : FunSpec({
         }
     }
 
+    listOf(
+        FirebaseInstallationsException.Status.BAD_CONFIG to "Firebase rejected the api_key or mobilesdk_app_id",
+        FirebaseInstallationsException.Status.UNAVAILABLE to "Firebase Installations was unavailable",
+        FirebaseInstallationsException.Status.TOO_MANY_REQUESTS to "Firebase Installations was unavailable",
+    ).forEach { (status, guidance) ->
+        test("explains a $status Firebase Installations failure during FID registration") {
+            val fid =
+                fidRegistration(
+                    registerResult = Tasks.forException(fcmRegistrationFailure(FirebaseInstallationsException("failed", status))),
+                )
+
+            val logs = capturingLogs { registerSkippingBackoff(fid.registrator) }
+
+            logs.count {
+                it.level == LogLevel.ERROR &&
+                    it.entry.contains("Firebase Installation ID registration failed") &&
+                    it.entry.contains(guidance)
+            } shouldBe 1
+        }
+    }
+
     test("maps an IOException from FID retrieval to the IOException status instead of a FID registration failure") {
         val fid =
             fidRegistration(
