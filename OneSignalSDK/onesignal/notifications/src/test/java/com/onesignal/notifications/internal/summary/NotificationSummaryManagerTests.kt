@@ -144,7 +144,7 @@ class NotificationSummaryManagerTests : FunSpec({
         coEvery { mockNotificationRepository.getAndroidIdForGroup("groupId", true) } returns 99
         val mockSummaryNotificationDisplayer = mockk<ISummaryNotificationDisplayer>()
         val mockNotificationRestoreProcessor = mockk<INotificationRestoreProcessor>()
-        coEvery { mockNotificationRestoreProcessor.processNotification(any(), any(), any()) } just runs
+        coEvery { mockNotificationRestoreProcessor.processNotification(any(), any(), any()) } returns true
 
         val notificationSummaryManager =
             NotificationSummaryManager(

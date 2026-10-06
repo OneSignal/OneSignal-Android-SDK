@@ -153,6 +153,10 @@ class OneSignalRepository {
         return OneSignal.User.pushSubscription.id
     }
 
+    fun getPushSubscriptionToken(): String {
+        return OneSignal.User.pushSubscription.token
+    }
+
     fun isPushEnabled(): Boolean {
         return OneSignal.User.pushSubscription.optedIn
     }

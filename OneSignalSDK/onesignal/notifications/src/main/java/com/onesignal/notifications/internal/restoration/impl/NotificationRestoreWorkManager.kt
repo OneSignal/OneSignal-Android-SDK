@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequest
+import androidx.work.Operation
 import androidx.work.WorkerParameters
 import com.onesignal.OneSignal
 import com.onesignal.debug.internal.logging.Logging
@@ -12,38 +13,14 @@ import com.onesignal.notifications.internal.common.OSWorkManagerHelper
 import com.onesignal.notifications.internal.restoration.INotificationRestoreProcessor
 import com.onesignal.notifications.internal.restoration.INotificationRestoreWorkManager
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 
 internal class NotificationRestoreWorkManager : INotificationRestoreWorkManager {
-    // Notifications will never be force removed when the app's process is running,
-    //   so we only need to restore at most once per cold start of the app.
-    private var restored = false
-    private val lock = Any()
-
     override fun beginEnqueueingWork(
         context: Context,
         shouldDelay: Boolean,
     ) {
-        // Only allow one piece of work to be enqueued.
-        synchronized(lock) {
-            if (restored) {
-                return
-            }
-
-            restored = true
-        }
-
-        // When boot or upgrade, add a 15 second delay to alleviate app doing to much work all at once
-        val restoreDelayInSeconds = if (shouldDelay) 15 else 0
-        val workRequest =
-            OneTimeWorkRequest.Builder(NotificationRestoreWorker::class.java)
-                .setInitialDelay(restoreDelayInSeconds.toLong(), TimeUnit.SECONDS)
-                .build()
-        OSWorkManagerHelper.getInstance(context!!)
-            .enqueueUniqueWork(
-                NOTIFICATION_RESTORE_WORKER_IDENTIFIER,
-                ExistingWorkPolicy.KEEP,
-                workRequest,
-            )
+        enqueueWork(context, shouldDelay)
     }
 
     class NotificationRestoreWorker(context: Context, workerParams: WorkerParameters) : CoroutineWorker(context, workerParams) {
@@ -62,13 +39,59 @@ internal class NotificationRestoreWorkManager : INotificationRestoreWorkManager 
             }
 
             val processor = OneSignal.getService<INotificationRestoreProcessor>()
-            processor.process()
-
-            return Result.success()
+            return when {
+                processor.process() -> Result.success()
+                runAttemptCount + 1 >= MAX_RESTORE_ATTEMPTS -> Result.failure()
+                else -> Result.retry()
+            }
         }
     }
 
     companion object {
-        private val NOTIFICATION_RESTORE_WORKER_IDENTIFIER = NotificationRestoreWorker::class.java.canonicalName
+        private val NOTIFICATION_RESTORE_WORKER_IDENTIFIER =
+            NotificationRestoreWorker::class.java.canonicalName ?: NotificationRestoreWorker::class.java.name
+        private const val DELAYED_RESTORE_SECONDS = 15L
+        internal const val MAX_RESTORE_ATTEMPTS = 3
+        private val restored = AtomicBoolean(false)
+
+        /** Returns null when restore work was already enqueued by this process. */
+        @Suppress("TooGenericExceptionCaught")
+        internal fun enqueueWork(
+            context: Context,
+            shouldDelay: Boolean,
+        ): Operation? {
+            if (!restored.compareAndSet(false, true)) return null
+
+            return try {
+                // Boot and upgrade delay restore so the app is not doing too much work at once.
+                val restoreDelayInSeconds = if (shouldDelay) DELAYED_RESTORE_SECONDS else 0L
+                val workRequest =
+                    OneTimeWorkRequest.Builder(NotificationRestoreWorker::class.java)
+                        .setInitialDelay(restoreDelayInSeconds, TimeUnit.SECONDS)
+                        .build()
+                OSWorkManagerHelper.getInstance(context)
+                    .enqueueUniqueWork(
+                        NOTIFICATION_RESTORE_WORKER_IDENTIFIER,
+                        ExistingWorkPolicy.KEEP,
+                        workRequest,
+                    )
+            } catch (e: Exception) {
+                onEnqueueFailed()
+                throw e
+            } catch (e: LinkageError) {
+                // NoSuchMethodError is not an Exception, so clear the flag here too.
+                onEnqueueFailed()
+                throw e
+            }
+        }
+
+        /** Lets a later caller retry after WorkManager rejected the enqueue. */
+        internal fun onEnqueueFailed() {
+            restored.set(false)
+        }
+
+        internal fun resetForTest() {
+            restored.set(false)
+        }
     }
 }

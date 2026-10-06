@@ -2,6 +2,7 @@ package com.onesignal
 
 import android.os.Build
 import androidx.annotation.RequiresApi
+import com.onesignal.common.threading.mainDispatcherOrNull
 import kotlinx.coroutines.Dispatchers
 import java.util.function.Consumer
 import kotlin.coroutines.Continuation
@@ -51,7 +52,8 @@ object Continue {
      * @param onFinished Called when the coroutine has completed, passing in the result ([ContinueResult])
      * of the coroutine for the java code to continue processing.
      * @param context The optional coroutine context to run the [onFinished] lambda under. If not
-     * specified a context confined to the main thread will be used.
+     * specified the main thread is used, falling back to [Dispatchers.Default] on hosts where the
+     * main dispatcher is unavailable. Do not assume [onFinished] runs on the main thread.
      *
      * @return The [Continuation] which should be provided to the Kotlin coroutine, and will be executed
      * once that coroutine has completed.
@@ -61,7 +63,7 @@ object Continue {
     @JvmStatic
     fun <R> with(
         onFinished: Consumer<ContinueResult<R>>,
-        context: CoroutineContext = Dispatchers.Main,
+        context: CoroutineContext = mainDispatcherOrNull() ?: Dispatchers.Default,
     ): Continuation<R> {
         return object : Continuation<R> {
             override val context: CoroutineContext
@@ -80,9 +82,10 @@ object Continue {
     @JvmOverloads
     @JvmStatic
     fun <R> none(): Continuation<R> {
+        val ctx = mainDispatcherOrNull() ?: Dispatchers.Default
         return object : Continuation<R> {
             override val context: CoroutineContext
-                get() = Dispatchers.Main
+                get() = ctx
 
             override fun resumeWith(result: Result<R>) {
             }

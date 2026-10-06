@@ -4,11 +4,7 @@ import android.app.Activity
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import com.onesignal.OneSignal
-import com.onesignal.common.threading.OneSignalDispatchers
-import com.onesignal.common.threading.suspendifyOnIO
-import com.onesignal.debug.internal.logging.Logging
-import com.onesignal.notifications.internal.bundle.INotificationBundleProcessor
+import com.onesignal.notifications.internal.ingress.NotificationIngress
 
 // This is the entry point when a FCM payload is received from the Google Play services app
 // OneSignal does not use FirebaseMessagingService.onMessageReceived as it does not allow multiple
@@ -26,62 +22,40 @@ class FCMBroadcastReceiver : BroadcastReceiver() {
             return
         }
 
-        // FCM can cold-start the process before initWithContext. Warm dispatchers before goAsync()
-        // so the prewarm daemon gets a head start during the handoff, making the dispatchers more
-        // likely to be warm by the time the suspendifyOnIO below submits its work.
-        OneSignalDispatchers.prewarm()
-
-        val pendingResult: BroadcastReceiver.PendingResult? = goAsync()
-        // process in background
-        suspendifyOnIO {
-            if (!OneSignal.initWithContext(context.applicationContext)) {
-                Logging.warn("FCMBroadcastReceiver skipped due to failed OneSignal init")
-                pendingResult?.finish()
-                return@suspendifyOnIO
-            }
-
-            val bundleProcessor = OneSignal.getService<INotificationBundleProcessor>()
-
+        runOrderedIngressHandoff(
+            "FCMBroadcastReceiver",
+            BroadcastCompletion.RECONSTRUCTIBLE_WORK_TIMEOUT_MS,
+        ) { ordered, pendingResult ->
             if (!isFCMMessage(intent)) {
-                setSuccessfulResultCode()
-                pendingResult?.finish()
-                return@suspendifyOnIO
+                setSuccessfulResultCode(pendingResult, ordered)
+                return@runOrderedIngressHandoff
             }
 
-            val processedResult = bundleProcessor.processBundleFromReceiver(context, bundle)
-
-            // Prevent other FCM receivers from firing if work manager is processing the notification
-            if (processedResult?.isWorkManagerProcessing == true) {
-                setAbort()
-                pendingResult?.finish()
-                return@suspendifyOnIO
+            if (NotificationIngress.persistFcm(context, intent, bundle)) {
+                setAbort(pendingResult, ordered)
+            } else {
+                setSuccessfulResultCode(pendingResult, ordered)
             }
-
-            setSuccessfulResultCode()
-            pendingResult?.finish()
         }
     }
 
-    private fun setSuccessfulResultCode() {
-        if (isOrderedBroadcast) {
-            resultCode = Activity.RESULT_OK
+    private fun setSuccessfulResultCode(
+        pendingResult: BroadcastReceiver.PendingResult?,
+        ordered: Boolean,
+    ) {
+        if (ordered && pendingResult != null) {
+            pendingResult.resultCode = Activity.RESULT_OK
         }
     }
 
-    private fun setAbort() {
-        if (isOrderedBroadcast) {
-            // Prevents other BroadcastReceivers from firing
-            abortBroadcast()
-
-            // TODO: Previous error and related to this Github issue ticket
-            //    https://github.com/OneSignal/OneSignal-Android-SDK/issues/307
-            // RESULT_OK prevents the following confusing logcat entry;
-            // W/GCM: broadcast intent callback: result=CANCELLED forIntent {
-            //    act=com.google.android.c2dm.intent.RECEIVE
-            //    flg=0x10000000
-            //    pkg=com.onesignal.sdktest (has extras)
-            // }
-            resultCode = Activity.RESULT_OK
+    private fun setAbort(
+        pendingResult: BroadcastReceiver.PendingResult?,
+        ordered: Boolean,
+    ) {
+        if (ordered && pendingResult != null) {
+            // Stops the other FCM receivers. RESULT_OK avoids the GCM result=CANCELLED log.
+            pendingResult.abortBroadcast()
+            pendingResult.resultCode = Activity.RESULT_OK
         }
     }
 

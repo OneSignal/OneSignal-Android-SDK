@@ -7,6 +7,7 @@ import com.onesignal.IUserJwtInvalidatedListener
 import com.onesignal.common.AndroidUtils
 import com.onesignal.common.DeviceUtils
 import com.onesignal.common.OneSignalUtils
+import com.onesignal.common.isMissing
 import com.onesignal.common.modules.IModule
 import com.onesignal.common.services.IServiceProvider
 import com.onesignal.common.services.ServiceBuilder
@@ -475,6 +476,8 @@ internal class OneSignalImp : IOneSignal,
 
         waitForInit(operationName = "login")
 
+        if (isMissing(externalId, "login: externalId")) return
+
         val context = loginHelper.switchUser(externalId, jwtBearerToken) ?: return
 
         suspendifyOnIO { loginHelper.enqueueLogin(context) }
@@ -497,6 +500,8 @@ internal class OneSignalImp : IOneSignal,
         Logging.log(LogLevel.DEBUG, "updateUserJwt(externalId: $externalId, token: ...${token.takeLast(8)})")
 
         waitForInit(operationName = "updateUserJwt")
+
+        if (isMissing(externalId, "updateUserJwt: externalId") || isMissing(token, "updateUserJwt: token")) return
 
         jwtTokenStore.putJwt(externalId, token)
         // Wake the queue so any deferred ops can dispatch with the fresh token.
@@ -580,16 +585,16 @@ internal class OneSignalImp : IOneSignal,
         // Local-capture state + deferred under initLock so we await on the same generation
         // we observed (a concurrent retry-after-FAILED can replace `suspendCompletion`).
         val observedState: InitState
-        val completionToAwait: CompletableDeferred<Unit>?
+        val completionToAwait: CompletableDeferred<Unit>
         synchronized(initLock) {
             observedState = initState
-            completionToAwait = if (observedState == InitState.IN_PROGRESS) suspendCompletion else null
+            completionToAwait = suspendCompletion
         }
 
         when (observedState) {
             InitState.NOT_STARTED -> throw IllegalStateException(notInitializedMessage(operationName))
 
-            InitState.IN_PROGRESS -> awaitInitCompletion(completionToAwait!!, operationName)
+            InitState.IN_PROGRESS -> awaitInitCompletion(completionToAwait, operationName)
 
             InitState.FAILED -> {
                 throw initFailureException ?: IllegalStateException("Initialization failed. Cannot proceed.")
@@ -751,19 +756,19 @@ internal class OneSignalImp : IOneSignal,
         // OneSignalDispatchers on a background thread before we touch [ioDispatcher].
         OneSignalDispatchers.prewarm()
 
-        // Use IO dispatcher for initialization to prevent ANRs and optimize for I/O operations
-        return withContext(ioDispatcher) {
-            val shouldRunInit: Boolean
-            // Local-capture under the lock so that even if a concurrent retry-after-FAILED
-            // resets `suspendCompletion`, we await on the same generation we observed.
-            val completionToAwait: CompletableDeferred<Unit>?
+        // Observing a terminal SUCCESS must never require an IO worker (see waitForInit).
+        if (initState == InitState.SUCCESS) {
+            return true
+        }
+
+        // Local-capture under the lock so that even if a concurrent retry-after-FAILED
+        // resets `suspendCompletion`, we await on the same generation we observed.
+        // Null means this caller is the one that starts init.
+        val completionToAwait: CompletableDeferred<Unit>? =
             synchronized(initLock) {
                 if (initState.isSDKAccessible()) {
-                    shouldRunInit = false
-                    completionToAwait = suspendCompletion
+                    suspendCompletion
                 } else {
-                    shouldRunInit = true
-                    completionToAwait = null
                     initState = InitState.IN_PROGRESS
                     // Fresh latch for this init attempt.
                     suspendCompletion = CompletableDeferred()
@@ -771,23 +776,28 @@ internal class OneSignalImp : IOneSignal,
                     // Re-entrant callers must not overwrite it -- otherwise the failure stack trace
                     // would point at the SyncJobService coroutine instead of the original initiator.
                     initFailureException = IllegalStateException("OneSignal initWithContext failed.")
+                    null
                 }
             }
 
-            if (!shouldRunInit) {
-                // Another caller has already started (or completed) init. Honor this method's
-                // contract by suspending until initialization is *fully* completed -- not just
-                // kicked off. This closes a race where re-entrant suspend callers (e.g. the
-                // SyncJobService entry point) would otherwise
-                // proceed to use IBackgroundService implementations like SessionService whose
-                // bootstrap() had not yet run, NPE'ing on still-null model fields.
-                Logging.log(LogLevel.DEBUG, "initWithContext: init already in progress or completed, awaiting completion")
-                completionToAwait!!.await()
-                return@withContext initState == InitState.SUCCESS
-            }
+        if (completionToAwait != null) {
+            // Another caller has already started (or completed) init. Honor this method's
+            // contract by suspending until initialization is *fully* completed -- not just
+            // kicked off. This closes a race where re-entrant suspend callers (e.g. the
+            // SyncJobService entry point) would otherwise
+            // proceed to use IBackgroundService implementations like SessionService whose
+            // bootstrap() had not yet run, NPE'ing on still-null model fields.
+            Logging.log(LogLevel.DEBUG, "initWithContext: init already in progress or completed, awaiting completion")
+            // Awaited on the caller's own context: waiting for, and resuming from, another
+            // caller's init must not queue behind the work that init itself is doing.
+            completionToAwait.await()
+            return initState == InitState.SUCCESS
+        }
 
-            val result = internalInit(context, appId)
-            result
+        // Only the caller that actually runs init needs the IO dispatcher, to keep its disk
+        // and network work off the calling thread.
+        return withContext(ioDispatcher) {
+            internalInit(context, appId)
         }
     }
 
@@ -800,6 +810,8 @@ internal class OneSignalImp : IOneSignal,
         // suspendUntilInit throws on NOT_STARTED / FAILED (preserving initFailureException as the
         // cause), and only returns once initState == SUCCESS — so no post-check is needed here.
         suspendUntilInit(operationName = "login")
+
+        if (isMissing(externalId, "login: externalId")) return@withContext
 
         val context = loginHelper.switchUser(externalId, jwtBearerToken) ?: return@withContext
         loginHelper.enqueueLogin(context)
@@ -815,6 +827,10 @@ internal class OneSignalImp : IOneSignal,
 
         if (!isInitialized) {
             throw IllegalStateException("'initWithContext failed' before 'updateUserJwt'")
+        }
+
+        if (isMissing(externalId, "updateUserJwt: externalId") || isMissing(token, "updateUserJwt: token")) {
+            return@withContext
         }
 
         jwtTokenStore.putJwt(externalId, token)

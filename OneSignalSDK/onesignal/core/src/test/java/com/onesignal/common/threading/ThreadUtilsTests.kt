@@ -2,13 +2,32 @@ package com.onesignal.common.threading
 
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
+import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import io.kotest.matchers.types.shouldBeInstanceOf
+import io.mockk.every
+import io.mockk.mockkStatic
+import io.mockk.unmockkStatic
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.setMain
 import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicReference
+import kotlin.coroutines.CoroutineContext
 
 class ThreadUtilsTests : FunSpec({
 
@@ -26,7 +45,7 @@ class ThreadUtilsTests : FunSpec({
             latch.countDown()
         }
 
-        latch.await()
+        latch.await(5, TimeUnit.SECONDS) shouldBe true
         completed shouldBe true
     }
 
@@ -43,43 +62,73 @@ class ThreadUtilsTests : FunSpec({
         val mainThreadId = Thread.currentThread().id
         var backgroundThreadId: Long? = null
 
+        val ran = CountDownLatch(1)
+
         suspendifyOnIO {
             backgroundThreadId = Thread.currentThread().id
+            ran.countDown()
         }
 
-        Thread.sleep(10)
+        ran.await(2, TimeUnit.SECONDS) shouldBe true
         backgroundThreadId shouldNotBe null
         backgroundThreadId shouldNotBe mainThreadId
     }
 
-    test("suspendifyOnThread with completion should execute onComplete callback") {
-        var completed = false
-        var onCompleteCalled = false
+    test("suspendifyOnIngress runs onSuccess after the block completes") {
+        val succeeded = CountDownLatch(1)
+        var blockRan = false
 
-        suspendifyOnIO(
-            block = {
-                Thread.sleep(10)
-                completed = true
-            },
-            onComplete = {
-                onCompleteCalled = true
-            },
+        suspendifyOnIngress(
+            block = { blockRan = true },
+            onSuccess = { succeeded.countDown() },
         )
 
-        Thread.sleep(20)
-        completed shouldBe true
-        onCompleteCalled shouldBe true
+        succeeded.await(2, TimeUnit.SECONDS) shouldBe true
+        blockRan shouldBe true
+    }
+
+    test("suspendifyOnIngress skips onSuccess when the block fails") {
+        val failed = CountDownLatch(1)
+        var onSuccessCalled = false
+
+        suspendifyOnIngress(
+            block = {
+                failed.countDown()
+                throw IllegalStateException("journal unavailable")
+            },
+            onSuccess = { onSuccessCalled = true },
+        )
+
+        failed.await(2, TimeUnit.SECONDS) shouldBe true
+        Thread.sleep(50)
+        onSuccessCalled shouldBe false
+    }
+
+    test("suspendifyOnIO logs exceptions thrown by the block") {
+        val latch = CountDownLatch(1)
+        mockkStatic(Logging::class)
+        every { Logging.error("Exception in suspendify", any<RuntimeException>()) } answers { latch.countDown() }
+        try {
+            suspendifyOnIO { throw RuntimeException("Test error") }
+
+            latch.await(5, TimeUnit.SECONDS) shouldBe true
+        } finally {
+            unmockkStatic(Logging::class)
+        }
     }
 
     test("suspendifyOnIO should execute work asynchronously") {
         val mainThreadId = Thread.currentThread().id
         var backgroundThreadId: Long? = null
 
+        val ran = CountDownLatch(1)
+
         suspendifyOnIO {
             backgroundThreadId = Thread.currentThread().id
+            ran.countDown()
         }
 
-        Thread.sleep(10)
+        ran.await(2, TimeUnit.SECONDS) shouldBe true
         backgroundThreadId shouldNotBe null
         backgroundThreadId shouldNotBe mainThreadId
     }
@@ -88,11 +137,14 @@ class ThreadUtilsTests : FunSpec({
         val mainThreadId = Thread.currentThread().id
         var backgroundThreadId: Long? = null
 
+        val ran = CountDownLatch(1)
+
         suspendifyOnIO {
             backgroundThreadId = Thread.currentThread().id
+            ran.countDown()
         }
 
-        Thread.sleep(10)
+        ran.await(2, TimeUnit.SECONDS) shouldBe true
         backgroundThreadId shouldNotBe null
         backgroundThreadId shouldNotBe mainThreadId
     }
@@ -101,11 +153,14 @@ class ThreadUtilsTests : FunSpec({
         val mainThreadId = Thread.currentThread().id
         var backgroundThreadId: Long? = null
 
+        val ran = CountDownLatch(1)
+
         suspendifyOnDefault {
             backgroundThreadId = Thread.currentThread().id
+            ran.countDown()
         }
 
-        Thread.sleep(10)
+        ran.await(2, TimeUnit.SECONDS) shouldBe true
         backgroundThreadId shouldNotBe null
         backgroundThreadId shouldNotBe mainThreadId
     }
@@ -119,29 +174,177 @@ class ThreadUtilsTests : FunSpec({
         Thread.sleep(20)
     }
 
-    test("suspendifyWithCompletion should execute onComplete callback") {
-        var completed = false
-        var onCompleteCalled = false
+    test("launchOnDefault returns a job that can be joined") {
+        var ran = false
 
-        suspendifyWithCompletion(
-            useIO = true,
-            block = {
-                Thread.sleep(10)
-                completed = true
-            },
-            onComplete = {
-                onCompleteCalled = true
-            },
-        )
+        runBlocking { launchOnDefault { ran = true }.join() }
 
-        Thread.sleep(20)
-        completed shouldBe true
-        onCompleteCalled shouldBe true
+        ran shouldBe true
+    }
+
+    test("linkage errors stay inside suspendify helpers") {
+        @OptIn(ExperimentalCoroutinesApi::class)
+        Dispatchers.setMain(UnconfinedTestDispatcher())
+        val uncaught = AtomicReference<Throwable>()
+        val previous = Thread.getDefaultUncaughtExceptionHandler()
+        val escaped = CountDownLatch(1)
+        Thread.setDefaultUncaughtExceptionHandler { _, error ->
+            uncaught.set(error)
+            escaped.countDown()
+        }
+        val finished = CountDownLatch(7)
+        val reported = AtomicReference<Exception>()
+        try {
+            mainDispatcherOrNull() shouldNotBe null
+            suspendifyOnIO {
+                try {
+                    throw NoSuchMethodError("forNamespace")
+                } finally {
+                    finished.countDown()
+                }
+            }
+            suspendifyOnSerialIO {
+                try {
+                    throw ExceptionInInitializerError("Module with the Main dispatcher is missing")
+                } finally {
+                    finished.countDown()
+                }
+            }
+            suspendifyOnMain {
+                try {
+                    throw NoSuchMethodError("Main")
+                } finally {
+                    finished.countDown()
+                }
+            }
+            launchOnIO {
+                try {
+                    throw NoSuchMethodError("launchOnIO")
+                } finally {
+                    finished.countDown()
+                }
+            }
+            launchOnDefault {
+                try {
+                    throw ExceptionInInitializerError("launchOnDefault")
+                } finally {
+                    finished.countDown()
+                }
+            }
+            suspendifyOnIngress(
+                block = {
+                    try {
+                        throw NoSuchMethodError("ingress")
+                    } finally {
+                        finished.countDown()
+                    }
+                },
+                onSuccess = { throw AssertionError("onSuccess ran after a linkage error") },
+            )
+            suspendifyWithErrorHandling(
+                block = { throw NoSuchMethodError("errorHandling") },
+                onError = {
+                    reported.set(it)
+                    finished.countDown()
+                },
+            )
+            finished.await(2, TimeUnit.SECONDS) shouldBe true
+            escaped.await(300, TimeUnit.MILLISECONDS)
+            uncaught.get() shouldBe null
+            reported.get().cause.shouldBeInstanceOf<NoSuchMethodError>()
+        } finally {
+            Thread.setDefaultUncaughtExceptionHandler(previous)
+            @OptIn(ExperimentalCoroutinesApi::class)
+            Dispatchers.resetMain()
+        }
+    }
+
+    test("a LinkageError reading Main is contained") {
+        usableMainDispatcher { throw ExceptionInInitializerError("missing") } shouldBe null
+        usableMainDispatcher { throw NoClassDefFoundError("Dispatchers") } shouldBe null
+    }
+
+    test("a dispatcher that cannot dispatch is reported unusable") {
+        usableMainDispatcher { UndispatchableDispatcher } shouldBe null
+    }
+
+    test("a LinkageError from the dispatch probe is contained") {
+        usableMainDispatcher { UnlinkableDispatcher } shouldBe null
+    }
+
+    test("withMain skips the block when Main cannot dispatch") {
+        var ran = false
+
+        withMain { ran = true } shouldBe null
+
+        ran shouldBe false
+    }
+
+    test("a cancelled caller is not mistaken for a missing Main") {
+        @OptIn(ExperimentalCoroutinesApi::class)
+        Dispatchers.setMain(UnconfinedTestDispatcher())
+        try {
+            val cancelled = AtomicReference<Throwable>()
+            val skipped = AtomicBoolean(false)
+
+            runBlocking {
+                val job =
+                    launch(Dispatchers.Default) {
+                        cancel()
+                        try {
+                            if (withMain { } == null) skipped.set(true)
+                        } catch (e: CancellationException) {
+                            cancelled.set(e)
+                        }
+                    }
+                job.join()
+            }
+
+            skipped.get() shouldBe false
+            cancelled.get().shouldBeInstanceOf<CancellationException>()
+
+            // The cancellation must not have left Main poisoned for everyone else.
+            var ran = false
+            withMain { ran = true }
+            ran shouldBe true
+        } finally {
+            @OptIn(ExperimentalCoroutinesApi::class)
+            Dispatchers.resetMain()
+        }
+    }
+
+    test("withMain lets the block's own failure through") {
+        @OptIn(ExperimentalCoroutinesApi::class)
+        Dispatchers.setMain(UnconfinedTestDispatcher())
+        try {
+            shouldThrow<IllegalStateException> {
+                withMain { throw IllegalStateException("from the block") }
+            }
+
+            var ran = false
+            withMain { ran = true }
+            ran shouldBe true
+        } finally {
+            @OptIn(ExperimentalCoroutinesApi::class)
+            Dispatchers.resetMain()
+        }
+    }
+
+    test("withMain runs the block when Main is available") {
+        @OptIn(ExperimentalCoroutinesApi::class)
+        Dispatchers.setMain(UnconfinedTestDispatcher())
+        try {
+            var ran = false
+            withMain { ran = true }
+            ran shouldBe true
+        } finally {
+            @OptIn(ExperimentalCoroutinesApi::class)
+            Dispatchers.resetMain()
+        }
     }
 
     test("suspendifyWithErrorHandling should handle errors properly") {
         var errorHandled = false
-        var onCompleteCalled = false
         var caughtException: Exception? = null
 
         suspendifyWithErrorHandling(
@@ -153,40 +356,11 @@ class ThreadUtilsTests : FunSpec({
                 errorHandled = true
                 caughtException = exception
             },
-            onComplete = {
-                onCompleteCalled = true
-            },
         )
 
         Thread.sleep(20)
         errorHandled shouldBe true
-        onCompleteCalled shouldBe false
         caughtException?.message shouldBe "Test error"
-    }
-
-    test("suspendifyWithErrorHandling should call onComplete when no error") {
-        var errorHandled = false
-        var onCompleteCalled = false
-        var completed = false
-
-        suspendifyWithErrorHandling(
-            useIO = true,
-            block = {
-                Thread.sleep(10)
-                completed = true
-            },
-            onError = { _ ->
-                errorHandled = true
-            },
-            onComplete = {
-                onCompleteCalled = true
-            },
-        )
-
-        Thread.sleep(20)
-        errorHandled shouldBe false
-        onCompleteCalled shouldBe true
-        completed shouldBe true
     }
 
     test("modern functions should handle concurrent operations") {
@@ -195,20 +369,16 @@ class ThreadUtilsTests : FunSpec({
         val latch = CountDownLatch(5)
 
         (1..5).forEach { i ->
-            suspendifyOnIO(
-                block = {
-                    Thread.sleep(20)
-                    synchronized(results) {
-                        results.add(i)
-                    }
-                },
-                onComplete = {
-                    latch.countDown()
-                },
-            )
+            suspendifyOnIO {
+                Thread.sleep(20)
+                synchronized(results) {
+                    results.add(i)
+                }
+                latch.countDown()
+            }
         }
 
-        latch.await()
+        latch.await(5, TimeUnit.SECONDS) shouldBe true
         results.sorted() shouldBe expectedResults
     }
 
@@ -234,34 +404,28 @@ class ThreadUtilsTests : FunSpec({
             latch.countDown()
         }
 
-        latch.await()
+        latch.await(5, TimeUnit.SECONDS) shouldBe true
         completed.get() shouldBe 3
     }
 
-    test("completion callbacks should work with different dispatchers") {
+    test("IO and Default dispatchers should both run work") {
         val latch = CountDownLatch(2)
         val ioCompleted = AtomicInteger(0)
         val defaultCompleted = AtomicInteger(0)
 
-        suspendifyWithCompletion(
-            useIO = true,
-            block = {
-                Thread.sleep(30)
-                ioCompleted.incrementAndGet()
-            },
-            onComplete = { latch.countDown() },
-        )
+        suspendifyOnIO {
+            Thread.sleep(30)
+            ioCompleted.incrementAndGet()
+            latch.countDown()
+        }
 
-        suspendifyWithCompletion(
-            useIO = false,
-            block = {
-                Thread.sleep(30)
-                defaultCompleted.incrementAndGet()
-            },
-            onComplete = { latch.countDown() },
-        )
+        suspendifyOnDefault {
+            Thread.sleep(30)
+            defaultCompleted.incrementAndGet()
+            latch.countDown()
+        }
 
-        latch.await()
+        latch.await(5, TimeUnit.SECONDS) shouldBe true
         ioCompleted.get() shouldBe 1
         defaultCompleted.get() shouldBe 1
     }
@@ -289,7 +453,7 @@ class ThreadUtilsTests : FunSpec({
             },
         )
 
-        latch.await()
+        latch.await(5, TimeUnit.SECONDS) shouldBe true
         ioErrors.get() shouldBe 1
         defaultErrors.get() shouldBe 1
     }
@@ -306,7 +470,7 @@ class ThreadUtilsTests : FunSpec({
             }
         }
 
-        latch.await()
+        latch.await(5, TimeUnit.SECONDS) shouldBe true
         completed.get() shouldBe 5
     }
 
@@ -334,7 +498,7 @@ class ThreadUtilsTests : FunSpec({
             latch.countDown()
         }
 
-        latch.await()
+        latch.await(5, TimeUnit.SECONDS) shouldBe true
         results.size shouldBe 4
         results shouldContain "blocking"
         results shouldContain "thread"
@@ -342,3 +506,34 @@ class ThreadUtilsTests : FunSpec({
         results shouldContain "default"
     }
 })
+
+/**
+ * Stands in for coroutines' MissingMainCoroutineDispatcher, which can be read and then throws from
+ * both of these the moment anything tries to use it.
+ */
+private object UndispatchableDispatcher : CoroutineDispatcher() {
+    override fun isDispatchNeeded(context: CoroutineContext): Boolean {
+        throw IllegalStateException("Module with the Main dispatcher is missing")
+    }
+
+    override fun dispatch(
+        context: CoroutineContext,
+        block: Runnable,
+    ) {
+        throw IllegalStateException("Module with the Main dispatcher is missing")
+    }
+}
+
+/** A Main backed by a half-installed coroutines-android, which fails to link rather than to throw. */
+private object UnlinkableDispatcher : CoroutineDispatcher() {
+    override fun isDispatchNeeded(context: CoroutineContext): Boolean {
+        throw NoSuchMethodError("HandlerContext.isDispatchNeeded")
+    }
+
+    override fun dispatch(
+        context: CoroutineContext,
+        block: Runnable,
+    ) {
+        throw NoSuchMethodError("HandlerContext.dispatch")
+    }
+}

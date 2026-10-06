@@ -1,8 +1,7 @@
 package com.onesignal.common.events
 
 import com.onesignal.common.threading.suspendifyOnMain
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import com.onesignal.common.threading.withMain
 import java.util.Collections
 
 /**
@@ -87,7 +86,7 @@ open class EventProducer<THandler> : IEventNotifier<THandler> {
      * @param callback The callback will be invoked for each subscribed handler, allowing you to call the handler.
      */
     suspend fun suspendingFireOnMain(callback: suspend (THandler) -> Unit) {
-        withContext(Dispatchers.Main) {
+        withMain {
             val localList = synchronized(subscribers) { subscribers.toList() }
             for (s in localList) {
                 callback(s)
