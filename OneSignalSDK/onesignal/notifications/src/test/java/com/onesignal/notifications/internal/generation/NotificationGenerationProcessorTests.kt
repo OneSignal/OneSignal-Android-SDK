@@ -216,6 +216,8 @@ class NotificationGenerationProcessorTests : FunSpec({
     test("processNotificationData should not display notification when external callback indicates not to") {
         // Given
         val mocks = Mocks()
+        // The suite default of 10ms can expire before Dispatchers.IO runs the callback.
+        every { mocks.notificationGenerationProcessor getProperty "EXTERNAL_CALLBACKS_TIMEOUT" } answers { 1_000L }
         coEvery { mocks.notificationLifecycleService.externalRemoteNotificationReceived(any()) } answers {
             val receivedEvent = firstArg<INotificationReceivedEvent>()
             receivedEvent.preventDefault()

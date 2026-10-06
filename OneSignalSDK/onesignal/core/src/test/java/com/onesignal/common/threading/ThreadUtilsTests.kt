@@ -6,8 +6,12 @@ import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import io.mockk.every
+import io.mockk.mockkStatic
+import io.mockk.unmockkStatic
 import kotlinx.coroutines.delay
 import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
 class ThreadUtilsTests : FunSpec({
@@ -26,7 +30,7 @@ class ThreadUtilsTests : FunSpec({
             latch.countDown()
         }
 
-        latch.await()
+        latch.await(5, TimeUnit.SECONDS) shouldBe true
         completed shouldBe true
     }
 
@@ -43,43 +47,73 @@ class ThreadUtilsTests : FunSpec({
         val mainThreadId = Thread.currentThread().id
         var backgroundThreadId: Long? = null
 
+        val ran = CountDownLatch(1)
+
         suspendifyOnIO {
             backgroundThreadId = Thread.currentThread().id
+            ran.countDown()
         }
 
-        Thread.sleep(10)
+        ran.await(2, TimeUnit.SECONDS) shouldBe true
         backgroundThreadId shouldNotBe null
         backgroundThreadId shouldNotBe mainThreadId
     }
 
-    test("suspendifyOnThread with completion should execute onComplete callback") {
-        var completed = false
-        var onCompleteCalled = false
+    test("suspendifyOnIngress runs onSuccess after the block completes") {
+        val succeeded = CountDownLatch(1)
+        var blockRan = false
 
-        suspendifyOnIO(
-            block = {
-                Thread.sleep(10)
-                completed = true
-            },
-            onComplete = {
-                onCompleteCalled = true
-            },
+        suspendifyOnIngress(
+            block = { blockRan = true },
+            onSuccess = { succeeded.countDown() },
         )
 
-        Thread.sleep(20)
-        completed shouldBe true
-        onCompleteCalled shouldBe true
+        succeeded.await(2, TimeUnit.SECONDS) shouldBe true
+        blockRan shouldBe true
+    }
+
+    test("suspendifyOnIngress skips onSuccess when the block fails") {
+        val failed = CountDownLatch(1)
+        var onSuccessCalled = false
+
+        suspendifyOnIngress(
+            block = {
+                failed.countDown()
+                throw IllegalStateException("journal unavailable")
+            },
+            onSuccess = { onSuccessCalled = true },
+        )
+
+        failed.await(2, TimeUnit.SECONDS) shouldBe true
+        Thread.sleep(50)
+        onSuccessCalled shouldBe false
+    }
+
+    test("suspendifyOnIO logs exceptions thrown by the block") {
+        val latch = CountDownLatch(1)
+        mockkStatic(Logging::class)
+        every { Logging.error("Exception in suspendify", any<RuntimeException>()) } answers { latch.countDown() }
+        try {
+            suspendifyOnIO { throw RuntimeException("Test error") }
+
+            latch.await(5, TimeUnit.SECONDS) shouldBe true
+        } finally {
+            unmockkStatic(Logging::class)
+        }
     }
 
     test("suspendifyOnIO should execute work asynchronously") {
         val mainThreadId = Thread.currentThread().id
         var backgroundThreadId: Long? = null
 
+        val ran = CountDownLatch(1)
+
         suspendifyOnIO {
             backgroundThreadId = Thread.currentThread().id
+            ran.countDown()
         }
 
-        Thread.sleep(10)
+        ran.await(2, TimeUnit.SECONDS) shouldBe true
         backgroundThreadId shouldNotBe null
         backgroundThreadId shouldNotBe mainThreadId
     }
@@ -88,11 +122,14 @@ class ThreadUtilsTests : FunSpec({
         val mainThreadId = Thread.currentThread().id
         var backgroundThreadId: Long? = null
 
+        val ran = CountDownLatch(1)
+
         suspendifyOnIO {
             backgroundThreadId = Thread.currentThread().id
+            ran.countDown()
         }
 
-        Thread.sleep(10)
+        ran.await(2, TimeUnit.SECONDS) shouldBe true
         backgroundThreadId shouldNotBe null
         backgroundThreadId shouldNotBe mainThreadId
     }
@@ -101,11 +138,14 @@ class ThreadUtilsTests : FunSpec({
         val mainThreadId = Thread.currentThread().id
         var backgroundThreadId: Long? = null
 
+        val ran = CountDownLatch(1)
+
         suspendifyOnDefault {
             backgroundThreadId = Thread.currentThread().id
+            ran.countDown()
         }
 
-        Thread.sleep(10)
+        ran.await(2, TimeUnit.SECONDS) shouldBe true
         backgroundThreadId shouldNotBe null
         backgroundThreadId shouldNotBe mainThreadId
     }
@@ -119,29 +159,8 @@ class ThreadUtilsTests : FunSpec({
         Thread.sleep(20)
     }
 
-    test("suspendifyWithCompletion should execute onComplete callback") {
-        var completed = false
-        var onCompleteCalled = false
-
-        suspendifyWithCompletion(
-            useIO = true,
-            block = {
-                Thread.sleep(10)
-                completed = true
-            },
-            onComplete = {
-                onCompleteCalled = true
-            },
-        )
-
-        Thread.sleep(20)
-        completed shouldBe true
-        onCompleteCalled shouldBe true
-    }
-
     test("suspendifyWithErrorHandling should handle errors properly") {
         var errorHandled = false
-        var onCompleteCalled = false
         var caughtException: Exception? = null
 
         suspendifyWithErrorHandling(
@@ -153,40 +172,11 @@ class ThreadUtilsTests : FunSpec({
                 errorHandled = true
                 caughtException = exception
             },
-            onComplete = {
-                onCompleteCalled = true
-            },
         )
 
         Thread.sleep(20)
         errorHandled shouldBe true
-        onCompleteCalled shouldBe false
         caughtException?.message shouldBe "Test error"
-    }
-
-    test("suspendifyWithErrorHandling should call onComplete when no error") {
-        var errorHandled = false
-        var onCompleteCalled = false
-        var completed = false
-
-        suspendifyWithErrorHandling(
-            useIO = true,
-            block = {
-                Thread.sleep(10)
-                completed = true
-            },
-            onError = { _ ->
-                errorHandled = true
-            },
-            onComplete = {
-                onCompleteCalled = true
-            },
-        )
-
-        Thread.sleep(20)
-        errorHandled shouldBe false
-        onCompleteCalled shouldBe true
-        completed shouldBe true
     }
 
     test("modern functions should handle concurrent operations") {
@@ -195,20 +185,16 @@ class ThreadUtilsTests : FunSpec({
         val latch = CountDownLatch(5)
 
         (1..5).forEach { i ->
-            suspendifyOnIO(
-                block = {
-                    Thread.sleep(20)
-                    synchronized(results) {
-                        results.add(i)
-                    }
-                },
-                onComplete = {
-                    latch.countDown()
-                },
-            )
+            suspendifyOnIO {
+                Thread.sleep(20)
+                synchronized(results) {
+                    results.add(i)
+                }
+                latch.countDown()
+            }
         }
 
-        latch.await()
+        latch.await(5, TimeUnit.SECONDS) shouldBe true
         results.sorted() shouldBe expectedResults
     }
 
@@ -234,34 +220,28 @@ class ThreadUtilsTests : FunSpec({
             latch.countDown()
         }
 
-        latch.await()
+        latch.await(5, TimeUnit.SECONDS) shouldBe true
         completed.get() shouldBe 3
     }
 
-    test("completion callbacks should work with different dispatchers") {
+    test("IO and Default dispatchers should both run work") {
         val latch = CountDownLatch(2)
         val ioCompleted = AtomicInteger(0)
         val defaultCompleted = AtomicInteger(0)
 
-        suspendifyWithCompletion(
-            useIO = true,
-            block = {
-                Thread.sleep(30)
-                ioCompleted.incrementAndGet()
-            },
-            onComplete = { latch.countDown() },
-        )
+        suspendifyOnIO {
+            Thread.sleep(30)
+            ioCompleted.incrementAndGet()
+            latch.countDown()
+        }
 
-        suspendifyWithCompletion(
-            useIO = false,
-            block = {
-                Thread.sleep(30)
-                defaultCompleted.incrementAndGet()
-            },
-            onComplete = { latch.countDown() },
-        )
+        suspendifyOnDefault {
+            Thread.sleep(30)
+            defaultCompleted.incrementAndGet()
+            latch.countDown()
+        }
 
-        latch.await()
+        latch.await(5, TimeUnit.SECONDS) shouldBe true
         ioCompleted.get() shouldBe 1
         defaultCompleted.get() shouldBe 1
     }
@@ -289,7 +269,7 @@ class ThreadUtilsTests : FunSpec({
             },
         )
 
-        latch.await()
+        latch.await(5, TimeUnit.SECONDS) shouldBe true
         ioErrors.get() shouldBe 1
         defaultErrors.get() shouldBe 1
     }
@@ -306,7 +286,7 @@ class ThreadUtilsTests : FunSpec({
             }
         }
 
-        latch.await()
+        latch.await(5, TimeUnit.SECONDS) shouldBe true
         completed.get() shouldBe 5
     }
 
@@ -334,7 +314,7 @@ class ThreadUtilsTests : FunSpec({
             latch.countDown()
         }
 
-        latch.await()
+        latch.await(5, TimeUnit.SECONDS) shouldBe true
         results.size shouldBe 4
         results shouldContain "blocking"
         results shouldContain "thread"

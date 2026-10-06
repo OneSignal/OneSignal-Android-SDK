@@ -6,8 +6,9 @@ import androidx.test.core.app.ApplicationProvider
 import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
 import com.onesignal.OneSignal
 import com.onesignal.common.threading.OneSignalDispatchers
-import com.onesignal.common.threading.suspendifyOnIO
+import com.onesignal.common.threading.suspendifyOnIngress
 import com.onesignal.mocks.IOMockHelper
+import com.onesignal.notifications.internal.ingress.NotificationIngress
 import io.kotest.core.spec.style.FunSpec
 import io.mockk.clearMocks
 import io.mockk.coEvery
@@ -19,7 +20,7 @@ import io.mockk.verifyOrder
 /**
  * Verifies each cold-start broadcast-receiver entry point makes the explicit
  * [OneSignalDispatchers.prewarm] head-start call before its first dispatch. [IOMockHelper] stubs
- * `suspendifyOnIO` (run inline) and `prewarm()`, so these assert placement/ordering of the explicit
+ * `suspendifyOnIngress` (run inline) and `prewarm()`, so these assert placement/ordering of the explicit
  * call, not end-to-end cold-init behavior.
  *
  * Not covered here (no unit-test path): `ADMMessageHandler` / `ADMMessageHandlerJob` (the
@@ -37,6 +38,9 @@ class PrewarmEntryPointTests : FunSpec({
         clearMocks(OneSignalDispatchers, answers = false)
         mockkObject(OneSignal)
         coEvery { OneSignal.initWithContext(any()) } returns false
+        mockkObject(NotificationIngress)
+        coEvery { NotificationIngress.enqueueRestore(any()) } returns Unit
+        coEvery { NotificationIngress.persistDismiss(any(), any()) } returns Unit
     }
 
     afterAny {
@@ -44,6 +48,7 @@ class PrewarmEntryPointTests : FunSpec({
         // are owned by IOMockHelper and torn down in its afterSpec — unmockkAll() here would strip
         // them mid-spec and break the remaining tests.
         unmockkObject(OneSignal)
+        unmockkObject(NotificationIngress)
     }
 
     test("BootUpReceiver.onReceive prewarms before dispatch") {
@@ -52,7 +57,7 @@ class PrewarmEntryPointTests : FunSpec({
         verify(exactly = 1) { OneSignalDispatchers.prewarm() }
         verifyOrder {
             OneSignalDispatchers.prewarm()
-            suspendifyOnIO(any<suspend () -> Unit>())
+            suspendifyOnIngress(any<suspend () -> Unit>(), any<() -> Unit>())
         }
     }
 
@@ -62,7 +67,7 @@ class PrewarmEntryPointTests : FunSpec({
         verify(exactly = 1) { OneSignalDispatchers.prewarm() }
         verifyOrder {
             OneSignalDispatchers.prewarm()
-            suspendifyOnIO(any<suspend () -> Unit>())
+            suspendifyOnIngress(any<suspend () -> Unit>(), any<() -> Unit>())
         }
     }
 
@@ -72,7 +77,7 @@ class PrewarmEntryPointTests : FunSpec({
         verify(exactly = 1) { OneSignalDispatchers.prewarm() }
         verifyOrder {
             OneSignalDispatchers.prewarm()
-            suspendifyOnIO(any<suspend () -> Unit>())
+            suspendifyOnIngress(any<suspend () -> Unit>(), any<() -> Unit>())
         }
     }
 })
