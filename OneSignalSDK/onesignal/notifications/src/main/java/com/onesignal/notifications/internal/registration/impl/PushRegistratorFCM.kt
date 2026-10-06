@@ -103,7 +103,7 @@ internal class PushRegistratorFCM(
             }
         if (failure == null || !FCMLegacyAppSelector.isHostCredentialFailure(failure)) return hostToken
 
-        Logging.warn(FCMLegacyAppSelector.credentialFailureMessage(), failure)
+        Logging.error(FCMLegacyAppSelector.credentialFailureMessage(), failure)
         rejectedHostApp = hostApp
         return oneSignalLegacyToken(senderId)
     }
