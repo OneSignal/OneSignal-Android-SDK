@@ -57,7 +57,7 @@ class SessionModel : Model() {
 
     /**
      * [focusTime] from a monotonic clock ([com.onesignal.core.internal.time.ITime.elapsedRealtimeMillis]).
-     * Used instead of [focusTime] to measure [activeDuration] when [isSessionsV2Enabled].
+     * Used instead of [focusTime] to measure [activeDuration] when [usesSessionsApi].
      */
     var focusElapsedRealtime: Long
         get() = getLongProperty(::focusElapsedRealtime.name) { 0L }
@@ -66,19 +66,20 @@ class SessionModel : Model() {
         }
 
     /**
-     * Value of [com.onesignal.features.FeatureFlag.SDK_SESSIONS_V2_API_CUTOVER] captured when this session
-     * started. Fixed for the life of the session so it never mixes the legacy and v2 paths.
-     * Read this rather than the feature manager, whose value can change mid-session.
+     * Whether this session reports through the sessions API instead of the legacy session paths.
+     * Decided by [com.onesignal.features.FeatureFlag.SDK_SESSIONS_V2_API_CUTOVER] when the session
+     * starts and fixed until it ends, so a session never mixes paths. Read this rather than the
+     * feature manager, whose value can change mid-session.
      */
-    var isSessionsV2Enabled: Boolean
-        get() = getBooleanProperty(::isSessionsV2Enabled.name) { false }
+    var usesSessionsApi: Boolean
+        get() = getBooleanProperty(::usesSessionsApi.name) { false }
         set(value) {
-            setBooleanProperty(::isSessionsV2Enabled.name, value)
+            setBooleanProperty(::usesSessionsApi.name, value)
         }
 
     /**
-     * The OneSignal ID when this session started. Session updates keep using it after a
-     * login or user switch.
+     * The OneSignal ID when this session started, set only when [usesSessionsApi]. Session
+     * updates keep using it after a login or user switch.
      */
     var onesignalId: String?
         get() = getOptStringProperty(::onesignalId.name)

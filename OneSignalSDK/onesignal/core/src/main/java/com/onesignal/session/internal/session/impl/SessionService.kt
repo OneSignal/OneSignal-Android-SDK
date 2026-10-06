@@ -182,12 +182,15 @@ internal class SessionService(
             session.startTime = focusTimeMs
             session.focusTime = session.startTime
             session.focusElapsedRealtime = focusElapsedMs
-            session.isSessionsV2Enabled = featureManager.isEnabled(FeatureFlag.SDK_SESSIONS_V2_API_CUTOVER)
-            session.onesignalId =
-                identityModelStore.model
-                    .takeIf { it.hasProperty(IdentityConstants.ONESIGNAL_ID) }
-                    ?.onesignalId
-            session.subscriptionId = config?.pushSubscriptionId
+            session.usesSessionsApi = featureManager.isEnabled(FeatureFlag.SDK_SESSIONS_V2_API_CUTOVER)
+            if (session.usesSessionsApi) {
+                val identityModel = identityModelStore.model
+                session.onesignalId = if (identityModel.hasProperty(IdentityConstants.ONESIGNAL_ID)) identityModel.onesignalId else null
+                session.subscriptionId = config?.pushSubscriptionId
+            } else {
+                session.onesignalId = null
+                session.subscriptionId = null
+            }
             session.serverSessionId = null
             session.isValid = true
             Logging.debug("SessionService: New session started at ${session.startTime}")
@@ -221,7 +224,7 @@ internal class SessionService(
         }
         // capture the amount of time the app was focused
         val dt =
-            if (session.isSessionsV2Enabled) {
+            if (session.usesSessionsApi) {
                 // elapsedRealtime resets on reboot; drop the interval rather than count a negative one.
                 (unfocusElapsedMs - session.focusElapsedRealtime).coerceAtLeast(0L)
             } else {

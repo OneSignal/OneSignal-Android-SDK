@@ -33,7 +33,7 @@ import kotlinx.coroutines.Job
 
 // Mocks used by every test in this file
 private class Mocks(
-    var sessionsV2Enabled: Boolean = false,
+    var sessionsApiEnabled: Boolean = false,
 ) {
     val currentTime = 1111L
     var elapsedRealtime = 5000L
@@ -48,7 +48,7 @@ private class Mocks(
 
     val featureManager: IFeatureManager =
         mockk<IFeatureManager>().also {
-            every { it.isEnabled(FeatureFlag.SDK_SESSIONS_V2_API_CUTOVER) } answers { sessionsV2Enabled }
+            every { it.isEnabled(FeatureFlag.SDK_SESSIONS_V2_API_CUTOVER) } answers { sessionsApiEnabled }
         }
 
     val identityModelStore = MockHelper.identityModelStore { it.onesignalId = ONESIGNAL_ID }
@@ -252,9 +252,9 @@ class SessionServiceTests : FunSpec({
         verify(exactly = 0) { mocks.spyCallback.onSessionEnded(any()) }
     }
 
-    test("new session captures the sessions v2 flag when on") {
+    test("new session uses the sessions API when the flag is on") {
         // Given
-        val mocks = Mocks(sessionsV2Enabled = true)
+        val mocks = Mocks(sessionsApiEnabled = true)
         val sessionService = mocks.sessionService
         sessionService.bootstrap()
         sessionService.start()
@@ -264,12 +264,12 @@ class SessionServiceTests : FunSpec({
         sessionService.onFocus(false)
 
         // Then
-        sessionModelStore.model.isSessionsV2Enabled shouldBe true
+        sessionModelStore.model.usesSessionsApi shouldBe true
     }
 
-    test("new session captures the sessions v2 flag when off") {
+    test("new session uses the legacy path when the flag is off") {
         // Given
-        val mocks = Mocks(sessionsV2Enabled = false)
+        val mocks = Mocks(sessionsApiEnabled = false)
         val sessionService = mocks.sessionService
         sessionService.bootstrap()
         sessionService.start()
@@ -279,12 +279,12 @@ class SessionServiceTests : FunSpec({
         sessionService.onFocus(false)
 
         // Then
-        sessionModelStore.model.isSessionsV2Enabled shouldBe false
+        sessionModelStore.model.usesSessionsApi shouldBe false
     }
 
-    test("sessions v2 flag does not change mid-session") {
+    test("sessions API choice does not change mid-session") {
         // Given
-        val mocks = Mocks(sessionsV2Enabled = true)
+        val mocks = Mocks(sessionsApiEnabled = true)
         val sessionService = mocks.sessionService
         sessionService.bootstrap()
         sessionService.start()
@@ -292,17 +292,17 @@ class SessionServiceTests : FunSpec({
         sessionService.onFocus(false)
 
         // When
-        mocks.sessionsV2Enabled = false
+        mocks.sessionsApiEnabled = false
         sessionService.onUnfocused()
         sessionService.onFocus(false)
 
         // Then
-        sessionModelStore.model.isSessionsV2Enabled shouldBe true
+        sessionModelStore.model.usesSessionsApi shouldBe true
     }
 
     test("new session pins onesignal and subscription IDs and clears the server session ID") {
         // Given
-        val mocks = Mocks()
+        val mocks = Mocks(sessionsApiEnabled = true)
         val sessionService = mocks.sessionService
         sessionService.bootstrap()
         sessionService.start()
@@ -321,9 +321,30 @@ class SessionServiceTests : FunSpec({
         sessionModelStore.model.serverSessionId shouldBe null
     }
 
+    test("legacy session does not pin IDs") {
+        // Given
+        val mocks = Mocks(sessionsApiEnabled = false)
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        val sessionModelStore =
+            mocks.sessionModelStore {
+                it.isValid = false
+                it.onesignalId = "previous-user"
+                it.subscriptionId = "previous-subscription"
+            }
+
+        // When
+        sessionService.onFocus(false)
+
+        // Then
+        sessionModelStore.model.onesignalId shouldBe null
+        sessionModelStore.model.subscriptionId shouldBe null
+    }
+
     test("pinned IDs stay the same after login within a session") {
         // Given
-        val mocks = Mocks()
+        val mocks = Mocks(sessionsApiEnabled = true)
         val sessionService = mocks.sessionService
         sessionService.bootstrap()
         sessionService.start()
@@ -343,7 +364,7 @@ class SessionServiceTests : FunSpec({
 
     test("pinned local IDs are replaced with backend IDs when the user is created") {
         // Given
-        val mocks = Mocks()
+        val mocks = Mocks(sessionsApiEnabled = true)
         mocks.identityModelStore.model.onesignalId = "local-user"
         mocks.configModelStore.model.pushSubscriptionId = "local-subscription"
         val sessionService = mocks.sessionService
@@ -363,7 +384,7 @@ class SessionServiceTests : FunSpec({
 
     test("pinned backend IDs are not replaced by later ID changes") {
         // Given
-        val mocks = Mocks()
+        val mocks = Mocks(sessionsApiEnabled = true)
         val sessionService = mocks.sessionService
         sessionService.bootstrap()
         sessionService.start()
@@ -381,7 +402,7 @@ class SessionServiceTests : FunSpec({
 
     test("pinned local IDs are not replaced when a different local ID is translated") {
         // Given
-        val mocks = Mocks()
+        val mocks = Mocks(sessionsApiEnabled = true)
         mocks.identityModelStore.model.onesignalId = "local-user"
         val sessionService = mocks.sessionService
         sessionService.bootstrap()
@@ -399,7 +420,7 @@ class SessionServiceTests : FunSpec({
 
     test("pinned local IDs are not replaced by another local ID") {
         // Given
-        val mocks = Mocks()
+        val mocks = Mocks(sessionsApiEnabled = true)
         mocks.identityModelStore.model.onesignalId = "local-user"
         val sessionService = mocks.sessionService
         sessionService.bootstrap()
@@ -414,9 +435,9 @@ class SessionServiceTests : FunSpec({
         sessionModelStore.model.onesignalId shouldBe "local-user"
     }
 
-    test("sessions v2 active duration uses the monotonic clock") {
+    test("sessions API active duration uses the monotonic clock") {
         // Given
-        val mocks = Mocks(sessionsV2Enabled = true)
+        val mocks = Mocks(sessionsApiEnabled = true)
         val sessionService = mocks.sessionService
         sessionService.bootstrap()
         sessionService.start()
@@ -431,16 +452,16 @@ class SessionServiceTests : FunSpec({
         sessionModelStore.model.activeDuration shouldBe 750L
     }
 
-    test("sessions v2 active duration ignores an interval spanning a reboot") {
+    test("sessions API active duration ignores an interval spanning a reboot") {
         // Given
-        val mocks = Mocks(sessionsV2Enabled = true)
+        val mocks = Mocks(sessionsApiEnabled = true)
         val sessionService = mocks.sessionService
         sessionService.bootstrap()
         sessionService.start()
         val sessionModelStore =
             mocks.sessionModelStore {
                 it.isValid = true
-                it.isSessionsV2Enabled = true
+                it.usesSessionsApi = true
                 it.focusElapsedRealtime = 10_000L
                 it.activeDuration = 200L
             }
@@ -461,7 +482,7 @@ class SessionServiceTests : FunSpec({
         store.model.startTime = 123L
         store.model.activeDuration = 456L
         store.model.focusElapsedRealtime = 789L
-        store.model.isSessionsV2Enabled = true
+        store.model.usesSessionsApi = true
         store.model.onesignalId = Mocks.ONESIGNAL_ID
         store.model.subscriptionId = Mocks.SUBSCRIPTION_ID
         store.model.serverSessionId = "server-session-id"
@@ -474,7 +495,7 @@ class SessionServiceTests : FunSpec({
         reloaded.startTime shouldBe 123L
         reloaded.activeDuration shouldBe 456L
         reloaded.focusElapsedRealtime shouldBe 789L
-        reloaded.isSessionsV2Enabled shouldBe true
+        reloaded.usesSessionsApi shouldBe true
         reloaded.onesignalId shouldBe Mocks.ONESIGNAL_ID
         reloaded.subscriptionId shouldBe Mocks.SUBSCRIPTION_ID
         reloaded.serverSessionId shouldBe "server-session-id"
