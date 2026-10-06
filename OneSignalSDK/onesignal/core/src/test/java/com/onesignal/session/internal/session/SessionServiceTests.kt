@@ -41,7 +41,7 @@ private class Mocks(
 
     val featureManager: IFeatureManager =
         mockk<IFeatureManager>().also {
-            every { it.isEnabled(FeatureFlag.SDK_SESSIONS_V2) } answers { sessionsV2Enabled }
+            every { it.isEnabled(FeatureFlag.SDK_SESSIONS_V2_API_CUTOVER) } answers { sessionsV2Enabled }
         }
 
     val identityModelStore = MockHelper.identityModelStore { it.onesignalId = ONESIGNAL_ID }

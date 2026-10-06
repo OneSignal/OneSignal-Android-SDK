@@ -38,8 +38,8 @@ internal class SessionService(
     private val _configModelStore: ConfigModelStore,
     private val _sessionModelStore: SessionModelStore,
     private val _time: ITime,
-    private val _featureManager: IFeatureManager,
-    private val _identityModelStore: IdentityModelStore,
+    private val featureManager: IFeatureManager,
+    private val identityModelStore: IdentityModelStore,
 ) : ISessionService, IBootstrapService, IStartableService, IBackgroundService, IApplicationLifecycleHandler {
     override val startTime: Long
         // Pre-bootstrap default returns "now" so call sites computing `_time.currentTimeMillis - startTime`
@@ -145,9 +145,9 @@ internal class SessionService(
             session.startTime = focusTimeMs
             session.focusTime = session.startTime
             session.focusElapsedRealtime = focusElapsedMs
-            session.isSessionsV2Enabled = _featureManager.isEnabled(FeatureFlag.SDK_SESSIONS_V2)
+            session.isSessionsV2Enabled = featureManager.isEnabled(FeatureFlag.SDK_SESSIONS_V2_API_CUTOVER)
             session.onesignalId =
-                _identityModelStore.model
+                identityModelStore.model
                     .takeIf { it.hasProperty(IdentityConstants.ONESIGNAL_ID) }
                     ?.onesignalId
             session.subscriptionId = config?.pushSubscriptionId

@@ -66,7 +66,7 @@ class SessionModel : Model() {
         }
 
     /**
-     * Value of [com.onesignal.features.FeatureFlag.SDK_SESSIONS_V2] captured when this session
+     * Value of [com.onesignal.features.FeatureFlag.SDK_SESSIONS_V2_API_CUTOVER] captured when this session
      * started. Fixed for the life of the session so it never mixes the legacy and v2 paths.
      */
     var isSessionsV2Enabled: Boolean
