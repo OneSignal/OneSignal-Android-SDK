@@ -241,7 +241,7 @@ private fun reportMainDispatcherUnavailable(cause: Throwable) {
     if (mainDispatcherReported.compareAndSet(false, true)) {
         Logging.error("Dispatchers.Main unavailable, skipping main thread work", cause)
     } else {
-        Logging.warn("Dispatchers.Main unavailable, skipping main thread work")
+        Logging.debug("Dispatchers.Main unavailable, skipping main thread work")
     }
 }
 

@@ -59,8 +59,7 @@ internal class InAppDisplayer(
         if (response.content != null) {
             message.displayDuration = response.content!!.displayDuration!!
             _influenceManager.onInAppMessageDisplayed(message.messageId)
-            showMessageContent(message, response.content!!)
-            return true
+            return showMessageContent(message, response.content!!)
         } else {
             return if (response.shouldRetry) {
                 // Retry displaying the same IAM
@@ -77,13 +76,11 @@ internal class InAppDisplayer(
         val message = InAppMessage(true, _time)
         val content = _backend.getIAMPreviewData(_configModelStore.model.appId, previewUUID)
 
-        return if (content == null) {
-            false
-        } else {
-            message.displayDuration = content.displayDuration!!
-            showMessageContent(message, content)
-            true
+        if (content == null) {
+            return false
         }
+        message.displayDuration = content.displayDuration!!
+        return showMessageContent(message, content)
     }
 
     /**
@@ -96,7 +93,7 @@ internal class InAppDisplayer(
     private suspend fun showMessageContent(
         message: InAppMessage,
         content: InAppMessageContent,
-    ) {
+    ): Boolean {
         val currentActivity = _applicationService.current
         Logging.debug("InAppDisplayer.showMessageContent: in app message on currentActivity: $currentActivity")
 
@@ -109,12 +106,11 @@ internal class InAppDisplayer(
                 // Claim the instance in one step; a concurrent dismiss may have already cleared it.
                 lastInstance.getAndSet(null)?.dismissAndAwaitNextMessage()
             }
-            initInAppMessage(currentActivity, message, content)
-            return
+            return initInAppMessage(currentActivity, message, content)
         }
 
         delay(IN_APP_MESSAGE_INIT_DELAY.toLong())
-        showMessageContent(message, content)
+        return showMessageContent(message, content)
     }
 
     override fun dismissCurrentInAppMessage() {
@@ -128,7 +124,7 @@ internal class InAppDisplayer(
         currentActivity: Activity,
         message: InAppMessage,
         content: InAppMessageContent,
-    ) {
+    ): Boolean {
         try {
             val base64Str =
                 Base64.encodeToString(
@@ -166,9 +162,12 @@ internal class InAppDisplayer(
                 // Never displayed, so it must not stay the target of dismissCurrentInAppMessage.
                 lastInstance.compareAndSet(webViewManager, null)
                 Logging.error("Could not set up the in app message web view, the main thread is unavailable")
+                return false
             }
+            return true
         } catch (e: UnsupportedEncodingException) {
             Logging.error("Catch on initInAppMessage: ", e)
+            return true
         }
     }
 

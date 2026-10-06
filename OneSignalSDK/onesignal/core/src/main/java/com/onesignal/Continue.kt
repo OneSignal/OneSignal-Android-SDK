@@ -82,9 +82,10 @@ object Continue {
     @JvmOverloads
     @JvmStatic
     fun <R> none(): Continuation<R> {
+        val ctx = mainDispatcherOrNull() ?: Dispatchers.Default
         return object : Continuation<R> {
             override val context: CoroutineContext
-                get() = mainDispatcherOrNull() ?: Dispatchers.Default
+                get() = ctx
 
             override fun resumeWith(result: Result<R>) {
             }

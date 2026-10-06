@@ -25,9 +25,11 @@ class NotificationRestoreWorkManagerTests : FunSpec({
     beforeAny {
         Logging.logLevel = LogLevel.NONE
         mockkObject(OSWorkManagerHelper)
+        NotificationRestoreWorkManager.resetForTest()
     }
 
     afterAny {
+        NotificationRestoreWorkManager.resetForTest()
         unmockkObject(OSWorkManagerHelper)
     }
 

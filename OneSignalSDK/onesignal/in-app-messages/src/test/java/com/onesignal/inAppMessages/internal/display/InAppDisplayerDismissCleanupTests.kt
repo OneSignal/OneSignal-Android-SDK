@@ -96,7 +96,7 @@ class InAppDisplayerDismissCleanupTests : FunSpec({
             coEvery { withMain(any<suspend CoroutineScope.() -> Unit>()) } returns null
 
             runBlocking {
-                displayer.displayMessage(InAppMessage("test-iam", MockHelper.time(1)))
+                displayer.displayMessage(InAppMessage("test-iam", MockHelper.time(1))) shouldBe false
             }
 
             // Nothing was displayed, so dismissCurrentInAppMessage must not find an instance.
