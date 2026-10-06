@@ -89,7 +89,7 @@ class SessionsBackendServiceTests : FunSpec({
         result shouldBe SessionsApiResult.Success("server-id")
     }
 
-    test("create session drops a success response without a session ID") {
+    test("create session retries a success response without a session ID") {
         listOf(
             null,
             "",
@@ -97,6 +97,9 @@ class SessionsBackendServiceTests : FunSpec({
             "{}",
             """{"data":{}}""",
             """{"data":{"session_id":""}}""",
+            """{"data":{"session_id":null}}""",
+            """{"data":{"session_id":123}}""",
+            """{"data":"server-id"}""",
         ).forEach { payload ->
             // Given
             val http = mockk<IHttpClient>()
@@ -107,7 +110,7 @@ class SessionsBackendServiceTests : FunSpec({
             val result = service.createSession("appId", createRequest)
 
             // Then
-            result shouldBe SessionsApiResult.Drop(202)
+            result shouldBe SessionsApiResult.Retry(202, null)
         }
     }
 
@@ -155,7 +158,7 @@ class SessionsBackendServiceTests : FunSpec({
     }
 
     test("failures are retried on network error, 5xx, 408, and 429") {
-        listOf(0, 408, 429, 500, 502, 503).forEach { statusCode ->
+        listOf(-1, 0, 408, 429, 500, 502, 503).forEach { statusCode ->
             // Given
             val http = mockk<IHttpClient>()
             coEvery { http.post(any(), any()) } returns HttpResponse(statusCode, null)

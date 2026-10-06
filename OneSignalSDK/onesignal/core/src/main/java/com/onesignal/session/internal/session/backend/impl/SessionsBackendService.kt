@@ -1,7 +1,5 @@
 package com.onesignal.session.internal.session.backend.impl
 
-import com.onesignal.common.safeJSONObject
-import com.onesignal.common.safeString
 import com.onesignal.core.internal.http.HttpResponse
 import com.onesignal.core.internal.http.IHttpClient
 import com.onesignal.debug.internal.logging.Logging
@@ -35,8 +33,9 @@ internal class SessionsBackendService(
 
         val sessionId = parseSessionId(response.payload)
         return if (sessionId.isNullOrEmpty()) {
+            // Retrying with the same idempotency key lets the backend return the session it already created.
             Logging.warn("SessionsBackendService: create session response is missing data.session_id")
-            SessionsApiResult.Drop(response.statusCode)
+            SessionsApiResult.Retry(response.statusCode, response.retryAfterSeconds)
         } else {
             SessionsApiResult.Success(sessionId)
         }
@@ -64,7 +63,7 @@ internal class SessionsBackendService(
 
     private fun parseSessionId(payload: String?): String? =
         try {
-            payload?.let { JSONObject(it) }?.safeJSONObject("data")?.safeString("session_id")
+            payload?.let { JSONObject(it) }?.optJSONObject("data")?.opt("session_id") as? String
         } catch (e: JSONException) {
             Logging.warn("SessionsBackendService: unable to parse create session response", e)
             null
@@ -72,8 +71,8 @@ internal class SessionsBackendService(
 
     private fun classifyFailure(response: HttpResponse): SessionsApiResult<Nothing> {
         val code = response.statusCode
-        // Status 0 means the request never got a response (network error, timeout).
-        val retryable = code == 0 || code == HTTP_REQUEST_TIMEOUT || code == HTTP_TOO_MANY_REQUESTS || code >= HTTP_SERVER_ERROR
+        // Non-positive codes mean no HTTP response: HttpClient returns -1 for network errors and 0 for timeouts or missing consent.
+        val retryable = code <= 0 || code == HTTP_REQUEST_TIMEOUT || code == HTTP_TOO_MANY_REQUESTS || code >= HTTP_SERVER_ERROR
         return if (retryable) {
             SessionsApiResult.Retry(code, response.retryAfterSeconds)
         } else {
