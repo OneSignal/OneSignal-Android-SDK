@@ -16,6 +16,7 @@ import com.onesignal.common.safeString
 import com.onesignal.common.threading.suspendifyOnDefault
 import com.onesignal.common.threading.suspendifyOnIO
 import com.onesignal.common.threading.suspendifyOnMain
+import com.onesignal.common.threading.withMain
 import com.onesignal.core.internal.application.IActivityLifecycleHandler
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.debug.LogLevel
@@ -26,10 +27,8 @@ import com.onesignal.inAppMessages.internal.InAppMessageContent
 import com.onesignal.inAppMessages.internal.InAppMessagePage
 import com.onesignal.inAppMessages.internal.lifecycle.IInAppLifecycleService
 import com.onesignal.inAppMessages.internal.prompt.IInAppMessagePromptFactory
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withContext
 import org.json.JSONException
 import org.json.JSONObject
 import java.util.Locale
@@ -246,8 +245,8 @@ internal class WebViewManager(
     }
 
     private suspend fun updateSafeAreaInsets() {
-        withContext(Dispatchers.Main) {
-            val localWebView = webView ?: return@withContext
+        withMain {
+            val localWebView = webView ?: return@withMain
             val insets = ViewUtils.getCutoutAndStatusBarInsets(activity)
             val safeAreaInsetsObject =
                 String.format(

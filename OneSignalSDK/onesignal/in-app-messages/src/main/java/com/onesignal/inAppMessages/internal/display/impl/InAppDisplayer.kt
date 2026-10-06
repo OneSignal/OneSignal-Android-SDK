@@ -4,6 +4,7 @@ import android.annotation.TargetApi
 import android.app.Activity
 import android.os.Build
 import android.util.Base64
+import com.onesignal.common.threading.withMain
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.language.ILanguageContext
@@ -17,9 +18,7 @@ import com.onesignal.inAppMessages.internal.display.IInAppDisplayer
 import com.onesignal.inAppMessages.internal.lifecycle.IInAppLifecycleService
 import com.onesignal.inAppMessages.internal.prompt.IInAppMessagePromptFactory
 import com.onesignal.session.internal.influence.IInfluenceManager
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.withContext
 import java.io.UnsupportedEncodingException
 import java.util.concurrent.atomic.AtomicReference
 
@@ -60,8 +59,7 @@ internal class InAppDisplayer(
         if (response.content != null) {
             message.displayDuration = response.content!!.displayDuration!!
             _influenceManager.onInAppMessageDisplayed(message.messageId)
-            showMessageContent(message, response.content!!)
-            return true
+            return showMessageContent(message, response.content!!)
         } else {
             return if (response.shouldRetry) {
                 // Retry displaying the same IAM
@@ -78,13 +76,11 @@ internal class InAppDisplayer(
         val message = InAppMessage(true, _time)
         val content = _backend.getIAMPreviewData(_configModelStore.model.appId, previewUUID)
 
-        return if (content == null) {
-            false
-        } else {
-            message.displayDuration = content.displayDuration!!
-            showMessageContent(message, content)
-            true
+        if (content == null) {
+            return false
         }
+        message.displayDuration = content.displayDuration!!
+        return showMessageContent(message, content)
     }
 
     /**
@@ -97,7 +93,7 @@ internal class InAppDisplayer(
     private suspend fun showMessageContent(
         message: InAppMessage,
         content: InAppMessageContent,
-    ) {
+    ): Boolean {
         val currentActivity = _applicationService.current
         Logging.debug("InAppDisplayer.showMessageContent: in app message on currentActivity: $currentActivity")
 
@@ -110,12 +106,11 @@ internal class InAppDisplayer(
                 // Claim the instance in one step; a concurrent dismiss may have already cleared it.
                 lastInstance.getAndSet(null)?.dismissAndAwaitNextMessage()
             }
-            initInAppMessage(currentActivity, message, content)
-            return
+            return initInAppMessage(currentActivity, message, content)
         }
 
         delay(IN_APP_MESSAGE_INIT_DELAY.toLong())
-        showMessageContent(message, content)
+        return showMessageContent(message, content)
     }
 
     override fun dismissCurrentInAppMessage() {
@@ -129,7 +124,7 @@ internal class InAppDisplayer(
         currentActivity: Activity,
         message: InAppMessage,
         content: InAppMessageContent,
-    ) {
+    ): Boolean {
         try {
             val base64Str =
                 Base64.encodeToString(
@@ -148,21 +143,31 @@ internal class InAppDisplayer(
             }
 
             // Web view must be created on the main thread.
-            withContext(Dispatchers.Main) {
-                // Handles exception "MissingWebViewPackageException: Failed to load WebView provider: No WebView installed"
-                try {
-                    webViewManager.setupWebView(currentActivity, base64Str, content.isFullBleed)
-                } catch (e: Exception) {
-                    // Need to check error message to only catch MissingWebViewPackageException as it isn't public
-                    if (e.message != null && e.message!!.contains("No WebView installed")) {
-                        Logging.info("Error setting up WebView: ", e)
-                    } else {
-                        throw e
+            val setUp =
+                withMain {
+                    // Handles exception "MissingWebViewPackageException: Failed to load WebView provider: No WebView installed"
+                    try {
+                        webViewManager.setupWebView(currentActivity, base64Str, content.isFullBleed)
+                    } catch (e: Exception) {
+                        // Need to check error message to only catch MissingWebViewPackageException as it isn't public
+                        if (e.message != null && e.message!!.contains("No WebView installed")) {
+                            Logging.info("Error setting up WebView: ", e)
+                        } else {
+                            throw e
+                        }
                     }
                 }
+
+            if (setUp == null) {
+                // Never displayed, so it must not stay the target of dismissCurrentInAppMessage.
+                lastInstance.compareAndSet(webViewManager, null)
+                Logging.error("Could not set up the in app message web view, the main thread is unavailable")
+                return false
             }
+            return true
         } catch (e: UnsupportedEncodingException) {
             Logging.error("Catch on initInAppMessage: ", e)
+            return true
         }
     }
 
