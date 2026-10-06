@@ -5,6 +5,7 @@ import android.os.Handler
 import android.os.Looper
 import androidx.activity.ComponentActivity
 import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.ActivityResultRegistry
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.app.ActivityCompat
 import com.onesignal.common.AndroidUtils
@@ -31,6 +32,7 @@ internal class HostPrompt(
     private val onResult: (granted: Boolean, rationaleAfter: Boolean?) -> Unit,
 ) {
     private var boundActivity: Activity? = null
+    private var boundRegistry: ActivityResultRegistry? = null
     private var launcher: ActivityResultLauncher<String>? = null
 
     /** True only after the registry, not a wrapper, accepted this prompt. */
@@ -68,9 +70,10 @@ internal class HostPrompt(
     }
 
     /**
-     * A recreated host restores the registry key but not our callback, so the OS answer sits
-     * undelivered until we register again. Relaunch only when nothing was waiting for us.
+     * Re-register on a recreated host. A second launch while that request is in flight
+     * comes back as an empty denial and drops the real answer.
      */
+    @Suppress("ReturnCount")
     fun rebind(activity: Activity) {
         if (isComplete() || activity === boundActivity) {
             return
@@ -80,13 +83,22 @@ internal class HostPrompt(
             return
         }
 
+        // Config change: the restored registry already has this request. A second launch comes back denied.
+        val configChange = boundActivity?.isChangingConfigurations == true
         Logging.debug("Host activity changed while prompting for $permission. Rebinding.")
+        if (activity.activityResultRegistry !== boundRegistry) {
+            launcher?.unregister()
+        }
         bindTo(activity)
+        if (configChange) {
+            return
+        }
         launcher?.launch(permission)
     }
 
     private fun bindTo(activity: ComponentActivity) {
         boundActivity = activity
+        boundRegistry = activity.activityResultRegistry
         // The no-LifecycleOwner overload is required: OneSignal routinely reaches this point
         // after the host activity is already STARTED, which the lifecycle-aware overload rejects.
         val registered =

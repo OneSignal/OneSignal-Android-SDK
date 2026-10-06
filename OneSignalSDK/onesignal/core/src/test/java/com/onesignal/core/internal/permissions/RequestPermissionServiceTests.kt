@@ -225,6 +225,29 @@ class RequestPermissionServiceTests : FunSpec({
         recreatedRegistry.launched.shouldBeEmpty()
     }
 
+    test("a config change does not launch a second request while the first is in flight") {
+        val env = Env()
+        val registry = TestRegistry(result = null)
+        val activity = env.componentActivity(registry)
+        every { activity.isChangingConfigurations } returns true
+
+        env.service.startPrompt(false, PERMISSION_TYPE, ANDROID_PERMISSION, Env.Callback::class.java)
+        env.handler.onActivityAvailable(activity)
+
+        val savedState = Bundle()
+        registry.onSaveInstanceState(savedState)
+        val recreatedRegistry = TestRegistry(result = null)
+        recreatedRegistry.onRestoreInstanceState(savedState)
+
+        env.handler.onActivityAvailable(env.componentActivity(recreatedRegistry))
+
+        recreatedRegistry.launched.shouldBeEmpty()
+        verify(exactly = 0) { env.callback.onReject(any()) }
+
+        recreatedRegistry.dispatchResult(registry.launched.single(), true)
+        verify(exactly = 1) { env.callback.onAccept() }
+    }
+
     test("a replaced host activity with no pending answer prompts again") {
         val env = Env()
         val registry = TestRegistry(result = null)
