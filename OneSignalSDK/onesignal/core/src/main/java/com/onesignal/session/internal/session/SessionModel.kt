@@ -78,8 +78,8 @@ class SessionModel : Model() {
         }
 
     /**
-     * The OneSignal ID when this session started, set only when [usesSessionsApi]. Session
-     * updates keep using it after a login or user switch.
+     * The OneSignal ID when this session started. Session updates keep using it after a
+     * login or user switch.
      */
     var onesignalId: String?
         get() = getOptStringProperty(::onesignalId.name)

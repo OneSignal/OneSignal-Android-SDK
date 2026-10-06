@@ -302,7 +302,7 @@ class SessionServiceTests : FunSpec({
 
     test("new session pins onesignal and subscription IDs and clears the server session ID") {
         // Given
-        val mocks = Mocks(sessionsApiEnabled = true)
+        val mocks = Mocks()
         val sessionService = mocks.sessionService
         sessionService.bootstrap()
         sessionService.start()
@@ -321,30 +321,9 @@ class SessionServiceTests : FunSpec({
         sessionModelStore.model.serverSessionId shouldBe null
     }
 
-    test("legacy session does not pin IDs") {
-        // Given
-        val mocks = Mocks(sessionsApiEnabled = false)
-        val sessionService = mocks.sessionService
-        sessionService.bootstrap()
-        sessionService.start()
-        val sessionModelStore =
-            mocks.sessionModelStore {
-                it.isValid = false
-                it.onesignalId = "previous-user"
-                it.subscriptionId = "previous-subscription"
-            }
-
-        // When
-        sessionService.onFocus(false)
-
-        // Then
-        sessionModelStore.model.onesignalId shouldBe null
-        sessionModelStore.model.subscriptionId shouldBe null
-    }
-
     test("pinned IDs stay the same after login within a session") {
         // Given
-        val mocks = Mocks(sessionsApiEnabled = true)
+        val mocks = Mocks()
         val sessionService = mocks.sessionService
         sessionService.bootstrap()
         sessionService.start()
@@ -364,7 +343,7 @@ class SessionServiceTests : FunSpec({
 
     test("pinned local IDs are replaced with backend IDs when the user is created") {
         // Given
-        val mocks = Mocks(sessionsApiEnabled = true)
+        val mocks = Mocks()
         mocks.identityModelStore.model.onesignalId = "local-user"
         mocks.configModelStore.model.pushSubscriptionId = "local-subscription"
         val sessionService = mocks.sessionService
@@ -384,7 +363,7 @@ class SessionServiceTests : FunSpec({
 
     test("pinned backend IDs are not replaced by later ID changes") {
         // Given
-        val mocks = Mocks(sessionsApiEnabled = true)
+        val mocks = Mocks()
         val sessionService = mocks.sessionService
         sessionService.bootstrap()
         sessionService.start()
@@ -402,7 +381,7 @@ class SessionServiceTests : FunSpec({
 
     test("pinned local IDs are not replaced when a different local ID is translated") {
         // Given
-        val mocks = Mocks(sessionsApiEnabled = true)
+        val mocks = Mocks()
         mocks.identityModelStore.model.onesignalId = "local-user"
         val sessionService = mocks.sessionService
         sessionService.bootstrap()
@@ -420,7 +399,7 @@ class SessionServiceTests : FunSpec({
 
     test("pinned local IDs are not replaced by another local ID") {
         // Given
-        val mocks = Mocks(sessionsApiEnabled = true)
+        val mocks = Mocks()
         mocks.identityModelStore.model.onesignalId = "local-user"
         val sessionService = mocks.sessionService
         sessionService.bootstrap()

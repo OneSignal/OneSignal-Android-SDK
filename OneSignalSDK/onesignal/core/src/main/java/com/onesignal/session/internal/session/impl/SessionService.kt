@@ -183,14 +183,11 @@ internal class SessionService(
             session.focusTime = session.startTime
             session.focusElapsedRealtime = focusElapsedMs
             session.usesSessionsApi = featureManager.isEnabled(FeatureFlag.SDK_SESSIONS_V2_API_CUTOVER)
-            if (session.usesSessionsApi) {
-                val identityModel = identityModelStore.model
-                session.onesignalId = if (identityModel.hasProperty(IdentityConstants.ONESIGNAL_ID)) identityModel.onesignalId else null
-                session.subscriptionId = config?.pushSubscriptionId
-            } else {
-                session.onesignalId = null
-                session.subscriptionId = null
-            }
+            session.onesignalId =
+                identityModelStore.model
+                    .takeIf { it.hasProperty(IdentityConstants.ONESIGNAL_ID) }
+                    ?.onesignalId
+            session.subscriptionId = config?.pushSubscriptionId
             session.serverSessionId = null
             session.isValid = true
             Logging.debug("SessionService: New session started at ${session.startTime}")
