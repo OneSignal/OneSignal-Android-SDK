@@ -32,6 +32,7 @@ import android.os.Build
 import androidx.annotation.ChecksSdkIntAtLeast
 import com.onesignal.common.AndroidUtils
 import com.onesignal.common.events.EventProducer
+import com.onesignal.common.threading.InFlightResult
 import com.onesignal.common.threading.Waiter
 import com.onesignal.common.threading.WaiterWithValue
 import com.onesignal.common.threading.launchOnIO
@@ -62,6 +63,7 @@ internal class NotificationPermissionController(
 ) : IRequestPermissionService.PermissionCallback,
     INotificationPermissionController {
     private val waiter = WaiterWithValue<Boolean>()
+    private val inFlightPrompt = InFlightResult<Boolean>()
     private val pollingWaiter = Waiter()
     private var pollingWaitInterval: Long
     private val events = EventProducer<INotificationPermissionChangedHandler>()
@@ -135,16 +137,7 @@ internal class NotificationPermissionController(
     }
 
     /**
-     * Prompt the user for notification permission.  Note it is possible the application
-     * will be killed while the permission prompt is being displayed to the user. When the
-     * app restarts it will begin with the permission prompt.  In this case this suspending
-     * function has been killed as well, the permission callbacks should be used to cover
-     * that case.
-     *
-     * @return true if permissions are enabled. False if they are not enabled, null if the user
-     * was directed to the permission settings and could not be determined at this time. When this
-     * does happen, the app will detect the permissions on app focus and drive permission callbacks
-     * to notify of the status.
+     * A second call joins the prompt already on screen. Starting another would resolve the first.
      */
     override suspend fun prompt(fallbackToSettings: Boolean): Boolean {
         // Calling yield() to force a suspension point because Kotlin Continuation won't work
@@ -155,22 +148,23 @@ internal class NotificationPermissionController(
             return true
         }
 
-        if (supportsNativePrompt) {
-            _requestPermission.startPrompt(
-                fallbackToSettings,
-                PERMISSION_TYPE,
-                ANDROID_PERMISSION_STRING,
-                this::class.java,
-            )
-        } else if (fallbackToSettings) {
-            showFallbackAlertDialog()
-        } else {
+        if (!supportsNativePrompt && !fallbackToSettings) {
             return false
         }
 
-        // this won't return until onAccept or onReject sends the response on the channel (either
-        // through the native prompt or through the fallback)
-        return waiter.waitForWake()
+        return inFlightPrompt.share(false) {
+            if (supportsNativePrompt) {
+                _requestPermission.startPrompt(
+                    fallbackToSettings,
+                    PERMISSION_TYPE,
+                    ANDROID_PERMISSION_STRING,
+                    this::class.java,
+                )
+            } else {
+                showFallbackAlertDialog()
+            }
+            waiter.waitForWake()
+        }
     }
 
     override fun subscribe(handler: INotificationPermissionChangedHandler) = events.subscribe(handler)

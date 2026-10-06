@@ -55,8 +55,19 @@ class RequestPermissionServiceTests : FunSpec({
         env.handler.onActivityAvailable(env.hostActivity)
 
         verify(exactly = 1) { env.hostActivity.startActivity(any()) }
-        verify(exactly = 1) { env.callback.onReject(true) }
+        verify(exactly = 1) { env.callback.onReject(false) }
         verify(exactly = 1) { env.app.removeActivityLifecycleHandler(env.handler) }
+    }
+
+    test("a host that cannot prompt still offers settings when the permission was already resolved") {
+        val env = Env()
+        env.markResolved()
+        every { env.hostActivity.startActivity(any()) } throws ActivityNotFoundException("missing")
+
+        env.service.startPrompt(true, PERMISSION_TYPE, ANDROID_PERMISSION, Env.Callback::class.java)
+        env.handler.onActivityAvailable(env.hostActivity)
+
+        verify(exactly = 1) { env.callback.onReject(true) }
     }
 
     test("startPrompt removes the handler when PermissionsActivity is already current") {
@@ -117,7 +128,7 @@ class RequestPermissionServiceTests : FunSpec({
         env.service.startPrompt(true, PERMISSION_TYPE, ANDROID_PERMISSION, Env.Callback::class.java)
         env.handler.onActivityAvailable(env.hostActivity)
 
-        verify(exactly = 1) { env.callback.onReject(true) }
+        verify(exactly = 1) { env.callback.onReject(false) }
         verify(exactly = 0) { env.callback.onAccept() }
     }
 
@@ -129,7 +140,27 @@ class RequestPermissionServiceTests : FunSpec({
         env.service.startPrompt(true, PERMISSION_TYPE, ANDROID_PERMISSION, Env.Callback::class.java)
         env.handler.onActivityAvailable(env.hostActivity)
 
-        verify(exactly = 1) { env.callback.onReject(true) }
+        verify(exactly = 1) { env.callback.onReject(false) }
+    }
+
+    test("a wrapper that declines still rebinds the registry after the host is recreated") {
+        val env = Env()
+        OneSignalWrapper.hostPermissionPrompt = DecliningPrompt()
+        val registry = TestRegistry(result = null)
+
+        env.service.startPrompt(false, PERMISSION_TYPE, ANDROID_PERMISSION, Env.Callback::class.java)
+        env.handler.onActivityAvailable(env.componentActivity(registry))
+
+        val savedState = Bundle()
+        registry.onSaveInstanceState(savedState)
+        val recreatedRegistry = TestRegistry(result = null)
+        recreatedRegistry.onRestoreInstanceState(savedState)
+        recreatedRegistry.dispatchResult(registry.launched.single(), true)
+
+        env.handler.onActivityAvailable(env.componentActivity(recreatedRegistry))
+
+        verify(exactly = 1) { env.callback.onAccept() }
+        recreatedRegistry.launched.shouldBeEmpty()
     }
 
     test("a successful wrapper host prompt does not also prompt on the registry") {
@@ -253,21 +284,22 @@ class RequestPermissionServiceTests : FunSpec({
         restoredRegistry.launched.shouldBeEmpty()
     }
 
-    test("a second prompt for the same permission completes as denied rather than hanging") {
+    test("a second prompt for the same permission leaves the in-flight prompt to answer") {
         val env = Env()
         val registry = TestRegistry(result = null)
         val activity = env.componentActivity(registry)
 
         env.service.startPrompt(false, PERMISSION_TYPE, ANDROID_PERMISSION, Env.Callback::class.java)
         env.handlers[0].onActivityAvailable(activity)
-        env.service.startPrompt(false, PERMISSION_TYPE, ANDROID_PERMISSION, Env.Callback::class.java)
+        env.service.startPrompt(true, PERMISSION_TYPE, ANDROID_PERMISSION, Env.Callback::class.java)
         env.handlers[1].onActivityAvailable(activity)
 
         registry.launched.size shouldBe 1
-        verify(exactly = 1) { env.callback.onReject(false) }
+        verify(exactly = 0) { env.callback.onReject(any()) }
 
         registry.dispatchResult(registry.launched.single(), true)
         verify(exactly = 1) { env.callback.onAccept() }
+        verify(exactly = 0) { env.callback.onReject(any()) }
     }
 })
 
@@ -276,6 +308,7 @@ private const val ANDROID_PERMISSION = "android.permission.POST_NOTIFICATIONS"
 private const val LOCATION_PERMISSION_TYPE = "LOCATION"
 private const val LOCATION_PERMISSION = "android.permission.ACCESS_FINE_LOCATION"
 private const val PROMPTED_PREFIX = "PROMPTED_PERMISSION_"
+private const val RESOLVED_PREFIX = "USER_RESOLVED_PERMISSION_"
 
 private fun List<Int>.shouldBeEmpty() = isEmpty() shouldBe true
 
@@ -357,5 +390,9 @@ private class Env {
      */
     fun markPreviouslyPrompted() {
         every { preferences.getBool(any(), match { it.startsWith(PROMPTED_PREFIX) }, any()) } returns true
+    }
+
+    fun markResolved() {
+        every { preferences.getBool(any(), match { it.startsWith(RESOLVED_PREFIX) }, any()) } returns true
     }
 }

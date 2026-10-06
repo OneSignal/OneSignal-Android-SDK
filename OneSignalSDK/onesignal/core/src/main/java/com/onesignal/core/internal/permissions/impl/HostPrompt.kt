@@ -33,6 +33,9 @@ internal class HostPrompt(
     private var boundActivity: Activity? = null
     private var launcher: ActivityResultLauncher<String>? = null
 
+    /** True only after the registry, not a wrapper, accepted this prompt. */
+    private var registryAccepted = false
+
     var rationaleBefore = false
         private set
 
@@ -57,6 +60,7 @@ internal class HostPrompt(
             return false
         }
 
+        registryAccepted = true
         bindTo(activity)
         launcher?.launch(permission)
         Logging.debug("Prompting for $permission on the host activity result registry.")
@@ -71,8 +75,8 @@ internal class HostPrompt(
         if (isComplete() || activity === boundActivity) {
             return
         }
-        // The wrapper owns redelivery across its own activity changes.
-        if (wrapper != null || activity !is ComponentActivity) {
+        // A wrapper that accepted the prompt redelivers across its own activity changes.
+        if (!registryAccepted || activity !is ComponentActivity) {
             return
         }
 

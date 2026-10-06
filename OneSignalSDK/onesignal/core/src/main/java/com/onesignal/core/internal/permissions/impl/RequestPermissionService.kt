@@ -144,10 +144,10 @@ internal class RequestPermissionService(
                 return
             }
 
-            // A second prompt for the same permission would take over this one's registry key.
+            // One callback per permission type. Rejecting here would resolve the prompt already on screen.
             if (hostPromptsInFlight.putIfAbsent(permission, this) != null) {
-                Logging.warn("A host prompt for $permission is already in flight. Completing this one as denied.")
-                completeAsDenied()
+                Logging.warn("A host prompt for $permission is already in flight.")
+                claimCompletion()
                 return
             }
 
@@ -196,7 +196,17 @@ internal class RequestPermissionService(
             if (!claimCompletion()) {
                 return
             }
-            permissionRequestType?.let { getCallback(it)?.onReject(fallbackToSettings) }
+            // No dialog was shown, so there is no rationale transition to treat as a fresh denial.
+            resultHandler.handleResult(
+                PermissionPromptRequest(
+                    permissionRequestType,
+                    permission,
+                    fallbackToSettings,
+                    hostPrompt?.rationaleBefore ?: false,
+                ),
+                false,
+                null,
+            )
         }
 
         private fun claimCompletion(): Boolean {
