@@ -57,6 +57,22 @@ class RequestPermissionServiceTests : FunSpec({
         verify(exactly = 1) { env.hostActivity.startActivity(any()) }
         verify(exactly = 1) { env.callback.onReject(false) }
         verify(exactly = 1) { env.app.removeActivityLifecycleHandler(env.handler) }
+        verify(exactly = 0) {
+            env.preferences.saveBool(any(), match { it.startsWith(PROMPTED_PREFIX) }, any())
+        }
+    }
+
+    test("a host the SDK is not allowed to start still completes the prompt as denied") {
+        val env = Env()
+        every { env.hostActivity.startActivity(any()) } throws SecurityException("blocked")
+
+        env.service.startPrompt(true, PERMISSION_TYPE, ANDROID_PERMISSION, Env.Callback::class.java)
+        env.handler.onActivityAvailable(env.hostActivity)
+
+        verify(exactly = 1) { env.callback.onReject(false) }
+        verify(exactly = 0) {
+            env.preferences.saveBool(any(), match { it.startsWith(PROMPTED_PREFIX) }, any())
+        }
     }
 
     test("a host that cannot prompt still offers settings when the permission was already resolved") {
@@ -201,6 +217,9 @@ class RequestPermissionServiceTests : FunSpec({
         registry.lastInput shouldBe ANDROID_PERMISSION
         verify(exactly = 1) { env.callback.onReject(true) }
         verify(exactly = 0) { env.callback.onAccept() }
+        verify(exactly = 1) {
+            env.preferences.saveBool(any(), match { it.startsWith(PROMPTED_PREFIX) }, true)
+        }
     }
 
     test("a result that arrives after the host activity is recreated still reaches the caller") {

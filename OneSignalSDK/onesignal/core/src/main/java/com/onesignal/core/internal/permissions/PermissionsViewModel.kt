@@ -8,31 +8,17 @@ import com.onesignal.OneSignal
 import com.onesignal.core.internal.permissions.impl.PermissionPromptRequest
 import com.onesignal.core.internal.permissions.impl.PermissionsResultHandler
 import com.onesignal.core.internal.permissions.impl.RequestPermissionService
-import com.onesignal.core.internal.preferences.IPreferencesService
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-/**
- * ViewModel that handles the business logic for permission requests.
- * This separates the permission handling logic from the Activity lifecycle.
- * Uses AndroidX ViewModel with StateFlow for lifecycle-aware state management.
- *
- * Responsibilities:
- * - Store permission request state (survives configuration changes)
- * - Handle permission result business logic
- * - Manage callbacks and preferences
- * - Does NOT hold Activity references or call Activity APIs directly
- */
+/** Permission state for PermissionsActivity. Survives rotation and does not hold the Activity. */
 class PermissionsViewModel : ViewModel() {
-    // Lazy initialization to ensure OneSignal is ready before accessing services
+    // OneSignal.getService throws before init.
     private val requestPermissionService: RequestPermissionService by lazy { OneSignal.getService() }
-    private val preferenceService: IPreferencesService by lazy { OneSignal.getService() }
-    private val resultHandler: PermissionsResultHandler by lazy {
-        PermissionsResultHandler(requestPermissionService, preferenceService)
-    }
+    private val resultHandler: PermissionsResultHandler by lazy { requestPermissionService.resultHandler }
 
     private val _shouldFinish = MutableStateFlow(false)
     val shouldFinish: StateFlow<Boolean> = _shouldFinish.asStateFlow()
@@ -45,11 +31,7 @@ class PermissionsViewModel : ViewModel() {
 
     private var androidPermissionString: String? = null
 
-    /**
-     * Initialize OneSignal and the ViewModel with intent data.
-     * Returns false if initialization fails.
-     * @param activity Activity context (not stored, used only for initialization)
-     */
+    /** Returns false when init or the intent extras fail. Does not retain [activity]. */
     suspend fun initialize(
         activity: Activity,
         permissionType: String?,
@@ -84,11 +66,7 @@ class PermissionsViewModel : ViewModel() {
         return true
     }
 
-    /**
-     * Reset the waiting flag. This should be called when the activity is interrupted
-     * or destroyed without completing the permission request flow.
-     * This ensures the permission dialog can be shown again.
-     */
+    /** Clears waiting so an interrupted activity can prompt again. */
     fun resetWaitingState() {
         _waiting.value = false
     }
@@ -101,12 +79,7 @@ class PermissionsViewModel : ViewModel() {
         requestPermissionService.shouldShowRequestPermissionRationaleBeforeRequest = shouldShowRationale
     }
 
-    /**
-     * Handle the permission request result.
-     * Activity should call this with the result from onRequestPermissionsResult.
-     *
-     * @param shouldShowRationaleAfter The result of shouldShowRequestPermissionRationale AFTER the user responded
-     */
+    /** [shouldShowRationaleAfter] is the reading after the user answered. */
     fun onRequestPermissionsResult(
         permissions: Array<String>,
         grantResults: IntArray,

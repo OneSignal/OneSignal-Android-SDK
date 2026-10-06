@@ -105,12 +105,7 @@ internal class RequestPermissionService(
                 .putExtra(PermissionsViewModel.INTENT_EXTRA_ANDROID_PERMISSION_STRING, permission)
                 .putExtra(PermissionsViewModel.INTENT_EXTRA_CALLBACK_CLASS, callbackClass.name)
 
-            // Host tools:node=replace can drop this activity. Do not retry on later activities.
-            if (intent.resolveActivity(activity.packageManager) == null) {
-                onPermissionsActivityMissing(activity, null)
-                return
-            }
-
+            // An explicit component resolves even after tools:node drops the activity.
             try {
                 activity.startActivity(intent)
                 activity.overridePendingTransition(
@@ -118,6 +113,8 @@ internal class RequestPermissionService(
                     R.anim.onesignal_fade_out,
                 )
             } catch (e: ActivityNotFoundException) {
+                onPermissionsActivityMissing(activity, e)
+            } catch (e: SecurityException) {
                 onPermissionsActivityMissing(activity, e)
             }
         }
@@ -206,6 +203,7 @@ internal class RequestPermissionService(
                 ),
                 false,
                 null,
+                dialogShown = false,
             )
         }
 

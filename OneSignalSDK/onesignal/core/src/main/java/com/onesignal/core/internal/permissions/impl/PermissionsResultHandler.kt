@@ -6,9 +6,7 @@ import com.onesignal.core.internal.preferences.PreferenceStores
 import com.onesignal.debug.internal.logging.Logging
 
 /**
- * One prompt's inputs. Held per request so overlapping prompts resolve independently.
- *
- * @param permission null when the OS returned no permissions, which is always a denial.
+ * Per request, so overlapping prompts stay independent. A null permission is a denial.
  */
 internal data class PermissionPromptRequest(
     val permissionRequestType: String?,
@@ -34,6 +32,7 @@ internal class PermissionsResultHandler(
         request: PermissionPromptRequest,
         granted: Boolean,
         rationaleAfter: Boolean?,
+        dialogShown: Boolean = true,
     ) {
         val permission = request.permission
         var isGranted = granted
@@ -52,13 +51,15 @@ internal class PermissionsResultHandler(
                 showSettings = shouldShowSettings(request, permission, rationaleAfter)
             }
 
-            // Must be persisted after shouldShowSettings() reads it so the recovery path
-            // only considers requests prior to the current one.
-            _preferences.saveBool(
-                PreferenceStores.ONESIGNAL,
-                "${PreferenceOneSignalKeys.PREFS_OS_PROMPTED_PERMISSION_PREFIX}$permission",
-                true,
-            )
+            // After shouldShowSettings reads it, so this attempt is not "prompted before".
+            // A missing dialog must not count: the recovery path treats the flag as an OS refusal.
+            if (dialogShown) {
+                _preferences.saveBool(
+                    PreferenceStores.ONESIGNAL,
+                    "${PreferenceOneSignalKeys.PREFS_OS_PROMPTED_PERMISSION_PREFIX}$permission",
+                    true,
+                )
+            }
         }
 
         executeCallback(request.permissionRequestType, isGranted, showSettings)

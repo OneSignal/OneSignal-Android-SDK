@@ -7,16 +7,13 @@ package com.onesignal.common
 interface IHostPermissionPrompt {
     /** Receives the user's answer. May be called from any thread. */
     fun interface Callback {
-        /** Delivers the answer. Must be called at most once per request. */
+        /** Call once after [request] returns true, and do not call it when [request] returns false. */
         fun onResult(granted: Boolean)
     }
 
     /**
-     * Implementations must deliver exactly one [Callback.onResult], including when the host
-     * activity goes away before the user answers, or return false so the SDK can complete the
-     * prompt as denied rather than leaving the caller suspended.
-     *
-     * @return false when no host activity is currently available to prompt on.
+     * Return false, and do not call [Callback], when no activity can prompt.
+     * Otherwise call [Callback.onResult] once, even if the host goes away first.
      */
     fun request(
         androidPermission: String,
