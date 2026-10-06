@@ -101,33 +101,11 @@ internal class PushRegistratorFCM(
             } catch (e: ExecutionException) {
                 hostToken.exception ?: e
             }
-        if (failure == null || !hostCredentialsRejected(hostApp, failure)) return hostToken
+        if (failure == null || !FCMLegacyAppSelector.hostCredentialsRejected(hostApp, failure)) return hostToken
 
         Logging.warn(FCMLegacyAppSelector.credentialFailureMessage(), failure)
         rejectedHostApp = hostApp
         return oneSignalLegacyToken(senderId)
-    }
-
-    // FIS_AUTH_ERROR also follows a temporary Firebase Installations outage, so it only counts as
-    //   rejected credentials once a fresh auth token request fails with BAD_CONFIG.
-    private fun hostCredentialsRejected(
-        hostApp: FirebaseApp,
-        failure: Throwable,
-    ): Boolean =
-        when {
-            FCMLegacyAppSelector.isBadConfig(failure) -> true
-            FCMLegacyAppSelector.isFisAuthError(failure) -> installationAuthTokenBadConfig(hostApp)
-            else -> false
-        }
-
-    private fun installationAuthTokenBadConfig(hostApp: FirebaseApp): Boolean {
-        val authToken = FirebaseInstallations.getInstance(hostApp).getToken(false)
-        return try {
-            Tasks.await(authToken)
-            false
-        } catch (e: ExecutionException) {
-            FCMLegacyAppSelector.isBadConfig(authToken.exception ?: e)
-        }
     }
 
     private fun oneSignalLegacyToken(senderId: String): Task<String> =
@@ -271,15 +249,37 @@ internal object FCMLegacyAppSelector {
         return "FCM legacy token registration is using OneSignal's FirebaseApp because $reason."
     }
 
+    // FIS_AUTH_ERROR also follows a temporary Firebase Installations outage, so it only counts as
+    //   rejected credentials once a fresh auth token request fails with BAD_CONFIG.
+    fun hostCredentialsRejected(
+        hostApp: FirebaseApp,
+        failure: Throwable,
+    ): Boolean =
+        when {
+            isBadConfig(failure) -> true
+            isFisAuthError(failure) -> installationAuthTokenBadConfig(hostApp)
+            else -> false
+        }
+
+    private fun installationAuthTokenBadConfig(hostApp: FirebaseApp): Boolean {
+        val authToken = FirebaseInstallations.getInstance(hostApp).getToken(false)
+        return try {
+            Tasks.await(authToken)
+            false
+        } catch (e: ExecutionException) {
+            isBadConfig(authToken.exception ?: e)
+        }
+    }
+
     /**
      * A rejected API key or app id does not fail the Firebase Installations ID lookup, only its
      * auth token, so FCM sends the registration without one and the server answers with
      * FIS_AUTH_ERROR.
      */
-    fun isFisAuthError(throwable: Throwable): Boolean =
+    private fun isFisAuthError(throwable: Throwable): Boolean =
         causes(throwable).any { it is IOException && it.message == FIS_AUTH_ERROR }
 
-    fun isBadConfig(throwable: Throwable): Boolean =
+    private fun isBadConfig(throwable: Throwable): Boolean =
         causes(throwable).any {
             it is FirebaseInstallationsException && it.status == FirebaseInstallationsException.Status.BAD_CONFIG
         }
