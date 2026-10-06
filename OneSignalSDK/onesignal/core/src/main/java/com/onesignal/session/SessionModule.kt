@@ -18,6 +18,8 @@ import com.onesignal.session.internal.outcomes.impl.OutcomeEventsPreferences
 import com.onesignal.session.internal.outcomes.impl.OutcomeEventsRepository
 import com.onesignal.session.internal.session.ISessionService
 import com.onesignal.session.internal.session.SessionModelStore
+import com.onesignal.session.internal.session.backend.ISessionsBackendService
+import com.onesignal.session.internal.session.backend.impl.SessionsBackendService
 import com.onesignal.session.internal.session.impl.SessionListener
 import com.onesignal.session.internal.session.impl.SessionService
 
@@ -43,5 +45,6 @@ internal class SessionModule : IModule {
             .provides<IBootstrapService>()
         builder.register<SessionListener>().provides<IStartableService>()
         builder.register<SessionManager>().provides<ISessionManager>()
+        builder.register<SessionsBackendService>().provides<ISessionsBackendService>()
     }
 }
