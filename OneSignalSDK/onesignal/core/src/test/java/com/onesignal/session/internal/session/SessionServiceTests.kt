@@ -2,8 +2,12 @@ package com.onesignal.session.internal.session
 
 import com.onesignal.common.threading.OneSignalDispatchers
 import com.onesignal.common.threading.runOnSerialIO
+import com.onesignal.core.internal.features.IFeatureManager
+import com.onesignal.core.internal.time.ITime
+import com.onesignal.features.FeatureFlag
 import com.onesignal.mocks.IOMockHelper
 import com.onesignal.mocks.MockHelper
+import com.onesignal.mocks.MockPreferencesService
 import com.onesignal.session.internal.session.impl.SessionService
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
@@ -21,10 +25,27 @@ import io.mockk.verifyOrder
 import kotlinx.coroutines.Job
 
 // Mocks used by every test in this file
-private class Mocks {
+private class Mocks(
+    var sessionsV2Enabled: Boolean = false,
+) {
     val currentTime = 1111L
+    var elapsedRealtime = 5000L
 
     private val mockSessionModelStore = MockHelper.sessionModelStore()
+
+    val time: ITime =
+        mockk<ITime>().also {
+            every { it.currentTimeMillis } returns currentTime
+            every { it.elapsedRealtimeMillis } answers { elapsedRealtime }
+        }
+
+    val featureManager: IFeatureManager =
+        mockk<IFeatureManager>().also {
+            every { it.isEnabled(FeatureFlag.SDK_SESSIONS_V2) } answers { sessionsV2Enabled }
+        }
+
+    val identityModelStore = MockHelper.identityModelStore { it.onesignalId = ONESIGNAL_ID }
+    val configModelStore = MockHelper.configModelStore { it.pushSubscriptionId = SUBSCRIPTION_ID }
 
     fun sessionModelStore(action: ((SessionModel) -> Unit)? = null): SessionModelStore {
         if (action != null) action(mockSessionModelStore.model)
@@ -32,9 +53,21 @@ private class Mocks {
     }
 
     val sessionService =
-        SessionService(MockHelper.applicationService(), MockHelper.configModelStore(), mockSessionModelStore, MockHelper.time(currentTime))
+        SessionService(
+            MockHelper.applicationService(),
+            configModelStore,
+            mockSessionModelStore,
+            time,
+            featureManager,
+            identityModelStore,
+        )
 
     val spyCallback = spyk<ISessionLifecycleHandler>()
+
+    companion object {
+        const val ONESIGNAL_ID = "onesignal-id"
+        const val SUBSCRIPTION_ID = "subscription-id"
+    }
 }
 
 class SessionServiceTests : FunSpec({
@@ -181,6 +214,161 @@ class SessionServiceTests : FunSpec({
 
         // Then
         verify(exactly = 0) { mocks.spyCallback.onSessionEnded(any()) }
+    }
+
+    test("new session captures the sessions v2 flag when on") {
+        // Given
+        val mocks = Mocks(sessionsV2Enabled = true)
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        val sessionModelStore = mocks.sessionModelStore { it.isValid = false }
+
+        // When
+        sessionService.onFocus(false)
+
+        // Then
+        sessionModelStore.model.isSessionsV2Enabled shouldBe true
+    }
+
+    test("new session captures the sessions v2 flag when off") {
+        // Given
+        val mocks = Mocks(sessionsV2Enabled = false)
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        val sessionModelStore = mocks.sessionModelStore { it.isValid = false }
+
+        // When
+        sessionService.onFocus(false)
+
+        // Then
+        sessionModelStore.model.isSessionsV2Enabled shouldBe false
+    }
+
+    test("sessions v2 flag does not change mid-session") {
+        // Given
+        val mocks = Mocks(sessionsV2Enabled = true)
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        val sessionModelStore = mocks.sessionModelStore { it.isValid = false }
+        sessionService.onFocus(false)
+
+        // When
+        mocks.sessionsV2Enabled = false
+        sessionService.onUnfocused()
+        sessionService.onFocus(false)
+
+        // Then
+        sessionModelStore.model.isSessionsV2Enabled shouldBe true
+    }
+
+    test("new session pins onesignal and subscription IDs and clears the server session ID") {
+        // Given
+        val mocks = Mocks()
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        val sessionModelStore =
+            mocks.sessionModelStore {
+                it.isValid = false
+                it.serverSessionId = "previous-server-session"
+            }
+
+        // When
+        sessionService.onFocus(false)
+
+        // Then
+        sessionModelStore.model.onesignalId shouldBe Mocks.ONESIGNAL_ID
+        sessionModelStore.model.subscriptionId shouldBe Mocks.SUBSCRIPTION_ID
+        sessionModelStore.model.serverSessionId shouldBe null
+    }
+
+    test("pinned IDs stay the same after login within a session") {
+        // Given
+        val mocks = Mocks()
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        val sessionModelStore = mocks.sessionModelStore { it.isValid = false }
+        sessionService.onFocus(false)
+
+        // When
+        mocks.identityModelStore.model.onesignalId = "new-user-id"
+        mocks.configModelStore.model.pushSubscriptionId = "new-subscription-id"
+        sessionService.onUnfocused()
+        sessionService.onFocus(false)
+
+        // Then
+        sessionModelStore.model.onesignalId shouldBe Mocks.ONESIGNAL_ID
+        sessionModelStore.model.subscriptionId shouldBe Mocks.SUBSCRIPTION_ID
+    }
+
+    test("sessions v2 active duration uses the monotonic clock") {
+        // Given
+        val mocks = Mocks(sessionsV2Enabled = true)
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        val sessionModelStore = mocks.sessionModelStore { it.isValid = false }
+        sessionService.onFocus(false)
+
+        // When
+        mocks.elapsedRealtime += 750L
+        sessionService.onUnfocused()
+
+        // Then
+        sessionModelStore.model.activeDuration shouldBe 750L
+    }
+
+    test("sessions v2 active duration ignores an interval spanning a reboot") {
+        // Given
+        val mocks = Mocks(sessionsV2Enabled = true)
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        val sessionModelStore =
+            mocks.sessionModelStore {
+                it.isValid = true
+                it.isSessionsV2Enabled = true
+                it.focusElapsedRealtime = 10_000L
+                it.activeDuration = 200L
+            }
+
+        // When
+        mocks.elapsedRealtime = 100L
+        sessionService.onUnfocused()
+
+        // Then
+        sessionModelStore.model.activeDuration shouldBe 200L
+    }
+
+    test("session model fields survive a reload from preferences") {
+        // Given
+        val prefs = MockPreferencesService()
+        val store = SessionModelStore(prefs)
+        store.model.sessionId = "session-id"
+        store.model.startTime = 123L
+        store.model.activeDuration = 456L
+        store.model.focusElapsedRealtime = 789L
+        store.model.isSessionsV2Enabled = true
+        store.model.onesignalId = Mocks.ONESIGNAL_ID
+        store.model.subscriptionId = Mocks.SUBSCRIPTION_ID
+        store.model.serverSessionId = "server-session-id"
+
+        // When
+        val reloaded = SessionModelStore(prefs).model
+
+        // Then
+        reloaded.sessionId shouldBe "session-id"
+        reloaded.startTime shouldBe 123L
+        reloaded.activeDuration shouldBe 456L
+        reloaded.focusElapsedRealtime shouldBe 789L
+        reloaded.isSessionsV2Enabled shouldBe true
+        reloaded.onesignalId shouldBe Mocks.ONESIGNAL_ID
+        reloaded.subscriptionId shouldBe Mocks.SUBSCRIPTION_ID
+        reloaded.serverSessionId shouldBe "server-session-id"
     }
 
     test("onFocus dispatches the session-mutation body through runOnSerialIO (SDK-4508)") {

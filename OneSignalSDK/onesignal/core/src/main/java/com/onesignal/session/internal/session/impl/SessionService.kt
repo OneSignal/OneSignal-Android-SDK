@@ -7,15 +7,19 @@ import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.background.IBackgroundService
 import com.onesignal.core.internal.config.ConfigModel
 import com.onesignal.core.internal.config.ConfigModelStore
+import com.onesignal.core.internal.features.IFeatureManager
 import com.onesignal.core.internal.startup.IBootstrapService
 import com.onesignal.core.internal.startup.IStartableService
 import com.onesignal.core.internal.time.ITime
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
+import com.onesignal.features.FeatureFlag
 import com.onesignal.session.internal.session.ISessionLifecycleHandler
 import com.onesignal.session.internal.session.ISessionService
 import com.onesignal.session.internal.session.SessionModel
 import com.onesignal.session.internal.session.SessionModelStore
+import com.onesignal.user.internal.backend.IdentityConstants
+import com.onesignal.user.internal.identity.IdentityModelStore
 import java.util.UUID
 
 /**
@@ -34,6 +38,8 @@ internal class SessionService(
     private val _configModelStore: ConfigModelStore,
     private val _sessionModelStore: SessionModelStore,
     private val _time: ITime,
+    private val _featureManager: IFeatureManager,
+    private val _identityModelStore: IdentityModelStore,
 ) : ISessionService, IBootstrapService, IStartableService, IBackgroundService, IApplicationLifecycleHandler {
     override val startTime: Long
         // Pre-bootstrap default returns "now" so call sites computing `_time.currentTimeMillis - startTime`
@@ -107,14 +113,16 @@ internal class SessionService(
         // Capture focus time on the caller's thread so session timestamps reflect lifecycle
         // arrival, not dispatcher latency (SDK-4506).
         val focusTimeMs = _time.currentTimeMillis
+        val focusElapsedMs = _time.elapsedRealtimeMillis
         runOnSerialIO {
-            handleOnFocus(firedOnSubscribe, focusTimeMs)
+            handleOnFocus(firedOnSubscribe, focusTimeMs, focusElapsedMs)
         }
     }
 
     private fun handleOnFocus(
         firedOnSubscribe: Boolean,
         focusTimeMs: Long,
+        focusElapsedMs: Long,
     ) {
         Logging.log(LogLevel.DEBUG, "SessionService.onFocus() - fired from start: $firedOnSubscribe")
 
@@ -136,6 +144,14 @@ internal class SessionService(
             session.sessionId = UUID.randomUUID().toString()
             session.startTime = focusTimeMs
             session.focusTime = session.startTime
+            session.focusElapsedRealtime = focusElapsedMs
+            session.isSessionsV2Enabled = _featureManager.isEnabled(FeatureFlag.SDK_SESSIONS_V2)
+            session.onesignalId =
+                _identityModelStore.model
+                    .takeIf { it.hasProperty(IdentityConstants.ONESIGNAL_ID) }
+                    ?.onesignalId
+            session.subscriptionId = config?.pushSubscriptionId
+            session.serverSessionId = null
             session.isValid = true
             Logging.debug("SessionService: New session started at ${session.startTime}")
             sessionLifeCycleNotifier.fire { it.onSessionStarted() }
@@ -143,6 +159,7 @@ internal class SessionService(
             // existing session: just remember the focus time so we can calculate the active time
             // when onUnfocused is called.
             session.focusTime = focusTimeMs
+            session.focusElapsedRealtime = focusElapsedMs
             sessionLifeCycleNotifier.fire { it.onSessionActive() }
         }
     }
@@ -150,19 +167,29 @@ internal class SessionService(
     override fun onUnfocused() {
         // Capture on the caller's thread so activeDuration is unaffected by dispatcher latency.
         val unfocusTimeMs = _time.currentTimeMillis
+        val unfocusElapsedMs = _time.elapsedRealtimeMillis
         runOnSerialIO {
-            handleOnUnfocused(unfocusTimeMs)
+            handleOnUnfocused(unfocusTimeMs, unfocusElapsedMs)
         }
     }
 
-    private fun handleOnUnfocused(unfocusTimeMs: Long) {
+    private fun handleOnUnfocused(
+        unfocusTimeMs: Long,
+        unfocusElapsedMs: Long,
+    ) {
         val session = this.session
         if (session == null) {
             Logging.warn("SessionService.onUnfocused called before bootstrap; ignoring.")
             return
         }
         // capture the amount of time the app was focused
-        val dt = unfocusTimeMs - session.focusTime
+        val dt =
+            if (session.isSessionsV2Enabled) {
+                // elapsedRealtime resets on reboot; drop the interval rather than count a negative one.
+                (unfocusElapsedMs - session.focusElapsedRealtime).coerceAtLeast(0L)
+            } else {
+                unfocusTimeMs - session.focusTime
+            }
         session.activeDuration += dt
         Logging.log(LogLevel.DEBUG, "SessionService.onUnfocused adding time $dt for total: ${session.activeDuration}")
     }
