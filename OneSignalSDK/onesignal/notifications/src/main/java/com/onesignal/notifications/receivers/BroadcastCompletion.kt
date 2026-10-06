@@ -14,10 +14,24 @@ internal fun BroadcastReceiver.runIngressHandoff(
     timeoutMs: Long,
     block: suspend () -> Unit,
 ) {
+    runOrderedIngressHandoff(receiverName, timeoutMs) { _, _ -> block() }
+}
+
+internal fun BroadcastReceiver.runOrderedIngressHandoff(
+    receiverName: String,
+    timeoutMs: Long,
+    block: suspend (ordered: Boolean, pendingResult: BroadcastReceiver.PendingResult?) -> Unit,
+) {
     OneSignalDispatchers.prewarm()
-    val completion = BroadcastCompletion(receiverName, goAsync(), timeoutMs)
+    // goAsync() nulls the pending result, and isOrderedBroadcast is then false.
+    val ordered = isOrderedBroadcast
+    val pendingResult = goAsync()
+    val completion = BroadcastCompletion(receiverName, pendingResult, timeoutMs)
     // A failed handoff is left open so only the deadline finishes it, never a success path.
-    suspendifyOnIngress(block = block, onSuccess = { completion.finish() })
+    suspendifyOnIngress(
+        block = { block(ordered, pendingResult) },
+        onSuccess = { completion.finish() },
+    )
 }
 
 internal class BroadcastCompletion(

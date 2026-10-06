@@ -1,5 +1,6 @@
 package com.onesignal.notifications.receivers
 
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import androidx.test.core.app.ApplicationProvider
@@ -9,6 +10,7 @@ import com.onesignal.common.threading.OneSignalDispatchers
 import com.onesignal.common.threading.suspendifyOnIngress
 import com.onesignal.mocks.IOMockHelper
 import com.onesignal.notifications.internal.ingress.NotificationIngress
+import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.FunSpec
 import io.mockk.clearMocks
 import io.mockk.coEvery
@@ -99,5 +101,77 @@ class FCMBroadcastReceiverTests : FunSpec({
         FCMBroadcastReceiver().onReceive(context, intent)
 
         coVerify(exactly = 0) { NotificationIngress.persistFcm(any(), any(), any()) }
+    }
+
+    test("an ordered broadcast aborts through the pending result when ingress keeps the payload") {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val intent =
+            Intent("com.google.android.c2dm.intent.RECEIVE").apply {
+                putExtra("from", "sender")
+                putExtra("message_type", "gcm")
+            }
+        val receiver = FCMBroadcastReceiver()
+        val pendingResult = receiver.attachPendingResult(ordered = true)
+
+        receiver.onReceive(context, intent)
+
+        verify(exactly = 1) { pendingResult.abortBroadcast() }
+        verify(exactly = 1) { pendingResult.resultCode = Activity.RESULT_OK }
+        verify(exactly = 1) { pendingResult.finish() }
+    }
+
+    test("an ordered broadcast only sets the result code when ingress rejects the payload") {
+        coEvery { NotificationIngress.persistFcm(any(), any(), any()) } returns false
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val intent =
+            Intent("com.google.android.c2dm.intent.RECEIVE").apply {
+                putExtra("from", "sender")
+                putExtra("message_type", "gcm")
+            }
+        val receiver = FCMBroadcastReceiver()
+        val pendingResult = receiver.attachPendingResult(ordered = true)
+
+        receiver.onReceive(context, intent)
+
+        verify(exactly = 0) { pendingResult.abortBroadcast() }
+        verify(exactly = 1) { pendingResult.resultCode = Activity.RESULT_OK }
+        verify(exactly = 1) { pendingResult.finish() }
+    }
+
+    test("a non ordered broadcast is only finished") {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val intent =
+            Intent("com.google.android.c2dm.intent.RECEIVE").apply {
+                putExtra("from", "sender")
+                putExtra("message_type", "gcm")
+            }
+        val receiver = FCMBroadcastReceiver()
+        val pendingResult = receiver.attachPendingResult(ordered = false)
+
+        receiver.onReceive(context, intent)
+
+        verify(exactly = 0) { pendingResult.resultCode = any() }
+        verify(exactly = 0) { pendingResult.abortBroadcast() }
+        verify(exactly = 1) { pendingResult.finish() }
+    }
+
+    test("a failed ordered handoff does not abort or finish") {
+        coEvery { NotificationIngress.persistFcm(any(), any(), any()) } throws NoSuchMethodError("forNamespace")
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val intent =
+            Intent("com.google.android.c2dm.intent.RECEIVE").apply {
+                putExtra("from", "sender")
+                putExtra("message_type", "gcm")
+            }
+        val receiver = FCMBroadcastReceiver()
+        val pendingResult = receiver.attachPendingResult(ordered = true)
+
+        shouldThrow<NoSuchMethodError> {
+            receiver.onReceive(context, intent)
+        }
+
+        verify(exactly = 0) { pendingResult.abortBroadcast() }
+        verify(exactly = 0) { pendingResult.resultCode = any() }
+        verify(exactly = 0) { pendingResult.finish() }
     }
 })
