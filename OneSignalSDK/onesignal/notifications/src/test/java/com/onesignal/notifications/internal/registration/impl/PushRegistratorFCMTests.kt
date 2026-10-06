@@ -10,7 +10,6 @@ import com.google.firebase.FirebaseApp
 import com.google.firebase.FirebaseOptions
 import com.google.firebase.installations.FirebaseInstallations
 import com.google.firebase.installations.FirebaseInstallationsException
-import com.google.firebase.installations.InstallationTokenResult
 import com.google.firebase.messaging.FirebaseMessaging
 import com.onesignal.common.AndroidUtils
 import com.onesignal.core.internal.application.IApplicationService
@@ -133,16 +132,6 @@ private fun fcmRegistrationFailure(cause: Exception): IOException =
 private fun badConfigFailure(): FirebaseInstallationsException =
     FirebaseInstallationsException("bad config", FirebaseInstallationsException.Status.BAD_CONFIG)
 
-private fun mockInstallationAuthToken(
-    app: FirebaseApp,
-    authToken: Task<InstallationTokenResult>,
-) {
-    val installations = mockk<FirebaseInstallations>()
-    every { installations.getToken(false) } returns authToken
-    mockkStatic(FirebaseInstallations::class)
-    every { FirebaseInstallations.getInstance(app) } returns installations
-}
-
 private fun remoteConfigModelStore(): ConfigModelStore =
     MockHelper.configModelStore {
         it.isInitializedWithRemote = true
@@ -247,12 +236,10 @@ class PushRegistratorFCMTests : FunSpec({
     test("falls back to OneSignal's FirebaseApp when Firebase rejects the default app credentials (FIS_AUTH_ERROR)") {
         val messaging = mockk<FirebaseMessaging>()
         every { messaging.token } returns Tasks.forException(fcmRegistrationFailure(IOException("FIS_AUTH_ERROR")))
-        val app = defaultApp(SENDER_ID, messaging = messaging)
-        mockInstallationAuthToken(app, Tasks.forException(badConfigFailure()))
         val registrator =
             registrator(
                 legacyToken = Tasks.forResult("fallback-token"),
-                installedApps = listOf(app),
+                installedApps = listOf(defaultApp(SENDER_ID, messaging = messaging)),
             )
 
         val token = withContext(Dispatchers.IO) { registrator.getToken(SENDER_ID) }
@@ -276,36 +263,6 @@ class PushRegistratorFCMTests : FunSpec({
         token shouldBe "fallback-token"
         verify(exactly = 1) { messaging.token }
         verify(exactly = 1) { FirebaseApp.initializeApp(any(), any<FirebaseOptions>(), any()) }
-    }
-
-    listOf(
-        "auth token succeeds" to Tasks.forResult(mockk<InstallationTokenResult>()),
-        "auth token is unavailable" to
-            Tasks.forException(FirebaseInstallationsException("unavailable", FirebaseInstallationsException.Status.UNAVAILABLE)),
-    ).forEach { (description, authToken) ->
-        test("keeps the default FirebaseApp after FIS_AUTH_ERROR when the installation $description") {
-            val failure = fcmRegistrationFailure(IOException("FIS_AUTH_ERROR"))
-            val messaging = mockk<FirebaseMessaging>()
-            every { messaging.token } returns Tasks.forException(failure)
-            val app = defaultApp(SENDER_ID, messaging = messaging)
-            mockInstallationAuthToken(app, authToken)
-            val registrator =
-                registrator(
-                    legacyToken = Tasks.forResult("fallback-token"),
-                    installedApps = listOf(app),
-                )
-
-            repeat(2) {
-                val thrown =
-                    withContext(Dispatchers.IO) {
-                        shouldThrow<IOException> { registrator.getToken(SENDER_ID) }
-                    }
-                thrown shouldBe failure
-            }
-
-            verify(exactly = 2) { messaging.token }
-            verify(exactly = 0) { FirebaseApp.initializeApp(any(), any<FirebaseOptions>(), any()) }
-        }
     }
 
     listOf("SERVICE_NOT_AVAILABLE", "INTERNAL_SERVER_ERROR", "AUTHENTICATION_FAILED").forEach { message ->
@@ -410,7 +367,6 @@ class PushRegistratorFCMTests : FunSpec({
         token shouldBe "installation-id"
         verify(exactly = 1) { messaging.token }
         verify(exactly = 1) { FCMTokenProvider.invokeRegister(messaging) }
-        verify(exactly = 0) { installations.getToken(any()) }
         verify(exactly = 0) { FirebaseApp.initializeApp(any(), any<FirebaseOptions>(), any()) }
     }
 

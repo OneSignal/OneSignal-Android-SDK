@@ -101,7 +101,7 @@ internal class PushRegistratorFCM(
             } catch (e: ExecutionException) {
                 hostToken.exception ?: e
             }
-        if (failure == null || !FCMLegacyAppSelector.hostCredentialsRejected(hostApp, failure)) return hostToken
+        if (failure == null || !FCMLegacyAppSelector.isHostCredentialFailure(failure)) return hostToken
 
         Logging.warn(FCMLegacyAppSelector.credentialFailureMessage(), failure)
         rejectedHostApp = hostApp
@@ -249,39 +249,18 @@ internal object FCMLegacyAppSelector {
         return "FCM legacy token registration is using OneSignal's FirebaseApp because $reason."
     }
 
-    // FIS_AUTH_ERROR also follows a temporary Firebase Installations outage, so it only counts as
-    //   rejected credentials once a fresh auth token request fails with BAD_CONFIG.
-    fun hostCredentialsRejected(
-        hostApp: FirebaseApp,
-        failure: Throwable,
-    ): Boolean =
-        when {
-            isBadConfig(failure) -> true
-            isFisAuthError(failure) -> installationAuthTokenBadConfig(hostApp)
-            else -> false
-        }
-
-    private fun installationAuthTokenBadConfig(hostApp: FirebaseApp): Boolean {
-        val authToken = FirebaseInstallations.getInstance(hostApp).getToken(false)
-        return try {
-            Tasks.await(authToken)
-            false
-        } catch (e: ExecutionException) {
-            isBadConfig(authToken.exception ?: e)
-        }
-    }
-
     /**
-     * A rejected API key or app id does not fail the Firebase Installations ID lookup, only its
-     * auth token, so FCM sends the registration without one and the server answers with
-     * FIS_AUTH_ERROR.
+     * Whether a token request through the host app failed because Firebase rejected its
+     * google-services.json credentials. A rejected API key or app id does not fail the Firebase
+     * Installations ID lookup, only its auth token, so FCM sends the registration without one and
+     * the server answers with FIS_AUTH_ERROR. This is not confirmed with another auth token request
+     * because Firebase Installations blocks requests for 24 hours after rejecting its config, so
+     * that request would fail with UNAVAILABLE without reaching the server.
      */
-    private fun isFisAuthError(throwable: Throwable): Boolean =
-        causes(throwable).any { it is IOException && it.message == FIS_AUTH_ERROR }
-
-    private fun isBadConfig(throwable: Throwable): Boolean =
+    fun isHostCredentialFailure(throwable: Throwable): Boolean =
         causes(throwable).any {
-            it is FirebaseInstallationsException && it.status == FirebaseInstallationsException.Status.BAD_CONFIG
+            (it is IOException && it.message == FIS_AUTH_ERROR) ||
+                (it is FirebaseInstallationsException && it.status == FirebaseInstallationsException.Status.BAD_CONFIG)
         }
 
     fun credentialFailureMessage(): String =
