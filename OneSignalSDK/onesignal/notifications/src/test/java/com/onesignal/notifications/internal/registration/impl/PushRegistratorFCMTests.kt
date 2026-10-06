@@ -645,6 +645,16 @@ class PushRegistratorFCMTests : FunSpec({
             SubscriptionStatus.FIREBASE_FCM_FID_REGISTRATION_FAILED,
             expectedAttempts = 1,
         ),
+        FidFailureCase(
+            fcmRegistrationFailure(
+                FirebaseInstallationsException(
+                    "Firebase Installations Service is unavailable. Please try again later.",
+                    FirebaseInstallationsException.Status.UNAVAILABLE,
+                ),
+            ),
+            SubscriptionStatus.FIREBASE_FCM_FID_REGISTRATION_FAILED,
+            expectedAttempts = 1,
+        ),
     ).forEach { (failure, expectedStatus, expectedAttempts) ->
         test("maps a FID register failure of ${failure.javaClass.simpleName}(${failure.message}) to $expectedStatus") {
             val fid = fidRegistration(registerResult = Tasks.forException(failure))

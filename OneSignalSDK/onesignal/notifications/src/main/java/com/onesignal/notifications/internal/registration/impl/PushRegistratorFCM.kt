@@ -368,17 +368,28 @@ internal object FCMTokenProvider {
         } catch (e: FCMInstallationIdException) {
             throw e
         } catch (e: IOException) {
-            throw e
+            // FCM wraps Firebase Installations failures in an IOException. Those come from the
+            //   default app's google-services.json credentials, not a transient FCM error.
+            val installationsFailure =
+                generateSequence<Throwable>(e) { cause -> cause.cause?.takeIf { it !== cause } }
+                    .any { it is FirebaseInstallationsException }
+            if (!installationsFailure) throw e
+            throw registrationFailed(diagnostics, e)
         } catch (e: Exception) {
-            throw FCMInstallationIdException(
-                FCMInstallationIdFailureReason.REGISTRATION_FAILED,
-                "Firebase Installation ID registration failed and can be retried on the next " +
-                    "session (${diagnostics.summary()}). If it persists, verify google-services.json, " +
-                    "the com.google.gms.google-services Gradle plugin, and that the default Firebase " +
-                    "project matches the OneSignal Android configuration.",
-                e,
-            )
+            throw registrationFailed(diagnostics, e)
         }
+
+    private fun registrationFailed(
+        diagnostics: FCMInstallationIdDiagnostics,
+        cause: Throwable,
+    ) = FCMInstallationIdException(
+        FCMInstallationIdFailureReason.REGISTRATION_FAILED,
+        "Firebase Installation ID registration failed and can be retried on the next " +
+            "session (${diagnostics.summary()}). If it persists, verify the api_key and " +
+            "mobilesdk_app_id in google-services.json, the com.google.gms.google-services Gradle " +
+            "plugin, and that the default Firebase project matches the OneSignal Android configuration.",
+        cause,
+    )
 
     fun validateSenderId(
         senderId: String,
