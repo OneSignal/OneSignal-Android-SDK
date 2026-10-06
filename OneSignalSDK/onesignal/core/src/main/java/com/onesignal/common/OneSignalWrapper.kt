@@ -12,4 +12,12 @@ object OneSignalWrapper {
      */
     @JvmStatic
     var sdkVersion: String? = null
+
+    /**
+     * Set on activity attach and cleared on detach by wrappers whose host activity cannot
+     * host an activity result launcher. Consulted only when `PermissionsActivity` is missing.
+     */
+    @JvmStatic
+    @Volatile
+    var hostPermissionPrompt: IHostPermissionPrompt? = null
 }
