@@ -3,6 +3,7 @@ package com.onesignal.session
 import com.onesignal.common.modules.IModule
 import com.onesignal.common.services.ServiceBuilder
 import com.onesignal.core.internal.background.IBackgroundService
+import com.onesignal.core.internal.operations.IOperationExecutor
 import com.onesignal.core.internal.startup.IBootstrapService
 import com.onesignal.core.internal.startup.IStartableService
 import com.onesignal.session.internal.SessionManager
@@ -22,6 +23,7 @@ import com.onesignal.session.internal.session.backend.ISessionsBackendService
 import com.onesignal.session.internal.session.backend.impl.SessionsBackendService
 import com.onesignal.session.internal.session.impl.SessionListener
 import com.onesignal.session.internal.session.impl.SessionService
+import com.onesignal.session.internal.session.operations.impl.SessionOperationExecutor
 
 internal class SessionModule : IModule {
     override fun register(builder: ServiceBuilder) {
@@ -46,5 +48,6 @@ internal class SessionModule : IModule {
         builder.register<SessionListener>().provides<IStartableService>()
         builder.register<SessionManager>().provides<ISessionManager>()
         builder.register<SessionsBackendService>().provides<ISessionsBackendService>()
+        builder.register<SessionOperationExecutor>().provides<IOperationExecutor>()
     }
 }

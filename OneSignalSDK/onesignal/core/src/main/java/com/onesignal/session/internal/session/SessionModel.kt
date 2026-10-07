@@ -1,5 +1,6 @@
 package com.onesignal.session.internal.session
 
+import com.onesignal.common.IDManager
 import com.onesignal.common.modeling.Model
 
 /**
@@ -104,4 +105,10 @@ class SessionModel : Model() {
         set(value) {
             setOptStringProperty(::serverSessionId.name, value)
         }
+
+    /**
+     * Stands in for [serverSessionId] in queued session operations until the backend assigns one.
+     */
+    internal val localSessionId: String
+        get() = "${IDManager.LOCAL_PREFIX}$sessionId"
 }

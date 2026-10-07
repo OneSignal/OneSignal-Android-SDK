@@ -14,6 +14,7 @@ import com.onesignal.core.internal.startup.IStartableService
 import com.onesignal.core.internal.time.ITime
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
+import com.onesignal.session.internal.session.operations.UpdateSessionOperation
 import com.onesignal.user.internal.jwt.JwtRequirement
 import com.onesignal.user.internal.jwt.JwtTokenStore
 import com.onesignal.user.internal.operations.LoginUserOperation
@@ -67,6 +68,9 @@ internal class OperationRepo(
     private val waiter = WaiterWithValue<LoopWaiterMessage>()
     private val retryWaiter = WaiterWithValue<LoopWaiterMessage>()
     private var paused = false
+
+    // Ops enqueued after their local IDs were translated would otherwise keep the local ID forever.
+    private val appliedIdTranslations = mutableMapOf<String, String>()
     private val initialized = CompletableDeferred<Unit>()
 
     override suspend fun awaitInitialized() {
@@ -171,7 +175,7 @@ internal class OperationRepo(
      */
     private fun shouldSuppressAnonymousOp(op: Operation): Boolean {
         if (!_identityVerificationService.newCodePathsRun) return false
-        if (op is LoginUserOperation) return false
+        if (op is LoginUserOperation || !op.requiresJwt) return false
         val suppress =
             _configModelStore.model.useIdentityVerification == JwtRequirement.REQUIRED &&
                 op.externalId == null
@@ -194,11 +198,7 @@ internal class OperationRepo(
         index: Int? = null,
     ) {
         synchronized(queue) {
-            val hasExisting = queue.any { it.operation.id == queueItem.operation.id }
-            if (hasExisting) {
-                Logging.debug("OperationRepo: internalEnqueue - operation.id: ${queueItem.operation.id} already exists in the queue.")
-                return
-            }
+            if (!prepareForQueue(queueItem, addToStore)) return
 
             // Dedupe LoginUserOperation by onesignalId.
             val op = queueItem.operation
@@ -244,9 +244,29 @@ internal class OperationRepo(
             if (addToStore) {
                 _operationModelStore.add(queueItem.operation)
             }
+            enforceSessionOperationCap(op, _operationModelStore)
         }
 
         waiter.wake(LoopWaiterMessage(flush, 0))
+    }
+
+    /**
+     * THIS SHOULD BE CALLED WHILE THE QUEUE IS SYNCHRONIZED!!
+     *
+     * @return false if [queueItem] should not be added.
+     */
+    private fun prepareForQueue(
+        queueItem: OperationQueueItem,
+        isNew: Boolean,
+    ): Boolean {
+        val op = queueItem.operation
+        val isDuplicate = queue.any { it.operation.id == op.id }
+        if (isDuplicate) {
+            Logging.debug("OperationRepo: internalEnqueue - operation.id: ${op.id} already exists in the queue.")
+        } else if (isNew && appliedIdTranslations.isNotEmpty()) {
+            op.translateIds(appliedIdTranslations)
+        }
+        return !isDuplicate && (!isNew || op !is UpdateSessionOperation || coalesceSessionUpdate(queueItem, _operationModelStore))
     }
 
     /**
@@ -293,7 +313,7 @@ internal class OperationRepo(
     internal fun removeOperationsWithoutExternalId() {
         val removedIds: List<String> =
             synchronized(queue) {
-                val anonymous = queue.filter { it.operation.externalId == null }
+                val anonymous = queue.filter { it.operation.externalId == null && it.operation.requiresJwt }
                 anonymous.forEach { it.waiter?.wake(false) }
                 queue.removeAll(anonymous)
                 // IV=ON never transfers anonymous state; clear existingOnesignalId so the
@@ -381,6 +401,7 @@ internal class OperationRepo(
                 ops.forEach { it.operation.translateIds(response.idTranslations) }
                 synchronized(queue) {
                     queue.forEach { it.operation.translateIds(response.idTranslations) }
+                    appliedIdTranslations.putAll(response.idTranslations)
                 }
                 response.idTranslations.values.forEach { _newRecordState.add(it) }
             }
@@ -480,6 +501,9 @@ internal class OperationRepo(
     private fun dropAndWake(ops: List<OperationQueueItem>) {
         ops.forEach { _operationModelStore.remove(it.operation.id) }
         ops.forEach { it.waiter?.wake(false) }
+        synchronized(queue) {
+            dropOrphanedSessionUpdates(ops, _operationModelStore)
+        }
     }
 
     /**
