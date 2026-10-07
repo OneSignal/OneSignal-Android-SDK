@@ -82,7 +82,15 @@ internal class SessionService(
     override fun start() {
         _applicationService.addApplicationLifecycleHandler(this)
         identityModelStore.subscribe(PinnedLocalIdTranslator(IdentityConstants.ONESIGNAL_ID, SessionModel::onesignalId))
-        _configModelStore.subscribe(PinnedLocalIdTranslator(ConfigModel::pushSubscriptionId.name, SessionModel::subscriptionId))
+        // Login before the anonymous user is created carries the local push subscription over to
+        // the new user, so its backend ID belongs to that user, not the one pinned on this session.
+        _configModelStore.subscribe(
+            PinnedLocalIdTranslator(ConfigModel::pushSubscriptionId.name, SessionModel::subscriptionId) { session ->
+                val identityModel = identityModelStore.model
+                val currentOnesignalId = if (identityModel.hasProperty(IdentityConstants.ONESIGNAL_ID)) identityModel.onesignalId else null
+                session.onesignalId == currentOnesignalId
+            },
+        )
     }
 
     /**
@@ -93,6 +101,7 @@ internal class SessionService(
     private inner class PinnedLocalIdTranslator<TModel : Model>(
         private val sourceProperty: String,
         private val pinnedId: KMutableProperty1<SessionModel, String?>,
+        private val appliesTo: (SessionModel) -> Boolean = { true },
     ) : ISingletonModelStoreChangeHandler<TModel> {
         override fun onModelReplaced(
             model: TModel,
@@ -110,7 +119,7 @@ internal class SessionService(
 
             runOnSerialIO {
                 val session = this@SessionService.session ?: return@runOnSerialIO
-                if (pinnedId.get(session) == localId) pinnedId.set(session, backendId)
+                if (pinnedId.get(session) == localId && appliesTo(session)) pinnedId.set(session, backendId)
             }
         }
     }

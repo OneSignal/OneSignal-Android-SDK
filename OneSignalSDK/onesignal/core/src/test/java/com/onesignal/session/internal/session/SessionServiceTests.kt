@@ -361,6 +361,29 @@ class SessionServiceTests : FunSpec({
         sessionModelStore.model.subscriptionId shouldBe "backend-subscription"
     }
 
+    test("pinned subscription ID is not replaced after login before the anonymous user is created") {
+        // Given
+        val mocks = Mocks()
+        mocks.identityModelStore.model.onesignalId = "local-anonymous"
+        mocks.configModelStore.model.pushSubscriptionId = "local-subscription"
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        val sessionModelStore = mocks.sessionModelStore { it.isValid = false }
+        sessionService.onFocus(false)
+
+        // When
+        val loggedInModel = IdentityModel().apply { onesignalId = "local-logged-in" }
+        every { mocks.identityModelStore.model } returns loggedInModel
+        mocks.identityChangeHandler.captured.onModelReplaced(loggedInModel, ModelChangeTags.NORMAL)
+        mocks.hydrateOnesignalId("backend-logged-in")
+        mocks.hydratePushSubscriptionId("backend-subscription")
+
+        // Then
+        sessionModelStore.model.onesignalId shouldBe "local-anonymous"
+        sessionModelStore.model.subscriptionId shouldBe "local-subscription"
+    }
+
     test("pinned backend IDs are not replaced by later ID changes") {
         // Given
         val mocks = Mocks()
@@ -429,6 +452,27 @@ class SessionServiceTests : FunSpec({
 
         // Then
         sessionModelStore.model.activeDuration shouldBe 750L
+    }
+
+    test("sessions API active duration excludes background time between focuses") {
+        // Given
+        val mocks = Mocks(sessionsApiEnabled = true)
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        val sessionModelStore = mocks.sessionModelStore { it.isValid = false }
+        sessionService.onFocus(false)
+        mocks.elapsedRealtime += 300L
+        sessionService.onUnfocused()
+
+        // When
+        mocks.elapsedRealtime += 10_000L
+        sessionService.onFocus(false)
+        mocks.elapsedRealtime += 200L
+        sessionService.onUnfocused()
+
+        // Then
+        sessionModelStore.model.activeDuration shouldBe 500L
     }
 
     test("sessions API active duration ignores an interval spanning a reboot") {
