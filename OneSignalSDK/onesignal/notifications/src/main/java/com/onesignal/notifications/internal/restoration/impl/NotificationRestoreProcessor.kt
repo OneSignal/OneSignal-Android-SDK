@@ -5,9 +5,11 @@ import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.notifications.internal.badges.IBadgeCountUpdater
 import com.onesignal.notifications.internal.common.NotificationHelper
+import com.onesignal.notifications.internal.common.NotificationRestoreReason
 import com.onesignal.notifications.internal.data.INotificationRepository
 import com.onesignal.notifications.internal.generation.INotificationGenerationWorkManager
 import com.onesignal.notifications.internal.restoration.INotificationRestoreProcessor
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import org.json.JSONObject
 
@@ -17,40 +19,64 @@ internal class NotificationRestoreProcessor(
     private val _dataController: INotificationRepository,
     private val _badgeCountUpdater: IBadgeCountUpdater,
 ) : INotificationRestoreProcessor {
-    override suspend fun process() {
+    @Suppress("TooGenericExceptionCaught")
+    override suspend fun process(): Boolean {
         Logging.info("Restoring notifications")
 
-        try {
-            var excludeAndroidIds = getVisibleNotifications()
-            var outstandingNotifications = _dataController.listNotificationsForOutstanding(excludeAndroidIds)
+        return try {
+            val excludeAndroidIds = getVisibleNotifications()
+            val outstandingNotifications = _dataController.listNotificationsForOutstanding(excludeAndroidIds)
 
+            var allPersisted = true
             for (notification in outstandingNotifications) {
-                processNotification(notification, DELAY_BETWEEN_NOTIFICATION_RESTORES_MS)
+                allPersisted =
+                    processNotification(
+                        notification,
+                        NotificationRestoreReason.SHADE_RESTORE,
+                        DELAY_BETWEEN_NOTIFICATION_RESTORES_MS,
+                    ) && allPersisted
             }
 
             _badgeCountUpdater.update()
+            allPersisted
+        } catch (e: CancellationException) {
+            throw e
         } catch (t: Throwable) {
             Logging.warn("Error restoring notification records! ", t)
+            false
         }
     }
 
+    // One failed enqueue must not skip the rest of the batch.
+    @Suppress("TooGenericExceptionCaught")
     override suspend fun processNotification(
         notification: INotificationRepository.NotificationData,
+        reason: NotificationRestoreReason,
         delay: Int,
-    ) {
-        _workManager.beginEnqueueingWork(
-            _applicationService.appContext,
-            notification.id,
-            notification.androidId,
-            JSONObject(notification.fullData),
-            notification.createdAt,
-            true,
-            false,
-        )
+    ): Boolean {
+        val persisted =
+            try {
+                _workManager.beginEnqueueingWork(
+                    _applicationService.appContext,
+                    notification.id,
+                    notification.androidId,
+                    JSONObject(notification.fullData),
+                    notification.createdAt,
+                    reason,
+                    false,
+                )
+                true
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Logging.warn("Failed to enqueue restore for notification ${notification.id}", e)
+                false
+            }
 
         if (delay > 0) {
             delay(delay.toLong())
         }
+        return persisted
     }
 
     /**

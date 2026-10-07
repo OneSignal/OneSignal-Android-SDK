@@ -37,7 +37,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import com.onesignal.example.BuildConfig
 import com.onesignal.example.R
+import com.onesignal.example.data.model.NotificationExtensionOptions
 import com.onesignal.example.data.model.NotificationType
 import com.onesignal.example.ui.components.LocalSnackbarController
 import com.onesignal.example.ui.components.PrimaryButton
@@ -54,17 +56,20 @@ fun MainScreen(viewModel: MainViewModel) {
 
     val appId by viewModel.appId.observeAsState("")
     val pushSubscriptionId by viewModel.pushSubscriptionId.observeAsState()
+    val pushSubscriptionToken by viewModel.pushSubscriptionToken.observeAsState("")
     val pushEnabled by viewModel.pushEnabled.observeAsState(false)
     val hasNotificationPermission by viewModel.hasNotificationPermission.observeAsState(false)
     val consentRequired by viewModel.consentRequired.observeAsState(false)
     val privacyConsentGiven by viewModel.privacyConsentGiven.observeAsState(false)
     val externalUserId by viewModel.externalUserId.observeAsState()
+    val language by viewModel.language.observeAsState("")
     val useIdentityVerification by viewModel.useIdentityVerification.observeAsState(false)
     val aliases by viewModel.aliases.observeAsState(emptyList())
     val emails by viewModel.emails.observeAsState(emptyList())
     val smsNumbers by viewModel.smsNumbers.observeAsState(emptyList())
     val tags by viewModel.tags.observeAsState(emptyList())
     val triggers by viewModel.triggers.observeAsState(emptyList())
+    val notificationExtensionOptions by viewModel.notificationExtensionOptions.observeAsState(NotificationExtensionOptions())
     val inAppMessagesPaused by viewModel.inAppMessagesPaused.observeAsState(false)
     val locationShared by viewModel.locationShared.observeAsState(false)
     val isLoading by viewModel.isLoading.observeAsState(false)
@@ -135,8 +140,10 @@ fun MainScreen(viewModel: MainViewModel) {
 
                 UserSection(
                     externalUserId = externalUserId,
+                    language = language,
                     useIdentityVerification = useIdentityVerification,
                     onUseIdentityVerificationChange = { viewModel.setUseIdentityVerification(it) },
+                    onLanguageChange = { viewModel.setLanguage(it) },
                     onLogin = { userId, jwt -> viewModel.loginUser(userId, jwt) },
                     onLoginWithProfile = { userId, email, phone, jwt ->
                         viewModel.loginUserWithProfile(userId, email, phone, jwt)
@@ -148,6 +155,7 @@ fun MainScreen(viewModel: MainViewModel) {
 
                 PushSection(
                     pushSubscriptionId = pushSubscriptionId,
+                    pushSubscriptionToken = pushSubscriptionToken,
                     pushEnabled = pushEnabled,
                     hasPermission = hasNotificationPermission,
                     onEnabledChange = { viewModel.setPushEnabled(it) },
@@ -163,6 +171,14 @@ fun MainScreen(viewModel: MainViewModel) {
                     onClearAllClick = { viewModel.clearAllNotifications() },
                     onInfoClick = { showTooltipDialog = "sendPushNotification" }
                 )
+
+                // Off by default. Build with -PSHOW_NSE_SECTION=true to show it.
+                if (BuildConfig.SHOW_NSE_SECTION) {
+                    NotificationExtensionSection(
+                        options = notificationExtensionOptions,
+                        onOptionsChange = { viewModel.setNotificationExtensionOptions(it) }
+                    )
+                }
 
                 InAppMessagingSection(
                     isPaused = inAppMessagesPaused,

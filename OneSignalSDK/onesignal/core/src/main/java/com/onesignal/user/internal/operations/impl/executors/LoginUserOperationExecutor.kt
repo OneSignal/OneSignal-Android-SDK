@@ -12,6 +12,7 @@ import com.onesignal.common.TimeUtils
 import com.onesignal.common.consistency.enums.IamFetchRywTokenKey
 import com.onesignal.common.consistency.models.IConsistencyManager
 import com.onesignal.common.exceptions.BackendException
+import com.onesignal.common.hasNullByte
 import com.onesignal.common.modeling.ModelChangeTags
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.config.ConfigModelStore
@@ -78,11 +79,13 @@ internal class LoginUserOperationExecutor(
         loginUserOp: LoginUserOperation,
         operations: List<Operation>,
     ): ExecutionResponse {
+        val alias = resolveAlias(loginUserOp)
+
         // Handle a bad state that can happen in User Model 5.1.27 or earlier versions that old Login
         // request is not removed after processing if app is force-closed within the PostCreateDelay.
         // Anonymous Login being processed alone will surely be rejected, so we need to drop the request
         val containsSubscriptionOperation = operations.any { it is CreateSubscriptionOperation || it is TransferSubscriptionOperation }
-        if (!containsSubscriptionOperation && loginUserOp.externalId == null) {
+        if (!containsSubscriptionOperation && alias == null) {
             return ExecutionResponse(ExecutionResult.FAIL_NORETRY)
         }
         if (shouldCreateUserDirectly(loginUserOp)) {
@@ -161,6 +164,15 @@ internal class LoginUserOperationExecutor(
         }
     }
 
+    // NUL cannot be stored as an alias. Leave it on the op so the user binding stays intact.
+    private fun resolveAlias(loginUserOp: LoginUserOperation): String? {
+        val rawExternalId = loginUserOp.externalId
+        if (rawExternalId == null || !hasNullByte(rawExternalId)) return rawExternalId
+        Logging.error("login: externalId contains a null byte; dropping the alias")
+        _identityModelStore.model.clearExternalIdIf(rawExternalId, loginUserOp.onesignalId)
+        return null
+    }
+
     private suspend fun createUser(
         createUserOperation: LoginUserOperation,
         operations: List<Operation>,
@@ -174,7 +186,9 @@ internal class LoginUserOperationExecutor(
                 timezoneId = TimeUtils.getTimeZoneId(),
             )
 
-        createUserOperation.externalId?.let { identities[IdentityConstants.EXTERNAL_ID] = it }
+        createUserOperation.externalId?.takeUnless { hasNullByte(it) }?.let {
+            identities[IdentityConstants.EXTERNAL_ID] = it
+        }
         for ((label, id) in createUserOperation.aliases) {
             if (reservedLoginAliasLabel(label)) {
                 Logging.warn("LoginUserOperationExecutor: skipping reserved alias label")

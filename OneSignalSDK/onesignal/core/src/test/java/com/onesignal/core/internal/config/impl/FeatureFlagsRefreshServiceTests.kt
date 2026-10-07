@@ -6,9 +6,10 @@ import com.onesignal.common.threading.runOnSerialIO
 import com.onesignal.core.internal.application.IApplicationLifecycleHandler
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.backend.IFeatureFlagsBackendService
-import com.onesignal.core.internal.backend.RemoteFeatureFlagsFetchOutcome
 import com.onesignal.core.internal.config.ConfigModel
 import com.onesignal.core.internal.config.ConfigModelStore
+import com.onesignal.features.RemoteFeatureFlagsFetchOutcome
+import com.onesignal.features.RemoteFeatureFlagsUnavailableReason
 import com.onesignal.mocks.IOMockHelper
 import com.onesignal.mocks.IOMockHelper.awaitIO
 import io.kotest.core.spec.style.FunSpec
@@ -49,7 +50,9 @@ class FeatureFlagsRefreshServiceTests : FunSpec({
         var count = 0
         coEvery { backend.fetchRemoteFeatureFlags(any()) } answers {
             count++
-            RemoteFeatureFlagsFetchOutcome.Unavailable
+            RemoteFeatureFlagsFetchOutcome.unavailable(
+                reason = RemoteFeatureFlagsUnavailableReason.NON_SUCCESS_HTTP,
+            )
         }
         return backend to { count }
     }

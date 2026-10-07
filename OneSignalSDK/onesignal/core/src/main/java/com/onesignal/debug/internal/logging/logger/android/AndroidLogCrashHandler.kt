@@ -6,13 +6,8 @@ import com.onesignal.logger.ILogCrashReporter
 import com.onesignal.logger.ILogger
 
 /**
- * Android [ILogCrashHandler] — installs a [Thread.UncaughtExceptionHandler] that
- * captures OneSignal-related crashes and hands a platform-neutral [CrashData] to the
- * `logger` module's [ILogCrashReporter].
- *
- * Crash *capture* is platform-specific (hence this lives in core), but everything
- * downstream — persisting and shipping — is shared multiplatform code. Direct
- * analogue of `OtelCrashHandler`.
+ * Android [ILogCrashHandler]: installs a [Thread.UncaughtExceptionHandler] and hands OneSignal
+ * crashes to [ILogCrashReporter] as platform-neutral [CrashData].
  */
 internal class AndroidLogCrashHandler(
     private val crashReporter: ILogCrashReporter,
@@ -89,14 +84,8 @@ internal fun isOneSignalAtFault(stackTrace: Array<StackTraceElement>): Boolean =
     stackTrace.any { it.className.startsWith("com.onesignal") }
 
 /**
- * True when OneSignal appears anywhere in the throwable graph — the throwable
- * itself, its [Throwable.cause] chain, or any [Throwable.getSuppressed] entries.
- *
- * This is broader than inspecting only the top-level frames: framework wrappers
- * (e.g. `RuntimeException: Unable to create application`) and SDK init failures
- * that re-throw a generic exception bury the real OneSignal frames one or more
- * levels down as a cause or suppressed exception. A BFS with an identity-based
- * visited set keeps us safe against cyclic cause chains.
+ * True when OneSignal appears anywhere in the throwable graph: framework wrappers bury the real
+ * frames in a cause. The visited set must stay identity-based — cause chains can be cyclic.
  */
 internal fun isOneSignalAtFault(throwable: Throwable): Boolean {
     val visited = java.util.Collections.newSetFromMap(java.util.IdentityHashMap<Throwable, Boolean>())

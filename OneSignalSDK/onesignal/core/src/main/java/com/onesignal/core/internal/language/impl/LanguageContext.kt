@@ -6,11 +6,11 @@ import com.onesignal.user.internal.properties.PropertiesModelStore
 internal class LanguageContext(
     private val _propertiesModelStore: PropertiesModelStore,
 ) : ILanguageContext {
-    private var deviceLanguageProvider = LanguageProviderDevice()
+    private val deviceLanguageProvider = LanguageProviderDevice()
 
     override var language: String
         get() = _propertiesModelStore.model.language ?: deviceLanguageProvider.language
         set(value) {
-            _propertiesModelStore.model.language = value
+            _propertiesModelStore.model.language = value.ifEmpty { deviceLanguageProvider.language }
         }
 }

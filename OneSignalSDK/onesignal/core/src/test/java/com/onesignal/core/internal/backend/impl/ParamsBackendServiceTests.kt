@@ -72,6 +72,26 @@ class ParamsBackendServiceTests : FunSpec({
         ex.response shouldBe """{"errors":["Forbidden"]}"""
     }
 
+    test("a NONE log_level parses as remote logging disabled") {
+        val http = mockk<IHttpClient>()
+        coEvery { http.get(any(), any()) } returns HttpResponse(200, """{"logging_config":{"log_level":"NONE"}}""")
+
+        val params = ParamsBackendService(http).fetchParams("appId", null)
+
+        params.remoteLoggingParams.logLevel shouldBe LogLevel.NONE
+        params.remoteLoggingParams.isEnabled shouldBe false
+    }
+
+    test("a shippable log_level parses as remote logging enabled") {
+        val http = mockk<IHttpClient>()
+        coEvery { http.get(any(), any()) } returns HttpResponse(200, """{"logging_config":{"log_level":"ERROR"}}""")
+
+        val params = ParamsBackendService(http).fetchParams("appId", null)
+
+        params.remoteLoggingParams.logLevel shouldBe LogLevel.ERROR
+        params.remoteLoggingParams.isEnabled shouldBe true
+    }
+
     test("valid JSON payload is parsed and returns a populated ParamsObject") {
         val http = mockk<IHttpClient>()
         coEvery { http.get(any(), any()) } returns

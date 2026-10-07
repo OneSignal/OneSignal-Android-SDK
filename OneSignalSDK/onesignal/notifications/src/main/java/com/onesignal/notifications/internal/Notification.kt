@@ -217,7 +217,7 @@ class Notification : IDisplayableMutableNotification {
                 }
                 mainObj.put("actionButtons", actionButtonJsonArray)
             }
-            mainObj.put("rawPayload", rawPayload)
+            mainObj.put("rawPayload", JSONObject(rawPayload))
         } catch (e: JSONException) {
             e.printStackTrace()
         }

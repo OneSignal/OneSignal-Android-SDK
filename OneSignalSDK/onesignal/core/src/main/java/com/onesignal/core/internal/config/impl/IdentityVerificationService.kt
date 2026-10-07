@@ -5,9 +5,9 @@ import com.onesignal.common.modeling.ModelChangeTags
 import com.onesignal.common.modeling.ModelChangedArgs
 import com.onesignal.core.internal.config.ConfigModel
 import com.onesignal.core.internal.config.ConfigModelStore
-import com.onesignal.core.internal.features.FeatureFlag
 import com.onesignal.core.internal.features.IFeatureManager
 import com.onesignal.core.internal.startup.IStartableService
+import com.onesignal.features.FeatureFlag
 import com.onesignal.user.internal.jwt.JwtRequirement
 
 /**

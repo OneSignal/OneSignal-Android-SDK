@@ -27,7 +27,8 @@ class NotificationGenerationJob(
     var overriddenTitleFromExtender: CharSequence? = null
     var overriddenSound: Uri? = null
     var overriddenFlags: Int? = null
-    var orgFlags: Int? = null
+
+    // The payload's sound, saved before the extender runs so we can tell if the extender changed it.
     var orgSound: Uri? = null
 
     constructor(jsonPayload: JSONObject, time: ITime) : this(
@@ -73,7 +74,6 @@ class NotificationGenerationJob(
             ", overriddenTitleFromExtender=" + overriddenTitleFromExtender +
             ", overriddenSound=" + overriddenSound +
             ", overriddenFlags=" + overriddenFlags +
-            ", orgFlags=" + orgFlags +
             ", orgSound=" + orgSound +
             ", notification=" + notification +
             '}'

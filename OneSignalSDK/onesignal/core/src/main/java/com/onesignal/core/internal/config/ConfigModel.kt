@@ -239,6 +239,15 @@ class ConfigModel : Model() {
         }
 
     /**
+     * App ID [googleProjectNumber] was fetched for.
+     */
+    var dashboardSenderAppId: String?
+        get() = getOptStringProperty(::dashboardSenderAppId.name)
+        set(value) {
+            setOptStringProperty(::dashboardSenderAppId.name, value)
+        }
+
+    /**
      * Whether the current application is an enterprise-level
      */
     var enterprise: Boolean
@@ -310,7 +319,7 @@ class ConfigModel : Model() {
      * Feature ids from the Turbine SDK feature-flags HTTP endpoint
      * ([com.onesignal.core.internal.backend.IFeatureFlagsBackendService]), updated while the app is
      * foreground. [com.onesignal.core.internal.features.FeatureManager] unions these with any local
-     * test overrides when evaluating [com.onesignal.core.internal.features.FeatureFlag] entries.
+     * test overrides when evaluating [com.onesignal.features.FeatureFlag] entries.
      */
     var sdkRemoteFeatureFlags: List<String>
         get() = getListProperty(::sdkRemoteFeatureFlags.name) { emptyList() }
@@ -520,7 +529,8 @@ class RemoteLoggingConfigModel(
 
     /**
      * Whether remote logging is enabled.
-     * Set by backend config hydration — true when the server sends a valid log_level, false otherwise.
+     * Set by backend config hydration — true when the server sends a valid log_level other than
+     * NONE, false otherwise.
      */
     var isEnabled: Boolean
         get() = getBooleanProperty(::isEnabled.name) { false }

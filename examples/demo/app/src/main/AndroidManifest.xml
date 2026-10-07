@@ -30,6 +30,13 @@
             android:name="com.amazon.device.messaging"
             android:required="false"/>
 
+        <!-- Notification service extension. The SDK resolves this value by reflection, so a typo
+             fails silently at runtime. Every behavior in the class is off until switched on in
+             the demo's Notification Service Extension section. -->
+        <meta-data
+            android:name="com.onesignal.NotificationServiceExtension"
+            android:value="com.onesignal.example.notification.DemoNotificationServiceExtension" />
+
         <!-- ADM Services -->
         <service
             android:name="com.onesignal.notifications.services.ADMMessageHandlerJob"

@@ -3,77 +3,76 @@ package com.onesignal.core.internal.features
 import com.onesignal.common.modeling.ISingletonModelStoreChangeHandler
 import com.onesignal.common.modeling.ModelChangeTags
 import com.onesignal.common.modeling.ModelChangedArgs
-import com.onesignal.core.internal.backend.impl.FeatureFlagsJsonParser
 import com.onesignal.core.internal.config.ConfigModel
 import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.debug.internal.logging.Logging
-import kotlinx.serialization.json.JsonObject
+import com.onesignal.features.FeatureFlag
+import com.onesignal.features.FeatureFlagMetadata
+import com.onesignal.features.FeatureManager as SharedFeatureManager
 
 /**
- * Resolves backend-driven [FeatureFlag] state for the current device run and exposes the
- * enabled set to the rest of the SDK. State is derived from cached/remote config and
- * [FeatureActivationMode] latching rules.
+ * Resolves backend-driven [FeatureFlag] state for the current device run.
+ * Catalog and latching live in shared [SharedFeatureManager]; this host hydrates
+ * from [ConfigModel] and applies [com.onesignal.features.FeatureActivationMode]
+ * rules via [SharedFeatureManager.refresh].
  */
 interface IFeatureManager {
     /**
-     * Whether [feature] is enabled for the current run, after applying remote config and
-     * [FeatureActivationMode] latching rules.
+     * Whether [feature] is enabled for the current run, after remote config and
+     * [com.onesignal.features.FeatureActivationMode] latching.
      */
     fun isEnabled(feature: FeatureFlag): Boolean
 
     /**
-     * The canonical keys of feature flags that are currently enabled for this device run,
-     * after applying remote config, [FeatureActivationMode] latching rules, and any local
-     * test overrides. Order is not guaranteed.
-     *
-     * Empty when no flags have been resolved yet (e.g. before the first refresh on a fresh
-     * install) or when none are enabled.
+     * Canonical keys enabled for this process after latching.
+     * Order follows [FeatureFlag] declaration order.
      */
     fun enabledFeatureKeys(): List<String>
 
     /**
-     * Per-flag payloads from [com.onesignal.core.internal.backend.IFeatureFlagsBackendService].
-     * Each value is a [JsonObject] so callers can decode nested fields or map to `@Serializable` types.
-     *
-     * `null` when no metadata has been stored yet ([ConfigModel.sdkRemoteFeatureFlagMetadata] null/blank).
+     * Per-flag payloads persisted on [ConfigModel.sdkRemoteFeatureFlagMetadata].
+     * Values are JSON object text (flag id → object). `null` when nothing has been
+     * stored yet.
      */
-    fun remoteFeatureFlagMetadata(): Map<String, JsonObject>?
+    fun remoteFeatureFlagMetadata(): Map<String, String>?
 }
 
+/**
+ * Android host for the shared [SharedFeatureManager] latch.
+ *
+ * Persistence ([ConfigModel]) and store subscriptions stay here. Catalog, activation
+ * modes, and isEnabled latching live in KMP so iOS can call the same
+ * [SharedFeatureManager.refresh] with cached keys at process start
+ * (`applyAppStartupFlags = true`) and again after later fetches (`false`).
+ *
+ * Shared [SharedFeatureManager] is thread-safe; this host does not add an extra lock.
+ */
 @Suppress("TooGenericExceptionCaught")
 internal class FeatureManager(
     private val configModelStore: ConfigModelStore,
 ) : IFeatureManager, ISingletonModelStoreChangeHandler<ConfigModel> {
-    @Volatile
-    private var featureStates: Map<FeatureFlag, Boolean> = emptyMap()
+    private val latch = SharedFeatureManager()
 
     init {
         Logging.debug("OneSignal: FeatureManager initializing from cached config features")
         try {
-            refreshEnabledFeatures(configModelStore.model, applyNextRunOnlyFeatures = true)
+            refreshFrom(configModelStore.model, applyAppStartupFlags = true)
         } catch (t: Throwable) {
             Logging.error("OneSignal: Failed to initialize feature states from cached config", t)
         }
         configModelStore.subscribe(this)
     }
 
-    override fun isEnabled(feature: FeatureFlag): Boolean = featureStates[feature] ?: false
+    override fun isEnabled(feature: FeatureFlag): Boolean = latch.isEnabled(feature)
 
-    override fun enabledFeatureKeys(): List<String> {
-        val snapshot = featureStates
-        return snapshot.entries
-            .asSequence()
-            .filter { it.value }
-            .map { it.key.key }
-            .toList()
-    }
+    override fun enabledFeatureKeys(): List<String> = latch.enabledFeatureKeys()
 
-    override fun remoteFeatureFlagMetadata(): Map<String, JsonObject>? {
-        val raw = configModelStore.model.sdkRemoteFeatureFlagMetadata
-        if (raw.isNullOrBlank()) {
-            return null
-        }
-        return FeatureFlagsJsonParser.parseStoredMetadataMap(raw)
+    override fun remoteFeatureFlagMetadata(): Map<String, String>? {
+        val parsed =
+            FeatureFlagMetadata.parse(
+                configModelStore.model.sdkRemoteFeatureFlagMetadata,
+            ) ?: return null
+        return parsed.ids().associateWith { id -> parsed.jsonObjectForId(id).orEmpty() }
     }
 
     @Suppress("TooGenericExceptionCaught")
@@ -84,7 +83,7 @@ internal class FeatureManager(
         Logging.debug("OneSignal: FeatureManager.onModelReplaced(tag=$tag)")
         if (tag == ModelChangeTags.HYDRATE || tag == ModelChangeTags.NORMAL) {
             try {
-                refreshEnabledFeatures(model, applyNextRunOnlyFeatures = false)
+                refreshFrom(model, applyAppStartupFlags = false)
             } catch (t: Throwable) {
                 Logging.error("OneSignal: Failed to refresh features on model replace", t)
             }
@@ -101,90 +100,38 @@ internal class FeatureManager(
         ) {
             Logging.debug("OneSignal: FeatureManager.onModelUpdated(property=${args.property}, tag=$tag)")
             try {
-                refreshEnabledFeatures(configModelStore.model, applyNextRunOnlyFeatures = false)
+                refreshFrom(configModelStore.model, applyAppStartupFlags = false)
             } catch (t: Throwable) {
                 Logging.error("OneSignal: Failed to refresh features on model update", t)
             }
         }
     }
 
-    @Suppress("NestedBlockDepth")
-    private fun refreshEnabledFeatures(
+    private fun refreshFrom(
         model: ConfigModel,
-        applyNextRunOnlyFeatures: Boolean,
+        applyAppStartupFlags: Boolean,
     ) {
-        val enabledFeatureKeys =
-            (
-                model.sdkRemoteFeatureFlags.map { canonicalizeFeatureKey(it) } +
-                    localFeatureOverrides.map { canonicalizeFeatureKey(it) }
-                ).toSet()
         if (localFeatureOverrides.isNotEmpty()) {
             Logging.warn(
                 "OneSignal: Local feature override enabled for testing only: $localFeatureOverrides",
             )
         }
-        val nextStates = featureStates.toMutableMap()
-
-        for (feature in FeatureFlag.entries) {
-            val desiredState = feature.isEnabledIn(enabledFeatureKeys)
-            when (feature.activationMode) {
-                FeatureActivationMode.IMMEDIATE -> {
-                    nextStates[feature] = desiredState
-                    applySideEffects(feature, desiredState)
-                }
-
-                FeatureActivationMode.APP_STARTUP -> {
-                    val hasBeenInitialized = nextStates.containsKey(feature)
-                    if (applyNextRunOnlyFeatures || !hasBeenInitialized) {
-                        nextStates[feature] = desiredState
-                        applySideEffects(feature, desiredState)
-                    } else {
-                        val currentState = nextStates[feature] ?: false
-                        if (currentState != desiredState) {
-                            Logging.info(
-                                "OneSignal: Feature ${feature.key} changed remotely to $desiredState " +
-                                    "but is NEXT_RUN, keeping current run value=$currentState",
-                            )
-                        }
-                    }
-                }
-            }
-        }
-
-        featureStates = nextStates
-    }
-
-    private fun canonicalizeFeatureKey(key: String): String =
-        buildString(key.length) {
-            for (c in key) {
-                append(c.lowercaseChar())
-            }
-        }
-
-    @Suppress("UNUSED_PARAMETER")
-    private fun applySideEffects(
-        feature: FeatureFlag,
-        enabled: Boolean,
-    ) {
-        when (feature) {
-            // SDK_IDENTITY_VERIFICATION has no side effect: IdentityVerificationService
-            // reads featureStates directly via isEnabled() at gate-check time.
-            FeatureFlag.SDK_IDENTITY_VERIFICATION -> {}
-            // SDK_CUSTOM_LOGGING has no side effect here: the observability module choice is
-            // made during early init (before this manager exists) by reading the cached flag
-            // straight from prefs via LoggerModuleSwitch/OtelIdResolver.
-            FeatureFlag.SDK_CUSTOM_LOGGING -> {}
+        val deferred =
+            latch.refresh(model.sdkRemoteFeatureFlags, applyAppStartupFlags, localFeatureOverrides)
+        for (change in deferred) {
+            Logging.info(
+                "OneSignal: Feature ${change.key} changed remotely to ${change.desiredEnabled} " +
+                    "but is NEXT_RUN, keeping current run value=${change.latchedEnabled}",
+            )
         }
     }
 
     companion object {
         /**
          * Local-only test hook for forcing features ON without backend config.
-         * Add feature keys here while testing locally, e.g.:
-         * setOf(FeatureFlag.SDK_IDENTITY_VERIFICATION.key)
+         * Add feature keys here while testing locally, e.g.
+         * `listOf(FeatureFlag.SDK_IDENTITY_VERIFICATION.key)`.
          */
-        private val localFeatureOverrides: Set<String> = emptySet()
-//        private val localFeatureOverrides: Set<String> =
-//            setOf(FeatureFlag.SDK_IDENTITY_VERIFICATION.key)
+        private val localFeatureOverrides: List<String> = emptyList()
     }
 }

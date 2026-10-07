@@ -16,6 +16,7 @@ import com.onesignal.common.safeString
 import com.onesignal.common.threading.suspendifyOnDefault
 import com.onesignal.common.threading.suspendifyOnIO
 import com.onesignal.common.threading.suspendifyOnMain
+import com.onesignal.common.threading.withMain
 import com.onesignal.core.internal.application.IActivityLifecycleHandler
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.debug.LogLevel
@@ -26,10 +27,8 @@ import com.onesignal.inAppMessages.internal.InAppMessageContent
 import com.onesignal.inAppMessages.internal.InAppMessagePage
 import com.onesignal.inAppMessages.internal.lifecycle.IInAppLifecycleService
 import com.onesignal.inAppMessages.internal.prompt.IInAppMessagePromptFactory
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withContext
 import org.json.JSONException
 import org.json.JSONObject
 import java.util.Locale
@@ -208,7 +207,7 @@ internal class WebViewManager(
         // benign/recoverable reasons (e.g. JS not yet defined when the activity
         // rotates, custom IAM template, partial metadata). The previous
         // `getJSONObject("rect")` raised `JSONException` which we caught and logged
-        // at ERROR with a full stack trace, flooding OTel/Datadog with non-actionable
+        // at ERROR with a full stack trace, flooding remote logs/Datadog with non-actionable
         // alerts. Use `optJSONObject` and `optInt` so missing fields are a structured
         // null/sentinel instead, and downgrade the log to a single WARN line.
         val rect = jsonObject.optJSONObject("rect")
@@ -231,7 +230,7 @@ internal class WebViewManager(
     }
 
     /**
-     * Trim [body] to a short, single-line snippet safe for logcat / OTel. See
+     * Trim [body] to a short, single-line snippet safe for logcat / remote logs. See
      * SDK-4494 - we only want enough context to debug shape mismatches without
      * dumping the full WebView payload into log pipelines.
      */
@@ -246,8 +245,8 @@ internal class WebViewManager(
     }
 
     private suspend fun updateSafeAreaInsets() {
-        withContext(Dispatchers.Main) {
-            val localWebView = webView ?: return@withContext
+        withMain {
+            val localWebView = webView ?: return@withMain
             val insets = ViewUtils.getCutoutAndStatusBarInsets(activity)
             val safeAreaInsetsObject =
                 String.format(
@@ -704,7 +703,7 @@ internal class WebViewManager(
         private val MARGIN_PX_SIZE = ViewUtils.dpToPx(24)
 
         // SDK-4494: cap the body snippet included in WARN logs so a malformed/large
-        // WebView payload can't blow up the OTel log entry. Same pattern as
+        // WebView payload can't blow up the remote log entry. Same pattern as
         // FeatureFlagsBackendService.
         private const val LOG_BODY_SNIPPET_MAX_CHARS = 200
 

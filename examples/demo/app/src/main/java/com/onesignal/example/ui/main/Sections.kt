@@ -23,11 +23,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.onesignal.example.data.model.InAppMessageType
+import com.onesignal.example.data.model.NotificationExtensionOptions
 import com.onesignal.example.ui.components.CardKvRow
 import com.onesignal.example.ui.components.CollapsibleSingleList
 import com.onesignal.example.ui.components.CustomNotificationDialog
 import com.onesignal.example.ui.components.DemoSection
 import com.onesignal.example.ui.components.DestructiveButton
+import com.onesignal.example.ui.components.DropdownRow
 import com.onesignal.example.ui.components.LocalSnackbarController
 import com.onesignal.example.ui.components.CompositeLoginDialog
 import com.onesignal.example.ui.components.LoginDialog
@@ -50,6 +52,53 @@ import com.onesignal.example.ui.theme.OsGrey700
 import com.onesignal.example.ui.theme.OsPrimary
 import com.onesignal.example.ui.theme.OsSuccess
 import com.onesignal.example.ui.theme.OsWarningBackground
+
+private val languageOptions = listOf(
+    "Device Default" to "",
+    "English" to "en",
+    "Arabic" to "ar",
+    "Azerbaijani" to "az",
+    "Bosnian" to "bs",
+    "Catalan" to "ca",
+    "Chinese (Simplified)" to "zh-Hans",
+    "Chinese (Traditional)" to "zh-Hant",
+    "Croatian" to "hr",
+    "Czech" to "cs",
+    "Danish" to "da",
+    "Dutch" to "nl",
+    "Estonian" to "et",
+    "Finnish" to "fi",
+    "French" to "fr",
+    "Georgian" to "ka",
+    "Bulgarian" to "bg",
+    "German" to "de",
+    "Greek" to "el",
+    "Hindi" to "hi",
+    "Hebrew" to "he",
+    "Hungarian" to "hu",
+    "Indonesian" to "id",
+    "Italian" to "it",
+    "Japanese" to "ja",
+    "Korean" to "ko",
+    "Latvian" to "lv",
+    "Lithuanian" to "lt",
+    "Malay" to "ms",
+    "Norwegian" to "nb",
+    "Persian" to "fa",
+    "Polish" to "pl",
+    "Portuguese" to "pt",
+    "Punjabi" to "pa",
+    "Romanian" to "ro",
+    "Russian" to "ru",
+    "Serbian" to "sr",
+    "Slovak" to "sk",
+    "Spanish" to "es",
+    "Swedish" to "sv",
+    "Thai" to "th",
+    "Turkish" to "tr",
+    "Ukrainian" to "uk",
+    "Vietnamese" to "vi",
+)
 
 @Composable
 private fun DemoCard(
@@ -131,8 +180,10 @@ fun AppSection(
 @Composable
 fun UserSection(
     externalUserId: String?,
+    language: String,
     useIdentityVerification: Boolean,
     onUseIdentityVerificationChange: (Boolean) -> Unit,
+    onLanguageChange: (String) -> Unit,
     onLogin: (String, String?) -> Unit,
     onLoginWithProfile: (String, String?, String?, String?) -> Unit,
     onLogout: () -> Unit,
@@ -167,6 +218,14 @@ fun UserSection(
                 label = "External ID",
                 value = externalUserId ?: "—",
                 valueTestTag = "user_external_id_value",
+            )
+            HorizontalDivider(color = OsDivider, modifier = Modifier.padding(vertical = DemoLayout.gap))
+            DropdownRow(
+                label = "Language",
+                selectedValue = language,
+                options = languageOptions,
+                onValueSelected = onLanguageChange,
+                testTag = "user_language_dropdown",
             )
         }
 
@@ -241,6 +300,7 @@ fun UserSection(
 @Composable
 fun PushSection(
     pushSubscriptionId: String?,
+    pushSubscriptionToken: String,
     pushEnabled: Boolean,
     hasPermission: Boolean,
     onEnabledChange: (Boolean) -> Unit,
@@ -256,13 +316,24 @@ fun PushSection(
                 valueColor = if (!pushSubscriptionId.isNullOrEmpty()) OsGrey600 else OsGrey600.copy(alpha = 0.5f),
             )
             HorizontalDivider(color = OsDivider, modifier = Modifier.padding(vertical = DemoLayout.gap))
+            CardKvRow(
+                label = "Status",
+                value = if (pushEnabled && hasPermission && pushSubscriptionToken.isNotEmpty()) {
+                    "Subscribed"
+                } else {
+                    "Unsubscribed"
+                },
+                valueTestTag = "push_subscription_status",
+                monospaceValue = false,
+            )
+            HorizontalDivider(color = OsDivider, modifier = Modifier.padding(vertical = DemoLayout.gap))
             ToggleRow(
-                label = "Enabled",
+                label = "Opted In",
                 checked = pushEnabled,
                 onCheckedChange = onEnabledChange,
                 enabled = hasPermission,
                 testTag = "push_enabled_toggle",
-                contentDescription = "Push enabled",
+                contentDescription = "Push opted in",
             )
         }
 
@@ -307,6 +378,65 @@ fun SendPushSection(
                 customOpen = false
             },
         )
+    }
+}
+
+@Composable
+fun NotificationExtensionSection(
+    options: NotificationExtensionOptions,
+    onOptionsChange: (NotificationExtensionOptions) -> Unit,
+) {
+    DemoSection {
+        SectionCard(title = "Notification Service Extension", sectionKey = "nse") {
+            ToggleRow(
+                label = "Enable Extension",
+                description = "Run the demo's extension on received pushes and log under [Demo]NSE",
+                checked = options.enabled,
+                onCheckedChange = { onOptionsChange(options.copy(enabled = it)) },
+                testTag = "nse_enabled_toggle",
+                contentDescription = "Enable notification service extension",
+            )
+            HorizontalDivider(color = OsDivider, modifier = Modifier.padding(vertical = DemoLayout.gap))
+            ToggleRow(
+                label = "Apply Extender",
+                description = "Prefix the title with [NSE] through a NotificationCompat.Extender",
+                checked = options.applyExtender,
+                onCheckedChange = { onOptionsChange(options.copy(applyExtender = it)) },
+                enabled = options.enabled,
+                testTag = "nse_extender_toggle",
+                contentDescription = "Apply notification extender",
+            )
+            HorizontalDivider(color = OsDivider, modifier = Modifier.padding(vertical = DemoLayout.gap))
+            ToggleRow(
+                label = "Force High Importance Channel",
+                description = "Move every notification onto an app-owned IMPORTANCE_HIGH channel",
+                checked = options.forceHighImportanceChannel,
+                onCheckedChange = { onOptionsChange(options.copy(forceHighImportanceChannel = it)) },
+                enabled = options.enabled,
+                testTag = "nse_high_importance_toggle",
+                contentDescription = "Force high importance channel",
+            )
+            HorizontalDivider(color = OsDivider, modifier = Modifier.padding(vertical = DemoLayout.gap))
+            ToggleRow(
+                label = "Delay Display",
+                description = "preventDefault(), then display() five seconds later",
+                checked = options.delayDisplay,
+                onCheckedChange = { onOptionsChange(options.copy(delayDisplay = it)) },
+                enabled = options.enabled,
+                testTag = "nse_delay_toggle",
+                contentDescription = "Delay notification display",
+            )
+            HorizontalDivider(color = OsDivider, modifier = Modifier.padding(vertical = DemoLayout.gap))
+            ToggleRow(
+                label = "Discard",
+                description = "preventDefault(true). Takes precedence over the switches above",
+                checked = options.discard,
+                onCheckedChange = { onOptionsChange(options.copy(discard = it)) },
+                enabled = options.enabled,
+                testTag = "nse_discard_toggle",
+                contentDescription = "Discard notification",
+            )
+        }
     }
 }
 

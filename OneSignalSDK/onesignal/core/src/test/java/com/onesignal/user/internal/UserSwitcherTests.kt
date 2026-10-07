@@ -20,6 +20,7 @@ import com.onesignal.user.internal.identity.IdentityModel
 import com.onesignal.user.internal.identity.IdentityModelStore
 import com.onesignal.user.internal.operations.LoginUserFromSubscriptionOperation
 import com.onesignal.user.internal.operations.LoginUserOperation
+import com.onesignal.user.internal.operations.impl.listeners.SubscriptionModelStoreListener
 import com.onesignal.user.internal.properties.PropertiesModelStore
 import com.onesignal.user.internal.subscriptions.SubscriptionModel
 import com.onesignal.user.internal.subscriptions.SubscriptionModelStore
@@ -255,6 +256,58 @@ class UserSwitcherTests : FunSpec({
         result shouldBe true
         verify(exactly = 1) { mockConfigModel.pushSubscriptionId = mocks.legacyPlayerId }
         verify(exactly = 1) { mockSubscriptionModelStore.add(any(), ModelChangeTags.NO_PROPOGATE) }
+    }
+
+    test("createAndSwitchToNewUser carries a remote disable onto the new push model") {
+        // Uses -22 rather than -31 so the assertions below also prove the exact recorded code
+        // survives the switch instead of every remote disable collapsing to one status.
+        // Given
+        val mocks = Mocks()
+        val userSwitcher = mocks.createUserSwitcher()
+        val disabledPushModel =
+            SubscriptionModel().apply {
+                id = mocks.testSubscriptionId
+                type = SubscriptionType.PUSH
+                address = "test-token"
+                optedIn = true
+                remoteDisabledReason = SubscriptionStatus.MANUALLY_UNSUBSCRIBED.value
+            }
+        mocks.subscriptionModelStore!!.add(disabledPushModel, ModelChangeTags.NO_PROPOGATE)
+
+        // When
+        userSwitcher.createAndSwitchToNewUser()
+
+        // Then the login create for the new user still reports the subscription disabled
+        val newPushModel = mocks.subscriptionModelStore!!.list().first { it.type == SubscriptionType.PUSH }
+        newPushModel.remoteDisabledReason shouldBe SubscriptionStatus.MANUALLY_UNSUBSCRIBED.value
+        val (enabled, status) = SubscriptionModelStoreListener.getSubscriptionEnabledAndStatus(newPushModel)
+        enabled shouldBe false
+        status shouldBe SubscriptionStatus.MANUALLY_UNSUBSCRIBED
+    }
+
+    test("createAndSwitchToNewUser carries the opt-in guard onto the new push model") {
+        // The guard lives in memory rather than as a model property, so it is not carried by the
+        // copy of the reason beside it. Without it, a login landing between an opt-in and its write
+        // lets a fetch issued before that write record the disable the opt-in just cleared.
+        // Given
+        val mocks = Mocks()
+        val userSwitcher = mocks.createUserSwitcher()
+        val optedInPushModel =
+            SubscriptionModel().apply {
+                id = mocks.testSubscriptionId
+                type = SubscriptionType.PUSH
+                address = "test-token"
+                optedIn = true
+                remoteDisableClearedByUser = true
+            }
+        mocks.subscriptionModelStore!!.add(optedInPushModel, ModelChangeTags.NO_PROPOGATE)
+
+        // When
+        userSwitcher.createAndSwitchToNewUser()
+
+        // Then
+        val newPushModel = mocks.subscriptionModelStore!!.list().first { it.type == SubscriptionType.PUSH }
+        newPushModel.remoteDisableClearedByUser shouldBe true
     }
 
     test("initUser with forceCreateUser creates new user") {

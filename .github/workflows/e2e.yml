@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       sdk-version:
-        description: 'OneSignal Android SDK version to wait for and build against (defaults to OneSignalSDK/gradle.properties).'
+        description: 'OneSignal Android SDK version to build against (defaults to OneSignalSDK/gradle.properties).'
         required: false
         type: string
 
@@ -60,17 +60,11 @@ jobs:
           echo "Resolved OneSignal Android SDK version: $VERSION"
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
 
-      - name: Wait for OneSignal Android SDK on Maven Central
-        uses: OneSignal/sdk-shared/.github/actions/wait-for-maven-artifact@main
-        with:
-          version: ${{ steps.android-sdk-version.outputs.version }}
-
       # gms+debug: BrowserStack devices have GMS, debug enables UiAutomator2
-      # attach. -PSDK_VERSION pins the Maven dep to the version we waited
-      # for. SDK_VERSION flows through env: to avoid script injection
-      # (workflow_dispatch input is user-controlled).
+      # attach. The OneSignalSDK build substitutes the demo's Maven dependencies
+      # with the local SDK projects defined in OneSignalSDK/settings.gradle.
       - name: Build debug APK
-        working-directory: examples/demo
+        working-directory: OneSignalSDK
         env:
           SDK_VERSION: ${{ steps.android-sdk-version.outputs.version }}
         run: ./gradlew :app:assembleGmsDebug "-PSDK_VERSION=$SDK_VERSION" --console=plain --warning-mode=summary

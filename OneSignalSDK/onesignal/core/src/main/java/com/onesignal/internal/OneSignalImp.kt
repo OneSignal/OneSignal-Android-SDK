@@ -12,6 +12,7 @@ import com.onesignal.OneSignalUserProfile
 import com.onesignal.common.AndroidUtils
 import com.onesignal.common.DeviceUtils
 import com.onesignal.common.OneSignalUtils
+import com.onesignal.common.isMissing
 import com.onesignal.common.modules.IModule
 import com.onesignal.common.services.IServiceProvider
 import com.onesignal.common.services.ServiceBuilder
@@ -34,9 +35,10 @@ import com.onesignal.debug.IDebugManager
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.DebugManager
 import com.onesignal.debug.internal.logging.Logging
-import com.onesignal.debug.internal.logging.otel.android.getOtelCrashStoragePath
+import com.onesignal.debug.internal.logging.logger.android.getCrashStoragePath
 import com.onesignal.inAppMessages.IInAppMessagesManager
 import com.onesignal.location.ILocationManager
+import com.onesignal.logger.IObservabilityEventRecorder
 import com.onesignal.notifications.INotificationsManager
 import com.onesignal.session.ISessionManager
 import com.onesignal.session.SessionModule
@@ -244,20 +246,15 @@ internal class OneSignalImp : IOneSignal,
     }
 
     private fun initEssentials(context: Context) {
-        // OtelLifecycleManager comes up early so crash handling and remote logging can capture
+        // LoggerLifecycleManager comes up early so crash handling and remote logging can capture
         // anything that happens during the rest of init. FeatureManager is wired in via a
         // lazy supplier — `enabledFeatureFlags` is read per-event, so resolving the manager
         // can be deferred until services have bootstrapped.
         val featureManagerProvider = { services.getService<IFeatureManager>() }
-        val useLoggerModule =
-            com.onesignal.debug.internal.logging.logger.LoggerModuleSwitch.useLoggerModule(context)
         observabilityManager =
-            if (useLoggerModule) {
-                LoggerLifecycleManager(context = context, featureManagerProvider = featureManagerProvider)
-            } else {
-                OtelLifecycleManager(context = context, featureManagerProvider = featureManagerProvider)
-            }.also { it.initializeFromCachedConfig() }
-        logStartupDiagnostics(context, useLoggerModule)
+            LoggerLifecycleManager(context = context, featureManagerProvider = featureManagerProvider)
+                .also { it.initializeFromCachedConfig() }
+        logStartupDiagnostics(context)
 
         PreferenceStoreFix.ensureNoObfuscatedPrefStore(context)
 
@@ -266,16 +263,13 @@ internal class OneSignalImp : IOneSignal,
 
     /**
      * One concise WARN line at init with the build/runtime facts most useful for
-     * release triage from a raw log capture: SDK version, which observability module
-     * is active (and the flag driving it), the shared KMP module version when the
-     * logger is active, OS/API, device, host app + version, and the crash storage dir.
+     * release triage from a raw log capture: SDK version, the shared KMP module version,
+     * OS/API, device, host app + version, and the crash storage dir.
      * Best-effort — never lets diagnostics interfere with init.
      */
     @Suppress("TooGenericExceptionCaught", "SwallowedException")
-    internal fun logStartupDiagnostics(context: Context, useLoggerModule: Boolean) {
+    internal fun logStartupDiagnostics(context: Context) {
         try {
-            val module = if (useLoggerModule) "logger" else "otel"
-            val kmpVersion = if (useLoggerModule) com.onesignal.logger.LoggerBuildInfo.KMP_VERSION else "n/a"
             val appVersion =
                 try {
                     context.packageManager.getPackageInfo(context.packageName, 0).versionName
@@ -284,12 +278,12 @@ internal class OneSignalImp : IOneSignal,
                 }
             Logging.warn(
                 "OneSignal init: sdkVersion=${OneSignalUtils.sdkVersion} " +
-                    "observabilityModule=$module (SDK_CUSTOM_LOGGING=$useLoggerModule) " +
-                    "kmpVersion=$kmpVersion " +
+                    "observabilityModule=logger " +
+                    "kmpVersion=${com.onesignal.logger.LoggerBuildInfo.KMP_VERSION} " +
                     "os=Android/${Build.VERSION.RELEASE}(API ${Build.VERSION.SDK_INT}) " +
                     "device=${Build.MANUFACTURER}/${Build.MODEL} " +
                     "app=${context.packageName}@$appVersion " +
-                    "crashDir=${getOtelCrashStoragePath(context)}",
+                    "crashDir=${getCrashStoragePath(context)}",
             )
         } catch (t: Throwable) {
             Logging.warn("OneSignal init: startup diagnostics failed: ${t.message}", t)
@@ -431,9 +425,18 @@ internal class OneSignalImp : IOneSignal,
 
             val startupService = bootstrapServices()
 
-            // Now that the IoC container is ready, subscribe the Otel lifecycle
+            // Now that the IoC container is ready, subscribe the observability lifecycle
             // manager to config store events so it reacts to fresh remote config.
             observabilityManager?.subscribeToConfigStore(services.getService<ConfigModelStore>())
+            // The event recorder is a container service, so it can only be handed over now. The resolve
+            // cannot fail in practice (bootstrap already built the feature manager it needs), and the
+            // hand-over is fail-open inside the manager.
+            val eventRecorder = services.getServiceOrNull<IObservabilityEventRecorder>()
+            if (eventRecorder != null) {
+                observabilityManager?.attachEventRecorder(eventRecorder)
+            } else {
+                Logging.warn("OneSignal: event recorder unavailable, observability events will not ship")
+            }
 
             val result = resolveAppId(appId, configModel, preferencesService)
             if (result.failed) {
@@ -455,7 +458,7 @@ internal class OneSignalImp : IOneSignal,
             return true
         } catch (e: Exception) {
             // Any unchecked throw from initEssentials / bootstrapServices / subscribeToConfigStore /
-            // updateConfig / userSwitcher.initUser / startupService.scheduleStart would otherwise
+            // attachEventRecorder / updateConfig / userSwitcher.initUser / startupService.scheduleStart would otherwise
             // leave initState at IN_PROGRESS forever and `suspendCompletion` uncompleted —
             // accessors and re-entrant suspend callers (e.g. SyncJobService) would deadlock on
             // `await()`. Reach a terminal state via [completeInit] (atomic state+completion) and
@@ -480,6 +483,8 @@ internal class OneSignalImp : IOneSignal,
 
         waitForInit(operationName = "login")
 
+        if (isMissing(externalId, "login: externalId")) return
+
         val context = loginHelper.switchUser(externalId, jwtBearerToken).context ?: return
 
         suspendifyOnIO { loginHelper.enqueueLogin(context) }
@@ -502,6 +507,8 @@ internal class OneSignalImp : IOneSignal,
         Logging.log(LogLevel.DEBUG, "updateUserJwt(externalId: $externalId, token: ...${token.takeLast(8)})")
 
         waitForInit(operationName = "updateUserJwt")
+
+        if (isMissing(externalId, "updateUserJwt: externalId") || isMissing(token, "updateUserJwt: token")) return
 
         jwtTokenStore.putJwt(externalId, token)
         // Wake the queue so any deferred ops can dispatch with the fresh token.
@@ -585,16 +592,16 @@ internal class OneSignalImp : IOneSignal,
         // Local-capture state + deferred under initLock so we await on the same generation
         // we observed (a concurrent retry-after-FAILED can replace `suspendCompletion`).
         val observedState: InitState
-        val completionToAwait: CompletableDeferred<Unit>?
+        val completionToAwait: CompletableDeferred<Unit>
         synchronized(initLock) {
             observedState = initState
-            completionToAwait = if (observedState == InitState.IN_PROGRESS) suspendCompletion else null
+            completionToAwait = suspendCompletion
         }
 
         when (observedState) {
             InitState.NOT_STARTED -> throw IllegalStateException(notInitializedMessage(operationName))
 
-            InitState.IN_PROGRESS -> awaitInitCompletion(completionToAwait!!, operationName)
+            InitState.IN_PROGRESS -> awaitInitCompletion(completionToAwait, operationName)
 
             InitState.FAILED -> {
                 throw initFailureException ?: IllegalStateException("Initialization failed. Cannot proceed.")
@@ -756,19 +763,19 @@ internal class OneSignalImp : IOneSignal,
         // OneSignalDispatchers on a background thread before we touch [ioDispatcher].
         OneSignalDispatchers.prewarm()
 
-        // Use IO dispatcher for initialization to prevent ANRs and optimize for I/O operations
-        return withContext(ioDispatcher) {
-            val shouldRunInit: Boolean
-            // Local-capture under the lock so that even if a concurrent retry-after-FAILED
-            // resets `suspendCompletion`, we await on the same generation we observed.
-            val completionToAwait: CompletableDeferred<Unit>?
+        // Observing a terminal SUCCESS must never require an IO worker (see waitForInit).
+        if (initState == InitState.SUCCESS) {
+            return true
+        }
+
+        // Local-capture under the lock so that even if a concurrent retry-after-FAILED
+        // resets `suspendCompletion`, we await on the same generation we observed.
+        // Null means this caller is the one that starts init.
+        val completionToAwait: CompletableDeferred<Unit>? =
             synchronized(initLock) {
                 if (initState.isSDKAccessible()) {
-                    shouldRunInit = false
-                    completionToAwait = suspendCompletion
+                    suspendCompletion
                 } else {
-                    shouldRunInit = true
-                    completionToAwait = null
                     initState = InitState.IN_PROGRESS
                     // Fresh latch for this init attempt.
                     suspendCompletion = CompletableDeferred()
@@ -776,23 +783,28 @@ internal class OneSignalImp : IOneSignal,
                     // Re-entrant callers must not overwrite it -- otherwise the failure stack trace
                     // would point at the SyncJobService coroutine instead of the original initiator.
                     initFailureException = IllegalStateException("OneSignal initWithContext failed.")
+                    null
                 }
             }
 
-            if (!shouldRunInit) {
-                // Another caller has already started (or completed) init. Honor this method's
-                // contract by suspending until initialization is *fully* completed -- not just
-                // kicked off. This closes a race where re-entrant suspend callers (e.g. the
-                // SyncJobService entry point) would otherwise
-                // proceed to use IBackgroundService implementations like SessionService whose
-                // bootstrap() had not yet run, NPE'ing on still-null model fields.
-                Logging.log(LogLevel.DEBUG, "initWithContext: init already in progress or completed, awaiting completion")
-                completionToAwait!!.await()
-                return@withContext initState == InitState.SUCCESS
-            }
+        if (completionToAwait != null) {
+            // Another caller has already started (or completed) init. Honor this method's
+            // contract by suspending until initialization is *fully* completed -- not just
+            // kicked off. This closes a race where re-entrant suspend callers (e.g. the
+            // SyncJobService entry point) would otherwise
+            // proceed to use IBackgroundService implementations like SessionService whose
+            // bootstrap() had not yet run, NPE'ing on still-null model fields.
+            Logging.log(LogLevel.DEBUG, "initWithContext: init already in progress or completed, awaiting completion")
+            // Awaited on the caller's own context: waiting for, and resuming from, another
+            // caller's init must not queue behind the work that init itself is doing.
+            completionToAwait.await()
+            return initState == InitState.SUCCESS
+        }
 
-            val result = internalInit(context, appId)
-            result
+        // Only the caller that actually runs init needs the IO dispatcher, to keep its disk
+        // and network work off the calling thread.
+        return withContext(ioDispatcher) {
+            internalInit(context, appId)
         }
     }
 
@@ -805,6 +817,8 @@ internal class OneSignalImp : IOneSignal,
         // suspendUntilInit throws on NOT_STARTED / FAILED (preserving initFailureException as the
         // cause), and only returns once initState == SUCCESS — so no post-check is needed here.
         suspendUntilInit(operationName = "login")
+
+        if (isMissing(externalId, "login: externalId")) return@withContext
 
         val context = loginHelper.switchUser(externalId, jwtBearerToken).context ?: return@withContext
         loginHelper.enqueueLogin(context)
@@ -860,6 +874,10 @@ internal class OneSignalImp : IOneSignal,
 
         if (!isInitialized) {
             throw IllegalStateException("'initWithContext failed' before 'updateUserJwt'")
+        }
+
+        if (isMissing(externalId, "updateUserJwt: externalId") || isMissing(token, "updateUserJwt: token")) {
+            return@withContext
         }
 
         jwtTokenStore.putJwt(externalId, token)

@@ -31,6 +31,7 @@ import android.app.Activity
 import com.onesignal.common.AndroidUtils
 import com.onesignal.common.events.EventProducer
 import com.onesignal.common.events.IEventNotifier
+import com.onesignal.common.threading.InFlightResult
 import com.onesignal.common.threading.WaiterWithValue
 import com.onesignal.core.activities.PermissionsActivity
 import com.onesignal.core.internal.application.ApplicationLifecycleHandlerBase
@@ -56,6 +57,7 @@ internal class LocationPermissionController(
     }
 
     private val waiter = WaiterWithValue<Boolean>()
+    private val inFlightPrompt = InFlightResult<Boolean>()
     private val events = EventProducer<ILocationPermissionChangedHandler>()
     private var currPermission: String = ""
 
@@ -67,17 +69,16 @@ internal class LocationPermissionController(
         fallbackToSettings: Boolean,
         androidPermissionString: String,
     ): Boolean {
-        currPermission = androidPermissionString
-        _requestPermission.startPrompt(
-            fallbackToSettings,
-            PERMISSION_TYPE,
-            androidPermissionString,
-            this::class.java,
-        )
-
-        // this won't return until onAccept or onReject sends the response on the channel (either
-        // through the native prompt or through the fallback)
-        return waiter.waitForWake()
+        return inFlightPrompt.share(false) {
+            currPermission = androidPermissionString
+            _requestPermission.startPrompt(
+                fallbackToSettings,
+                PERMISSION_TYPE,
+                androidPermissionString,
+                this::class.java,
+            )
+            waiter.waitForWake()
+        }
     }
 
     override fun onAccept() {

@@ -1,20 +1,19 @@
 package com.onesignal.debug.internal.crash
 
+import io.kotest.assertions.throwables.shouldNotThrowAny
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 
 /**
- * Pure-JVM tests for the ANR decision core. These run without Robolectric so the logic is exercised
- * on a real JVM (and therefore counted by coverage), unlike the Android shell in [OtelAnrDetector].
- *
- * Defaults mirror AnrConstants: 5s foreground ANR, 2s check interval, 2s frozen slack, 10s background
- * warning, 30s dedup window.
+ * Pure-JVM tests for the ANR decision core. Fixtures mirror AnrConstants: 5s foreground ANR,
+ * 2s check interval, 2s frozen slack, 10s background warning, 30s dedup window.
  */
 class AnrCheckEvaluatorTest : FunSpec({
 
-    class FakeClock(var nowMs: Long = 1_000L) {
-        fun advance(ms: Long) { nowMs += ms }
+    class FakeClock(private var t: Long = 1_000L) : MonotonicClock {
+        fun advance(ms: Long) { t += ms }
+        override fun now(): Long = t
     }
 
     fun evaluator(clock: FakeClock) = AnrCheckEvaluator(
@@ -23,8 +22,14 @@ class AnrCheckEvaluatorTest : FunSpec({
         backgroundThresholdMs = 10_000L,
         frozenSlackMs = 2_000L,
         dedupWindowMs = 30_000L,
-        now = { clock.nowMs },
+        clock = clock,
     )
+
+    fun AnrCheckEvaluator.ping() {
+        recordHeartbeatSafely()
+        evaluate(actualSleepMs = 2_000L, inForeground = true)
+            .shouldBeInstanceOf<AnrCheckResult.Responsive>()
+    }
 
     // ===== classifyBlock (pure) =====
 
@@ -76,17 +81,50 @@ class AnrCheckEvaluatorTest : FunSpec({
         val clock = FakeClock(5_000L)
         val e = evaluator(clock)
 
-        e.recordHeartbeat()
+        e.ping()
         clock.advance(4_000L)
 
         e.evaluate(actualSleepMs = 2_000L, inForeground = true).shouldBeInstanceOf<AnrCheckResult.Responsive>()
+    }
+
+    test("MonotonicClock.now returns a primitive long so the heartbeat cannot box") {
+        MonotonicClock::class.java.getMethod("now").returnType shouldBe java.lang.Long.TYPE
+    }
+
+    test("recordHeartbeatSafely swallows a throwing clock") {
+        var ticks = 0
+        var nowMs = 1_000L
+        val e = AnrCheckEvaluator(
+            anrThresholdMs = 5_000L,
+            checkIntervalMs = 2_000L,
+            backgroundThresholdMs = 10_000L,
+            frozenSlackMs = 2_000L,
+            dedupWindowMs = 30_000L,
+            clock = MonotonicClock {
+                ticks += 1
+                if (ticks == 2) throw OutOfMemoryError("boxed Long")
+                nowMs
+            },
+        )
+        shouldNotThrowAny { e.recordHeartbeatSafely() }
+        ticks shouldBe 2
+
+        nowMs += 6_000L
+        e.evaluate(actualSleepMs = 2_000L, inForeground = true)
+            .shouldBeInstanceOf<AnrCheckResult.Responsive>()
+        ticks shouldBe 3
+
+        nowMs += 6_000L
+        val r = e.evaluate(actualSleepMs = 2_000L, inForeground = true)
+        r.shouldBeInstanceOf<AnrCheckResult.ForegroundAnr>()
+        r.durationMs shouldBe 6_000L
     }
 
     test("a stale heartbeat past the threshold reports a foreground ANR") {
         val clock = FakeClock(1_000L)
         val e = evaluator(clock)
 
-        e.recordHeartbeat()
+        e.ping()
         clock.advance(6_000L)
 
         val r = e.evaluate(actualSleepMs = 2_000L, inForeground = true)
@@ -98,7 +136,7 @@ class AnrCheckEvaluatorTest : FunSpec({
         val clock = FakeClock(1_000L)
         val e = evaluator(clock)
 
-        e.recordHeartbeat()
+        e.ping()
         clock.advance(11_000L)
 
         e.evaluate(actualSleepMs = 2_000L, inForeground = false).shouldBeInstanceOf<AnrCheckResult.BackgroundWarning>()
@@ -108,7 +146,7 @@ class AnrCheckEvaluatorTest : FunSpec({
         val clock = FakeClock(1_000L)
         val e = evaluator(clock)
 
-        e.recordHeartbeat()
+        e.ping()
         clock.advance(60_000L)
         e.evaluate(actualSleepMs = 30_000L, inForeground = true).shouldBeInstanceOf<AnrCheckResult.FrozenProcess>()
 
@@ -122,7 +160,7 @@ class AnrCheckEvaluatorTest : FunSpec({
         val clock = FakeClock(1_000L)
         val e = evaluator(clock)
 
-        e.recordHeartbeat()
+        e.ping()
         clock.advance(6_000L)
         e.evaluate(actualSleepMs = 2_000L, inForeground = true).shouldBeInstanceOf<AnrCheckResult.ForegroundAnr>()
 
@@ -138,7 +176,7 @@ class AnrCheckEvaluatorTest : FunSpec({
         val e = evaluator(clock)
 
         // Background warning fires first and sets the background dedup timestamp.
-        e.recordHeartbeat()
+        e.ping()
         clock.advance(11_000L)
         e.evaluate(actualSleepMs = 2_000L, inForeground = false).shouldBeInstanceOf<AnrCheckResult.BackgroundWarning>()
 
@@ -150,14 +188,13 @@ class AnrCheckEvaluatorTest : FunSpec({
         val clock = FakeClock(1_000L)
         val e = evaluator(clock)
 
-        e.recordHeartbeat()
+        e.ping()
         clock.advance(6_000L)
         e.evaluate(actualSleepMs = 2_000L, inForeground = true).shouldBeInstanceOf<AnrCheckResult.ForegroundAnr>()
 
         // Main thread recovers.
         clock.advance(1_000L)
-        e.recordHeartbeat()
-        e.evaluate(actualSleepMs = 2_000L, inForeground = true).shouldBeInstanceOf<AnrCheckResult.Responsive>()
+        e.ping()
 
         // A new block right away (within the old dedup window) still reports because recovery cleared it.
         clock.advance(6_000L)
@@ -165,12 +202,11 @@ class AnrCheckEvaluatorTest : FunSpec({
     }
 
     test("the very first block shortly after boot is not suppressed by the sentinel timestamp") {
-        // Clock starts small (near boot); `now - NEVER_REPORTED` would look "recent" if dedup didn't
-        // special-case the sentinel. It must still report.
+        // Near boot, `now - NEVER_REPORTED` looks recent unless dedup special-cases the sentinel.
         val clock = FakeClock(500L)
         val e = evaluator(clock)
 
-        e.recordHeartbeat()
+        e.ping()
         clock.advance(6_000L)
         e.evaluate(actualSleepMs = 2_000L, inForeground = true).shouldBeInstanceOf<AnrCheckResult.ForegroundAnr>()
     }
@@ -200,5 +236,67 @@ class AnrCheckEvaluatorTest : FunSpec({
 
     test("buildBlockFingerprint handles an empty stack") {
         buildBlockFingerprint(emptyArray()) shouldBe "top=unknown|onesignal=none"
+    }
+
+    // ===== record formatting =====
+    // Must match Throwable.stackTraceToString() exactly, or consumers parsing
+    // `exception.stacktrace` silently stop matching ANRs only.
+
+    val blockedStack = arrayOf(
+        StackTraceElement("android.os.MessageQueue", "nativePollOnce", "MessageQueue.java", 1),
+        StackTraceElement("com.onesignal.core.Foo", "bar", "Foo.kt", 42),
+    )
+    val nl = System.lineSeparator()
+
+    test("formatJvmStacktrace matches what the JVM itself produces for a real throwable") {
+        val throwable = IllegalStateException("boom")
+
+        formatJvmStacktrace(
+            throwable::class.java.name,
+            throwable.message.orEmpty(),
+            throwable.stackTrace,
+        ) shouldBe throwable.stackTraceToString()
+    }
+
+    test("formatJvmStacktrace omits the colon when there is no message") {
+        formatJvmStacktrace("SomeException", "", emptyArray()) shouldBe "SomeException$nl"
+    }
+
+    test("buildAnrCrashData emits a canonical header and tab-at prefixed frames") {
+        val crash = buildAnrCrashData("main", blockedStack, 6_000L)
+
+        crash.threadName shouldBe "main"
+        crash.exceptionType shouldBe "ApplicationNotRespondingException"
+        crash.stacktrace shouldBe
+            "ApplicationNotRespondingException: Application Not Responding: Main thread blocked for 6000ms$nl" +
+            "\tat android.os.MessageQueue.nativePollOnce(MessageQueue.java:1)$nl" +
+            "\tat com.onesignal.core.Foo.bar(Foo.kt:42)$nl"
+    }
+
+    test("buildBackgroundBlockCrashData emits a canonical header and tab-at prefixed frames") {
+        val crash = buildBackgroundBlockCrashData("main", blockedStack, 11_000L)
+
+        crash.threadName shouldBe "main"
+        crash.exceptionType shouldBe "BackgroundMainThreadBlockException"
+        crash.exceptionMessage shouldBe
+            "Background main-thread block for 11000ms | " +
+            "top=android.os.MessageQueue.nativePollOnce(MessageQueue.java:1)|" +
+            "onesignal=com.onesignal.core.Foo.bar(Foo.kt:42)"
+        crash.stacktrace shouldBe
+            "BackgroundMainThreadBlockException: ${crash.exceptionMessage}$nl" +
+            "\tat android.os.MessageQueue.nativePollOnce(MessageQueue.java:1)$nl" +
+            "\tat com.onesignal.core.Foo.bar(Foo.kt:42)$nl"
+    }
+
+    test("every ANR record frame line is parseable by a `^\\s*at ` consumer") {
+        val fatal = buildAnrCrashData("main", blockedStack, 6_000L)
+        val nonFatal = buildBackgroundBlockCrashData("main", blockedStack, 11_000L)
+        val frameRegex = Regex("^\\s*at .+")
+
+        listOf(fatal, nonFatal).forEach { crash ->
+            val lines = crash.stacktrace.trimEnd().lines()
+            lines.first() shouldBe "${crash.exceptionType}: ${crash.exceptionMessage}"
+            lines.drop(1).all { frameRegex.matches(it) } shouldBe true
+        }
     }
 })

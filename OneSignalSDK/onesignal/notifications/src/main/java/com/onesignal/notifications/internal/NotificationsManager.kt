@@ -4,6 +4,7 @@ import android.app.Activity
 import com.onesignal.common.events.EventProducer
 import com.onesignal.common.threading.runOnSerialIO
 import com.onesignal.common.threading.suspendifyOnIO
+import com.onesignal.common.threading.withMain
 import com.onesignal.core.internal.application.IApplicationLifecycleHandler
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.debug.internal.logging.Logging
@@ -18,8 +19,6 @@ import com.onesignal.notifications.internal.permissions.INotificationPermissionC
 import com.onesignal.notifications.internal.permissions.INotificationPermissionController
 import com.onesignal.notifications.internal.restoration.INotificationRestoreWorkManager
 import com.onesignal.notifications.internal.summary.INotificationSummaryManager
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import org.json.JSONArray
 
 interface INotificationActivityOpener {
@@ -81,7 +80,14 @@ internal class NotificationsManager(
      */
     private fun refreshNotificationState() {
         // ensure all notifications for this app have been restored to the notification panel
-        _notificationRestoreWorkManager.beginEnqueueingWork(_applicationService.appContext, false)
+        @Suppress("TooGenericExceptionCaught")
+        try {
+            _notificationRestoreWorkManager.beginEnqueueingWork(_applicationService.appContext, false)
+        } catch (e: Exception) {
+            Logging.error("Exception in notification restore enqueue", e)
+        } catch (e: LinkageError) {
+            Logging.error("LinkageError in notification restore enqueue", e)
+        }
 
         val isEnabled = NotificationHelper.areNotificationsEnabled(_applicationService.appContext)
         setPermissionStatusAndFire(isEnabled)
@@ -90,9 +96,18 @@ internal class NotificationsManager(
     override suspend fun requestPermission(fallbackToSettings: Boolean): Boolean {
         Logging.debug("NotificationsManager.requestPermission()")
 
-        return withContext(Dispatchers.Main) {
-            return@withContext _notificationPermissionController.prompt(fallbackToSettings)
+        val granted =
+            withMain {
+                _notificationPermissionController.prompt(fallbackToSettings)
+            }
+
+        if (granted == null) {
+            // Reported as not granted because the prompt never ran, which is not a user denial.
+            Logging.error("Could not prompt for notification permission, the main thread is unavailable")
+            return false
         }
+
+        return granted
     }
 
     private fun setPermissionStatusAndFire(isEnabled: Boolean) {

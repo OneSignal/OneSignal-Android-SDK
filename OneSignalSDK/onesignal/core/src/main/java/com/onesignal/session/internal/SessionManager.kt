@@ -1,5 +1,6 @@
 package com.onesignal.session.internal
 
+import com.onesignal.common.isMissing
 import com.onesignal.common.threading.suspendifyOnIO
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
@@ -12,6 +13,8 @@ internal open class SessionManager(
     override fun addOutcome(name: String) {
         Logging.log(LogLevel.DEBUG, "sendOutcome(name: $name)")
 
+        if (isMissing(name, "addOutcome: name")) return
+
         suspendifyOnIO {
             _outcomeController.sendOutcomeEvent(name)
         }
@@ -19,6 +22,8 @@ internal open class SessionManager(
 
     override fun addUniqueOutcome(name: String) {
         Logging.log(LogLevel.DEBUG, "sendUniqueOutcome(name: $name)")
+
+        if (isMissing(name, "addUniqueOutcome: name")) return
 
         suspendifyOnIO {
             _outcomeController.sendUniqueOutcomeEvent(name)
@@ -30,6 +35,8 @@ internal open class SessionManager(
         value: Float,
     ) {
         Logging.log(LogLevel.DEBUG, "sendOutcomeWithValue(name: $name, value: $value)")
+
+        if (isMissing(name, "addOutcomeWithValue: name")) return
 
         suspendifyOnIO {
             _outcomeController.sendOutcomeEventWithValue(name, value)

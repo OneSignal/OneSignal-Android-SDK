@@ -6,7 +6,7 @@ import com.onesignal.debug.ILogListener
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.OneSignalLogEvent
 import com.onesignal.debug.internal.logging.Logging
-import com.onesignal.debug.internal.logging.otel.android.getOtelCrashStoragePath
+import com.onesignal.debug.internal.logging.logger.android.getCrashStoragePath
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
@@ -37,13 +37,12 @@ class StartupDiagnosticsTest : FunSpec({
 
         val oneSignal = OneSignalImp()
         Logging.logLevel = LogLevel.NONE
-        oneSignal.logStartupDiagnostics(context, useLoggerModule = false)
+        oneSignal.logStartupDiagnostics(context)
 
         events.size shouldBe 1
         events.single().level shouldBe LogLevel.WARN
-        events.single().entry shouldContain "observabilityModule=otel"
-        events.single().entry shouldContain "SDK_CUSTOM_LOGGING=false"
+        events.single().entry shouldContain "observabilityModule=logger"
         events.single().entry shouldContain "app=com.example@1.2.3"
-        events.single().entry shouldContain "crashDir=${getOtelCrashStoragePath(context)}"
+        events.single().entry shouldContain "crashDir=${getCrashStoragePath(context)}"
     }
 })

@@ -2,7 +2,9 @@ package com.onesignal.core.internal.config.impl
 
 import com.onesignal.core.internal.backend.IParamsBackendService
 import com.onesignal.core.internal.backend.ParamsObject
+import com.onesignal.core.internal.backend.RemoteLoggingParamsObject
 import com.onesignal.core.internal.config.ConfigModelStore
+import com.onesignal.debug.LogLevel
 import com.onesignal.mocks.IOMockHelper
 import com.onesignal.mocks.IOMockHelper.awaitIO
 import com.onesignal.mocks.MockPreferencesService
@@ -22,6 +24,63 @@ import io.mockk.mockk
  */
 class ConfigModelStoreListenerTests : FunSpec({
     listener(IOMockHelper)
+
+    suspend fun runFetchWith(
+        store: ConfigModelStore,
+        remoteLoggingParams: RemoteLoggingParamsObject,
+    ) {
+        val params = mockk<ParamsObject>(relaxed = true)
+        every { params.remoteLoggingParams } returns remoteLoggingParams
+
+        val paramsBackend = mockk<IParamsBackendService>()
+        coEvery { paramsBackend.fetchParams(any(), any()) } returns params
+
+        val pushSub = mockk<IPushSubscription>(relaxed = true)
+        val subscriptionManager = mockk<ISubscriptionManager>()
+        every { subscriptionManager.subscriptions } returns SubscriptionList(emptyList(), pushSub)
+
+        ConfigModelStoreListener(store, paramsBackend, subscriptionManager).start()
+        awaitIO()
+    }
+
+    // Every other field here is "absent means unchanged". Remote logging is not: the backend
+    // withdraws it by dropping log_level, so a level kept from the session before would outlive
+    // the revocation in the cache the next cold start reads.
+
+    test("a fetch that omits the log level clears the cached level rather than keeping it") {
+        val store = ConfigModelStore(MockPreferencesService())
+        store.model.appId = "test-app-id"
+        store.model.remoteLoggingParams.logLevel = LogLevel.ERROR
+        store.model.remoteLoggingParams.isEnabled = true
+
+        runFetchWith(store, RemoteLoggingParamsObject(logLevel = null))
+
+        store.model.remoteLoggingParams.logLevel shouldBe null
+        store.model.remoteLoggingParams.isEnabled shouldBe false
+    }
+
+    test("a fetch that sends a log level applies it") {
+        val store = ConfigModelStore(MockPreferencesService())
+        store.model.appId = "test-app-id"
+
+        runFetchWith(store, RemoteLoggingParamsObject(logLevel = LogLevel.WARN))
+
+        store.model.remoteLoggingParams.logLevel shouldBe LogLevel.WARN
+        store.model.remoteLoggingParams.isEnabled shouldBe true
+    }
+
+    // The cold-start resolver reads a cached NONE as off, so hydration has to cache it as off too.
+    test("a fetch that sends NONE caches remote logging as disabled") {
+        val store = ConfigModelStore(MockPreferencesService())
+        store.model.appId = "test-app-id"
+        store.model.remoteLoggingParams.logLevel = LogLevel.ERROR
+        store.model.remoteLoggingParams.isEnabled = true
+
+        runFetchWith(store, RemoteLoggingParamsObject(logLevel = LogLevel.NONE))
+
+        store.model.remoteLoggingParams.logLevel shouldBe LogLevel.NONE
+        store.model.remoteLoggingParams.isEnabled shouldBe false
+    }
 
     test("fetchParams does not clobber sdkRemoteFeatureFlags written between snapshot and replace") {
         // Real store so replace() goes through Model.initializeFromModel (data.clear()+putAll()).

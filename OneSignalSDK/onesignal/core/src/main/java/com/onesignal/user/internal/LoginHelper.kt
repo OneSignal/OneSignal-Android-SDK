@@ -46,13 +46,17 @@ internal class LoginHelper(
         jwtBearerToken: String? = null,
         profile: OneSignalUserProfile? = null,
     ): LoginSwitchResult {
+        val jwt = jwtBearerToken?.ifEmpty { null }
         synchronized(lock) {
             val currentExternalId = identityModelStore.model.externalId
             val currentOneSignalId = identityModelStore.model.onesignalId
 
             if (currentExternalId == externalId) {
-                if (jwtBearerToken != null) {
-                    jwtTokenStore.putJwt(externalId, jwtBearerToken)
+                // Same-user refresh path (e.g. login(sameId, freshJwt) after a 401). Store the
+                // fresh token and wake the queue so any ops deferred by `hasValidJwtIfRequired`
+                // dispatch immediately — symmetric with `updateUserJwt`. putJwt no-ops on null.
+                if (jwt != null) {
+                    jwtTokenStore.putJwt(externalId, jwt)
                     operationRepo.forceExecuteOperations()
                 }
                 val retryOrUpsert = IDManager.isLocalId(currentOneSignalId) || profile?.hasFields == true
@@ -65,7 +69,10 @@ internal class LoginHelper(
                 return LoginSwitchResult(context, currentOneSignalId)
             }
 
-            jwtTokenStore.putJwt(externalId, jwtBearerToken)
+            // Store the JWT before the LoginUserOperation enqueues so that when the op
+            // dispatches, the JWT lookup in `hasValidJwtIfRequired` already succeeds.
+            // putJwt no-ops on null.
+            jwtTokenStore.putJwt(externalId, jwt)
             userSwitcher.createAndSwitchToNewUser { identityModel, _ ->
                 identityModel.externalId = externalId
             }

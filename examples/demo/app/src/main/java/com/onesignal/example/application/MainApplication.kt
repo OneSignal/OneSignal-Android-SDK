@@ -19,6 +19,7 @@ import com.onesignal.notifications.INotificationLifecycleListener
 import com.onesignal.notifications.INotificationWillDisplayEvent
 import com.onesignal.example.BuildConfig
 import com.onesignal.example.data.network.OneSignalService
+import com.onesignal.example.util.DemoLog
 import com.onesignal.example.util.SharedPreferenceUtil
 import com.onesignal.example.util.TooltipHelper
 import com.onesignal.user.state.IUserStateObserver
@@ -27,7 +28,6 @@ import com.onesignal.user.state.UserChangedState
 class MainApplication : MultiDexApplication() {
 
     companion object {
-        private const val TAG = "OneSignalExample"
         private const val SLEEP_TIME_TO_MIMIC_ASYNC_OPERATION = 2000L
     }
 
@@ -68,7 +68,7 @@ class MainApplication : MultiDexApplication() {
         // Initialize OneSignal on main thread (required)
         // Crash handler + ANR detector are initialized early inside initWithContext
         OneSignal.initWithContext(this, appId)
-        Log.i(TAG, "OneSignal init completed (crash handler, ANR detector, and logging active)")
+        DemoLog.i("OneSignal init completed (crash handler, ANR detector, and logging active)")
 
         // Set up all OneSignal listeners
         setupOneSignalListeners()
@@ -80,37 +80,40 @@ class MainApplication : MultiDexApplication() {
     private fun setupOneSignalListeners() {
         OneSignal.InAppMessages.addLifecycleListener(object : IInAppMessageLifecycleListener {
             override fun onWillDisplay(event: IInAppMessageWillDisplayEvent) {
-                Log.d(TAG, "onWillDisplayInAppMessage")
+                DemoLog.d("onWillDisplayInAppMessage")
             }
 
             override fun onDidDisplay(event: IInAppMessageDidDisplayEvent) {
-                Log.d(TAG, "onDidDisplayInAppMessage")
+                DemoLog.d("onDidDisplayInAppMessage")
             }
 
             override fun onWillDismiss(event: IInAppMessageWillDismissEvent) {
-                Log.d(TAG, "onWillDismissInAppMessage")
+                DemoLog.d("onWillDismissInAppMessage")
             }
 
             override fun onDidDismiss(event: IInAppMessageDidDismissEvent) {
-                Log.d(TAG, "onDidDismissInAppMessage")
+                DemoLog.d("onDidDismissInAppMessage")
             }
         })
 
         OneSignal.InAppMessages.addClickListener(object : IInAppMessageClickListener {
             override fun onClick(event: IInAppMessageClickEvent) {
-                Log.d(TAG, "IInAppMessageClickListener.onClick")
+                DemoLog.d("IInAppMessageClickListener.onClick")
             }
         })
 
         OneSignal.Notifications.addClickListener(object : INotificationClickListener {
             override fun onClick(event: INotificationClickEvent) {
-                Log.d(TAG, "INotificationClickListener.onClick fired with event: $event")
+                DemoLog.d("Notification click: ${event.notification.title.orEmpty()}")
+                
+                // uncomment to see the full event object
+                // DemoLog.d("Event: ${event.toJSONObject()}")
             }
         })
 
         OneSignal.Notifications.addForegroundLifecycleListener(object : INotificationLifecycleListener {
             override fun onWillDisplay(event: INotificationWillDisplayEvent) {
-                Log.d(TAG, "INotificationLifecycleListener.onWillDisplay fired with event: $event")
+                DemoLog.d("INotificationLifecycleListener.onWillDisplay fired with event: $event")
 
                 val notification: IDisplayableNotification = event.notification
 
@@ -129,7 +132,7 @@ class MainApplication : MultiDexApplication() {
 
         OneSignal.User.addObserver(object : IUserStateObserver {
             override fun onUserStateChange(state: UserChangedState) {
-                Log.i(TAG, "User state changed: onesignalId=${state.current.onesignalId}, externalId=${state.current.externalId}")
+                DemoLog.i("User state changed: onesignalId=${state.current.onesignalId}, externalId=${state.current.externalId}")
             }
         })
 

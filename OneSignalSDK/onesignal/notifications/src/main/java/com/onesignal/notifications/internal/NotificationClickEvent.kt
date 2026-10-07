@@ -22,9 +22,9 @@ internal class NotificationClickEvent(
     override val result: INotificationClickResult
         get() = _result
 
-    fun toJSONObject(): JSONObject {
+    override fun toJSONObject(): JSONObject {
         return JSONObject()
             .put("notification", _notification.toJSONObject())
-            .put("action", _result.toJSONObject())
+            .put("result", _result.toJSONObject())
     }
 }

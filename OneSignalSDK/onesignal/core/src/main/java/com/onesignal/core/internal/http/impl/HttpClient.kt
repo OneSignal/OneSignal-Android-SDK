@@ -7,7 +7,9 @@ import com.onesignal.common.OneSignalUtils
 import com.onesignal.common.OneSignalWrapper
 import com.onesignal.common.threading.launchOnIO
 import com.onesignal.core.internal.config.ConfigModelStore
+import com.onesignal.core.internal.device.IFidEnv
 import com.onesignal.core.internal.device.IInstallIdService
+import com.onesignal.core.internal.device.impl.HTTP_FID_ENV_HEADER_KEY
 import com.onesignal.core.internal.http.HttpResponse
 import com.onesignal.core.internal.http.IHttpClient
 import com.onesignal.core.internal.preferences.IPreferencesService
@@ -35,6 +37,7 @@ internal class HttpClient(
     private val _configModelStore: ConfigModelStore,
     private val _time: ITime,
     private val _installIdService: IInstallIdService,
+    private val _fidEnv: IFidEnv,
 ) : IHttpClient {
     /**
      * Delay making network requests until we reach this time.
@@ -148,6 +151,14 @@ internal class HttpClient(
                     }
 
                     con.setRequestProperty("OneSignal-Install-Id", _installIdService.getId().toString())
+
+                    val fidEnv = _fidEnv.headerValue()
+                    if (fidEnv.isNotEmpty()) {
+                        try {
+                            con.setRequestProperty(HTTP_FID_ENV_HEADER_KEY, fidEnv)
+                        } catch (_: IllegalArgumentException) {
+                        }
+                    }
 
                     if (jsonBody != null) {
                         con.doInput = true

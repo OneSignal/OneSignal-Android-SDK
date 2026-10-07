@@ -80,6 +80,7 @@ internal class ConfigModelStoreListener(
                     config.appId = appId
                     config.notificationChannels = params.notificationChannels
                     config.googleProjectNumber = params.googleProjectNumber
+                    config.dashboardSenderAppId = appId
                     config.fcmParams.projectId = params.fcmParams.projectId
                     config.fcmParams.appId = params.fcmParams.appId
                     config.fcmParams.apiKey = params.fcmParams.apiKey
@@ -104,7 +105,9 @@ internal class ConfigModelStoreListener(
                     params.influenceParams.isIndirectEnabled?.let { config.influenceParams.isIndirectEnabled = it }
                     params.influenceParams.isUnattributedEnabled?.let { config.influenceParams.isUnattributedEnabled = it }
 
-                    params.remoteLoggingParams.logLevel?.let { config.remoteLoggingParams.logLevel = it }
+                    // Unlike the fields above, an absent log_level is a revocation rather than a
+                    // decline to change: keeping the old level would outlive the kill switch.
+                    config.remoteLoggingParams.logLevel = params.remoteLoggingParams.logLevel
                     config.remoteLoggingParams.isEnabled = params.remoteLoggingParams.isEnabled
 
                     // Re-source from live model: replace() is a full data.clear()+putAll(),
