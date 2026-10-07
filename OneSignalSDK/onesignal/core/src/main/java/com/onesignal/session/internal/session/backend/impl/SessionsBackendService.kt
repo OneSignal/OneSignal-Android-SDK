@@ -1,5 +1,6 @@
 package com.onesignal.session.internal.session.backend.impl
 
+import com.onesignal.common.DateUtils
 import com.onesignal.core.internal.http.HttpResponse
 import com.onesignal.core.internal.http.IHttpClient
 import com.onesignal.debug.internal.logging.Logging
@@ -9,10 +10,7 @@ import com.onesignal.session.internal.session.backend.SessionsApiResult
 import com.onesignal.session.internal.session.backend.UpdateSessionRequest
 import org.json.JSONException
 import org.json.JSONObject
-import java.text.SimpleDateFormat
 import java.util.Date
-import java.util.Locale
-import java.util.TimeZone
 
 internal class SessionsBackendService(
     private val httpClient: IHttpClient,
@@ -65,11 +63,7 @@ internal class SessionsBackendService(
         return SessionsApiResult.Success(Unit)
     }
 
-    // SimpleDateFormat instead of java.time, which needs API 26.
-    private fun toIso8601(epochSeconds: Long): String =
-        SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US)
-            .apply { timeZone = TimeZone.getTimeZone("UTC") }
-            .format(Date(epochSeconds * MILLIS_PER_SECOND))
+    private fun toIso8601(epochSeconds: Long): String = DateUtils.iso8601Format().format(Date(epochSeconds * MILLIS_PER_SECOND))
 
     private fun parseSessionId(payload: String?): String? =
         try {

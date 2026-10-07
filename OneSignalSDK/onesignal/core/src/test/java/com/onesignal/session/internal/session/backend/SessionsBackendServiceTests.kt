@@ -50,7 +50,7 @@ class SessionsBackendServiceTests : FunSpec({
                     it.getString("onesignal_id") shouldBe "onesignalId"
                     it.getString("subscription_id") shouldBe "subscriptionId"
                     it.getInt("device_type") shouldBe 1
-                    it.getString("start_time") shouldBe "2023-11-14T22:13:20Z"
+                    it.getString("start_time") shouldBe "2023-11-14T22:13:20.000Z"
                     it.getString("idempotency_key") shouldBe "create-key"
                     it.has("direct_attribution_id") shouldBe false
                 },
@@ -152,7 +152,7 @@ class SessionsBackendServiceTests : FunSpec({
         coVerify {
             http.patch(
                 "apps/appId/sessions/server-id",
-                withArg { it.getString("end_time") shouldBe "2023-11-14T22:14:02Z" },
+                withArg { it.getString("end_time") shouldBe "2023-11-14T22:14:02.000Z" },
             )
         }
     }
