@@ -39,10 +39,10 @@ import kotlin.reflect.KMutableProperty1
  * The time threshold for a session to expire is a configuration option: [ConfigModel.sessionFocusTimeout].
  */
 internal class SessionService(
-    private val _applicationService: IApplicationService,
-    private val _configModelStore: ConfigModelStore,
-    private val _sessionModelStore: SessionModelStore,
-    private val _time: ITime,
+    private val applicationService: IApplicationService,
+    private val configModelStore: ConfigModelStore,
+    private val sessionModelStore: SessionModelStore,
+    private val time: ITime,
     private val featureManager: IFeatureManager,
     private val identityModelStore: IdentityModelStore,
 ) : ISessionService, IBootstrapService, IStartableService, IBackgroundService, IApplicationLifecycleHandler {
@@ -50,7 +50,7 @@ internal class SessionService(
         // Pre-bootstrap default returns "now" so call sites computing `_time.currentTimeMillis - startTime`
         // (e.g. IAM session-duration / SESSION_TIME triggers) see ~0ms elapsed instead of ~58 years
         // (which is what `0L` / Jan 1970 would produce).
-        get() = session?.startTime ?: _time.currentTimeMillis
+        get() = session?.startTime ?: time.currentTimeMillis
 
     /**
      * Run in the background when the session would time out, only if a session is currently active.
@@ -75,16 +75,16 @@ internal class SessionService(
     private var hasFocused = false
 
     override fun bootstrap() {
-        session = _sessionModelStore.model
-        config = _configModelStore.model
+        session = sessionModelStore.model
+        config = configModelStore.model
     }
 
     override fun start() {
-        _applicationService.addApplicationLifecycleHandler(this)
+        applicationService.addApplicationLifecycleHandler(this)
         identityModelStore.subscribe(PinnedLocalIdTranslator(IdentityConstants.ONESIGNAL_ID, SessionModel::onesignalId))
         // Login before the anonymous user is created carries the local push subscription over to
         // the new user, so its backend ID belongs to that user, not the one pinned on this session.
-        _configModelStore.subscribe(
+        configModelStore.subscribe(
             PinnedLocalIdTranslator(ConfigModel::pushSubscriptionId.name, SessionModel::subscriptionId) { session ->
                 val identityModel = identityModelStore.model
                 val currentOnesignalId = if (identityModel.hasProperty(IdentityConstants.ONESIGNAL_ID)) identityModel.onesignalId else null
@@ -158,8 +158,8 @@ internal class SessionService(
     override fun onFocus(firedOnSubscribe: Boolean) {
         // Capture focus time on the caller's thread so session timestamps reflect lifecycle
         // arrival, not dispatcher latency (SDK-4506).
-        val focusTimeMs = _time.currentTimeMillis
-        val focusElapsedMs = _time.elapsedRealtimeMillis
+        val focusTimeMs = time.currentTimeMillis
+        val focusElapsedMs = time.elapsedRealtimeMillis
         runOnSerialIO {
             handleOnFocus(firedOnSubscribe, focusTimeMs, focusElapsedMs)
         }
@@ -212,8 +212,8 @@ internal class SessionService(
 
     override fun onUnfocused() {
         // Capture on the caller's thread so activeDuration is unaffected by dispatcher latency.
-        val unfocusTimeMs = _time.currentTimeMillis
-        val unfocusElapsedMs = _time.elapsedRealtimeMillis
+        val unfocusTimeMs = time.currentTimeMillis
+        val unfocusElapsedMs = time.elapsedRealtimeMillis
         runOnSerialIO {
             handleOnUnfocused(unfocusTimeMs, unfocusElapsedMs)
         }

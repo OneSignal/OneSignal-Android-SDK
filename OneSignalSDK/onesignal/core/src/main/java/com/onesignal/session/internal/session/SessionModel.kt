@@ -97,7 +97,7 @@ class SessionModel : Model() {
         }
 
     /**
-     * The ID the backend assigned to this session, once known.
+     * Null until the sessions API creates this session. Cleared when a new session starts.
      */
     var serverSessionId: String?
         get() = getOptStringProperty(::serverSessionId.name)
