@@ -1,5 +1,6 @@
 package com.onesignal.core.internal.operations.impl
 
+import com.onesignal.common.IDManager
 import com.onesignal.core.internal.operations.Operation
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.session.internal.session.operations.CreateSessionOperation
@@ -17,23 +18,28 @@ internal const val MAX_QUEUED_SESSION_OPERATIONS = 100
  * Folds queued, unsent updates for the same session into [incoming], which then carries the
  * highest duration. An update that ends the session replaces them the same way.
  *
- * @return false if [incoming] should be discarded because the session's end is already queued.
+ * @return false if [incoming] should be discarded: the session's end is already queued or
+ * sending, or its session ID is local and no create for it remains, so it could never be sent.
  */
-internal fun OperationRepo.coalesceSessionUpdate(
+internal fun OperationRepo.admitSessionUpdate(
     incoming: OperationRepo.OperationQueueItem,
     operationModelStore: OperationModelStore,
 ): Boolean {
     val op = incoming.operation as UpdateSessionOperation
-    val queued =
-        queue.filter {
-            val other = it.operation
-            other is UpdateSessionOperation && other.appId == op.appId && other.sessionId == op.sessionId
-        }
-    if (queued.any { (it.operation as UpdateSessionOperation).isEnd }) {
-        Logging.debug("OperationRepo: session ${op.sessionId} already has an end queued, discarding $op")
+    val pending = (queue + inFlight).map { it.operation }
+    val hasEnd = pending.any { it is UpdateSessionOperation && it.isSameSession(op) && it.isEnd }
+    // Saved ops may not be loaded yet, so a missing create only proves an orphan after initialization.
+    val isOrphaned =
+        isInitialized &&
+            IDManager.isLocalId(op.sessionId) &&
+            pending.none { it is CreateSessionOperation && it.localSessionId == op.sessionId }
+    if (hasEnd || isOrphaned) {
+        Logging.debug("OperationRepo: discarding $op, session ended: $hasEnd, never created: $isOrphaned")
         incoming.waiter?.wake(false)
         return false
     }
+
+    val queued = queue.filter { (it.operation as? UpdateSessionOperation)?.isSameSession(op) == true }
     queued.maxOfOrNull { (it.operation as UpdateSessionOperation).activeDuration }?.let {
         op.activeDuration = maxOf(op.activeDuration, it)
     }
@@ -89,6 +95,8 @@ internal fun OperationRepo.dropOrphanedSessionUpdates(
     orphans.forEach { it.waiter?.wake(false) }
     removeQueuedOperations(orphans, operationModelStore)
 }
+
+private fun UpdateSessionOperation.isSameSession(other: UpdateSessionOperation) = appId == other.appId && sessionId == other.sessionId
 
 private fun OperationRepo.removeQueuedOperations(
     items: List<OperationRepo.OperationQueueItem>,

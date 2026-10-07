@@ -1,5 +1,6 @@
 package com.onesignal.session.internal.session.operations.impl
 
+import com.onesignal.common.threading.OneSignalDispatchers
 import com.onesignal.core.internal.device.IDeviceService
 import com.onesignal.core.internal.operations.ExecutionResponse
 import com.onesignal.core.internal.operations.ExecutionResult
@@ -13,6 +14,7 @@ import com.onesignal.session.internal.session.backend.SessionsApiResult
 import com.onesignal.session.internal.session.backend.UpdateSessionRequest
 import com.onesignal.session.internal.session.operations.CreateSessionOperation
 import com.onesignal.session.internal.session.operations.UpdateSessionOperation
+import kotlinx.coroutines.withContext
 import java.util.concurrent.TimeUnit.MILLISECONDS
 
 internal class SessionOperationExecutor(
@@ -44,9 +46,12 @@ internal class SessionOperationExecutor(
             is SessionsApiResult.Success -> {
                 val serverSessionId = result.value
                 // Persisted so updates enqueued after this point, including after a restart, use the backend ID directly.
-                val session = sessionModelStore.model
-                if (session.localSessionId == op.localSessionId) {
-                    session.serverSessionId = serverSessionId
+                // On SerialIO so the check and write can't interleave with SessionService starting a new session.
+                withContext(OneSignalDispatchers.SerialIO) {
+                    val session = sessionModelStore.model
+                    if (session.localSessionId == op.localSessionId) {
+                        session.serverSessionId = serverSessionId
+                    }
                 }
                 ExecutionResponse(ExecutionResult.SUCCESS, idTranslations = mapOf(op.localSessionId to serverSessionId))
             }

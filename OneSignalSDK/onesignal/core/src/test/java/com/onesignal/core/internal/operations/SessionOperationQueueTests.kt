@@ -74,6 +74,20 @@ private class SessionQueueMocks(
             CoreInternalMocks.identityVerificationService(newCodePathsRun = ivRequired, ivBehaviorActive = ivRequired),
         )
 
+    /** The first execution suspends until [release] completes; [started] completes once it begins. */
+    fun holdFirstExecution(
+        started: CompletableDeferred<Unit>,
+        release: CompletableDeferred<Unit>,
+        response: (Operation) -> ExecutionResponse,
+    ) {
+        coEvery { executor.execute(any()) } coAnswers {
+            val op = firstArg<List<Operation>>().single()
+            executed.add(op)
+            if (started.complete(Unit)) release.await()
+            response(op)
+        }
+    }
+
     fun respondWith(vararg responses: (Operation) -> ExecutionResponse) {
         var call = 0
         coEvery { executor.execute(any()) } answers {
@@ -276,6 +290,69 @@ class SessionOperationQueueTests : FunSpec({
 
         // Then
         keys shouldContainExactly listOf(createOp.idempotencyKey, createOp.idempotencyKey)
+    }
+
+    test("an update for a session whose end is being sent is discarded") {
+        // Given
+        val mocks = SessionQueueMocks()
+        val started = CompletableDeferred<Unit>()
+        val release = CompletableDeferred<Unit>()
+        mocks.holdFirstExecution(started, release) { ExecutionResponse(ExecutionResult.SUCCESS) }
+        val end = update(activeDuration = 15_000, sessionId = "server-session", endTime = 5_000L)
+        mocks.enqueueAll(end)
+        mocks.operationRepo.start()
+        withTimeout(2_000) { started.await() }
+
+        // When
+        mocks.enqueueAll(update(activeDuration = 20_000, sessionId = "server-session"))
+        release.complete(Unit)
+        withTimeout(2_000) { while (mocks.storedOperations.isNotEmpty()) delay(10) }
+        delay(100)
+
+        // Then
+        mocks.executed shouldContainExactly listOf(end)
+    }
+
+    test("an update for a local session with no pending create is discarded") {
+        // Given
+        val mocks = SessionQueueMocks()
+        mocks.operationRepo.start()
+        withTimeout(2_000) { mocks.operationRepo.awaitInitialized() }
+
+        // When
+        mocks.enqueueAll(update(activeDuration = 10_000))
+
+        // Then
+        mocks.queuedOperations shouldBe emptyList()
+        mocks.storedOperations shouldBe emptyList()
+    }
+
+    test("an update for a session whose create is being sent is kept and translated") {
+        // Given
+        val mocks = SessionQueueMocks()
+        val started = CompletableDeferred<Unit>()
+        val release = CompletableDeferred<Unit>()
+        mocks.holdFirstExecution(started, release) {
+            if (it is CreateSessionOperation) {
+                ExecutionResponse(ExecutionResult.SUCCESS, idTranslations = mapOf(LOCAL_SESSION_ID to "server-session"))
+            } else {
+                ExecutionResponse(ExecutionResult.SUCCESS)
+            }
+        }
+        val createOp = create()
+        mocks.enqueueAll(createOp)
+        mocks.operationRepo.start()
+        withTimeout(2_000) { started.await() }
+
+        // When
+        val updateOp = update(activeDuration = 10_000)
+        mocks.enqueueAll(updateOp)
+        release.complete(Unit)
+        withTimeout(2_000) { while (mocks.executed.size < 2) delay(10) }
+
+        // Then
+        mocks.executed shouldContainExactly listOf(createOp, updateOp)
+        updateOp.sessionId shouldBe "server-session"
     }
 
     test("session operations are not suppressed or purged as anonymous under identity verification") {

@@ -73,6 +73,12 @@ internal class OperationRepo(
     @Volatile
     private var isWaitingToRetry = false
 
+    /** Ops removed from [queue] by [getNextOps] and not yet finished; guarded by [queue]. */
+    internal var inFlight: List<OperationQueueItem> = emptyList()
+        private set
+
+    internal val isInitialized: Boolean get() = initialized.isCompleted
+
     // Ops enqueued after their local IDs were translated would otherwise keep the local ID forever.
     private val appliedIdTranslations = mutableMapOf<String, String>()
     private val initialized = CompletableDeferred<Unit>()
@@ -270,7 +276,7 @@ internal class OperationRepo(
         } else if (isNew && appliedIdTranslations.isNotEmpty()) {
             op.translateIds(appliedIdTranslations)
         }
-        return !isDuplicate && (!isNew || op !is UpdateSessionOperation || coalesceSessionUpdate(queueItem, _operationModelStore))
+        return !isDuplicate && (!isNew || op !is UpdateSessionOperation || admitSessionUpdate(queueItem, _operationModelStore))
     }
 
     /**
@@ -395,6 +401,7 @@ internal class OperationRepo(
     }
 
     internal suspend fun executeOperations(ops: List<OperationQueueItem>) {
+        synchronized(queue) { inFlight = ops }
         try {
             val startingOp = ops.first()
             val executor =
@@ -505,6 +512,8 @@ internal class OperationRepo(
         } catch (e: Throwable) {
             Logging.log(LogLevel.ERROR, "Error attempting to execute operation: $ops", e)
             dropAndWake(ops)
+        } finally {
+            synchronized(queue) { inFlight = emptyList() }
         }
     }
 
