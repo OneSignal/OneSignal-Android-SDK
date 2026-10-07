@@ -1,10 +1,12 @@
 package com.onesignal.session.internal.session.backend
 
+import com.onesignal.common.exceptions.BackendException
 import com.onesignal.core.internal.http.HttpResponse
 import com.onesignal.core.internal.http.IHttpClient
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.session.internal.session.backend.impl.SessionsBackendService
+import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.mockk.coEvery
@@ -86,10 +88,10 @@ class SessionsBackendServiceTests : FunSpec({
         val result = service.createSession("appId", createRequest)
 
         // Then
-        result shouldBe SessionsApiResult.Success("server-id")
+        result shouldBe "server-id"
     }
 
-    test("create session retries a success response without a session ID") {
+    test("create session returns null for a success response without a session ID") {
         listOf(
             null,
             "",
@@ -110,7 +112,7 @@ class SessionsBackendServiceTests : FunSpec({
             val result = service.createSession("appId", createRequest)
 
             // Then
-            result shouldBe SessionsApiResult.Retry(202, null)
+            result shouldBe null
         }
     }
 
@@ -121,10 +123,9 @@ class SessionsBackendServiceTests : FunSpec({
         val service = SessionsBackendService(http)
 
         // When
-        val result = service.updateSession("appId", "server-id", updateRequest)
+        service.updateSession("appId", "server-id", updateRequest)
 
         // Then
-        result shouldBe SessionsApiResult.Success(Unit)
         coVerify {
             http.patch(
                 "apps/appId/sessions/server-id",
@@ -157,43 +158,24 @@ class SessionsBackendServiceTests : FunSpec({
         }
     }
 
-    test("failures are retried on network error, 5xx, 408, and 429") {
-        listOf(-1, 0, 408, 429, 500, 502, 503).forEach { statusCode ->
+    test("failures throw BackendException with the status code and Retry-After") {
+        listOf(-1, 0, 400, 404, 422, 429, 503).forEach { statusCode ->
             // Given
             val http = mockk<IHttpClient>()
-            coEvery { http.post(any(), any()) } returns HttpResponse(statusCode, null)
-            coEvery { http.patch(any(), any()) } returns HttpResponse(statusCode, null)
+            coEvery { http.post(any(), any()) } returns HttpResponse(statusCode, "error", retryAfterSeconds = 30)
+            coEvery { http.patch(any(), any()) } returns HttpResponse(statusCode, "error", retryAfterSeconds = 30)
             val service = SessionsBackendService(http)
 
-            // When / Then
-            service.createSession("appId", createRequest) shouldBe SessionsApiResult.Retry(statusCode, null)
-            service.updateSession("appId", "server-id", updateRequest) shouldBe SessionsApiResult.Retry(statusCode, null)
+            // When
+            val createException = shouldThrow<BackendException> { service.createSession("appId", createRequest) }
+            val updateException = shouldThrow<BackendException> { service.updateSession("appId", "server-id", updateRequest) }
+
+            // Then
+            listOf(createException, updateException).forEach {
+                it.statusCode shouldBe statusCode
+                it.response shouldBe "error"
+                it.retryAfterSeconds shouldBe 30
+            }
         }
-    }
-
-    test("other 4xx failures are dropped") {
-        listOf(400, 401, 403, 404, 409, 410, 422).forEach { statusCode ->
-            // Given
-            val http = mockk<IHttpClient>()
-            coEvery { http.post(any(), any()) } returns HttpResponse(statusCode, null, retryAfterSeconds = 10)
-            coEvery { http.patch(any(), any()) } returns HttpResponse(statusCode, null, retryAfterSeconds = 10)
-            val service = SessionsBackendService(http)
-
-            // When / Then
-            service.createSession("appId", createRequest) shouldBe SessionsApiResult.Drop(statusCode)
-            service.updateSession("appId", "server-id", updateRequest) shouldBe SessionsApiResult.Drop(statusCode)
-        }
-    }
-
-    test("retry exposes Retry-After from the response") {
-        // Given
-        val http = mockk<IHttpClient>()
-        coEvery { http.post(any(), any()) } returns HttpResponse(429, null, retryAfterSeconds = 30)
-        coEvery { http.patch(any(), any()) } returns HttpResponse(503, null, retryAfterSeconds = 15)
-        val service = SessionsBackendService(http)
-
-        // When / Then
-        service.createSession("appId", createRequest) shouldBe SessionsApiResult.Retry(429, 30)
-        service.updateSession("appId", "server-id", updateRequest) shouldBe SessionsApiResult.Retry(503, 15)
     }
 })

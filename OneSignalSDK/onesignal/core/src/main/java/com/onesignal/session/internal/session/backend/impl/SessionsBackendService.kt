@@ -1,12 +1,11 @@
 package com.onesignal.session.internal.session.backend.impl
 
 import com.onesignal.common.DateUtils
-import com.onesignal.core.internal.http.HttpResponse
+import com.onesignal.common.exceptions.BackendException
 import com.onesignal.core.internal.http.IHttpClient
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.session.internal.session.backend.CreateSessionRequest
 import com.onesignal.session.internal.session.backend.ISessionsBackendService
-import com.onesignal.session.internal.session.backend.SessionsApiResult
 import com.onesignal.session.internal.session.backend.UpdateSessionRequest
 import org.json.JSONException
 import org.json.JSONObject
@@ -18,7 +17,7 @@ internal class SessionsBackendService(
     override suspend fun createSession(
         appId: String,
         request: CreateSessionRequest,
-    ): SessionsApiResult<String> {
+    ): String? {
         val body =
             JSONObject()
                 .put("onesignal_id", request.onesignalId)
@@ -30,24 +29,17 @@ internal class SessionsBackendService(
 
         val response = httpClient.post("apps/$appId/sessions", body)
         if (!response.isSuccess) {
-            return classifyFailure(response)
+            throw BackendException(response.statusCode, response.payload, response.retryAfterSeconds)
         }
 
-        val sessionId = parseSessionId(response.payload)
-        return if (sessionId.isNullOrEmpty()) {
-            // Retrying with the same idempotency key lets the backend return the session it already created.
-            Logging.warn("SessionsBackendService: create session response is missing data.session_id")
-            SessionsApiResult.Retry(response.statusCode, response.retryAfterSeconds)
-        } else {
-            SessionsApiResult.Success(sessionId)
-        }
+        return parseSessionId(response.payload)
     }
 
     override suspend fun updateSession(
         appId: String,
         sessionId: String,
         request: UpdateSessionRequest,
-    ): SessionsApiResult<Unit> {
+    ) {
         val body =
             JSONObject()
                 .put("onesignal_id", request.onesignalId)
@@ -58,36 +50,22 @@ internal class SessionsBackendService(
 
         val response = httpClient.patch("apps/$appId/sessions/$sessionId", body)
         if (!response.isSuccess) {
-            return classifyFailure(response)
+            throw BackendException(response.statusCode, response.payload, response.retryAfterSeconds)
         }
-        return SessionsApiResult.Success(Unit)
     }
 
     private fun toIso8601(epochSeconds: Long): String = DateUtils.iso8601Format().format(Date(epochSeconds * MILLIS_PER_SECOND))
 
     private fun parseSessionId(payload: String?): String? =
         try {
-            payload?.let { JSONObject(it) }?.optJSONObject("data")?.opt("session_id") as? String
+            val sessionId = payload?.let { JSONObject(it) }?.optJSONObject("data")?.opt("session_id") as? String
+            sessionId?.takeIf { it.isNotEmpty() }
         } catch (e: JSONException) {
             Logging.warn("SessionsBackendService: unable to parse create session response", e)
             null
         }
 
-    private fun classifyFailure(response: HttpResponse): SessionsApiResult<Nothing> {
-        val code = response.statusCode
-        // Non-positive codes mean no HTTP response: HttpClient returns -1 for network errors and 0 for timeouts or missing consent.
-        val retryable = code <= 0 || code == HTTP_REQUEST_TIMEOUT || code == HTTP_TOO_MANY_REQUESTS || code >= HTTP_SERVER_ERROR
-        return if (retryable) {
-            SessionsApiResult.Retry(code, response.retryAfterSeconds)
-        } else {
-            SessionsApiResult.Drop(code)
-        }
-    }
-
     private companion object {
-        const val HTTP_REQUEST_TIMEOUT = 408
-        const val HTTP_TOO_MANY_REQUESTS = 429
-        const val HTTP_SERVER_ERROR = 500
         const val MILLIS_PER_SECOND = 1000L
     }
 }

@@ -1,16 +1,22 @@
 package com.onesignal.session.internal.session.backend
 
+import com.onesignal.common.exceptions.BackendException
+
 /**
  * The backend service for the public sessions API.
+ *
+ * If there is a non-successful response from the backend, a [BackendException] will be thrown with response data.
  */
 internal interface ISessionsBackendService {
     /**
-     * Create a session. On success the result holds the backend session ID.
+     * Create a session.
+     *
+     * @return The backend session ID, or null if the success response did not include one.
      */
     suspend fun createSession(
         appId: String,
         request: CreateSessionRequest,
-    ): SessionsApiResult<String>
+    ): String?
 
     /**
      * Update an existing session with its cumulative duration, and end it when [UpdateSessionRequest.endTime] is set.
@@ -19,7 +25,7 @@ internal interface ISessionsBackendService {
         appId: String,
         sessionId: String,
         request: UpdateSessionRequest,
-    ): SessionsApiResult<Unit>
+    )
 }
 
 internal data class CreateSessionRequest(
@@ -40,23 +46,3 @@ internal data class UpdateSessionRequest(
     /** Unix time in seconds, sent as ISO 8601 UTC. */
     val endTime: Long? = null,
 )
-
-internal sealed class SessionsApiResult<out T> {
-    data class Success<T>(val value: T) : SessionsApiResult<T>()
-
-    /**
-     * Transient failure: network error, 5xx, 408, 429, or a create success without a session ID.
-     * Wait at least [retryAfterSeconds] when set.
-     */
-    data class Retry(
-        val statusCode: Int,
-        val retryAfterSeconds: Int?,
-    ) : SessionsApiResult<Nothing>()
-
-    /**
-     * Permanent failure (any other 4xx); the request should not be retried.
-     */
-    data class Drop(
-        val statusCode: Int,
-    ) : SessionsApiResult<Nothing>()
-}
