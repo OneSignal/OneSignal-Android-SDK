@@ -794,6 +794,8 @@ class OperationRepoTests : FunSpec({
 
         // Then
         response shouldBe true
+        // The waiter wakes before the delay starts, so wait for the delay call before checking order.
+        coVerify(timeout = 1_000) { mocks.operationRepo.delayBeforeNextExecution(any(), any()) }
         coVerifyOrder {
             // ensure the order: IDs are translated, operation removed from the store, then delay for postCreateDelay
             operation.translateIds(idTranslation)
