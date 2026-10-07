@@ -27,14 +27,18 @@ private class ConnectivityContext(
 
 @RobolectricTest
 class OperationRetryTriggerTests : FunSpec({
-    fun setUp(connectivityManager: ConnectivityManager): Pair<OperationRetryTrigger, IOperationRepo> {
+    fun setUp(
+        connectivityManager: ConnectivityManager,
+        isInForeground: Boolean = true,
+    ): Pair<OperationRetryTrigger, IOperationRepo> {
         val operationRepo = mockk<IOperationRepo>(relaxed = true)
         val applicationService = mockk<IApplicationService>(relaxed = true)
+        every { applicationService.isInForeground } returns isInForeground
         every { applicationService.appContext } returns ConnectivityContext(ApplicationProvider.getApplicationContext(), connectivityManager)
         return OperationRetryTrigger(applicationService, operationRepo) to operationRepo
     }
 
-    test("retries when the network becomes available") {
+    test("retries when the network becomes available while the app is in the foreground") {
         // Given
         val callback = slot<ConnectivityManager.NetworkCallback>()
         val connectivityManager = mockk<ConnectivityManager>()
@@ -47,6 +51,21 @@ class OperationRetryTriggerTests : FunSpec({
 
         // Then
         verify(exactly = 1) { operationRepo.retryNow() }
+    }
+
+    test("does not retry when the network becomes available while the app is in the background") {
+        // Given
+        val callback = slot<ConnectivityManager.NetworkCallback>()
+        val connectivityManager = mockk<ConnectivityManager>()
+        every { connectivityManager.registerNetworkCallback(any<NetworkRequest>(), capture(callback)) } just runs
+        val (trigger, operationRepo) = setUp(connectivityManager, isInForeground = false)
+        trigger.start()
+
+        // When
+        callback.captured.onAvailable(mockk<Network>())
+
+        // Then
+        verify(exactly = 0) { operationRepo.retryNow() }
     }
 
     test("retries when the app comes to the foreground") {

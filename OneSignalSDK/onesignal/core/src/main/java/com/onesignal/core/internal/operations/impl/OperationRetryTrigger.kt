@@ -12,8 +12,8 @@ import com.onesignal.core.internal.startup.IStartableService
 import com.onesignal.debug.internal.logging.Logging
 
 /**
- * Retries operations waiting on failure backoff when the app opens or the network returns,
- * rather than leaving them until the backoff runs out.
+ * Retries operations waiting on failure backoff when the app opens or the network returns while
+ * the app is in the foreground, rather than leaving them until the backoff runs out.
  */
 internal class OperationRetryTrigger(
     private val applicationService: IApplicationService,
@@ -39,7 +39,10 @@ internal class OperationRetryTrigger(
             connectivityManager.registerNetworkCallback(
                 request,
                 object : ConnectivityManager.NetworkCallback() {
-                    override fun onAvailable(network: Network) = operationRepo.retryNow()
+                    override fun onAvailable(network: Network) {
+                        // Android 15+ blocks requests from cached background apps; a blocked attempt only lengthens the backoff.
+                        if (applicationService.isInForeground) operationRepo.retryNow()
+                    }
                 },
             )
         } catch (e: RuntimeException) {
