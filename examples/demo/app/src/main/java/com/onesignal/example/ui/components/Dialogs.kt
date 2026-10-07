@@ -468,11 +468,11 @@ fun LoginDialog(
 @Composable
 fun CompositeLoginDialog(
     onDismiss: () -> Unit,
-    onConfirm: (externalId: String, email: String?, phoneNumber: String?, jwt: String?) -> Unit,
+    onConfirm: (externalId: String, email: String?, sms: String?, jwt: String?) -> Unit,
 ) {
     var externalId by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
-    var phoneNumber by remember { mutableStateOf("") }
+    var sms by remember { mutableStateOf("") }
     var jwtToken by remember { mutableStateOf("") }
 
     AlertDialog(
@@ -510,12 +510,12 @@ fun CompositeLoginDialog(
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 OutlinedTextField(
-                    value = phoneNumber,
-                    onValueChange = { phoneNumber = it },
-                    label = { Text("Phone (optional)") },
+                    value = sms,
+                    onValueChange = { sms = it },
+                    label = { Text("SMS (optional)") },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .testTag("composite_login_phone_input"),
+                        .testTag("composite_login_sms_input"),
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                     shape = TextFieldShape,
@@ -541,7 +541,7 @@ fun CompositeLoginDialog(
                     onConfirm(
                         externalId,
                         email.ifBlank { null },
-                        phoneNumber.ifBlank { null },
+                        sms.ifBlank { null },
                         jwtToken.ifBlank { null },
                     )
                 },

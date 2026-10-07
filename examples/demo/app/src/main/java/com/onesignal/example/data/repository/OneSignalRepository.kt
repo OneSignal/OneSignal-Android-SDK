@@ -25,11 +25,11 @@ class OneSignalRepository {
     suspend fun loginUserWithProfile(
         externalUserId: String,
         email: String?,
-        phoneNumber: String?,
+        sms: String?,
         jwtToken: String? = null,
     ) = withContext(Dispatchers.IO) {
-        Log.d(TAG, "Composite login externalUserId: $externalUserId email=$email phone=$phoneNumber")
-        val profile = CompositeLoginExample.profile(email, phoneNumber)
+        Log.d(TAG, "Composite login externalUserId: $externalUserId email=$email sms=$sms")
+        val profile = CompositeLoginExample.profile(email, sms)
         val result = OneSignal.login(externalUserId, profile, jwtToken)
         Log.d(TAG, "Composite login result: $result")
         result

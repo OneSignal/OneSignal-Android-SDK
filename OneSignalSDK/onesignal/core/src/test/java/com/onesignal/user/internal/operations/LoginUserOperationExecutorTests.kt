@@ -1228,7 +1228,7 @@ class LoginUserOperationExecutorTests : FunSpec({
 
         val response =
             profileExecutor(mockUserBackendService).execute(
-                listOf(LoginUserOperation(appId, localOneSignalId, "externalId", null, OneSignalUserProfile(phoneNumber = "+15555550100"))),
+                listOf(LoginUserOperation(appId, localOneSignalId, "externalId", null, OneSignalUserProfile(sms = "+15555550100"))),
             )
 
         response.result shouldBe ExecutionResult.SUCCESS
@@ -1581,7 +1581,7 @@ class LoginUserOperationExecutorTests : FunSpec({
                 "existing-osid",
                 OneSignalUserProfile(
                     email = "a@b.com",
-                    phoneNumber = "+15555550100",
+                    sms = "+15555550100",
                     tags = mapOf("plan" to "pro"),
                     aliases = mapOf("facebook" to "bob"),
                 ),
@@ -1591,7 +1591,7 @@ class LoginUserOperationExecutorTests : FunSpec({
         restored.initializeFromJson(original.toJSON())
 
         restored.email shouldBe "a@b.com"
-        restored.phoneNumber shouldBe "+15555550100"
+        restored.sms shouldBe "+15555550100"
         restored.tags shouldBe mapOf("plan" to "pro")
         restored.aliases shouldBe mapOf("facebook" to "bob")
         restored.existingOnesignalId shouldBe "existing-osid"

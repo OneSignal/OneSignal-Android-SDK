@@ -274,8 +274,8 @@ fun UserSection(
     if (compositeLoginOpen) {
         CompositeLoginDialog(
             onDismiss = { compositeLoginOpen = false },
-            onConfirm = { userId, email, phone, jwt ->
-                onLoginWithProfile(userId, email, phone, jwt)
+            onConfirm = { userId, email, sms, jwt ->
+                onLoginWithProfile(userId, email, sms, jwt)
                 compositeLoginOpen = false
             },
         )

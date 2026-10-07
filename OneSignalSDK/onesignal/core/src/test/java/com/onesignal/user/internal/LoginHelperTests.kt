@@ -559,7 +559,7 @@ class LoginHelperTests : FunSpec({
         val data =
             loginHelper.loginDataFromStores(
                 currentExternalId,
-                OneSignalUserProfile(email = "a@b.com", phoneNumber = "+15555550100"),
+                OneSignalUserProfile(email = "a@b.com", sms = "+15555550100"),
             )
 
         data.onesignalId shouldBe currentOneSignalId
@@ -699,7 +699,7 @@ class LoginHelperTests : FunSpec({
         val data =
             loginHelper.loginDataFromStores(
                 currentExternalId,
-                OneSignalUserProfile(email = "a@b.com", phoneNumber = "+15555550100"),
+                OneSignalUserProfile(email = "a@b.com", sms = "+15555550100"),
             )
 
         data.emailSubscriptionId shouldBe "email-id"

@@ -55,10 +55,10 @@ class LoginUserOperation() : Operation(LoginUserOperationExecutor.LOGIN_USER) {
             setOptStringProperty(PROFILE_EMAIL, value)
         }
 
-    internal var phoneNumber: String?
-        get() = getOptStringProperty(PROFILE_PHONE)
+    internal var sms: String?
+        get() = getOptStringProperty(PROFILE_SMS)
         set(value) {
-            setOptStringProperty(PROFILE_PHONE, value)
+            setOptStringProperty(PROFILE_SMS, value)
         }
 
     internal var tags: Map<String, String>
@@ -92,18 +92,18 @@ class LoginUserOperation() : Operation(LoginUserOperationExecutor.LOGIN_USER) {
         this.existingOnesignalId = existingOneSignalId
         if (profile != null) {
             this.email = profile.email?.takeIf { it.isNotBlank() }
-            this.phoneNumber = profile.phoneNumber?.takeIf { it.isNotBlank() }
+            this.sms = profile.sms?.takeIf { it.isNotBlank() }
             this.tags = profile.tags
             this.aliases = profile.aliases
         }
     }
 
     internal fun hasProfileFields(): Boolean =
-        !email.isNullOrBlank() || !phoneNumber.isNullOrBlank() || tags.isNotEmpty() || aliases.isNotEmpty()
+        !email.isNullOrBlank() || !sms.isNullOrBlank() || tags.isNotEmpty() || aliases.isNotEmpty()
 
     internal fun mergeProfileFrom(other: LoginUserOperation) {
         if (!other.email.isNullOrBlank()) email = other.email
-        if (!other.phoneNumber.isNullOrBlank()) phoneNumber = other.phoneNumber
+        if (!other.sms.isNullOrBlank()) sms = other.sms
         if (other.tags.isNotEmpty()) tags = tags + other.tags
         if (other.aliases.isNotEmpty()) aliases = aliases + other.aliases
     }
@@ -111,7 +111,7 @@ class LoginUserOperation() : Operation(LoginUserOperationExecutor.LOGIN_USER) {
     override fun toString(): String {
         val json = toJSON()
         if (!email.isNullOrBlank()) json.put(PROFILE_EMAIL, "<set>")
-        if (!phoneNumber.isNullOrBlank()) json.put(PROFILE_PHONE, "<set>")
+        if (!sms.isNullOrBlank()) json.put(PROFILE_SMS, "<set>")
         if (tags.isNotEmpty()) json.put(PROFILE_TAGS, tags.size)
         if (aliases.isNotEmpty()) json.put(PROFILE_ALIASES, aliases.size)
         return json.toString()
@@ -128,7 +128,7 @@ internal fun reservedLoginAliasLabel(label: String): Boolean =
     label.isBlank() || label == IdentityConstants.ONESIGNAL_ID || label == IdentityConstants.EXTERNAL_ID
 
 private const val PROFILE_EMAIL = "profileEmail"
-private const val PROFILE_PHONE = "profilePhoneNumber"
+private const val PROFILE_SMS = "profileSms"
 private const val PROFILE_TAGS = "profileTags"
 private const val PROFILE_ALIASES = "profileAliases"
 

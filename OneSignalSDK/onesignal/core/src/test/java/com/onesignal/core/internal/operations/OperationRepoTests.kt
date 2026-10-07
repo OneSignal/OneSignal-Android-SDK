@@ -235,7 +235,7 @@ class OperationRepoTests : FunSpec({
                 "local-new",
                 "alice",
                 null,
-                OneSignalUserProfile(email = "first@b.com", phoneNumber = "+15555550100"),
+                OneSignalUserProfile(email = "first@b.com", sms = "+15555550100"),
             )
         queuedOp.id = UUID.randomUUID().toString()
         synchronized(operationRepo.queue) {
@@ -248,7 +248,7 @@ class OperationRepoTests : FunSpec({
                 "local-new",
                 "alice",
                 null,
-                OneSignalUserProfile(email = "second@b.com", phoneNumber = "+15555550999"),
+                OneSignalUserProfile(email = "second@b.com", sms = "+15555550999"),
             )
 
         operationRepo.enqueue(incomingOp)
@@ -256,7 +256,7 @@ class OperationRepoTests : FunSpec({
 
         val merged = operationRepo.queue.first().operation as LoginUserOperation
         merged.email shouldBe "second@b.com"
-        merged.phoneNumber shouldBe "+15555550999"
+        merged.sms shouldBe "+15555550999"
     }
 
     test("enqueue dedupe does not merge a local existingOnesignalId onto the queued op") {
@@ -322,7 +322,7 @@ class OperationRepoTests : FunSpec({
         val opRepo = mocks.operationRepo
         val executeOperationsCall = mockExecuteOperations(opRepo, OperationWaitResult(false, 400, "bad phone"))
 
-        val queuedOp = LoginUserOperation("appId", "alice", "ext", null, OneSignalUserProfile(phoneNumber = "+1"))
+        val queuedOp = LoginUserOperation("appId", "alice", "ext", null, OneSignalUserProfile(sms = "+1"))
         val incomingOp = LoginUserOperation("appId", "alice", "ext", null, OneSignalUserProfile(email = "a@b.com"))
 
         val queuedDone = WaiterWithValue<OperationWaitResult>()

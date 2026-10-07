@@ -30,9 +30,9 @@ internal object LoginProfileApplier {
         if (email != null && mutable.values.none { it.type == SubscriptionObjectType.EMAIL && it.token == email }) {
             mutable[PROFILE_EMAIL_KEY] = SubscriptionObject(type = SubscriptionObjectType.EMAIL, token = email)
         }
-        val phone = op.phoneNumber?.takeIf { it.isNotBlank() }
-        if (phone != null && mutable.values.none { it.type == SubscriptionObjectType.SMS && it.token == phone }) {
-            mutable[PROFILE_SMS_KEY] = SubscriptionObject(type = SubscriptionObjectType.SMS, token = phone)
+        val sms = op.sms?.takeIf { it.isNotBlank() }
+        if (sms != null && mutable.values.none { it.type == SubscriptionObjectType.SMS && it.token == sms }) {
+            mutable[PROFILE_SMS_KEY] = SubscriptionObject(type = SubscriptionObjectType.SMS, token = sms)
         }
         return mutable
     }
@@ -111,7 +111,7 @@ internal object LoginProfileApplier {
     ): String? =
         when (subscriptionType(backendType)) {
             SubscriptionType.EMAIL -> op.email
-            SubscriptionType.SMS -> op.phoneNumber
+            SubscriptionType.SMS -> op.sms
             else -> null
         }
 }

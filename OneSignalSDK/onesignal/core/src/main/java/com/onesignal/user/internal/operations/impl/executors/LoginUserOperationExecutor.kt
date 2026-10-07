@@ -294,7 +294,7 @@ internal class LoginUserOperationExecutor(
             }
 
             if (!_identityVerificationService.ivBehaviorActive &&
-                (!createUserOperation.email.isNullOrBlank() || !createUserOperation.phoneNumber.isNullOrBlank())
+                (!createUserOperation.email.isNullOrBlank() || !createUserOperation.sms.isNullOrBlank())
             ) {
                 Logging.warn(
                     "LoginUserOperationExecutor: email or SMS sent without identity verification. If that address belonged to another user it was transferred.",

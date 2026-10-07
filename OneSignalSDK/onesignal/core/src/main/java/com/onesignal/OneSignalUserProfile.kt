@@ -7,25 +7,25 @@ import com.onesignal.common.OneSignalUtils
  */
 class OneSignalUserProfile @JvmOverloads constructor(
     email: String? = null,
-    phoneNumber: String? = null,
+    sms: String? = null,
     tags: Map<String, String> = emptyMap(),
     aliases: Map<String, String> = emptyMap(),
 ) {
     val email: String? = email?.takeIf { it.isNotBlank() }
-    val phoneNumber: String? = phoneNumber?.takeIf { it.isNotBlank() }
+    val sms: String? = sms?.takeIf { it.isNotBlank() }
     val tags: Map<String, String> = tags.toMap()
     val aliases: Map<String, String> = aliases.toMap()
 
     internal val hasFields: Boolean
         get() =
             !email.isNullOrBlank() ||
-                !phoneNumber.isNullOrBlank() ||
+                !sms.isNullOrBlank() ||
                 tags.isNotEmpty() ||
                 aliases.isNotEmpty()
 
     internal fun validationError(): String? {
         if (email != null && !OneSignalUtils.isValidEmail(email)) return "Invalid email address"
-        if (phoneNumber != null && !OneSignalUtils.isValidPhoneNumber(phoneNumber)) return "Invalid phone number"
+        if (sms != null && !OneSignalUtils.isValidPhoneNumber(sms)) return "Invalid SMS number"
         return null
     }
 
@@ -33,26 +33,26 @@ class OneSignalUserProfile @JvmOverloads constructor(
         if (this === other) return true
         if (other !is OneSignalUserProfile) return false
         return email == other.email &&
-            phoneNumber == other.phoneNumber &&
+            sms == other.sms &&
             tags == other.tags &&
             aliases == other.aliases
     }
 
     override fun hashCode(): Int {
         var result = email?.hashCode() ?: 0
-        result = 31 * result + (phoneNumber?.hashCode() ?: 0)
+        result = 31 * result + (sms?.hashCode() ?: 0)
         result = 31 * result + tags.hashCode()
         result = 31 * result + aliases.hashCode()
         return result
     }
 
     override fun toString(): String =
-        "OneSignalUserProfile(email=${redact(email)}, phoneNumber=${redact(phoneNumber)}, tags=${tags.size}, aliases=${aliases.size})"
+        "OneSignalUserProfile(email=${redact(email)}, sms=${redact(sms)}, tags=${tags.size}, aliases=${aliases.size})"
 
     /** Java builder. Use this instead of the constructor when only some fields are set. */
     class Builder {
         private var email: String? = null
-        private var phoneNumber: String? = null
+        private var sms: String? = null
         private var tags: Map<String, String> = emptyMap()
         private var aliases: Map<String, String> = emptyMap()
 
@@ -60,7 +60,7 @@ class OneSignalUserProfile @JvmOverloads constructor(
         fun setEmail(email: String?) = apply { this.email = email }
 
         /** SMS to create or transfer onto this user at login. Must be E.164 (e.g. +14155552671). */
-        fun setPhoneNumber(phoneNumber: String?) = apply { this.phoneNumber = phoneNumber }
+        fun setSms(sms: String?) = apply { this.sms = sms }
 
         /** Sets tags to apply at login. The map is copied. */
         fun setTags(tags: Map<String, String>) = apply { this.tags = tags.toMap() }
@@ -69,7 +69,7 @@ class OneSignalUserProfile @JvmOverloads constructor(
         fun setAliases(aliases: Map<String, String>) = apply { this.aliases = aliases.toMap() }
 
         /** Builds the profile. */
-        fun build() = OneSignalUserProfile(email, phoneNumber, tags, aliases)
+        fun build() = OneSignalUserProfile(email, sms, tags, aliases)
     }
 
     companion object {

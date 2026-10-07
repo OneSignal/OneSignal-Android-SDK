@@ -10,7 +10,7 @@ class OneSignalUserProfileTests : FunSpec({
         val profile = OneSignalUserProfile()
 
         profile.email.shouldBeNull()
-        profile.phoneNumber.shouldBeNull()
+        profile.sms.shouldBeNull()
         profile.tags shouldBe emptyMap()
         profile.aliases shouldBe emptyMap()
         profile.hasFields shouldBe false
@@ -24,7 +24,7 @@ class OneSignalUserProfileTests : FunSpec({
             )
 
         profile.email shouldBe "bob@example.com"
-        profile.phoneNumber.shouldBeNull()
+        profile.sms.shouldBeNull()
         profile.tags shouldBe mapOf("plan" to "pro")
         profile.aliases shouldBe emptyMap()
         profile.hasFields shouldBe true
@@ -39,36 +39,36 @@ class OneSignalUserProfileTests : FunSpec({
         profile.tags shouldBe mapOf("plan" to "pro")
     }
 
-    test("toString redacts email and phone") {
-        val profile = OneSignalUserProfile(email = "bob@example.com", phoneNumber = "+15555550100")
+    test("toString redacts email and sms") {
+        val profile = OneSignalUserProfile(email = "bob@example.com", sms = "+15555550100")
 
         profile.toString().contains("bob@example.com") shouldBe false
         profile.toString().contains("+15555550100") shouldBe false
         profile.toString().contains("<set>") shouldBe true
     }
 
-    test("Java builder can set email without a phone number") {
+    test("Java builder can set email without an sms") {
         val profile =
             OneSignalUserProfile.builder()
                 .setEmail("bob@example.com")
                 .build()
 
         profile.email shouldBe "bob@example.com"
-        profile.phoneNumber.shouldBeNull()
+        profile.sms.shouldBeNull()
         profile.tags shouldBe emptyMap()
         profile.aliases shouldBe emptyMap()
     }
 
-    test("Java builder can set a phone number without an email") {
+    test("Java builder can set sms without an email") {
         val profile =
             OneSignalUserProfile.Builder()
-                .setPhoneNumber("+15555550100")
+                .setSms("+15555550100")
                 .setTags(mapOf("plan" to "pro"))
                 .setAliases(mapOf("facebook" to "bob"))
                 .build()
 
         profile.email.shouldBeNull()
-        profile.phoneNumber shouldBe "+15555550100"
+        profile.sms shouldBe "+15555550100"
         profile.tags shouldBe mapOf("plan" to "pro")
         profile.aliases shouldBe mapOf("facebook" to "bob")
     }
@@ -82,12 +82,12 @@ class OneSignalUserProfileTests : FunSpec({
         profile.tags shouldBe mapOf("plan" to "pro")
     }
 
-    test("blank email and phone do not count as fields") {
-        OneSignalUserProfile(email = "  ", phoneNumber = "").hasFields shouldBe false
+    test("blank email and sms do not count as fields") {
+        OneSignalUserProfile(email = "  ", sms = "").hasFields shouldBe false
     }
 
     test("validationError is null for a valid profile") {
-        OneSignalUserProfile(email = "bob@example.com", phoneNumber = "+15555550100").validationError().shouldBeNull()
+        OneSignalUserProfile(email = "bob@example.com", sms = "+15555550100").validationError().shouldBeNull()
         OneSignalUserProfile().validationError().shouldBeNull()
     }
 
@@ -95,7 +95,7 @@ class OneSignalUserProfileTests : FunSpec({
         OneSignalUserProfile(email = "not-an-email").validationError() shouldBe "Invalid email address"
     }
 
-    test("validationError rejects a non-E.164 phone number") {
-        OneSignalUserProfile(phoneNumber = "555-0100").validationError() shouldBe "Invalid phone number"
+    test("validationError rejects a non-E.164 sms") {
+        OneSignalUserProfile(sms = "555-0100").validationError() shouldBe "Invalid SMS number"
     }
 })

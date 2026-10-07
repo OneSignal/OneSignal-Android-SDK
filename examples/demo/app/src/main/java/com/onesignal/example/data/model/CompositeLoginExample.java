@@ -8,18 +8,18 @@ import java.util.Map;
 public final class CompositeLoginExample {
     private CompositeLoginExample() {}
 
-    public static OneSignalUserProfile profile(String email, String phoneNumber) {
-        return profile(email, phoneNumber, Collections.emptyMap(), Collections.emptyMap());
+    public static OneSignalUserProfile profile(String email, String sms) {
+        return profile(email, sms, Collections.emptyMap(), Collections.emptyMap());
     }
 
     public static OneSignalUserProfile profile(
             String email,
-            String phoneNumber,
+            String sms,
             Map<String, String> tags,
             Map<String, String> aliases) {
         return new OneSignalUserProfile.Builder()
                 .setEmail(email)
-                .setPhoneNumber(phoneNumber)
+                .setSms(sms)
                 .setTags(tags)
                 .setAliases(aliases)
                 .build();

@@ -133,7 +133,7 @@ internal class LoginHelper(
             emailSubscriptionId = meta?.emailSubscriptionId
                 ?: subscriptionId(subscriptions, SubscriptionType.EMAIL, profile.email),
             smsSubscriptionId = meta?.smsSubscriptionId
-                ?: subscriptionId(subscriptions, SubscriptionType.SMS, profile.phoneNumber),
+                ?: subscriptionId(subscriptions, SubscriptionType.SMS, profile.sms),
         )
     }
 
