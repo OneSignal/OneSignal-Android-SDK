@@ -88,7 +88,7 @@ internal class LoginUserOperationExecutor(
         if (!containsSubscriptionOperation && alias == null) {
             return ExecutionResponse(ExecutionResult.FAIL_NORETRY)
         }
-        if (shouldCreateUserDirectly(loginUserOp)) {
+        if (shouldCreateUserDirectly(loginUserOp, alias)) {
             // When there is no existing user to attempt to associate with the externalId provided, we go right to
             // createUser.  If there is no externalId provided this is an insert, if there is this will be an
             // "upsert with retrieval" as the user may already exist.
@@ -103,15 +103,16 @@ internal class LoginUserOperationExecutor(
             // before we create a user we attempt to associate the user defined by existingOnesignalId with the
             // externalId provided. If that association cannot be made, typically because the externalId is already
             // associated to a user, we fall back to our "upsert with retrieval" method.
+            val mergeAlias = alias!!
             val result =
                 _identityOperationExecutor.execute(
                     listOf(
                         SetAliasOperation(
                             loginUserOp.appId,
                             loginUserOp.existingOnesignalId!!,
-                            loginUserOp.externalId,
+                            mergeAlias,
                             IdentityConstants.EXTERNAL_ID,
-                            loginUserOp.externalId!!,
+                            mergeAlias,
                         ),
                     ),
                 )
@@ -190,8 +191,8 @@ internal class LoginUserOperationExecutor(
             identities[IdentityConstants.EXTERNAL_ID] = it
         }
         for ((label, id) in createUserOperation.aliases) {
-            if (reservedLoginAliasLabel(label)) {
-                Logging.warn("LoginUserOperationExecutor: skipping reserved alias label")
+            if (reservedLoginAliasLabel(label) || hasNullByte(label) || hasNullByte(id)) {
+                Logging.warn("LoginUserOperationExecutor: skipping reserved or invalid alias label")
                 continue
             }
             identities[label] = id
@@ -429,9 +430,9 @@ internal class LoginUserOperationExecutor(
         return mutableSubscriptions
     }
 
-    private fun shouldCreateUserDirectly(op: LoginUserOperation): Boolean {
+    private fun shouldCreateUserDirectly(op: LoginUserOperation, alias: String?): Boolean {
         if (op.hasProfileFields() || _identityVerificationService.ivBehaviorActive) return true
-        return op.existingOnesignalId == null || op.externalId == null
+        return op.existingOnesignalId == null || alias == null
     }
 
     private fun backendExecutionResponse(

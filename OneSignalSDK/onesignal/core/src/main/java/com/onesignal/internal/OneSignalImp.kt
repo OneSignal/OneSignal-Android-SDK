@@ -838,6 +838,13 @@ internal class OneSignalImp : IOneSignal,
 
             suspendUntilInit(operationName = "login")
 
+            if (isMissing(externalId, "login: externalId")) {
+                return@withContext OneSignalResult.failure(
+                    ErrorCode.INVALID_ARGUMENT,
+                    "login: externalId is required",
+                )
+            }
+
             val switched = loginHelper.switchUser(externalId, jwtBearerToken, profile)
             if (switched.context != null) {
                 val completed = loginHelper.enqueueLogin(switched.context, profile)
