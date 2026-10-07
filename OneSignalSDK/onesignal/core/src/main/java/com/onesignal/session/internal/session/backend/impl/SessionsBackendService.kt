@@ -9,6 +9,10 @@ import com.onesignal.session.internal.session.backend.SessionsApiResult
 import com.onesignal.session.internal.session.backend.UpdateSessionRequest
 import org.json.JSONException
 import org.json.JSONObject
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import java.util.TimeZone
 
 internal class SessionsBackendService(
     private val httpClient: IHttpClient,
@@ -22,7 +26,7 @@ internal class SessionsBackendService(
                 .put("onesignal_id", request.onesignalId)
                 .put("subscription_id", request.subscriptionId)
                 .put("device_type", request.deviceType)
-                .put("start_time", request.startTime)
+                .put("start_time", toIso8601(request.startTime))
                 .put("idempotency_key", request.idempotencyKey)
         request.directAttributionId?.let { body.put("direct_attribution_id", it) }
 
@@ -52,7 +56,7 @@ internal class SessionsBackendService(
                 .put("subscription_id", request.subscriptionId)
                 .put("duration_seconds", request.durationSeconds)
                 .put("idempotency_key", request.idempotencyKey)
-        request.endTime?.let { body.put("end_time", it) }
+        request.endTime?.let { body.put("end_time", toIso8601(it)) }
 
         val response = httpClient.patch("apps/$appId/sessions/$sessionId", body)
         if (!response.isSuccess) {
@@ -60,6 +64,12 @@ internal class SessionsBackendService(
         }
         return SessionsApiResult.Success(Unit)
     }
+
+    // SimpleDateFormat instead of java.time, which needs API 26.
+    private fun toIso8601(epochSeconds: Long): String =
+        SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US)
+            .apply { timeZone = TimeZone.getTimeZone("UTC") }
+            .format(Date(epochSeconds * MILLIS_PER_SECOND))
 
     private fun parseSessionId(payload: String?): String? =
         try {
@@ -84,5 +94,6 @@ internal class SessionsBackendService(
         const val HTTP_REQUEST_TIMEOUT = 408
         const val HTTP_TOO_MANY_REQUESTS = 429
         const val HTTP_SERVER_ERROR = 500
+        const val MILLIS_PER_SECOND = 1000L
     }
 }

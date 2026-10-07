@@ -26,7 +26,7 @@ internal data class CreateSessionRequest(
     val onesignalId: String,
     val subscriptionId: String,
     val deviceType: Int,
-    /** Unix time in seconds. */
+    /** Unix time in seconds, sent as ISO 8601 UTC. */
     val startTime: Long,
     val idempotencyKey: String,
     val directAttributionId: String? = null,
@@ -37,7 +37,7 @@ internal data class UpdateSessionRequest(
     val subscriptionId: String,
     val durationSeconds: Long,
     val idempotencyKey: String,
-    /** Unix time in seconds. */
+    /** Unix time in seconds, sent as ISO 8601 UTC. */
     val endTime: Long? = null,
 )
 
