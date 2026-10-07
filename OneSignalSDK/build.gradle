@@ -66,9 +66,8 @@ apply plugin: 'org.jetbrains.kotlinx.binary-compatibility-validator'
 apiValidation {
     // Not published, so they have no customer-facing surface to protect.
     ignoredProjects += ['app', 'testhelpers']
-    // Published, but excluded deliberately: :otel is an implementation detail we still reserve the
-    // right to reshape, and :kmp is a git submodule whose API is owned by the OneSignal-KMP-SDK repo.
-    ignoredProjects += ['otel', 'kmp']
+    // :kmp is a git submodule; its API is owned by OneSignal-KMP-SDK.
+    ignoredProjects += ['kmp']
 }
 
 allprojects {

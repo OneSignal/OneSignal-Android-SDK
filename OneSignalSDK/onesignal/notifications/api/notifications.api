@@ -263,7 +263,6 @@ public final class com/onesignal/notifications/internal/common/NotificationGener
 	public final fun getBody ()Ljava/lang/CharSequence;
 	public final fun getJsonPayload ()Lorg/json/JSONObject;
 	public final fun getNotification ()Lcom/onesignal/notifications/internal/Notification;
-	public final fun getOrgFlags ()Ljava/lang/Integer;
 	public final fun getOrgSound ()Landroid/net/Uri;
 	public final fun getOverriddenBodyFromExtender ()Ljava/lang/CharSequence;
 	public final fun getOverriddenFlags ()Ljava/lang/Integer;
@@ -276,7 +275,6 @@ public final class com/onesignal/notifications/internal/common/NotificationGener
 	public final fun isRestoring ()Z
 	public final fun setJsonPayload (Lorg/json/JSONObject;)V
 	public final fun setNotificationToDisplay (Z)V
-	public final fun setOrgFlags (Ljava/lang/Integer;)V
 	public final fun setOrgSound (Landroid/net/Uri;)V
 	public final fun setOverriddenBodyFromExtender (Ljava/lang/CharSequence;)V
 	public final fun setOverriddenFlags (Ljava/lang/Integer;)V
@@ -303,6 +301,7 @@ public final class com/onesignal/notifications/internal/common/NotificationHelpe
 	public final fun getNotificationManager (Landroid/content/Context;)Landroid/app/NotificationManager;
 	public final fun getSoundUri (Landroid/content/Context;Ljava/lang/String;)Landroid/net/Uri;
 	public final fun isGroupSummary (Landroid/service/notification/StatusBarNotification;)Z
+	public final fun isNotificationActive (Landroid/content/Context;I)Z
 	public final fun parseVibrationPattern (Lorg/json/JSONObject;)[J
 }
 

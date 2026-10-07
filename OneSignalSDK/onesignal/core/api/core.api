@@ -180,6 +180,20 @@ public final class com/onesignal/common/IDManager {
 	public final fun isLocalId (Ljava/lang/String;)Z
 }
 
+public abstract interface class com/onesignal/common/IHostPermissionPrompt {
+	public abstract fun request (Ljava/lang/String;Lcom/onesignal/common/IHostPermissionPrompt$Callback;)Z
+}
+
+public abstract interface class com/onesignal/common/IHostPermissionPrompt$Callback {
+	public abstract fun onResult (Z)V
+}
+
+public final class com/onesignal/common/InputGuardKt {
+	public static final fun hasMissingEntries (Ljava/util/Map;Ljava/lang/String;Z)Z
+	public static final fun isMissing (Ljava/lang/String;Ljava/lang/String;)Z
+	public static final fun isMissingAny (Ljava/util/Collection;Ljava/lang/String;)Z
+}
+
 public final class com/onesignal/common/JSONObjectExtensionsKt {
 	public static final fun expandJSONArray (Lorg/json/JSONObject;Ljava/lang/String;Lkotlin/jvm/functions/Function1;)Ljava/util/List;
 	public static final fun expandJSONObject (Lorg/json/JSONObject;Ljava/lang/String;Lkotlin/jvm/functions/Function1;)V
@@ -241,8 +255,10 @@ public final class com/onesignal/common/OneSignalUtils {
 
 public final class com/onesignal/common/OneSignalWrapper {
 	public static final field INSTANCE Lcom/onesignal/common/OneSignalWrapper;
+	public static final fun getHostPermissionPrompt ()Lcom/onesignal/common/IHostPermissionPrompt;
 	public static final fun getSdkType ()Ljava/lang/String;
 	public static final fun getSdkVersion ()Ljava/lang/String;
+	public static final fun setHostPermissionPrompt (Lcom/onesignal/common/IHostPermissionPrompt;)V
 	public static final fun setSdkType (Ljava/lang/String;)V
 	public static final fun setSdkVersion (Ljava/lang/String;)V
 }
@@ -658,6 +674,11 @@ public final class com/onesignal/common/services/ServiceRegistrationSingleton : 
 	public fun resolve (Lcom/onesignal/common/services/IServiceProvider;)Ljava/lang/Object;
 }
 
+public final class com/onesignal/common/threading/InFlightResult {
+	public fun <init> ()V
+	public final fun share (Ljava/lang/Object;Lkotlin/jvm/functions/Function1;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+}
+
 public final class com/onesignal/common/threading/OneSignalDispatchers {
 	public static final field INSTANCE Lcom/onesignal/common/threading/OneSignalDispatchers;
 	public final fun getDefault ()Lkotlinx/coroutines/CoroutineDispatcher;
@@ -665,6 +686,7 @@ public final class com/onesignal/common/threading/OneSignalDispatchers {
 	public final fun getSerialIO ()Lkotlinx/coroutines/CoroutineDispatcher;
 	public final fun launchOnDefault (Lkotlin/jvm/functions/Function1;)Lkotlinx/coroutines/Job;
 	public final fun launchOnIO (Lkotlin/jvm/functions/Function1;)Lkotlinx/coroutines/Job;
+	public final fun launchOnIngress (Lkotlin/jvm/functions/Function1;)Lkotlinx/coroutines/Job;
 	public final fun launchOnSerialIO (Lkotlin/jvm/functions/Function1;)Lkotlinx/coroutines/Job;
 	public final fun prewarm ()V
 }
@@ -672,17 +694,16 @@ public final class com/onesignal/common/threading/OneSignalDispatchers {
 public final class com/onesignal/common/threading/ThreadUtilsKt {
 	public static final fun launchOnDefault (Lkotlin/jvm/functions/Function1;)Lkotlinx/coroutines/Job;
 	public static final fun launchOnIO (Lkotlin/jvm/functions/Function1;)Lkotlinx/coroutines/Job;
+	public static final fun mainDispatcherOrNull ()Lkotlinx/coroutines/CoroutineDispatcher;
 	public static final fun runOnSerialIO (Lkotlin/jvm/functions/Function0;)V
 	public static final fun suspendifyOnDefault (Lkotlin/jvm/functions/Function1;)V
 	public static final fun suspendifyOnIO (Lkotlin/jvm/functions/Function1;)V
-	public static final fun suspendifyOnIO (Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function0;)V
-	public static synthetic fun suspendifyOnIO$default (Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function0;ILjava/lang/Object;)V
+	public static final fun suspendifyOnIngress (Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function0;)V
 	public static final fun suspendifyOnMain (Lkotlin/jvm/functions/Function1;)V
 	public static final fun suspendifyOnSerialIO (Lkotlin/jvm/functions/Function1;)V
-	public static final fun suspendifyWithCompletion (ZLkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function0;)V
-	public static synthetic fun suspendifyWithCompletion$default (ZLkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function0;ILjava/lang/Object;)V
-	public static final fun suspendifyWithErrorHandling (ZLkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function0;)V
-	public static synthetic fun suspendifyWithErrorHandling$default (ZLkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function0;ILjava/lang/Object;)V
+	public static final fun suspendifyWithErrorHandling (ZLkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;)V
+	public static synthetic fun suspendifyWithErrorHandling$default (ZLkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)V
+	public static final fun withMain (Lkotlin/jvm/functions/Function2;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 }
 
 public final class com/onesignal/common/threading/Waiter {
@@ -821,6 +842,7 @@ public final class com/onesignal/core/internal/config/ConfigModel : com/onesigna
 	public final fun getClearGroupOnSummaryClick ()Z
 	public final fun getConsentGiven ()Ljava/lang/Boolean;
 	public final fun getConsentRequired ()Ljava/lang/Boolean;
+	public final fun getDashboardSenderAppId ()Ljava/lang/String;
 	public final fun getDisableGMSMissingPrompt ()Z
 	public final fun getEnterprise ()Z
 	public final fun getFcmParams ()Lcom/onesignal/core/internal/config/FCMConfigModel;
@@ -855,6 +877,7 @@ public final class com/onesignal/core/internal/config/ConfigModel : com/onesigna
 	public final fun setClearGroupOnSummaryClick (Z)V
 	public final fun setConsentGiven (Ljava/lang/Boolean;)V
 	public final fun setConsentRequired (Ljava/lang/Boolean;)V
+	public final fun setDashboardSenderAppId (Ljava/lang/String;)V
 	public final fun setDisableGMSMissingPrompt (Z)V
 	public final fun setEnterprise (Z)V
 	public final fun setFetchIAMMinInterval (J)V
@@ -1046,28 +1069,9 @@ public abstract interface class com/onesignal/core/internal/device/IInstallIdSer
 	public abstract fun getId (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 }
 
-public final class com/onesignal/core/internal/features/FeatureActivationMode : java/lang/Enum {
-	public static final field APP_STARTUP Lcom/onesignal/core/internal/features/FeatureActivationMode;
-	public static final field IMMEDIATE Lcom/onesignal/core/internal/features/FeatureActivationMode;
-	public static fun getEntries ()Lkotlin/enums/EnumEntries;
-	public static fun valueOf (Ljava/lang/String;)Lcom/onesignal/core/internal/features/FeatureActivationMode;
-	public static fun values ()[Lcom/onesignal/core/internal/features/FeatureActivationMode;
-}
-
-public final class com/onesignal/core/internal/features/FeatureFlag : java/lang/Enum {
-	public static final field SDK_CUSTOM_LOGGING Lcom/onesignal/core/internal/features/FeatureFlag;
-	public static final field SDK_IDENTITY_VERIFICATION Lcom/onesignal/core/internal/features/FeatureFlag;
-	public final fun getActivationMode ()Lcom/onesignal/core/internal/features/FeatureActivationMode;
-	public static fun getEntries ()Lkotlin/enums/EnumEntries;
-	public final fun getKey ()Ljava/lang/String;
-	public final fun isEnabledIn (Ljava/util/Set;)Z
-	public static fun valueOf (Ljava/lang/String;)Lcom/onesignal/core/internal/features/FeatureFlag;
-	public static fun values ()[Lcom/onesignal/core/internal/features/FeatureFlag;
-}
-
 public abstract interface class com/onesignal/core/internal/features/IFeatureManager {
 	public abstract fun enabledFeatureKeys ()Ljava/util/List;
-	public abstract fun isEnabled (Lcom/onesignal/core/internal/features/FeatureFlag;)Z
+	public abstract fun isEnabled (Lcom/onesignal/features/FeatureFlag;)Z
 	public abstract fun remoteFeatureFlagMetadata ()Ljava/util/Map;
 }
 
@@ -1395,8 +1399,6 @@ public final class com/onesignal/debug/internal/logging/Logging {
 	public static final fun setLogLevel (Lcom/onesignal/debug/LogLevel;)V
 	public final fun setLoggerTelemetry (Lcom/onesignal/logger/ILogTelemetryRemote;Lkotlin/jvm/functions/Function1;)V
 	public static synthetic fun setLoggerTelemetry$default (Lcom/onesignal/debug/internal/logging/Logging;Lcom/onesignal/logger/ILogTelemetryRemote;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)V
-	public final fun setOtelTelemetry (Lcom/onesignal/otel/IOtelOpenTelemetryRemote;Lkotlin/jvm/functions/Function1;)V
-	public static synthetic fun setOtelTelemetry$default (Lcom/onesignal/debug/internal/logging/Logging;Lcom/onesignal/otel/IOtelOpenTelemetryRemote;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)V
 	public static final fun setVisualLogLevel (Lcom/onesignal/debug/LogLevel;)V
 	public static final fun verbose (Ljava/lang/String;Ljava/lang/Throwable;)V
 	public static synthetic fun verbose$default (Ljava/lang/String;Ljava/lang/Throwable;ILjava/lang/Object;)V
@@ -1540,6 +1542,7 @@ public abstract interface class com/onesignal/notifications/INotification {
 public abstract interface class com/onesignal/notifications/INotificationClickEvent {
 	public abstract fun getNotification ()Lcom/onesignal/notifications/INotification;
 	public abstract fun getResult ()Lcom/onesignal/notifications/INotificationClickResult;
+	public abstract fun toJSONObject ()Lorg/json/JSONObject;
 }
 
 public abstract interface class com/onesignal/notifications/INotificationClickListener {
@@ -1558,8 +1561,13 @@ public abstract interface class com/onesignal/notifications/INotificationLifecyc
 public abstract interface class com/onesignal/notifications/INotificationReceivedEvent {
 	public abstract fun getContext ()Landroid/content/Context;
 	public abstract fun getNotification ()Lcom/onesignal/notifications/IDisplayableMutableNotification;
+	public abstract fun getRestoring ()Z
 	public abstract fun preventDefault ()V
 	public abstract fun preventDefault (Z)V
+}
+
+public final class com/onesignal/notifications/INotificationReceivedEvent$DefaultImpls {
+	public static fun getRestoring (Lcom/onesignal/notifications/INotificationReceivedEvent;)Z
 }
 
 public abstract interface class com/onesignal/notifications/INotificationServiceExtension {
@@ -1950,6 +1958,7 @@ public final class com/onesignal/user/internal/customEvents/impl/CustomEventMeta
 
 public final class com/onesignal/user/internal/identity/IdentityModel : com/onesignal/common/modeling/MapModel {
 	public fun <init> ()V
+	public final fun clearExternalIdIf (Ljava/lang/String;Ljava/lang/String;)V
 	public final fun containsValue (Ljava/lang/Object;)Z
 	public fun containsValue (Ljava/lang/String;)Z
 	public final fun get (Ljava/lang/Object;)Ljava/lang/String;
@@ -2338,6 +2347,8 @@ public final class com/onesignal/user/internal/subscriptions/SubscriptionModel :
 	public final fun getCarrier ()Ljava/lang/String;
 	public final fun getDeviceOS ()Ljava/lang/String;
 	public final fun getOptedIn ()Z
+	public final fun getRemoteDisableClearedByUser ()Z
+	public final fun getRemoteDisabledReason ()I
 	public final fun getSdk ()Ljava/lang/String;
 	public final fun getStatus ()Lcom/onesignal/user/internal/subscriptions/SubscriptionStatus;
 	public final fun getType ()Lcom/onesignal/user/internal/subscriptions/SubscriptionType;
@@ -2348,6 +2359,8 @@ public final class com/onesignal/user/internal/subscriptions/SubscriptionModel :
 	public final fun setDeviceOS (Ljava/lang/String;)V
 	public final fun setDisabledInternally (Z)V
 	public final fun setOptedIn (Z)V
+	public final fun setRemoteDisableClearedByUser (Z)V
+	public final fun setRemoteDisabledReason (I)V
 	public final fun setSdk (Ljava/lang/String;)V
 	public final fun setStatus (Lcom/onesignal/user/internal/subscriptions/SubscriptionStatus;)V
 	public final fun setType (Lcom/onesignal/user/internal/subscriptions/SubscriptionType;)V
@@ -2362,7 +2375,7 @@ public class com/onesignal/user/internal/subscriptions/SubscriptionModelStore : 
 
 public final class com/onesignal/user/internal/subscriptions/SubscriptionStatus : java/lang/Enum {
 	public static final field Companion Lcom/onesignal/user/internal/subscriptions/SubscriptionStatus$Companion;
-	public static final field DISABLED_FROM_REST_API_DEFAULT_REASON Lcom/onesignal/user/internal/subscriptions/SubscriptionStatus;
+	public static final field DISABLED_FROM_REST_API Lcom/onesignal/user/internal/subscriptions/SubscriptionStatus;
 	public static final field ERROR Lcom/onesignal/user/internal/subscriptions/SubscriptionStatus;
 	public static final field FIREBASE_FCM_ERROR_IOEXCEPTION_AUTHENTICATION_FAILED Lcom/onesignal/user/internal/subscriptions/SubscriptionStatus;
 	public static final field FIREBASE_FCM_ERROR_IOEXCEPTION_OTHER Lcom/onesignal/user/internal/subscriptions/SubscriptionStatus;
@@ -2373,6 +2386,7 @@ public final class com/onesignal/user/internal/subscriptions/SubscriptionStatus 
 	public static final field HMS_ARGUMENTS_INVALID Lcom/onesignal/user/internal/subscriptions/SubscriptionStatus;
 	public static final field HMS_TOKEN_TIMEOUT Lcom/onesignal/user/internal/subscriptions/SubscriptionStatus;
 	public static final field INVALID_FCM_SENDER_ID Lcom/onesignal/user/internal/subscriptions/SubscriptionStatus;
+	public static final field MANUALLY_UNSUBSCRIBED Lcom/onesignal/user/internal/subscriptions/SubscriptionStatus;
 	public static final field MISSING_FIREBASE_FCM_LIBRARY Lcom/onesignal/user/internal/subscriptions/SubscriptionStatus;
 	public static final field MISSING_HMS_PUSHKIT_LIBRARY Lcom/onesignal/user/internal/subscriptions/SubscriptionStatus;
 	public static final field MISSING_JETPACK_LIBRARY Lcom/onesignal/user/internal/subscriptions/SubscriptionStatus;
@@ -2390,6 +2404,8 @@ public final class com/onesignal/user/internal/subscriptions/SubscriptionStatus 
 
 public final class com/onesignal/user/internal/subscriptions/SubscriptionStatus$Companion {
 	public final fun fromInt (I)Lcom/onesignal/user/internal/subscriptions/SubscriptionStatus;
+	public final fun isRemoteDisable (Ljava/lang/Integer;)Z
+	public final fun remoteDisableStatus (Ljava/lang/Integer;)Lcom/onesignal/user/internal/subscriptions/SubscriptionStatus;
 }
 
 public final class com/onesignal/user/internal/subscriptions/SubscriptionType : java/lang/Enum {
