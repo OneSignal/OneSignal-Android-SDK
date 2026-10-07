@@ -461,6 +461,40 @@ class OperationRepoTests : FunSpec({
         coVerify(exactly = 1) { mocks.executor.execute(any()) }
     }
 
+    test("duplicate login during post-create delay wakes with the completed result") {
+        val mocks = Mocks()
+        every { mocks.executor.operations } returns listOf(LoginUserOperationExecutor.LOGIN_USER)
+        coEvery { mocks.executor.execute(any()) } returns
+            ExecutionResponse(
+                ExecutionResult.SUCCESS,
+                idTranslations = mapOf("local-alice" to "backend-alice"),
+            )
+
+        val opRepo = mocks.operationRepo
+        val delayStarted = Waiter()
+        val releaseDelay = Waiter()
+        coEvery { opRepo.delayForPostCreate(any()) } coAnswers {
+            delayStarted.wake()
+            releaseDelay.waitForWake()
+        }
+
+        opRepo.start()
+        val first =
+            withTimeout(2_000) {
+                opRepo.enqueueAndAwaitResult(LoginUserOperation("appId", "local-alice", "alice", null))
+            }
+        first.success shouldBe true
+        delayStarted.waitForWake()
+
+        val second =
+            withTimeout(1_000) {
+                opRepo.enqueueAndAwaitResult(LoginUserOperation("appId", "local-alice", "alice", null))
+            }
+        second.success shouldBe true
+        coVerify(exactly = 1) { mocks.executor.execute(any()) }
+        releaseDelay.wake()
+    }
+
     test("containsInstanceOf") {
         // Given
         val mocks = Mocks()

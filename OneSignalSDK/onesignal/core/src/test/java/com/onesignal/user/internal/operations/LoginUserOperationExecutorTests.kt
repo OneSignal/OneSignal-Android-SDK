@@ -1174,6 +1174,20 @@ class LoginUserOperationExecutorTests : FunSpec({
         matchingBackendSubscription(remaining, "local-email", local) shouldBe null
     }
 
+    test("composite login succeeds when the backend omits an unchanged email subscription") {
+        val mockUserBackendService = mockk<IUserBackendService>()
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } returns
+            CreateUserResponse(mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId), PropertiesObject(), listOf())
+
+        val response =
+            profileExecutor(mockUserBackendService).execute(
+                listOf(LoginUserOperation(appId, localOneSignalId, "externalId", null, OneSignalUserProfile(email = "a@b.com"))),
+            )
+
+        response.result shouldBe ExecutionResult.SUCCESS
+        response.metadata shouldBe LoginWaitMetadata(remoteOneSignalId)
+    }
+
     test("composite login with email only sends an Email subscription") {
         val mockUserBackendService = mockk<IUserBackendService>()
         coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } returns

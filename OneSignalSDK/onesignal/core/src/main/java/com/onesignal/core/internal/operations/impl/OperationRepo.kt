@@ -47,14 +47,33 @@ internal class OperationRepo(
         var retries: Int = 0,
     ) {
         val waiters = mutableListOf<WaiterWithValue<OperationWaitResult>>()
+        @Volatile
+        var completedResult: OperationWaitResult? = null
+            private set
 
         init {
             if (waiter != null) waiters.add(waiter)
         }
 
         fun wakeWaiters(result: OperationWaitResult) {
-            waiters.forEach { it.wake(result) }
-            waiters.clear()
+            val toWake: List<WaiterWithValue<OperationWaitResult>>
+            synchronized(this) {
+                completedResult = result
+                toWake = waiters.toList()
+                waiters.clear()
+            }
+            toWake.forEach { it.wake(result) }
+        }
+
+        fun attachOrWake(incoming: List<WaiterWithValue<OperationWaitResult>>) {
+            val completed =
+                synchronized(this) {
+                    completedResult ?: run {
+                        waiters.addAll(incoming)
+                        return
+                    }
+                }
+            incoming.forEach { it.wake(completed) }
         }
 
         override fun toString(): String {
@@ -236,7 +255,7 @@ internal class OperationRepo(
                         }
                         return
                     }
-                    // In-flight: attach waiters only. The HTTP call already copied this op.
+                    // Attach waiters, or wake them if execute already finished (post-create delay).
                     if (existingInQueue != null) {
                         val existingOp = existing.operation as LoginUserOperation
                         // Preserve the anon-user conversion link if the queued op lacks it (e.g. RecoverFromDroppedLoginBug enqueued with null).
@@ -254,7 +273,7 @@ internal class OperationRepo(
                         }
                         existingOp.mergeProfileFrom(op)
                     }
-                    existing.waiters.addAll(queueItem.waiters)
+                    existing.attachOrWake(queueItem.waiters)
                     if (!addToStore) {
                         _operationModelStore.remove(queueItem.operation.id)
                     }

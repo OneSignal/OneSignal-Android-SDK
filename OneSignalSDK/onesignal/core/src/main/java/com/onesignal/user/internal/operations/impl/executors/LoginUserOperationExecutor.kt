@@ -269,7 +269,7 @@ internal class LoginUserOperationExecutor(
                     } else {
                         Logging.error("LoginUserOperationExecutor.createUser response is missing a local subscription model for ${pair.first}")
                     }
-                } else {
+                } else if (!LoginProfileApplier.isProfileSubscriptionKey(pair.first)) {
                     Logging.error("LoginUserOperationExecutor.createUser response is missing subscription data for ${pair.first}")
                 }
 
