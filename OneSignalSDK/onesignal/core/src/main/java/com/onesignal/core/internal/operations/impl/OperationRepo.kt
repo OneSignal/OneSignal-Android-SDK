@@ -28,6 +28,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 import java.util.UUID
 import kotlin.math.max
 import kotlin.reflect.KClass
+import kotlin.time.TimeSource
 
 internal class OperationRepo(
     executors: List<IOperationExecutor>,
@@ -68,6 +69,9 @@ internal class OperationRepo(
     private val waiter = WaiterWithValue<LoopWaiterMessage>()
     private val retryWaiter = WaiterWithValue<LoopWaiterMessage>()
     private var paused = false
+
+    @Volatile
+    private var isWaitingToRetry = false
 
     // Ops enqueued after their local IDs were translated would otherwise keep the local ID forever.
     private val appliedIdTranslations = mutableMapOf<String, String>()
@@ -305,6 +309,13 @@ internal class OperationRepo(
         waiter.wake(LoopWaiterMessage(false))
     }
 
+    override fun retryNow() {
+        // Only while waiting: the waiter is conflated, so a stale wake would cut short the next backoff.
+        if (isWaitingToRetry) {
+            retryWaiter.wake(LoopWaiterMessage(false))
+        }
+    }
+
     /**
      * Drops queued operations whose externalId is null. Called by the IV-aware HYDRATE
      * choreography in [OperationRepoIvExtensions] when `jwt_required` becomes REQUIRED
@@ -508,20 +519,31 @@ internal class OperationRepo(
 
     /**
      * Wait which ever is longer, retryAfterSeconds returned by the server,
-     * or based on the retry count.
+     * or based on the retry count. [forceExecuteOperations] ends the wait; [retryNow] ends
+     * only the backoff part and still waits out retryAfterSeconds.
      */
     suspend fun delayBeforeNextExecution(
         retries: Int,
         retryAfterSeconds: Int?,
     ) {
         Logging.debug("retryAfterSeconds: $retryAfterSeconds")
-        val retryAfterSecondsNonNull = retryAfterSeconds?.toLong() ?: 0L
+        val retryAfterMs = (retryAfterSeconds?.toLong() ?: 0L) * 1_000
         val delayForOnRetries = retries * _configModelStore.model.opRepoDefaultFailRetryBackoff
-        val delayFor = max(delayForOnRetries, retryAfterSecondsNonNull * 1_000)
+        val delayFor = max(delayForOnRetries, retryAfterMs)
         if (delayFor < 1) return
         Logging.debug("Operations being delay for: $delayFor ms")
-        withTimeoutOrNull(delayFor) {
-            retryWaiter.waitForWake()
+
+        val start = TimeSource.Monotonic.markNow()
+        var remaining = delayFor
+        isWaitingToRetry = true
+        try {
+            while (remaining > 0) {
+                val message = withTimeoutOrNull(remaining) { retryWaiter.waitForWake() }
+                val waitUntil = if (message == null || message.force) 0L else retryAfterMs
+                remaining = waitUntil - start.elapsedNow().inWholeMilliseconds
+            }
+        } finally {
+            isWaitingToRetry = false
         }
     }
 

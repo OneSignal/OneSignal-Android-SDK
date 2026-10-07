@@ -20,6 +20,7 @@ import com.onesignal.user.internal.operations.LoginUserOperation
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.ints.shouldBeGreaterThan
 import io.kotest.matchers.ints.shouldBeLessThan
+import io.kotest.matchers.longs.shouldBeGreaterThanOrEqual
 import io.kotest.matchers.shouldBe
 import io.mockk.CapturingSlot
 import io.mockk.coEvery
@@ -875,6 +876,64 @@ class OperationRepoTests : FunSpec({
         mocks.operationRepo.queue[1].operation shouldBe op2
     }
 
+    test("retryNow ends the failure backoff early") {
+        // Given
+        val mocks = Mocks()
+        mocks.configModelStore.model.opRepoDefaultFailRetryBackoff = 60_000
+        val executions = mocks.recordExecutions(ExecutionResponse(ExecutionResult.FAIL_RETRY), ExecutionResponse(ExecutionResult.SUCCESS))
+        mocks.operationRepo.enqueue(mockOperation())
+        mocks.operationRepo.start()
+        withTimeout(2_000) { while (executions.size < 1) delay(10) }
+        delay(100)
+
+        // When
+        mocks.operationRepo.retryNow()
+
+        // Then
+        withTimeout(2_000) { while (executions.size < 2) delay(10) }
+    }
+
+    test("retryNow still waits out Retry-After") {
+        // Given
+        val mocks = Mocks()
+        mocks.configModelStore.model.opRepoDefaultFailRetryBackoff = 60_000
+        val executions =
+            mocks.recordExecutions(
+                ExecutionResponse(ExecutionResult.FAIL_RETRY, retryAfterSeconds = 1),
+                ExecutionResponse(ExecutionResult.SUCCESS),
+            )
+        mocks.operationRepo.enqueue(mockOperation())
+        mocks.operationRepo.start()
+        withTimeout(2_000) { while (executions.size < 1) delay(10) }
+        delay(100)
+
+        // When
+        mocks.operationRepo.retryNow()
+
+        // Then - retried once Retry-After passes, not immediately and not after the full backoff
+        delay(500)
+        executions.size shouldBe 1
+        withTimeout(2_000) { while (executions.size < 2) delay(10) }
+        (executions[1] - executions[0]) shouldBeGreaterThanOrEqual 1_000L
+    }
+
+    test("retryNow while not waiting to retry does not shorten a later backoff") {
+        // Given
+        val mocks = Mocks()
+        mocks.configModelStore.model.opRepoDefaultFailRetryBackoff = 60_000
+        val executions = mocks.recordExecutions(ExecutionResponse(ExecutionResult.FAIL_RETRY), ExecutionResponse(ExecutionResult.SUCCESS))
+        mocks.operationRepo.retryNow()
+
+        // When
+        mocks.operationRepo.enqueue(mockOperation())
+        mocks.operationRepo.start()
+        withTimeout(2_000) { while (executions.size < 1) delay(10) }
+
+        // Then
+        delay(500)
+        executions.size shouldBe 1
+    }
+
     test("ensure forceExecuteOperations immediately wakes retry waiters") {
         // Given
         val mocks = Mocks()
@@ -1202,6 +1261,16 @@ class OperationRepoTests : FunSpec({
             return executeWaiter
         }
     }
+}
+
+/** Responds with [responses] in order, repeating the last, and returns the time of each execution. */
+private fun Mocks.recordExecutions(vararg responses: ExecutionResponse): List<Long> {
+    val executions = java.util.Collections.synchronizedList(mutableListOf<Long>())
+    coEvery { executor.execute(any()) } answers {
+        executions.add(System.currentTimeMillis())
+        responses[minOf(executions.size - 1, responses.size - 1)]
+    }
+    return executions
 }
 
 private fun Mocks.waitForInternalEnqueue() {
