@@ -325,7 +325,7 @@ internal class LoginUserOperationExecutor(
                 NetworkUtils.ResponseStatusType.UNAUTHORIZED ->
                     backendExecutionResponse(ExecutionResult.FAIL_UNAUTHORIZED, ex)
                 else ->
-                    backendExecutionResponse(ExecutionResult.FAIL_PAUSE_OPREPO, ex)
+                    backendExecutionResponse(ExecutionResult.FAIL_NORETRY, ex)
             }
         }
     }

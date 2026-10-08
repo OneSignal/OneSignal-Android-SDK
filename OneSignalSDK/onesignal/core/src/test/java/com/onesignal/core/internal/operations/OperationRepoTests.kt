@@ -398,6 +398,38 @@ class OperationRepoTests : FunSpec({
         }
     }
 
+    test("FAIL_NORETRY on login does not pause so a later login can execute") {
+        val mocks = Mocks()
+        every { mocks.executor.operations } returns listOf(LoginUserOperationExecutor.LOGIN_USER)
+        coEvery { mocks.executor.execute(any()) } returns
+            ExecutionResponse(ExecutionResult.FAIL_NORETRY, httpStatusCode = 409, httpResponse = "user-1") andThen
+            ExecutionResponse(ExecutionResult.SUCCESS)
+
+        val opRepo = mocks.operationRepo
+        opRepo.start()
+        val first =
+            withTimeout(2_000) {
+                opRepo.enqueueAndAwaitResult(
+                    LoginUserOperation(
+                        "appId",
+                        "local-alice",
+                        "alice",
+                        null,
+                        OneSignalUserProfile(aliases = mapOf("facebook" to "bob")),
+                    ),
+                )
+            }
+        first.success shouldBe false
+        first.httpStatusCode shouldBe 409
+
+        val second =
+            withTimeout(2_000) {
+                opRepo.enqueueAndAwaitResult(LoginUserOperation("appId", "local-alice", "alice", null))
+            }
+        second.success shouldBe true
+        coVerify(exactly = 2) { mocks.executor.execute(any()) }
+    }
+
     test("enqueueAndAwaitResult same login after FAIL_PAUSE returns false without hanging") {
         val mocks = Mocks()
         every { mocks.executor.operations } returns listOf(LoginUserOperationExecutor.LOGIN_USER)
