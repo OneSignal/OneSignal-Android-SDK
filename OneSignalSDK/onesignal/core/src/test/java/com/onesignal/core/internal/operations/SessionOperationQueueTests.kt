@@ -9,6 +9,7 @@ import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.mocks.CoreInternalMocks
 import com.onesignal.mocks.MockHelper
 import com.onesignal.mocks.MockPreferencesService
+import com.onesignal.session.internal.session.SessionModel
 import com.onesignal.session.internal.session.operations.CreateSessionOperation
 import com.onesignal.session.internal.session.operations.SessionOperation
 import com.onesignal.session.internal.session.operations.UpdateSessionOperation
@@ -16,6 +17,7 @@ import com.onesignal.session.internal.session.operations.impl.SessionOperationEx
 import com.onesignal.user.internal.jwt.JwtRequirement
 import com.onesignal.user.internal.jwt.JwtTokenStore
 import com.onesignal.user.internal.operations.ExecutorMocks.Companion.getNewRecordState
+import com.onesignal.user.internal.operations.LoginUserFromSubscriptionOperation
 import com.onesignal.user.internal.operations.LoginUserOperation
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.collections.shouldContainExactly
@@ -152,6 +154,20 @@ class SessionOperationQueueTests : FunSpec({
         mocks.queuedOperations shouldContainExactly listOf(second)
         second.activeDuration shouldBe 20_000
         mocks.storedOperations shouldContainExactly listOf(second)
+    }
+
+    test("coalescing keeps the highest failed attempt count") {
+        // Given
+        val mocks = SessionQueueMocks()
+        val retried = update(activeDuration = 10_000).apply { failedAttempts = 3 }
+        val next = update(activeDuration = 20_000)
+
+        // When
+        mocks.enqueueAll(retried, next)
+
+        // Then
+        mocks.queuedOperations shouldContainExactly listOf(next)
+        next.failedAttempts shouldBe 3
     }
 
     test("an end replaces an unsent update for the same session") {
@@ -442,6 +458,56 @@ class SessionOperationQueueTests : FunSpec({
         mocks.operationRepo.start()
         withTimeout(2_000) { while (mocks.executed.isEmpty()) delay(10) }
         delay(100)
+
+        // Then
+        session.serverSessionId shouldBe null
+    }
+
+    test("a session operation is kept under identity verification while a subscription login creates its user") {
+        // Given
+        val mocks = SessionQueueMocks(ivRequired = true)
+        mocks.operationRepo.start()
+        mocks.operationRepo.awaitInitialized()
+        val createOp = create(onesignalId = "local-identified")
+
+        // When
+        mocks.enqueueAll(LoginUserFromSubscriptionOperation(APP_ID, "local-identified", "external-id", "subscription-id"), createOp)
+
+        // Then
+        mocks.queuedOperations shouldContainExactly listOf(createOp)
+    }
+
+    test("a subscription translation without the session's user translation leaves the pinned subscription alone") {
+        // Given
+        val mocks = SessionQueueMocks()
+        val session =
+            mocks.sessionModelStore.model.apply {
+                onesignalId = "local-previous-user"
+                subscriptionId = "local-subscription"
+            }
+        mocks.respondWith({
+            ExecutionResponse(
+                ExecutionResult.SUCCESS,
+                idTranslations = mapOf(LOCAL_SESSION_ID to "server-session", "local-subscription" to "subscription"),
+            )
+        })
+        mocks.enqueueAll(create())
+
+        // When
+        mocks.operationRepo.start()
+        withTimeout(2_000) { while (session.serverSessionId == null) delay(10) }
+
+        // Then
+        session.onesignalId shouldBe "local-previous-user"
+        session.subscriptionId shouldBe "local-subscription"
+    }
+
+    test("translations before the first session starts are ignored") {
+        // Given
+        val session = SessionModel()
+
+        // When
+        session.translateIds(mapOf("local-user" to "user"))
 
         // Then
         session.serverSessionId shouldBe null

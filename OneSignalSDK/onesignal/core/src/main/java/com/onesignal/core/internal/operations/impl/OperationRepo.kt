@@ -1,8 +1,8 @@
 package com.onesignal.core.internal.operations.impl
 
 import com.onesignal.common.IDManager
+import com.onesignal.common.threading.OneSignalDispatchers
 import com.onesignal.common.threading.WaiterWithValue
-import com.onesignal.common.threading.runOnSerialIO
 import com.onesignal.common.threading.suspendifyOnIO
 import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.config.impl.IdentityVerificationService
@@ -26,6 +26,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.newSingleThreadContext
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import java.util.UUID
 import kotlin.math.max
@@ -430,9 +431,9 @@ internal class OperationRepo(
                     appliedIdTranslations.putAll(response.idTranslations)
                 }
                 response.idTranslations.values.forEach { _newRecordState.add(it) }
-                // On SerialIO, where SessionService starts sessions, so the session can't change mid-write.
-                // Updates built from the old IDs before this runs are still translated at enqueue.
-                runOnSerialIO { sessionModelStore.model.translateIds(response.idTranslations) }
+                // Joined so the IDs are saved before a successful create is removed from the store. On SerialIO,
+                // where SessionService starts sessions, so the session can't change mid-write.
+                withContext(OneSignalDispatchers.SerialIO) { sessionModelStore.model.translateIds(response.idTranslations) }
             }
 
             var highestRetries = 0

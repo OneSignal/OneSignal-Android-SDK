@@ -117,8 +117,13 @@ class SessionModel : Model() {
      * updates built from these fields, including after a restart, match them.
      */
     internal fun translateIds(map: Map<String, String>) {
-        onesignalId?.let { map[it] }?.let { onesignalId = it }
-        subscriptionId?.let { map[it] }?.let { subscriptionId = it }
+        // Unset until the first session starts.
+        if (!hasProperty(::sessionId.name)) return
+
         map[localSessionId]?.let { serverSessionId = it }
+        onesignalId = onesignalId?.let { map[it] } ?: return
+        // Login reuses a local push subscription for the new user, so its ID only belongs to this
+        // session when the same response created this session's user.
+        subscriptionId?.let { map[it] }?.let { subscriptionId = it }
     }
 }

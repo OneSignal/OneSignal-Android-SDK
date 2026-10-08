@@ -6,6 +6,7 @@ import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.session.internal.session.operations.CreateSessionOperation
 import com.onesignal.session.internal.session.operations.SessionOperation
 import com.onesignal.session.internal.session.operations.UpdateSessionOperation
+import com.onesignal.user.internal.operations.LoginUserFromSubscriptionOperation
 import com.onesignal.user.internal.operations.LoginUserOperation
 
 /**
@@ -54,8 +55,13 @@ private fun OperationRepo.isUnsendable(op: SessionOperation): Boolean =
         isIdentityVerificationRequired &&
         IDManager.isLocalId(op.onesignalId) &&
         (queue + inFlight).none {
-            val login = it.operation as? LoginUserOperation
-            login != null && login.onesignalId == op.onesignalId && login.externalId != null
+            val createsUser =
+                when (val login = it.operation) {
+                    is LoginUserOperation -> login.onesignalId == op.onesignalId
+                    is LoginUserFromSubscriptionOperation -> login.onesignalId == op.onesignalId
+                    else -> false
+                }
+            createsUser && it.operation.externalId != null
         }
 
 /**
@@ -83,19 +89,20 @@ private fun OperationRepo.admitSessionUpdate(
         return false
     }
 
-    val queued = queue.filter { (it.operation as? UpdateSessionOperation)?.isSameSession(op) == true }
-    queued.maxOfOrNull { (it.operation as UpdateSessionOperation).activeDuration }?.let {
-        op.activeDuration = maxOf(op.activeDuration, it)
-    }
-    queued.forEach { item ->
+    val queued = queue.mapNotNull { item -> (item.operation as? UpdateSessionOperation)?.takeIf { it.isSameSession(op) } }
+    queued.maxOfOrNull { it.activeDuration }?.let { op.activeDuration = maxOf(op.activeDuration, it) }
+    // Otherwise a session that keeps enqueueing updates would never reach the attempt limit.
+    queued.maxOfOrNull { it.failedAttempts }?.let { op.failedAttempts = maxOf(op.failedAttempts, it) }
+    val queuedItems = queue.filter { it.operation in queued }
+    queuedItems.forEach { item ->
         if (incoming.waiter == null) {
             incoming.waiter = item.waiter
         } else {
             item.waiter?.wake(true)
         }
     }
-    if (queued.isNotEmpty()) {
-        removeQueuedOperations(queued, operationModelStore)
+    if (queuedItems.isNotEmpty()) {
+        removeQueuedOperations(queuedItems, operationModelStore)
         Logging.debug("OperationRepo: coalesced ${queued.size} queued update(s) for session ${op.sessionId}")
     }
     return true
