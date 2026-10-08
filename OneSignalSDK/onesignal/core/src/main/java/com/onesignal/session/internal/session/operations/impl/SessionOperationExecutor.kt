@@ -1,5 +1,7 @@
 package com.onesignal.session.internal.session.operations.impl
 
+import com.onesignal.common.NetworkUtils
+import com.onesignal.common.exceptions.BackendException
 import com.onesignal.common.threading.OneSignalDispatchers
 import com.onesignal.core.internal.device.IDeviceService
 import com.onesignal.core.internal.operations.ExecutionResponse
@@ -10,7 +12,6 @@ import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.session.internal.session.SessionModelStore
 import com.onesignal.session.internal.session.backend.CreateSessionRequest
 import com.onesignal.session.internal.session.backend.ISessionsBackendService
-import com.onesignal.session.internal.session.backend.SessionsApiResult
 import com.onesignal.session.internal.session.backend.UpdateSessionRequest
 import com.onesignal.session.internal.session.operations.CreateSessionOperation
 import com.onesignal.session.internal.session.operations.UpdateSessionOperation
@@ -42,22 +43,34 @@ internal class SessionOperationExecutor(
                 idempotencyKey = op.idempotencyKey,
                 directAttributionId = op.directAttributionId,
             )
-        return when (val result = sessionsBackend.createSession(op.appId, request)) {
-            is SessionsApiResult.Success -> {
-                val serverSessionId = result.value
-                // Persisted so updates enqueued after this point, including after a restart, use the backend ID directly.
-                // On SerialIO so the check and write can't interleave with SessionService starting a new session.
-                withContext(OneSignalDispatchers.SerialIO) {
-                    val session = sessionModelStore.model
-                    if (session.localSessionId == op.localSessionId) {
-                        session.serverSessionId = serverSessionId
-                    }
-                }
-                ExecutionResponse(ExecutionResult.SUCCESS, idTranslations = mapOf(op.localSessionId to serverSessionId))
+        val serverSessionId =
+            try {
+                sessionsBackend.createSession(op.appId, request)
+            } catch (ex: BackendException) {
+                return failure("create", ex)
             }
-            is SessionsApiResult.Retry -> retry(result)
-            is SessionsApiResult.Drop -> drop("create", result)
+        return if (serverSessionId == null) {
+            // Retrying with the same idempotency key lets the backend return the session it already created.
+            Logging.warn("SessionOperationExecutor: create session response is missing data.session_id, retrying")
+            ExecutionResponse(ExecutionResult.FAIL_RETRY)
+        } else {
+            sessionCreated(op, serverSessionId)
         }
+    }
+
+    private suspend fun sessionCreated(
+        op: CreateSessionOperation,
+        serverSessionId: String,
+    ): ExecutionResponse {
+        // Persisted so updates enqueued after this point, including after a restart, use the backend ID directly.
+        // On SerialIO so the check and write can't interleave with SessionService starting a new session.
+        withContext(OneSignalDispatchers.SerialIO) {
+            val session = sessionModelStore.model
+            if (session.localSessionId == op.localSessionId) {
+                session.serverSessionId = serverSessionId
+            }
+        }
+        return ExecutionResponse(ExecutionResult.SUCCESS, idTranslations = mapOf(op.localSessionId to serverSessionId))
     }
 
     private suspend fun updateSession(op: UpdateSessionOperation): ExecutionResponse {
@@ -69,25 +82,38 @@ internal class SessionOperationExecutor(
                 idempotencyKey = op.idempotencyKey,
                 endTime = op.endTime?.let { MILLISECONDS.toSeconds(it) },
             )
-        return when (val result = sessionsBackend.updateSession(op.appId, op.sessionId, request)) {
-            is SessionsApiResult.Success -> ExecutionResponse(ExecutionResult.SUCCESS)
-            is SessionsApiResult.Retry -> retry(result)
-            is SessionsApiResult.Drop -> drop("update", result)
+        try {
+            sessionsBackend.updateSession(op.appId, op.sessionId, request)
+        } catch (ex: BackendException) {
+            return failure("update", ex)
         }
+        return ExecutionResponse(ExecutionResult.SUCCESS)
     }
 
-    private fun retry(result: SessionsApiResult.Retry) = ExecutionResponse(ExecutionResult.FAIL_RETRY, retryAfterSeconds = result.retryAfterSeconds)
-
-    private fun drop(
+    private fun failure(
         action: String,
-        result: SessionsApiResult.Drop,
+        ex: BackendException,
     ): ExecutionResponse {
-        Logging.warn("SessionOperationExecutor: $action session failed with ${result.statusCode}, dropping")
+        val code = ex.statusCode
+        // RETRYABLE also covers 4xx codes NetworkUtils doesn't list, like 413 and 422. Those won't succeed on retry,
+        // and OperationRepo retries without a cap at the front of the queue, so they would block every other operation.
+        val retryable =
+            NetworkUtils.getResponseStatusType(code) == NetworkUtils.ResponseStatusType.RETRYABLE &&
+                (code !in CLIENT_ERROR_CODES || code in RETRYABLE_CLIENT_ERROR_CODES)
+        if (retryable) {
+            return ExecutionResponse(ExecutionResult.FAIL_RETRY, retryAfterSeconds = ex.retryAfterSeconds)
+        }
+        Logging.warn("SessionOperationExecutor: $action session failed with $code, dropping")
         return ExecutionResponse(ExecutionResult.FAIL_NORETRY)
     }
 
     companion object {
         const val CREATE_SESSION = "create-session"
         const val UPDATE_SESSION = "update-session"
+
+        private val CLIENT_ERROR_CODES = 400..499
+
+        // Request Timeout and Too Many Requests
+        private val RETRYABLE_CLIENT_ERROR_CODES = setOf(408, 429)
     }
 }
