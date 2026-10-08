@@ -39,6 +39,24 @@ jobs:
         working-directory: OneSignalSDK
         run: |
           ./gradlew detekt --console=plain
+      # Explicit paths: a bare `apiCheck` silently skips any module that stops registering the task.
+      - name: "[Public API] Binary compatibility check"
+        id: api_check
+        working-directory: OneSignalSDK
+        run: |
+          ./gradlew \
+            :OneSignal:apiCheck \
+            :OneSignal:core:apiCheck \
+            :OneSignal:notifications:apiCheck \
+            :OneSignal:in-app-messages:apiCheck \
+            :OneSignal:location:apiCheck \
+            --console=plain
+      - name: "[Public API] Explain a failure"
+        if: failure() && steps.api_check.outcome == 'failure'
+        run: |
+          echo "If apiCheck failed, the public API changed. Review the diff it printed."
+          echo "If the change is intended, run './gradlew apiDump' in OneSignalSDK and commit the updated api/*.api files."
+          echo "If the new lines are internal (not customer or wrapper API), add them to ignoredPackages or ignoredClasses in OneSignalSDK/build.gradle instead."
 
   test:
     runs-on: ubuntu-latest

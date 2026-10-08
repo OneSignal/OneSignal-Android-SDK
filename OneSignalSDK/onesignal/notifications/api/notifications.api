@@ -1,0 +1,74 @@
+public final class com/onesignal/NotificationOpenedActivityHMS : android/app/Activity, com/onesignal/core/internal/application/OneSignalInternalActivity {
+	public fun <init> ()V
+}
+
+public final class com/onesignal/notifications/activities/NotificationOpenedActivity : com/onesignal/notifications/activities/NotificationOpenedActivityBase {
+	public fun <init> ()V
+}
+
+public final class com/onesignal/notifications/activities/NotificationOpenedActivityAndroid22AndOlder : com/onesignal/notifications/activities/NotificationOpenedActivityBase {
+	public fun <init> ()V
+}
+
+public abstract class com/onesignal/notifications/activities/NotificationOpenedActivityBase : android/app/Activity, com/onesignal/core/internal/application/OneSignalInternalActivity {
+	public fun <init> ()V
+	protected fun onCreate (Landroid/os/Bundle;)V
+	protected fun onNewIntent (Landroid/content/Intent;)V
+}
+
+public final class com/onesignal/notifications/bridges/OneSignalHmsEventBridge {
+	public static final field HMS_SENT_TIME_KEY Ljava/lang/String;
+	public static final field HMS_TTL_KEY Ljava/lang/String;
+	public static final field INSTANCE Lcom/onesignal/notifications/bridges/OneSignalHmsEventBridge;
+	public final fun onMessageReceived (Landroid/content/Context;Lcom/huawei/hms/push/RemoteMessage;)V
+	public final fun onNewToken (Landroid/content/Context;Ljava/lang/String;)V
+	public final fun onNewToken (Landroid/content/Context;Ljava/lang/String;Landroid/os/Bundle;)V
+}
+
+public final class com/onesignal/notifications/receivers/ADMMessageReceiver : com/amazon/device/messaging/ADMMessageReceiver {
+	public static final field Companion Lcom/onesignal/notifications/receivers/ADMMessageReceiver$Companion;
+	public fun <init> ()V
+}
+
+public final class com/onesignal/notifications/receivers/ADMMessageReceiver$Companion {
+}
+
+public final class com/onesignal/notifications/receivers/BootUpReceiver : android/content/BroadcastReceiver {
+	public fun <init> ()V
+	public fun onReceive (Landroid/content/Context;Landroid/content/Intent;)V
+}
+
+public final class com/onesignal/notifications/receivers/FCMBroadcastReceiver : android/content/BroadcastReceiver {
+	public static final field Companion Lcom/onesignal/notifications/receivers/FCMBroadcastReceiver$Companion;
+	public fun <init> ()V
+	public fun onReceive (Landroid/content/Context;Landroid/content/Intent;)V
+}
+
+public final class com/onesignal/notifications/receivers/FCMBroadcastReceiver$Companion {
+}
+
+public final class com/onesignal/notifications/receivers/NotificationDismissReceiver : android/content/BroadcastReceiver {
+	public fun <init> ()V
+	public fun onReceive (Landroid/content/Context;Landroid/content/Intent;)V
+}
+
+public final class com/onesignal/notifications/receivers/UpgradeReceiver : android/content/BroadcastReceiver {
+	public fun <init> ()V
+	public fun onReceive (Landroid/content/Context;Landroid/content/Intent;)V
+}
+
+public final class com/onesignal/notifications/services/ADMMessageHandler : com/amazon/device/messaging/ADMMessageHandlerBase {
+	public fun <init> ()V
+}
+
+public final class com/onesignal/notifications/services/ADMMessageHandlerJob : com/amazon/device/messaging/ADMMessageHandlerJobBase {
+	public fun <init> ()V
+}
+
+public final class com/onesignal/notifications/services/HmsMessageServiceOneSignal : com/huawei/hms/push/HmsMessageService {
+	public fun <init> ()V
+	public fun onMessageReceived (Lcom/huawei/hms/push/RemoteMessage;)V
+	public fun onNewToken (Ljava/lang/String;)V
+	public fun onNewToken (Ljava/lang/String;Landroid/os/Bundle;)V
+}
+

@@ -16,6 +16,8 @@ import java.io.PrintWriter
 import java.io.StringWriter
 import java.util.concurrent.CopyOnWriteArraySet
 
+// Wrapper SDKs (Flutter, React Native, Cordova, Capacitor) call this directly despite the
+// package name, so it is tracked by apiCheck and must stay binary-compatible.
 object Logging {
     private const val TAG = "OneSignal"
 

@@ -1,5 +1,6 @@
 package com.onesignal.common
 
+// Wrapper SDKs call this from Java, C# bindings, and Unity JNI by name. Tracked by apiCheck.
 object OneSignalWrapper {
     /**
      * The type of the wrapper SDK.
