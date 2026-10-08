@@ -325,7 +325,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
                     loadExistingTags()
                     refreshPushSubscription()
                 } else {
-                    Log.e(TAG, "Composite login failed: ${result.error}")
+                    DemoLog.e("Composite login failed: ${result.error}")
                 }
                 _isLoading.value = false
             }

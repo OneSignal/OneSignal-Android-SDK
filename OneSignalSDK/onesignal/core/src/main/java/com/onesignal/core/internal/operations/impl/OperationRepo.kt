@@ -47,6 +47,7 @@ internal class OperationRepo(
         var retries: Int = 0,
     ) {
         val waiters = mutableListOf<WaiterWithValue<OperationWaitResult>>()
+
         @Volatile
         var completedResult: OperationWaitResult? = null
             private set
