@@ -47,6 +47,7 @@ import com.onesignal.core.internal.permissions.IRequestPermissionService
 import com.onesignal.core.internal.preferences.IPreferencesService
 import com.onesignal.core.internal.preferences.PreferenceOneSignalKeys
 import com.onesignal.core.internal.preferences.PreferenceStores
+import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.notifications.R
 import com.onesignal.notifications.internal.common.NotificationHelper
 import com.onesignal.notifications.internal.permissions.INotificationPermissionChangedHandler
@@ -69,6 +70,35 @@ internal class NotificationPermissionController(
     private val events = EventProducer<INotificationPermissionChangedHandler>()
     private var enabled: Boolean
 
+    @Volatile
+    private var notificationsSeenEnabled = false
+
+    // Without a native prompt, disabled may be an OEM default (e.g. Huawei) whose own prompt is on screen, so a
+    // fresh install's first session never shows our dialog while notifications were never seen enabled.
+    // An app update means the app launched before; unknown install times count as fresh.
+    private val defersSettingsFallbackThisSession: Boolean by lazy {
+        val firstSession =
+            _preferenceService.getBool(
+                PreferenceStores.ONESIGNAL,
+                PreferenceOneSignalKeys.PREFS_OS_NOTIFICATION_SETTINGS_FALLBACK_ALLOWED,
+                false,
+            ) != true
+        if (firstSession) {
+            _preferenceService.saveBool(
+                PreferenceStores.ONESIGNAL,
+                PreferenceOneSignalKeys.PREFS_OS_NOTIFICATION_SETTINGS_FALLBACK_ALLOWED,
+                true,
+            )
+        }
+        val context = _application.appContext
+        val freshInstall =
+            runCatching {
+                val info = context.packageManager.getPackageInfo(context.packageName, 0)
+                info.firstInstallTime == info.lastUpdateTime
+            }.getOrDefault(true)
+        firstSession && freshInstall
+    }
+
     override val canRequestPermission: Boolean
         get() =
             !_preferenceService.getBool(
@@ -79,6 +109,7 @@ internal class NotificationPermissionController(
 
     init {
         this.enabled = notificationsEnabled()
+        notificationsSeenEnabled = this.enabled
         _requestPermission.registerAsCallback(PERMISSION_TYPE, this)
         pollingWaitInterval = _configModelStore.model.backgroundFetchNotificationPermissionInterval
         registerPollingLifecycleListener()
@@ -113,8 +144,15 @@ internal class NotificationPermissionController(
     }
 
     private suspend fun pollForPermission() {
+        // Decided at startup, not at the first prompt, so a later session's prompt is never deferred.
+        if (defersSettingsFallbackThisSession) {
+            Logging.debug("NotificationPermissionController: first session, settings fallback may be deferred if notifications stay disabled")
+        }
         while (true) {
             val enabled = this.notificationsEnabled()
+            if (enabled) {
+                notificationsSeenEnabled = true
+            }
             if (this.enabled != enabled) { // If the permission has changed without prompting through OneSignal
                 this.enabled = enabled
                 events.fire { it.onNotificationPermissionChanged(enabled) }
@@ -145,10 +183,16 @@ internal class NotificationPermissionController(
         yield()
 
         if (notificationsEnabled()) {
+            notificationsSeenEnabled = true
             return true
         }
 
         if (!supportsNativePrompt && !fallbackToSettings) {
+            return false
+        }
+
+        if (!supportsNativePrompt && defersSettingsFallbackThisSession && !notificationsSeenEnabled) {
+            Logging.info("NotificationPermissionController: notifications never seen enabled this session, settings fallback deferred")
             return false
         }
 
