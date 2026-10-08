@@ -26,7 +26,7 @@ interface INotificationsManager {
      * enabling of notifications, when the in-app prompting is not possible.
      *
      * @return true if the user is opted in to push notifications (Android 13 and higher, user affirmed or already enabled. < Android 13, already enabled)
-     *         false if the user is opted out of push notifications (user rejected)
+     *         false if the user is opted out of push notifications (user rejected, or < Android 13 on the first session where no prompt was shown; observe permission changes)
      */
     suspend fun requestPermission(fallbackToSettings: Boolean): Boolean
 
