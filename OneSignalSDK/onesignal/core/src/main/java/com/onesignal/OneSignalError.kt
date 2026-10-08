@@ -256,10 +256,9 @@ class OneSignalError private constructor(
         ): List<Detail>? {
             if (body.isNullOrBlank()) return null
             return try {
-                val root = json.parseToJsonElement(body) as? JsonObject ?: return null
-                val errors = root["errors"] as? JsonArray ?: return null
+                val errors = (json.parseToJsonElement(body) as? JsonObject)?.get("errors") as? JsonArray
                 val details =
-                    errors.mapNotNull { element ->
+                    errors?.mapNotNull { element ->
                         val item = element as? JsonObject ?: return@mapNotNull null
                         Detail.of(
                             code = ErrorCode.BACKEND_ERROR,
@@ -269,18 +268,17 @@ class OneSignalError private constructor(
                             meta = (item["meta"] as? JsonObject)?.toPlainMap()?.takeIf { it.isNotEmpty() },
                         )
                     }
-                details.takeIf { it.isNotEmpty() }
+                details?.takeIf { it.isNotEmpty() }
             } catch (_: Exception) {
                 null
             }
         }
 
-        private fun JsonObject.optionalString(key: String): String? {
-            val value = this[key] ?: return null
-            if (value is JsonNull) return null
-            val primitive = value as? JsonPrimitive ?: return null
-            return primitive.content.takeIf { it.isNotEmpty() }
-        }
+        private fun JsonObject.optionalString(key: String): String? =
+            (this[key] as? JsonPrimitive)
+                ?.takeIf { it !is JsonNull }
+                ?.content
+                ?.takeIf { it.isNotEmpty() }
 
         private fun JsonObject.toPlainMap(): Map<String, Any?> = entries.associate { it.key to it.value.toPlain() }
 

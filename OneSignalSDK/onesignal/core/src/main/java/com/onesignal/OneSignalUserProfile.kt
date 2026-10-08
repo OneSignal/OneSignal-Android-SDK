@@ -23,11 +23,12 @@ class OneSignalUserProfile @JvmOverloads constructor(
                 tags.isNotEmpty() ||
                 aliases.isNotEmpty()
 
-    internal fun validationError(): String? {
-        if (email != null && !OneSignalUtils.isValidEmail(email)) return "Invalid email address"
-        if (sms != null && !OneSignalUtils.isValidPhoneNumber(sms)) return "Invalid SMS number"
-        return null
-    }
+    internal fun validationError(): String? =
+        when {
+            email != null && !OneSignalUtils.isValidEmail(email) -> "Invalid email address"
+            sms != null && !OneSignalUtils.isValidPhoneNumber(sms) -> "Invalid SMS number"
+            else -> null
+        }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

@@ -455,23 +455,32 @@ internal fun matchingBackendSubscription(
     remaining: Set<SubscriptionObject>,
     localId: String,
     local: SubscriptionObject,
+): SubscriptionObject? =
+    remaining.firstOrNull { it.id == localId }
+        ?: matchByToken(remaining, local)
+        ?: matchByType(remaining, local)
+
+// Should always succeed for email or sms once the ID match fails.
+private fun matchByToken(
+    remaining: Set<SubscriptionObject>,
+    local: SubscriptionObject,
 ): SubscriptionObject? {
-    // 1. Start by matching the subscription ID
-    remaining.firstOrNull { it.id == localId }?.let { return it }
     val localToken = local.token
-    if (!localToken.isNullOrBlank()) {
-        // 2. If ID fails, match the token, this should always succeed for email or sms
-        val ignoreCase = local.type == SubscriptionObjectType.EMAIL
-        val hashed = PIIHasher.hash(localToken)
-        remaining.firstOrNull { backend ->
-            val token = backend.token
-            !token.isNullOrBlank() && (token.equals(localToken, ignoreCase) || token == hashed)
-        }?.let { return it }
+    if (localToken.isNullOrBlank()) return null
+    val ignoreCase = local.type == SubscriptionObjectType.EMAIL
+    val hashed = PIIHasher.hash(localToken)
+    return remaining.firstOrNull { backend ->
+        val token = backend.token
+        !token.isNullOrBlank() && (token.equals(localToken, ignoreCase) || token == hashed)
     }
-    // 3. Match by type. Push: at most one remains. Email/SMS: only if one remains and it has no token.
+}
+
+// Push: at most one remains. Email/SMS: only if one remains and it has no token.
+private fun matchByType(
+    remaining: Set<SubscriptionObject>,
+    local: SubscriptionObject,
+): SubscriptionObject? {
     val sameType = remaining.filter { it.type == local.type }
-    if (local.type == SubscriptionObjectType.EMAIL || local.type == SubscriptionObjectType.SMS) {
-        return sameType.singleOrNull()?.takeIf { it.token.isNullOrBlank() }
-    }
-    return sameType.firstOrNull()
+    val isEmailOrSms = local.type == SubscriptionObjectType.EMAIL || local.type == SubscriptionObjectType.SMS
+    return if (isEmailOrSms) sameType.singleOrNull()?.takeIf { it.token.isNullOrBlank() } else sameType.firstOrNull()
 }
