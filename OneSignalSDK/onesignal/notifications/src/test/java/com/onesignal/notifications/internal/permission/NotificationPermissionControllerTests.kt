@@ -3,6 +3,7 @@ package com.onesignal.notifications.internal.permission
 import android.app.Activity
 import androidx.test.core.app.ApplicationProvider
 import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
+import com.onesignal.common.AndroidUtils
 import com.onesignal.common.threading.OneSignalDispatchers
 import com.onesignal.common.threading.runOnSerialIO
 import com.onesignal.core.activities.PermissionsActivity
@@ -31,7 +32,10 @@ import io.mockk.unmockkObject
 import io.mockk.unmockkStatic
 import io.mockk.verify
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withTimeout
 import org.robolectric.annotation.Config
 
 @Config(
@@ -54,7 +58,7 @@ class NotificationPermissionControllerTests : FunSpec({
         // Given
         val mockRequestPermissionService = mockk<IRequestPermissionService>()
         every { mockRequestPermissionService.registerAsCallback(any(), any()) } just runs
-        val mockPreferenceService = mockk<IPreferencesService>()
+        val mockPreferenceService = mockk<IPreferencesService>(relaxed = true)
         val focusHandlerList = mutableListOf<IApplicationLifecycleHandler>()
         val mockAppService = mockk<IApplicationService>()
         every { mockAppService.addApplicationLifecycleHandler(any()) } answers {
@@ -91,7 +95,7 @@ class NotificationPermissionControllerTests : FunSpec({
         // Given
         val mockRequestPermissionService = mockk<IRequestPermissionService>()
         every { mockRequestPermissionService.registerAsCallback(any(), any()) } just runs
-        val mockPreferenceService = mockk<IPreferencesService>()
+        val mockPreferenceService = mockk<IPreferencesService>(relaxed = true)
         val handlerList = mutableListOf<IApplicationLifecycleHandler>()
         val mockAppService = mockk<IApplicationService>()
         every { mockAppService.addApplicationLifecycleHandler(any()) } answers {
@@ -130,13 +134,52 @@ class NotificationPermissionControllerTests : FunSpec({
         handlerFired shouldBe false
     }
 
+    test("first session with notifications disabled still launches the native prompt") {
+        mockkObject(AndroidUtils)
+        every { AndroidUtils.getTargetSdkVersion(any()) } returns 33
+
+        try {
+            ShadowRoboNotificationManager.setShadowNotificationsEnabled(false)
+            var nativePromptStarted = false
+            val mockRequestPermissionService = mockk<IRequestPermissionService>()
+            every { mockRequestPermissionService.registerAsCallback(any(), any()) } just runs
+            every { mockRequestPermissionService.startPrompt(any(), any(), any(), any()) } answers { nativePromptStarted = true }
+            val mockPreferenceService = mockk<IPreferencesService>(relaxed = true)
+            every { mockPreferenceService.getBool(any(), any(), any()) } returns false
+            val mockAppService = mockk<IApplicationService>(relaxed = true)
+            every { mockAppService.appContext } returns ApplicationProvider.getApplicationContext()
+            val controller =
+                NotificationPermissionController(
+                    mockAppService,
+                    mockRequestPermissionService,
+                    mockAppService,
+                    mockPreferenceService,
+                    MockHelper.configModelStore(),
+                )
+
+            val result =
+                withTimeout(1_000) {
+                    coroutineScope {
+                        val pending = async { controller.prompt(true) }
+                        while (!nativePromptStarted) delay(10)
+                        controller.onAccept()
+                        pending.await()
+                    }
+                }
+
+            result shouldBe true
+        } finally {
+            unmockkObject(AndroidUtils)
+        }
+    }
+
     test("onReject with fallback waits for host activity before showing settings dialog") {
         mockkObject(AlertDialogPrepromptForAndroidSettings)
 
         try {
             val mockRequestPermissionService = mockk<IRequestPermissionService>()
             every { mockRequestPermissionService.registerAsCallback(any(), any()) } just runs
-            val mockPreferenceService = mockk<IPreferencesService>()
+            val mockPreferenceService = mockk<IPreferencesService>(relaxed = true)
             val activityHandlers = mutableListOf<IActivityLifecycleHandler>()
             val mockAppService = mockk<IApplicationService>()
             val permissionsActivity = mockk<PermissionsActivity>(relaxed = true)
@@ -209,7 +252,7 @@ class NotificationPermissionControllerTests : FunSpec({
         try {
             val mockRequestPermissionService = mockk<IRequestPermissionService>()
             every { mockRequestPermissionService.registerAsCallback(any(), any()) } just runs
-            val mockPreferenceService = mockk<IPreferencesService>()
+            val mockPreferenceService = mockk<IPreferencesService>(relaxed = true)
             val activityHandlers = mutableListOf<IActivityLifecycleHandler>()
             val mockAppService = mockk<IApplicationService>()
             val hostActivity = mockk<Activity>(relaxed = true)
@@ -278,7 +321,7 @@ class NotificationPermissionControllerTests : FunSpec({
         try {
             val mockRequestPermissionService = mockk<IRequestPermissionService>()
             every { mockRequestPermissionService.registerAsCallback(any(), any()) } just runs
-            val mockPreferenceService = mockk<IPreferencesService>()
+            val mockPreferenceService = mockk<IPreferencesService>(relaxed = true)
             val mockAppService = mockk<IApplicationService>()
             val hostActivity = mockk<Activity>(relaxed = true)
             val callbackSlot = slot<AlertDialogPrepromptForAndroidSettings.Callback>()
@@ -349,7 +392,7 @@ class NotificationPermissionControllerTests : FunSpec({
         try {
             val mockRequestPermissionService = mockk<IRequestPermissionService>()
             every { mockRequestPermissionService.registerAsCallback(any(), any()) } just runs
-            val mockPreferenceService = mockk<IPreferencesService>()
+            val mockPreferenceService = mockk<IPreferencesService>(relaxed = true)
             val focusHandlerList = mutableListOf<IApplicationLifecycleHandler>()
             val mockAppService = mockk<IApplicationService>()
             every { mockAppService.addApplicationLifecycleHandler(any()) } answers {
@@ -388,7 +431,7 @@ class NotificationPermissionControllerTests : FunSpec({
         try {
             val mockRequestPermissionService = mockk<IRequestPermissionService>()
             every { mockRequestPermissionService.registerAsCallback(any(), any()) } just runs
-            val mockPreferenceService = mockk<IPreferencesService>()
+            val mockPreferenceService = mockk<IPreferencesService>(relaxed = true)
             val focusHandlerList = mutableListOf<IApplicationLifecycleHandler>()
             val mockAppService = mockk<IApplicationService>()
             every { mockAppService.addApplicationLifecycleHandler(any()) } answers {
@@ -419,7 +462,7 @@ class NotificationPermissionControllerTests : FunSpec({
         // Given
         val mockRequestPermissionService = mockk<IRequestPermissionService>()
         every { mockRequestPermissionService.registerAsCallback(any(), any()) } just runs
-        val mockPreferenceService = mockk<IPreferencesService>()
+        val mockPreferenceService = mockk<IPreferencesService>(relaxed = true)
         val handlerList = mutableListOf<IApplicationLifecycleHandler>()
         val mockAppService = mockk<IApplicationService>()
         every { mockAppService.addApplicationLifecycleHandler(any()) } answers {
