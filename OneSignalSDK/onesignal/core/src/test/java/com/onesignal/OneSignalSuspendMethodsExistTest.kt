@@ -148,6 +148,30 @@ class OneSignalSuspendMethodsExistTest : FunSpec({
         assert(kFunction.parameters.size >= 2) { "loginSuspend should have at least 2 parameters (receiver + externalId)" }
     }
 
+    test("identity-only login still exists and is not suspend") {
+        val blocking =
+            OneSignal::class.memberFunctions
+                .filter { it.name == "login" && !it.isSuspend }
+
+        assert(blocking.any { it.parameters.size == 2 }) { "login(externalId) is missing" }
+        assert(blocking.any { it.parameters.size == 3 }) { "login(externalId, jwtBearerToken) is missing" }
+    }
+
+    test("suspend login with profile exists and returns OneSignalResult") {
+        val kFunction =
+            OneSignal::class.memberFunctions
+                .firstOrNull { fn ->
+                    fn.name == "login" &&
+                        fn.isSuspend &&
+                        fn.parameters.any { it.type.classifier == OneSignalUserProfile::class }
+                }
+
+        assert(kFunction != null) { "suspend login(externalId, profile) not found" }
+        assert(kFunction!!.returnType.classifier == OneSignalResult::class) {
+            "suspend login(externalId, profile) should return OneSignalResult"
+        }
+    }
+
     test("logoutSuspend exists with no parameters") {
         val method: suspend () -> Unit = OneSignal::logoutSuspend
 

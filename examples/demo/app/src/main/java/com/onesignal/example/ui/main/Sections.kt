@@ -31,6 +31,7 @@ import com.onesignal.example.ui.components.DemoSection
 import com.onesignal.example.ui.components.DestructiveButton
 import com.onesignal.example.ui.components.DropdownRow
 import com.onesignal.example.ui.components.LocalSnackbarController
+import com.onesignal.example.ui.components.CompositeLoginDialog
 import com.onesignal.example.ui.components.LoginDialog
 import com.onesignal.example.ui.components.MultiPairInputDialog
 import com.onesignal.example.ui.components.MultiSelectRemoveDialog
@@ -184,12 +185,14 @@ fun UserSection(
     onUseIdentityVerificationChange: (Boolean) -> Unit,
     onLanguageChange: (String) -> Unit,
     onLogin: (String, String?) -> Unit,
+    onLoginWithProfile: (String, String?, String?, String?) -> Unit,
     onLogout: () -> Unit,
     onUpdateJwt: (String, String) -> Unit,
     isLoading: Boolean = false,
 ) {
     val isLoggedIn = !externalUserId.isNullOrEmpty()
     var loginOpen by remember { mutableStateOf(false) }
+    var compositeLoginOpen by remember { mutableStateOf(false) }
     var updateJwtOpen by remember { mutableStateOf(false) }
 
     DemoSection {
@@ -235,6 +238,13 @@ fun UserSection(
             testTag = "login_user_button",
         )
 
+        OutlineButton(
+            text = "LOGIN WITH PROFILE",
+            onClick = { compositeLoginOpen = true },
+            enabled = !isLoading,
+            testTag = "composite_login_button",
+        )
+
         if (isLoggedIn) {
             OutlineButton(
                 text = "LOGOUT USER",
@@ -257,6 +267,16 @@ fun UserSection(
             onConfirm = { userId, jwt ->
                 onLogin(userId, jwt)
                 loginOpen = false
+            },
+        )
+    }
+
+    if (compositeLoginOpen) {
+        CompositeLoginDialog(
+            onDismiss = { compositeLoginOpen = false },
+            onConfirm = { userId, email, sms, jwt ->
+                onLoginWithProfile(userId, email, sms, jwt)
+                compositeLoginOpen = false
             },
         )
     }
