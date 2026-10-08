@@ -4,7 +4,9 @@ import com.onesignal.common.IDManager
 import com.onesignal.core.internal.operations.Operation
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.session.internal.session.operations.CreateSessionOperation
+import com.onesignal.session.internal.session.operations.SessionOperation
 import com.onesignal.session.internal.session.operations.UpdateSessionOperation
+import com.onesignal.user.internal.operations.LoginUserOperation
 
 /**
  * Session operations accumulate while offline, one or more per app open. Coalescing keeps
@@ -15,13 +17,55 @@ import com.onesignal.session.internal.session.operations.UpdateSessionOperation
 internal const val MAX_QUEUED_SESSION_OPERATIONS = 100
 
 /**
+ * @return false if [incoming] was discarded because it could never be sent; see [admitSessionUpdate].
+ */
+internal fun OperationRepo.admitSessionOperation(
+    incoming: OperationRepo.OperationQueueItem,
+    operationModelStore: OperationModelStore,
+): Boolean {
+    val op = incoming.operation as SessionOperation
+    if (isUnsendable(op)) {
+        Logging.debug("OperationRepo: discarding $op, its anonymous user is never created under identity verification")
+        incoming.waiter?.wake(false)
+        return false
+    }
+    return op !is UpdateSessionOperation || admitSessionUpdate(incoming, operationModelStore)
+}
+
+/**
+ * Drops queued session operations that can never be sent, after anonymous operations are purged.
+ */
+internal fun OperationRepo.dropUnsendableSessionOperations(operationModelStore: OperationModelStore) {
+    val unsendable = queue.filter { (it.operation as? SessionOperation)?.let(::isUnsendable) == true }
+    if (unsendable.isEmpty()) return
+
+    Logging.warn("OperationRepo: dropping ${unsendable.size} session operation(s) for an anonymous user under identity verification")
+    unsendable.forEach { it.waiter?.wake(false) }
+    removeQueuedOperations(unsendable, operationModelStore)
+    dropOrphanedSessionUpdates(unsendable, operationModelStore)
+}
+
+/**
+ * Under required identity verification the anonymous user is never created, so a local OneSignal ID
+ * that no identified login will create never gets a backend ID.
+ */
+private fun OperationRepo.isUnsendable(op: SessionOperation): Boolean =
+    isInitialized &&
+        isIdentityVerificationRequired &&
+        IDManager.isLocalId(op.onesignalId) &&
+        (queue + inFlight).none {
+            val login = it.operation as? LoginUserOperation
+            login != null && login.onesignalId == op.onesignalId && login.externalId != null
+        }
+
+/**
  * Folds queued, unsent updates for the same session into [incoming], which then carries the
  * highest duration. An update that ends the session replaces them the same way.
  *
  * @return false if [incoming] should be discarded: the session's end is already queued or
  * sending, or its session ID is local and no create for it remains, so it could never be sent.
  */
-internal fun OperationRepo.admitSessionUpdate(
+private fun OperationRepo.admitSessionUpdate(
     incoming: OperationRepo.OperationQueueItem,
     operationModelStore: OperationModelStore,
 ): Boolean {
@@ -64,10 +108,10 @@ internal fun OperationRepo.enforceSessionOperationCap(
     added: Operation,
     operationModelStore: OperationModelStore,
 ) {
-    if (added !is CreateSessionOperation && added !is UpdateSessionOperation) return
+    if (added !is SessionOperation) return
 
     while (true) {
-        val sessionItems = queue.filter { it.operation is CreateSessionOperation || it.operation is UpdateSessionOperation }
+        val sessionItems = queue.filter { it.operation is SessionOperation }
         if (sessionItems.size <= MAX_QUEUED_SESSION_OPERATIONS) return
 
         val oldest = sessionItems.first()

@@ -10,11 +10,13 @@ import com.onesignal.mocks.CoreInternalMocks
 import com.onesignal.mocks.MockHelper
 import com.onesignal.mocks.MockPreferencesService
 import com.onesignal.session.internal.session.operations.CreateSessionOperation
+import com.onesignal.session.internal.session.operations.SessionOperation
 import com.onesignal.session.internal.session.operations.UpdateSessionOperation
 import com.onesignal.session.internal.session.operations.impl.SessionOperationExecutor
 import com.onesignal.user.internal.jwt.JwtRequirement
 import com.onesignal.user.internal.jwt.JwtTokenStore
 import com.onesignal.user.internal.operations.ExecutorMocks.Companion.getNewRecordState
+import com.onesignal.user.internal.operations.LoginUserOperation
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.shouldBe
@@ -41,6 +43,8 @@ private class SessionQueueMocks(
             it.isInitializedWithRemote = true
             it.useIdentityVerification = if (ivRequired) JwtRequirement.REQUIRED else JwtRequirement.NOT_REQUIRED
         }
+
+    val sessionModelStore = MockHelper.sessionModelStore { it.sessionId = "session" }
 
     val storedOperations = mutableListOf<Operation>()
     private val barriers = ConcurrentHashMap<Operation, CompletableDeferred<Unit>>()
@@ -72,6 +76,7 @@ private class SessionQueueMocks(
             getNewRecordState(configModelStore),
             JwtTokenStore(MockPreferencesService()),
             CoreInternalMocks.identityVerificationService(newCodePathsRun = ivRequired, ivBehaviorActive = ivRequired),
+            sessionModelStore,
         )
 
     /** The first execution suspends until [release] completes; [started] completes once it begins. */
@@ -367,5 +372,78 @@ class SessionOperationQueueTests : FunSpec({
         // Then
         mocks.queuedOperations shouldContainExactly listOf(createOp)
         verify(exactly = 0) { mocks.operationModelStore.remove(any()) }
+    }
+
+    test("session operations for an anonymous user are discarded at enqueue under identity verification") {
+        // Given
+        val mocks = SessionQueueMocks(ivRequired = true)
+        mocks.operationRepo.start()
+        mocks.operationRepo.awaitInitialized()
+        val identifiedLogin = LoginUserOperation(APP_ID, "local-identified", "external-id", existingOneSignalId = "local-pending")
+        val anonymousCreate = create(onesignalId = "local-anonymous")
+        val identifiedCreate = create(localSessionId = "local-other-session", onesignalId = "local-identified")
+
+        // When
+        mocks.enqueueAll(identifiedLogin, anonymousCreate, identifiedCreate)
+
+        // Then
+        mocks.queuedOperations shouldContainExactly listOf(identifiedCreate)
+    }
+
+    test("session operations for an anonymous user are dropped with anonymous operations under identity verification") {
+        // Given
+        val mocks = SessionQueueMocks(ivRequired = true)
+        mocks.enqueueAll(create(onesignalId = "local-anonymous"), update(activeDuration = 10_000))
+        mocks.operationRepo.start()
+        mocks.operationRepo.awaitInitialized()
+
+        // When
+        mocks.operationRepo.removeOperationsWithoutExternalId()
+
+        // Then
+        mocks.queuedOperations shouldBe emptyList()
+        mocks.storedOperations.filterIsInstance<SessionOperation>() shouldBe emptyList()
+    }
+
+    test("translations applied to the queue are also applied to the current session's pinned IDs") {
+        // Given
+        val mocks = SessionQueueMocks()
+        val session =
+            mocks.sessionModelStore.model.apply {
+                onesignalId = "local-user"
+                subscriptionId = "local-subscription"
+            }
+        mocks.respondWith({
+            ExecutionResponse(
+                ExecutionResult.SUCCESS,
+                idTranslations = mapOf(LOCAL_SESSION_ID to "server-session", "local-user" to "user", "local-subscription" to "subscription"),
+            )
+        })
+        mocks.enqueueAll(create())
+
+        // When
+        mocks.operationRepo.start()
+        withTimeout(2_000) { while (session.serverSessionId == null) delay(10) }
+
+        // Then
+        session.serverSessionId shouldBe "server-session"
+        session.onesignalId shouldBe "user"
+        session.subscriptionId shouldBe "subscription"
+    }
+
+    test("a create for an earlier session does not set the current session's server session ID") {
+        // Given
+        val mocks = SessionQueueMocks()
+        val session = mocks.sessionModelStore.model.apply { sessionId = "newer-session" }
+        mocks.respondWith({ ExecutionResponse(ExecutionResult.SUCCESS, idTranslations = mapOf(LOCAL_SESSION_ID to "server-session")) })
+        mocks.enqueueAll(create())
+
+        // When
+        mocks.operationRepo.start()
+        withTimeout(2_000) { while (mocks.executed.isEmpty()) delay(10) }
+        delay(100)
+
+        // Then
+        session.serverSessionId shouldBe null
     }
 })

@@ -50,16 +50,14 @@ class SessionOperationExecutorTests : FunSpec({
         // Given
         val backend = mockk<ISessionsBackendService>()
         coEvery { backend.createSession(any(), any()) } returns "server-session"
-        val sessionModelStore = MockHelper.sessionModelStore { it.sessionId = "session-uuid" }
-        val executor = SessionOperationExecutor(backend, MockHelper.deviceService(), sessionModelStore)
+        val executor = SessionOperationExecutor(backend, MockHelper.deviceService())
 
         // When
-        val response = executor.execute(listOf(createOp(localSessionId = sessionModelStore.model.localSessionId)))
+        val response = executor.execute(listOf(createOp()))
 
         // Then
         response.result shouldBe ExecutionResult.SUCCESS
         response.idTranslations shouldBe mapOf("local-session-uuid" to "server-session")
-        sessionModelStore.model.serverSessionId shouldBe "server-session"
         coVerify {
             backend.createSession(
                 APP_ID,
@@ -75,28 +73,13 @@ class SessionOperationExecutorTests : FunSpec({
         }
     }
 
-    test("create for a session that is no longer current leaves the current session alone") {
-        // Given
-        val backend = mockk<ISessionsBackendService>()
-        coEvery { backend.createSession(any(), any()) } returns "server-session"
-        val sessionModelStore = MockHelper.sessionModelStore { it.sessionId = "newer-session" }
-        val executor = SessionOperationExecutor(backend, MockHelper.deviceService(), sessionModelStore)
-
-        // When
-        val response = executor.execute(listOf(createOp(localSessionId = "local-older-session")))
-
-        // Then
-        response.idTranslations shouldBe mapOf("local-older-session" to "server-session")
-        sessionModelStore.model.serverSessionId shouldBe null
-    }
-
     test("network errors, 408, 429, and 5xx are retried with Retry-After") {
         listOf(-1, 0, 408, 429, 500, 503).forEach { statusCode ->
             // Given
             val backend = mockk<ISessionsBackendService>()
             coEvery { backend.createSession(any(), any()) } throws BackendException(statusCode, retryAfterSeconds = 30)
             coEvery { backend.updateSession(any(), any(), any()) } throws BackendException(statusCode, retryAfterSeconds = 30)
-            val executor = SessionOperationExecutor(backend, MockHelper.deviceService(), MockHelper.sessionModelStore())
+            val executor = SessionOperationExecutor(backend, MockHelper.deviceService())
 
             // When
             val responses = listOf(executor.execute(listOf(createOp())), executor.execute(listOf(updateOp())))
@@ -115,7 +98,7 @@ class SessionOperationExecutorTests : FunSpec({
             val backend = mockk<ISessionsBackendService>()
             coEvery { backend.createSession(any(), any()) } throws BackendException(statusCode)
             coEvery { backend.updateSession(any(), any(), any()) } throws BackendException(statusCode)
-            val executor = SessionOperationExecutor(backend, MockHelper.deviceService(), MockHelper.sessionModelStore())
+            val executor = SessionOperationExecutor(backend, MockHelper.deviceService())
 
             // When
             val responses = listOf(executor.execute(listOf(createOp())), executor.execute(listOf(updateOp())))
@@ -129,23 +112,56 @@ class SessionOperationExecutorTests : FunSpec({
         // Given
         val backend = mockk<ISessionsBackendService>()
         coEvery { backend.createSession(any(), any()) } returns null
-        val sessionModelStore = MockHelper.sessionModelStore { it.sessionId = "session-uuid" }
-        val executor = SessionOperationExecutor(backend, MockHelper.deviceService(), sessionModelStore)
+        val executor = SessionOperationExecutor(backend, MockHelper.deviceService())
 
         // When
-        val response = executor.execute(listOf(createOp(localSessionId = sessionModelStore.model.localSessionId)))
+        val response = executor.execute(listOf(createOp()))
 
         // Then
         response.result shouldBe ExecutionResult.FAIL_RETRY
         response.idTranslations shouldBe null
-        sessionModelStore.model.serverSessionId shouldBe null
+    }
+
+    test("an operation is dropped after the backend fails it the maximum number of times") {
+        listOf<suspend (ISessionsBackendService) -> Unit>(
+            { coEvery { it.createSession(any(), any()) } returns null },
+            { coEvery { it.createSession(any(), any()) } throws BackendException(503) },
+            { coEvery { it.createSession(any(), any()) } throws BackendException(429, retryAfterSeconds = 30) },
+        ).forEach { stub ->
+            // Given
+            val backend = mockk<ISessionsBackendService>().also { stub(it) }
+            val executor = SessionOperationExecutor(backend, MockHelper.deviceService())
+            val op = createOp()
+
+            // When
+            val results = List(SessionOperationExecutor.MAX_FAILED_ATTEMPTS) { executor.execute(listOf(op)).result }
+
+            // Then
+            results.dropLast(1).forEach { it shouldBe ExecutionResult.FAIL_RETRY }
+            results.last() shouldBe ExecutionResult.FAIL_NORETRY
+        }
+    }
+
+    test("network errors do not count toward the attempt limit") {
+        // Given
+        val backend = mockk<ISessionsBackendService>()
+        coEvery { backend.updateSession(any(), any(), any()) } throws BackendException(0)
+        val executor = SessionOperationExecutor(backend, MockHelper.deviceService())
+        val op = updateOp()
+
+        // When
+        val results = List(SessionOperationExecutor.MAX_FAILED_ATTEMPTS * 2) { executor.execute(listOf(op)).result }
+
+        // Then
+        results.forEach { it shouldBe ExecutionResult.FAIL_RETRY }
+        op.failedAttempts shouldBe 0
     }
 
     test("update sends the duration and end time in seconds") {
         // Given
         val backend = mockk<ISessionsBackendService>()
         coEvery { backend.updateSession(any(), any(), any()) } returns Unit
-        val executor = SessionOperationExecutor(backend, MockHelper.deviceService(), MockHelper.sessionModelStore())
+        val executor = SessionOperationExecutor(backend, MockHelper.deviceService())
 
         // When
         val response = executor.execute(listOf(updateOp(endTime = 1_700_000_100_999L)))
@@ -198,6 +214,7 @@ class SessionOperationExecutorTests : FunSpec({
         val prefs = MockPreferencesService()
         val create = createOp().apply { id = "create-op" }
         val duration = updateOp().apply { id = "duration-op" }
+        duration.failedAttempts = 2
         val end = updateOp(endTime = 5_000L).apply { id = "end-op" }
         OperationModelStore(prefs).apply {
             loadOperations()
@@ -218,6 +235,7 @@ class SessionOperationExecutorTests : FunSpec({
         reloadedDuration.idempotencyKey shouldBe "update-key"
         reloadedDuration.endTime shouldBe null
         reloadedDuration.activeDuration shouldBe 42_900L
+        reloadedDuration.failedAttempts shouldBe 2
         (reloaded[2] as UpdateSessionOperation).endTime shouldBe 5_000L
     }
 })

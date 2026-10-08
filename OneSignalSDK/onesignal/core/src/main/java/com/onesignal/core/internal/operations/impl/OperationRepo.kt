@@ -2,6 +2,7 @@ package com.onesignal.core.internal.operations.impl
 
 import com.onesignal.common.IDManager
 import com.onesignal.common.threading.WaiterWithValue
+import com.onesignal.common.threading.runOnSerialIO
 import com.onesignal.common.threading.suspendifyOnIO
 import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.config.impl.IdentityVerificationService
@@ -14,7 +15,8 @@ import com.onesignal.core.internal.startup.IStartableService
 import com.onesignal.core.internal.time.ITime
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
-import com.onesignal.session.internal.session.operations.UpdateSessionOperation
+import com.onesignal.session.internal.session.SessionModelStore
+import com.onesignal.session.internal.session.operations.SessionOperation
 import com.onesignal.user.internal.jwt.JwtRequirement
 import com.onesignal.user.internal.jwt.JwtTokenStore
 import com.onesignal.user.internal.operations.LoginUserOperation
@@ -30,6 +32,7 @@ import kotlin.math.max
 import kotlin.reflect.KClass
 import kotlin.time.TimeSource
 
+@Suppress("LongParameterList")
 internal class OperationRepo(
     executors: List<IOperationExecutor>,
     private val _operationModelStore: OperationModelStore,
@@ -38,6 +41,7 @@ internal class OperationRepo(
     private val _newRecordState: NewRecordsState,
     private val _jwtTokenStore: JwtTokenStore,
     private val _identityVerificationService: IdentityVerificationService,
+    private val sessionModelStore: SessionModelStore,
 ) : IOperationRepo, IStartableService {
 
     internal class OperationQueueItem(
@@ -184,16 +188,18 @@ internal class OperationRepo(
      * on the legacy enqueue path.
      */
     private fun shouldSuppressAnonymousOp(op: Operation): Boolean {
-        if (!_identityVerificationService.newCodePathsRun) return false
         if (op is LoginUserOperation || !op.requiresJwt) return false
-        val suppress =
-            _configModelStore.model.useIdentityVerification == JwtRequirement.REQUIRED &&
-                op.externalId == null
+        val suppress = isIdentityVerificationRequired && op.externalId == null
         if (suppress) {
             Logging.debug("OperationRepo: suppressing anonymous op under IV-required: $op")
         }
         return suppress
     }
+
+    internal val isIdentityVerificationRequired: Boolean
+        get() =
+            _identityVerificationService.newCodePathsRun &&
+                _configModelStore.model.useIdentityVerification == JwtRequirement.REQUIRED
 
     /**
      * Only used inside this class, adds OperationQueueItem to queue
@@ -270,13 +276,14 @@ internal class OperationRepo(
         isNew: Boolean,
     ): Boolean {
         val op = queueItem.operation
-        val isDuplicate = queue.any { it.operation.id == op.id }
-        if (isDuplicate) {
+        if (queue.any { it.operation.id == op.id }) {
             Logging.debug("OperationRepo: internalEnqueue - operation.id: ${op.id} already exists in the queue.")
-        } else if (isNew && appliedIdTranslations.isNotEmpty()) {
+            return false
+        }
+        if (isNew && appliedIdTranslations.isNotEmpty()) {
             op.translateIds(appliedIdTranslations)
         }
-        return !isDuplicate && (!isNew || op !is UpdateSessionOperation || admitSessionUpdate(queueItem, _operationModelStore))
+        return !isNew || op !is SessionOperation || admitSessionOperation(queueItem, _operationModelStore)
     }
 
     /**
@@ -346,6 +353,7 @@ internal class OperationRepo(
                     }
                 }
                 Logging.debug("OperationRepo: removeOperationsWithoutExternalId removed ${anonymous.size} of ${anonymous.size + queue.size} operations")
+                dropUnsendableSessionOperations(_operationModelStore)
                 anonymous.map { it.operation.id }
             }
         // Persistent store removal outside the queue lock; ModelStore has its own locking.
@@ -422,6 +430,9 @@ internal class OperationRepo(
                     appliedIdTranslations.putAll(response.idTranslations)
                 }
                 response.idTranslations.values.forEach { _newRecordState.add(it) }
+                // On SerialIO, where SessionService starts sessions, so the session can't change mid-write.
+                // Updates built from the old IDs before this runs are still translated at enqueue.
+                runOnSerialIO { sessionModelStore.model.translateIds(response.idTranslations) }
             }
 
             var highestRetries = 0

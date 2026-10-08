@@ -79,6 +79,9 @@ private class Mocks {
 
     var identityVerificationService = CoreInternalMocks.identityVerificationService()
 
+    // Created eagerly: operationRepo is lazy and may first be read inside an every { } block.
+    val sessionModelStore = MockHelper.sessionModelStore()
+
     val operationRepo: OperationRepo by lazy {
         spyk(
             OperationRepo(
@@ -89,6 +92,7 @@ private class Mocks {
                 getNewRecordState(configModelStore),
                 jwtTokenStore,
                 identityVerificationService,
+                sessionModelStore,
             ),
             recordPrivateCalls = true,
         )
@@ -116,6 +120,7 @@ class OperationRepoTests : FunSpec({
                     getNewRecordState(mocks.configModelStore),
                     JwtTokenStore(MockPreferencesService()),
                     CoreInternalMocks.identityVerificationService(),
+                    MockHelper.sessionModelStore(),
                 ),
             )
 

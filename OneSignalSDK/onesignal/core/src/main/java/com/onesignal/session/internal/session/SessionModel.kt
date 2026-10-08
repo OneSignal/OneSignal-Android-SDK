@@ -111,4 +111,14 @@ class SessionModel : Model() {
      */
     internal val localSessionId: String
         get() = "${IDManager.LOCAL_PREFIX}$sessionId"
+
+    /**
+     * Applies the same backend IDs the operation queue gives this session's operations, so
+     * updates built from these fields, including after a restart, match them.
+     */
+    internal fun translateIds(map: Map<String, String>) {
+        onesignalId?.let { map[it] }?.let { onesignalId = it }
+        subscriptionId?.let { map[it] }?.let { subscriptionId = it }
+        map[localSessionId]?.let { serverSessionId = it }
+    }
 }
