@@ -384,6 +384,8 @@ class OperationRepoTests : FunSpec({
         val loginResult = withTimeout(2_000) { loginDone.waitForWake() }
 
         loginResult.success shouldBe false
+        opRepo.containsInstanceOf<LoginUserOperation>() shouldBe false
+        mocks.operationModelStore.list().none { it is LoginUserOperation } shouldBe true
         opRepo.queue.map { it.operation } shouldBe listOf(createOp)
         verify { mocks.operationModelStore.remove(loginOp.id) }
         verify(exactly = 0) { mocks.operationModelStore.remove(createOp.id) }
