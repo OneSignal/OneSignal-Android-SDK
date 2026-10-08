@@ -709,11 +709,12 @@ class OperationRepoTests : FunSpec({
         val secondOp = mockOperationNonGroupable()
 
         // When
-        mocks.operationRepo.start()
         mocks.operationRepo.enqueue(firstOp)
         mocks.operationRepo.executeOperations(
             listOf(OperationQueueItem(opWithResult, bucket = 0)),
         )
+        // Started after the direct execution so the processing loop can't pick firstOp first.
+        mocks.operationRepo.start()
         mocks.operationRepo.enqueueAndWait(secondOp)
 
         // Then
