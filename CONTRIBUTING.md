@@ -79,14 +79,17 @@ cd OneSignalSDK
 ./gradlew apiDump
 ```
 
-Then read the resulting diff before committing it. A removed or altered line is a breaking change for customers; a purely added line is not.
+Then read the resulting diff before committing it. A removed or altered line is a breaking change for customers. An added line is usually safe, with one important exception: a new method on an interface customers implement (listeners such as `INotificationClickListener` or `IUserJwtInvalidatedListener`) breaks every existing implementation.
 
 Two things about the dumps are worth knowing up front:
 
-- They record what the *compiler* considers public, which is a much larger set than what we intend as customer API. The `core` dump currently contains roughly 200 types under `com.onesignal.**.internal.*` and `com.onesignal.common.*` — `BackendException` and `MainThreadException` among them — that are public only because Kotlin has no cross-module "internal" visibility. They are not supported API, and narrowing them is tracked separately.
-- The feature modules look almost empty because their customer-facing interfaces live in `core`; the modules themselves are implementation. An empty `location.api` is expected, not a misconfiguration.
+- They cover customer and wrapper-SDK API only. Kotlin has no cross-module "internal", so `com.onesignal.**.internal.*` and most of `com.onesignal.common.*` compile as public; `apiValidation` in `OneSignalSDK/build.gradle` excludes them so internal refactors don't trip `apiCheck`. `OneSignalWrapper`, `IHostPermissionPrompt`, and `debug.internal.logging.Logging` stay in because the wrapper SDKs (Flutter, React Native, Cordova, Capacitor, Unity, .NET) call them, so treat them as public API. If you add a new internal package, or a new class at the root of `com.onesignal.common`, add it to `ignoredPackages` or `ignoredClasses` rather than dumping it.
+- `in-app-messages.api` and `location.api` are empty because their customer-facing interfaces live in `core`. That is expected, not a misconfiguration. `notifications.api` also records manifest components (receivers, activities, HMS/ADM services).
+- `Logging.setLoggerTelemetry` takes a KMP type, so a KMP submodule bump (Flow B above) that changes `ILogTelemetryRemote` will fail `apiCheck`. Run `apiDump` on the bump PR if so.
 
-The validator hooks into the `kotlin-android` plugin. If this project ever moves to AGP 9's built-in Kotlin, the tasks stop being registered *silently* and the build stays green — see [BCV#312](https://github.com/Kotlin/binary-compatibility-validator/issues/312).
+The validator hooks into the `kotlin-android` plugin, and CI calls each module's `apiCheck` by path. If a module moves to AGP 9's built-in Kotlin, its task stops being registered and CI fails with "task not found" rather than skipping it. See [BCV#312](https://github.com/Kotlin/binary-compatibility-validator/issues/312).
+
+The eventual replacement is the [ABI validation built into the Kotlin Gradle plugin](https://kotlinlang.org/docs/gradle-binary-compatibility-validation.html) (`kotlin { abiValidation { } }`, experimental since Kotlin 2.2). It keeps the same `api/*.api` dump format, so the move is mostly porting the `apiValidation` filters. It needs Kotlin 2.2+, so it is planned alongside the AGP 9 move for v6.
 
 #### Before Submitting A Bug Report
 Before creating bug reports, please check this list of steps to follow.

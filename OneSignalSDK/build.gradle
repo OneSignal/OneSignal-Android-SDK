@@ -26,9 +26,8 @@ buildscript {
         startupVersion = '1.1.1'
         ktlintVersion = '0.50.0' // Used by Spotless for Kotlin formatting (compatible with Kotlin 1.7.10)
         spotlessVersion = '6.25.0'
-        // Pinned to the last line that supports Kotlin 1.9. Note that BCV hooks into the
-        // 'kotlin-android' plugin, so it stops registering tasks if we ever move to AGP 9's
-        // built-in Kotlin. See https://github.com/Kotlin/binary-compatibility-validator/issues/312
+        // BCV hooks into 'kotlin-android', so AGP 9's built-in Kotlin stops it registering tasks.
+        // See https://github.com/Kotlin/binary-compatibility-validator/issues/312
         binaryCompatibilityValidatorVersion = '0.16.3'
         tdunningJsonForTest = '1.0' // DO NOT upgrade for tests, using an old version so it matches AOSP
 
@@ -68,6 +67,47 @@ apiValidation {
     ignoredProjects += ['app', 'testhelpers']
     // :kmp is a git submodule; its API is owned by OneSignal-KMP-SDK.
     ignoredProjects += ['kmp']
+
+    // Public only because Kotlin has no cross-module internal. Subpackages are ignored too.
+    ignoredPackages += [
+        'com.onesignal.internal',
+        'com.onesignal.core.internal',
+        // Not all of debug.internal: wrapper SDKs call debug.internal.logging.Logging.
+        'com.onesignal.debug.internal.crash',
+        'com.onesignal.debug.internal.logging.logger',
+        'com.onesignal.inAppMessages.internal',
+        'com.onesignal.location.internal',
+        'com.onesignal.notifications.internal',
+        'com.onesignal.session.internal',
+        'com.onesignal.user.internal',
+        'com.onesignal.common.consistency',
+        'com.onesignal.common.events',
+        'com.onesignal.common.exceptions',
+        'com.onesignal.common.modeling',
+        'com.onesignal.common.modules',
+        'com.onesignal.common.services',
+        'com.onesignal.common.threading',
+    ]
+    // Wrapper SDKs call OneSignalWrapper and IHostPermissionPrompt, so the rest of
+    // com.onesignal.common is ignored class by class. Nested classes need their own entry.
+    ignoredClasses += [
+        'com.onesignal.common.AndroidUtils',
+        'com.onesignal.common.AndroidUtils$SchemaType',
+        'com.onesignal.common.AndroidUtils$SchemaType$Companion',
+        'com.onesignal.common.DateUtils',
+        'com.onesignal.common.DeviceUtils',
+        'com.onesignal.common.IDManager',
+        'com.onesignal.common.InputGuardKt',
+        'com.onesignal.common.JSONObjectExtensionsKt',
+        'com.onesignal.common.JSONUtils',
+        'com.onesignal.common.NetworkUtils',
+        'com.onesignal.common.NetworkUtils$ResponseStatusType',
+        'com.onesignal.common.OneSignalUtils',
+        'com.onesignal.common.PIIHasher',
+        'com.onesignal.common.RootToolsInternalMethods',
+        'com.onesignal.common.TimeUtils',
+        'com.onesignal.common.ViewUtils',
+    ]
 }
 
 allprojects {
