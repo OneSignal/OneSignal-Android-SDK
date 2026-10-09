@@ -42,6 +42,12 @@ interface IOperationRepo {
     suspend fun awaitInitialized()
 
     fun forceExecuteOperations()
+
+    /**
+     * Retry operations waiting on failure backoff now, such as when the network returns.
+     * Unlike [forceExecuteOperations], a backend-requested Retry-After is still honored.
+     */
+    fun retryNow()
 }
 
 // Extension function so the syntax containsInstanceOf<Operation>() can be used over
