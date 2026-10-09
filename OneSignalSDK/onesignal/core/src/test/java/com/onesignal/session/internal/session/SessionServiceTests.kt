@@ -2,6 +2,8 @@ package com.onesignal.session.internal.session
 
 import com.onesignal.common.threading.OneSignalDispatchers
 import com.onesignal.common.threading.runOnSerialIO
+import com.onesignal.core.internal.application.AppEntryAction
+import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.features.IFeatureManager
 import com.onesignal.core.internal.operations.IOperationRepo
 import com.onesignal.core.internal.operations.Operation
@@ -77,9 +79,15 @@ private class Mocks(
         return mockSessionModelStore
     }
 
+    var entryState = AppEntryAction.APP_OPEN
+    val applicationService: IApplicationService =
+        MockHelper.applicationService().also {
+            every { it.entryState } answers { entryState }
+        }
+
     val sessionService =
         SessionService(
-            MockHelper.applicationService(),
+            applicationService,
             configModelStore,
             mockSessionModelStore,
             time,
@@ -363,6 +371,74 @@ class SessionServiceTests : FunSpec({
         create.onesignalId shouldBe Mocks.ONESIGNAL_ID
         create.subscriptionId shouldBe Mocks.SUBSCRIPTION_ID
         create.startTime shouldBe mocks.currentTime
+        create.directAttributionId shouldBe null
+    }
+
+    test("notification open that starts a new session attributes the create to the notification") {
+        // Given
+        val mocks = Mocks(sessionsApiEnabled = true)
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        mocks.sessionModelStore { it.isValid = false }
+
+        // When
+        sessionService.attributeNextSessionTo("notification-id")
+        mocks.entryState = AppEntryAction.NOTIFICATION_CLICK
+        sessionService.onFocus(false)
+
+        // Then
+        val create = mocks.enqueued.single() as CreateSessionOperation
+        create.directAttributionId shouldBe "notification-id"
+    }
+
+    test("notification open during an active session does not change the session or attribute the next one") {
+        // Given
+        val mocks = Mocks(sessionsApiEnabled = true)
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        val sessionModelStore = mocks.sessionModelStore { it.isValid = false }
+        sessionService.onFocus(false)
+        sessionService.onUnfocused()
+        val sessionId = sessionModelStore.model.sessionId
+
+        // When
+        sessionService.attributeNextSessionTo("notification-id")
+        mocks.entryState = AppEntryAction.NOTIFICATION_CLICK
+        sessionService.onFocus(false)
+
+        // Then
+        sessionModelStore.model.sessionId shouldBe sessionId
+        mocks.enqueued.filterIsInstance<CreateSessionOperation>().size shouldBe 1
+
+        // When
+        sessionService.onUnfocused()
+        sessionService.backgroundRun()
+        mocks.entryState = AppEntryAction.APP_OPEN
+        sessionService.onFocus(false)
+
+        // Then
+        val creates = mocks.enqueued.filterIsInstance<CreateSessionOperation>()
+        creates.size shouldBe 2
+        creates.last().directAttributionId shouldBe null
+    }
+
+    test("notification open that does not focus the app is not attributed to a later normal open") {
+        // Given
+        val mocks = Mocks(sessionsApiEnabled = true)
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        mocks.sessionModelStore { it.isValid = false }
+
+        // When
+        sessionService.attributeNextSessionTo("notification-id")
+        mocks.entryState = AppEntryAction.APP_OPEN
+        sessionService.onFocus(false)
+
+        // Then
+        val create = mocks.enqueued.single() as CreateSessionOperation
         create.directAttributionId shouldBe null
     }
 
