@@ -33,6 +33,10 @@ import io.mockk.verify
 import io.mockk.verifyOrder
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 
 // Mocks used by every test in this file
@@ -44,10 +48,13 @@ private class Mocks(
 
     private val mockSessionModelStore = MockHelper.sessionModelStore()
 
+    // Runs the heartbeat in virtual time; elapsedRealtime advances with it.
+    val heartbeatScope = TestScope()
+
     val time: ITime =
         mockk<ITime>().also {
             every { it.currentTimeMillis } answers { currentTime }
-            every { it.elapsedRealtimeMillis } answers { elapsedRealtime }
+            every { it.elapsedRealtimeMillis } answers { elapsedRealtime + heartbeatScope.testScheduler.currentTime }
         }
 
     val featureManager: IFeatureManager =
@@ -79,7 +86,16 @@ private class Mocks(
             featureManager,
             identityModelStore,
             operationRepo,
-        )
+        ).also { service ->
+            service.launchHeartbeat = { block -> heartbeatScope.launch { block() } }
+        }
+
+    val heartbeats get() = enqueued.filterIsInstance<UpdateSessionOperation>().filter { !it.isEnd }
+
+    fun advanceTime(ms: Long) {
+        heartbeatScope.advanceTimeBy(ms)
+        heartbeatScope.runCurrent()
+    }
 
     val spyCallback = spyk<ISessionLifecycleHandler>()
 
@@ -88,6 +104,9 @@ private class Mocks(
         const val SUBSCRIPTION_ID = "subscription-id"
     }
 }
+
+private const val MINUTE_MS = 60_000L
+private const val HEARTBEAT_MS = 30 * MINUTE_MS
 
 class SessionServiceTests : FunSpec({
     // SessionService.onFocus/onUnfocused dispatch their state mutation through the now-always-async
@@ -662,6 +681,201 @@ class SessionServiceTests : FunSpec({
         sessionModelStore.model.activeDuration shouldBe 200L
     }
 
+    test("heartbeat sends the cumulative duration after 30 minutes in the foreground") {
+        // Given
+        val mocks = Mocks(sessionsApiEnabled = true)
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        val sessionModelStore = mocks.sessionModelStore { it.isValid = false }
+        sessionService.onFocus(false)
+
+        // When
+        mocks.advanceTime(HEARTBEAT_MS - 1)
+
+        // Then
+        mocks.heartbeats shouldBe emptyList()
+
+        // When
+        mocks.advanceTime(1)
+
+        // Then
+        val heartbeat = mocks.heartbeats.single()
+        heartbeat.sessionId shouldBe sessionModelStore.model.localSessionId
+        heartbeat.onesignalId shouldBe Mocks.ONESIGNAL_ID
+        heartbeat.subscriptionId shouldBe Mocks.SUBSCRIPTION_ID
+        heartbeat.activeDuration shouldBe HEARTBEAT_MS
+        heartbeat.endTime shouldBe null
+    }
+
+    test("heartbeat sends again every 30 minutes in the foreground") {
+        // Given
+        val mocks = Mocks(sessionsApiEnabled = true)
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        mocks.sessionModelStore { it.isValid = false }
+        sessionService.onFocus(false)
+
+        // When
+        mocks.advanceTime(2 * HEARTBEAT_MS)
+
+        // Then
+        mocks.heartbeats.map { it.activeDuration } shouldBe listOf(HEARTBEAT_MS, 2 * HEARTBEAT_MS)
+    }
+
+    test("heartbeat pauses in the background and counts only foreground time") {
+        // Given
+        val mocks = Mocks(sessionsApiEnabled = true)
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        mocks.sessionModelStore { it.isValid = false }
+        sessionService.onFocus(false)
+        mocks.advanceTime(20 * MINUTE_MS)
+        sessionService.onUnfocused()
+
+        // When
+        mocks.advanceTime(2 * HEARTBEAT_MS)
+
+        // Then
+        mocks.heartbeats shouldBe emptyList()
+
+        // When
+        sessionService.onFocus(false)
+        mocks.advanceTime(10 * MINUTE_MS)
+
+        // Then
+        mocks.heartbeats.single().activeDuration shouldBe HEARTBEAT_MS
+    }
+
+    test("heartbeat uses the server session ID once created") {
+        // Given
+        val mocks = Mocks(sessionsApiEnabled = true)
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        val sessionModelStore = mocks.sessionModelStore { it.isValid = false }
+        sessionService.onFocus(false)
+        sessionModelStore.model.serverSessionId = "server-session-id"
+
+        // When
+        mocks.advanceTime(HEARTBEAT_MS)
+
+        // Then
+        mocks.heartbeats.single().sessionId shouldBe "server-session-id"
+    }
+
+    test("new session restarts the heartbeat interval") {
+        // Given
+        val mocks = Mocks(sessionsApiEnabled = true)
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        mocks.sessionModelStore { it.isValid = false }
+        sessionService.onFocus(false)
+        mocks.advanceTime(HEARTBEAT_MS)
+        sessionService.onUnfocused()
+        sessionService.backgroundRun()
+        mocks.enqueued.clear()
+
+        // When
+        sessionService.onFocus(false)
+        mocks.advanceTime(HEARTBEAT_MS)
+
+        // Then
+        mocks.heartbeats.single().activeDuration shouldBe HEARTBEAT_MS
+    }
+
+    test("cold start after a kill following a heartbeat ends with at least the heartbeat's duration and time") {
+        // Given
+        val mocks = Mocks(sessionsApiEnabled = true)
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        val sessionModelStore = mocks.sessionModelStore { it.isValid = false }
+        sessionService.onFocus(false)
+        mocks.currentTime += HEARTBEAT_MS
+        mocks.advanceTime(HEARTBEAT_MS)
+        val heartbeatTime = mocks.currentTime
+
+        // When
+        val restarted =
+            SessionService(
+                MockHelper.applicationService(),
+                mocks.configModelStore,
+                mocks.sessionModelStore(),
+                mocks.time,
+                mocks.featureManager,
+                mocks.identityModelStore,
+                mocks.operationRepo,
+            ).also { it.launchHeartbeat = { _ -> mockk(relaxed = true) } }
+        mocks.enqueued.clear()
+        restarted.bootstrap()
+        restarted.start()
+        restarted.onFocus(false)
+
+        // Then
+        val end = mocks.enqueued.filterIsInstance<UpdateSessionOperation>().single()
+        end.isEnd shouldBe true
+        end.activeDuration shouldBe HEARTBEAT_MS
+        end.endTime shouldBe heartbeatTime
+    }
+
+    test("new session clears the last heartbeat") {
+        // Given
+        val mocks = Mocks(sessionsApiEnabled = true)
+        val sessionModelStore =
+            mocks.sessionModelStore {
+                it.isValid = false
+                it.lastHeartbeatDuration = HEARTBEAT_MS
+                it.lastHeartbeatTime = 999L
+            }
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+
+        // When
+        sessionService.onFocus(false)
+
+        // Then
+        sessionModelStore.model.lastHeartbeatDuration shouldBe 0L
+        sessionModelStore.model.lastHeartbeatTime shouldBe null
+    }
+
+    test("heartbeat does not run when the session uses the legacy path") {
+        // Given
+        val mocks = Mocks(sessionsApiEnabled = false)
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        mocks.sessionModelStore { it.isValid = false }
+
+        // When
+        sessionService.onFocus(false)
+        mocks.advanceTime(2 * HEARTBEAT_MS)
+
+        // Then
+        mocks.enqueued shouldBe emptyList()
+    }
+
+    test("heartbeat without a push subscription ID sends nothing and waits for the next interval") {
+        // Given
+        val mocks = Mocks(sessionsApiEnabled = true)
+        mocks.configModelStore.model.pushSubscriptionId = null
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        mocks.sessionModelStore { it.isValid = false }
+        sessionService.onFocus(false)
+
+        // When
+        mocks.advanceTime(2 * HEARTBEAT_MS)
+
+        // Then
+        mocks.enqueued shouldBe emptyList()
+    }
+
     test("session model fields survive a reload from preferences") {
         // Given
         val prefs = MockPreferencesService()
@@ -675,6 +889,8 @@ class SessionServiceTests : FunSpec({
         store.model.onesignalId = Mocks.ONESIGNAL_ID
         store.model.subscriptionId = Mocks.SUBSCRIPTION_ID
         store.model.serverSessionId = "server-session-id"
+        store.model.lastHeartbeatDuration = 654L
+        store.model.lastHeartbeatTime = 987L
 
         // When
         val reloaded = SessionModelStore(prefs).model
@@ -689,6 +905,8 @@ class SessionServiceTests : FunSpec({
         reloaded.onesignalId shouldBe Mocks.ONESIGNAL_ID
         reloaded.subscriptionId shouldBe Mocks.SUBSCRIPTION_ID
         reloaded.serverSessionId shouldBe "server-session-id"
+        reloaded.lastHeartbeatDuration shouldBe 654L
+        reloaded.lastHeartbeatTime shouldBe 987L
     }
 
     test("onFocus dispatches the session-mutation body through runOnSerialIO (SDK-4508)") {

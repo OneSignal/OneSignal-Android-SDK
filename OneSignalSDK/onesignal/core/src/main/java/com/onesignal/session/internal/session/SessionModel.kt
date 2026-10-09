@@ -66,6 +66,25 @@ class SessionModel : Model() {
         }
 
     /**
+     * The duration sent by this session's last heartbeat, in milliseconds. Persisted so an end
+     * after a kill while focused doesn't report less than the server already has.
+     */
+    var lastHeartbeatDuration: Long
+        get() = getLongProperty(::lastHeartbeatDuration.name) { 0L }
+        set(value) {
+            setLongProperty(::lastHeartbeatDuration.name, value)
+        }
+
+    /**
+     * When this session's last heartbeat was sent, in Unix time milliseconds. Null until the first heartbeat.
+     */
+    var lastHeartbeatTime: Long?
+        get() = getOptLongProperty(::lastHeartbeatTime.name)
+        set(value) {
+            setOptLongProperty(::lastHeartbeatTime.name, value)
+        }
+
+    /**
      * [focusTime] from a monotonic clock ([com.onesignal.core.internal.time.ITime.elapsedRealtimeMillis]).
      * Used instead of [focusTime] to measure [activeDuration] when [usesSessionsApi].
      */
