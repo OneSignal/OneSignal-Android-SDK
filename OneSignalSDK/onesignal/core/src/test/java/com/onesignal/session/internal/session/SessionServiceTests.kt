@@ -787,6 +787,62 @@ class SessionServiceTests : FunSpec({
         mocks.heartbeats.single().activeDuration shouldBe HEARTBEAT_MS
     }
 
+    test("cold start after a kill following a heartbeat ends with at least the heartbeat's duration and time") {
+        // Given
+        val mocks = Mocks(sessionsApiEnabled = true)
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        val sessionModelStore = mocks.sessionModelStore { it.isValid = false }
+        sessionService.onFocus(false)
+        mocks.currentTime += HEARTBEAT_MS
+        mocks.advanceTime(HEARTBEAT_MS)
+        val heartbeatTime = mocks.currentTime
+
+        // When
+        val restarted =
+            SessionService(
+                MockHelper.applicationService(),
+                mocks.configModelStore,
+                mocks.sessionModelStore(),
+                mocks.time,
+                mocks.featureManager,
+                mocks.identityModelStore,
+                mocks.operationRepo,
+            ).also { it.launchHeartbeat = { _ -> mockk(relaxed = true) } }
+        mocks.enqueued.clear()
+        restarted.bootstrap()
+        restarted.start()
+        restarted.onFocus(false)
+
+        // Then
+        val end = mocks.enqueued.filterIsInstance<UpdateSessionOperation>().single()
+        end.isEnd shouldBe true
+        end.activeDuration shouldBe HEARTBEAT_MS
+        end.endTime shouldBe heartbeatTime
+    }
+
+    test("new session clears the last heartbeat") {
+        // Given
+        val mocks = Mocks(sessionsApiEnabled = true)
+        val sessionModelStore =
+            mocks.sessionModelStore {
+                it.isValid = false
+                it.lastHeartbeatDuration = HEARTBEAT_MS
+                it.lastHeartbeatTime = 999L
+            }
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+
+        // When
+        sessionService.onFocus(false)
+
+        // Then
+        sessionModelStore.model.lastHeartbeatDuration shouldBe 0L
+        sessionModelStore.model.lastHeartbeatTime shouldBe null
+    }
+
     test("heartbeat does not run when the session uses the legacy path") {
         // Given
         val mocks = Mocks(sessionsApiEnabled = false)
@@ -833,6 +889,8 @@ class SessionServiceTests : FunSpec({
         store.model.onesignalId = Mocks.ONESIGNAL_ID
         store.model.subscriptionId = Mocks.SUBSCRIPTION_ID
         store.model.serverSessionId = "server-session-id"
+        store.model.lastHeartbeatDuration = 654L
+        store.model.lastHeartbeatTime = 987L
 
         // When
         val reloaded = SessionModelStore(prefs).model
@@ -847,6 +905,8 @@ class SessionServiceTests : FunSpec({
         reloaded.onesignalId shouldBe Mocks.ONESIGNAL_ID
         reloaded.subscriptionId shouldBe Mocks.SUBSCRIPTION_ID
         reloaded.serverSessionId shouldBe "server-session-id"
+        reloaded.lastHeartbeatDuration shouldBe 654L
+        reloaded.lastHeartbeatTime shouldBe 987L
     }
 
     test("onFocus dispatches the session-mutation body through runOnSerialIO (SDK-4508)") {

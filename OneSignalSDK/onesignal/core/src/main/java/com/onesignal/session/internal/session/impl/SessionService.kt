@@ -86,7 +86,6 @@ internal class SessionService(
      */
     internal var launchHeartbeat: (suspend () -> Unit) -> Job = OneSignalDispatchers::launchOnSerialIO
     private var heartbeatJob: Job? = null
-    private var lastHeartbeatDuration = 0L
 
     override fun bootstrap() {
         session = sessionModelStore.model
@@ -122,13 +121,7 @@ internal class SessionService(
         Logging.debug("SessionService.backgroundRun: Session ended. activeDuration: $activeDuration")
 
         session.isValid = false
-        val end =
-            if (session.usesSessionsApi) {
-                // An app killed while focused has no unfocus after its last focus.
-                session.toUpdateOperation(config?.appId, activeDuration, endTime = maxOf(session.unfocusTime ?: 0L, session.focusTime))
-            } else {
-                null
-            }
+        val end = if (session.usesSessionsApi) session.toEndOperation(config?.appId) else null
         sessionLifeCycleNotifier.fire { it.onSessionEnded(activeDuration) }
         session.activeDuration = 0L
         return end
@@ -187,7 +180,8 @@ internal class SessionService(
             session.subscriptionId = config?.pushSubscriptionId
             session.serverSessionId = null
             session.isValid = true
-            lastHeartbeatDuration = 0L
+            session.lastHeartbeatDuration = 0L
+            session.lastHeartbeatTime = null
             Logging.debug("SessionService: New session started at ${session.startTime}")
             if (session.usesSessionsApi) session.toCreateOperation(config?.appId)?.let { operationRepo.enqueue(it) }
             sessionLifeCycleNotifier.fire { it.onSessionStarted() }
@@ -210,14 +204,15 @@ internal class SessionService(
             launchHeartbeat {
                 while (true) {
                     val duration = session.activeDurationAt(time.elapsedRealtimeMillis)
-                    val remaining = lastHeartbeatDuration + HEARTBEAT_INTERVAL_MS - duration
+                    val remaining = session.lastHeartbeatDuration + HEARTBEAT_INTERVAL_MS - duration
                     if (remaining > 0) {
                         // Rechecked after waking since delay and elapsedRealtime can disagree.
                         delay(remaining)
                         continue
                     }
                     Logging.debug("SessionService: heartbeat with activeDuration: $duration")
-                    lastHeartbeatDuration = duration
+                    session.lastHeartbeatDuration = duration
+                    session.lastHeartbeatTime = time.currentTimeMillis
                     session.toUpdateOperation(config?.appId, duration)?.let { operationRepo.enqueue(it) }
                 }
             }
@@ -290,6 +285,17 @@ private fun SessionModel.toCreateOperation(appId: String?): CreateSessionOperati
             startTime = startTime,
         )
     }
+
+/**
+ * An app killed while focused never adds its last focus to [SessionModel.activeDuration] or sets
+ * [SessionModel.unfocusTime], so fall back to the last focus or heartbeat, whichever is later.
+ */
+private fun SessionModel.toEndOperation(appId: String?): UpdateSessionOperation? =
+    toUpdateOperation(
+        appId,
+        activeDuration = maxOf(activeDuration, lastHeartbeatDuration),
+        endTime = maxOf(unfocusTime ?: 0L, focusTime, lastHeartbeatTime ?: 0L),
+    )
 
 private fun SessionModel.toUpdateOperation(
     appId: String?,
