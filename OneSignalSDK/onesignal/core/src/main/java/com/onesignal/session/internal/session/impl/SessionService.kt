@@ -8,6 +8,7 @@ import com.onesignal.core.internal.background.IBackgroundService
 import com.onesignal.core.internal.config.ConfigModel
 import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.features.IFeatureManager
+import com.onesignal.core.internal.operations.IOperationRepo
 import com.onesignal.core.internal.startup.IBootstrapService
 import com.onesignal.core.internal.startup.IStartableService
 import com.onesignal.core.internal.time.ITime
@@ -18,6 +19,7 @@ import com.onesignal.session.internal.session.ISessionLifecycleHandler
 import com.onesignal.session.internal.session.ISessionService
 import com.onesignal.session.internal.session.SessionModel
 import com.onesignal.session.internal.session.SessionModelStore
+import com.onesignal.session.internal.session.operations.CreateSessionOperation
 import com.onesignal.user.internal.backend.IdentityConstants
 import com.onesignal.user.internal.identity.IdentityModelStore
 import java.util.UUID
@@ -40,6 +42,7 @@ internal class SessionService(
     private val time: ITime,
     private val featureManager: IFeatureManager,
     private val identityModelStore: IdentityModelStore,
+    private val operationRepo: IOperationRepo,
 ) : ISessionService, IBootstrapService, IStartableService, IBackgroundService, IApplicationLifecycleHandler {
     override val startTime: Long
         // Pre-bootstrap default returns "now" so call sites computing `_time.currentTimeMillis - startTime`
@@ -154,6 +157,7 @@ internal class SessionService(
             session.serverSessionId = null
             session.isValid = true
             Logging.debug("SessionService: New session started at ${session.startTime}")
+            if (session.usesSessionsApi) enqueueCreateSession(session)
             sessionLifeCycleNotifier.fire { it.onSessionStarted() }
         } else {
             // existing session: just remember the focus time so we can calculate the active time
@@ -162,6 +166,28 @@ internal class SessionService(
             session.focusElapsedRealtime = focusElapsedMs
             sessionLifeCycleNotifier.fire { it.onSessionActive() }
         }
+    }
+
+    private fun enqueueCreateSession(session: SessionModel) {
+        val appId = config?.appId
+        val onesignalId = session.onesignalId
+        val subscriptionId = session.subscriptionId
+        if (appId == null || onesignalId == null || subscriptionId == null) {
+            Logging.warn(
+                "SessionService: not creating session ${session.sessionId}, missing appId: ${appId == null}, " +
+                    "onesignalId: ${onesignalId == null}, subscriptionId: ${subscriptionId == null}",
+            )
+            return
+        }
+        operationRepo.enqueue(
+            CreateSessionOperation(
+                appId = appId,
+                localSessionId = session.localSessionId,
+                onesignalId = onesignalId,
+                subscriptionId = subscriptionId,
+                startTime = session.startTime,
+            ),
+        )
     }
 
     override fun onUnfocused() {
