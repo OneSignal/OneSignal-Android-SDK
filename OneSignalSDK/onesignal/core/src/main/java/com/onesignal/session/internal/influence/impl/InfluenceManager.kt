@@ -100,6 +100,7 @@ internal class InfluenceManager(
             return
         }
 
+        _sessionService.attributeNextSessionTo(notificationId)
         attemptSessionUpgrade(AppEntryAction.NOTIFICATION_CLICK, notificationId)
     }
 

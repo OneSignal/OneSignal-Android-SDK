@@ -44,6 +44,13 @@ internal class CreateSessionOperation() : Operation(SessionOperationExecutor.CRE
             setLongProperty(::startTime.name, value)
         }
 
+    /** The opened notification that started this session. */
+    var directAttributionId: String?
+        get() = getOptStringProperty(::directAttributionId.name)
+        private set(value) {
+            setOptStringProperty(::directAttributionId.name, value)
+        }
+
     /** Stable across retries and restarts, so the backend recognizes a resent create. */
     val idempotencyKey: String get() = localSessionId.removePrefix(IDManager.LOCAL_PREFIX)
 
@@ -69,6 +76,7 @@ internal class CreateSessionOperation() : Operation(SessionOperationExecutor.CRE
         subscriptionId: String,
         startTime: Long,
         externalId: String?,
+        directAttributionId: String? = null,
     ) : this() {
         this.appId = appId
         this.localSessionId = localSessionId
@@ -76,6 +84,7 @@ internal class CreateSessionOperation() : Operation(SessionOperationExecutor.CRE
         this.subscriptionId = subscriptionId
         this.startTime = startTime
         this.externalId = externalId
+        this.directAttributionId = directAttributionId
     }
 
     override fun translateIds(map: Map<String, String>) {

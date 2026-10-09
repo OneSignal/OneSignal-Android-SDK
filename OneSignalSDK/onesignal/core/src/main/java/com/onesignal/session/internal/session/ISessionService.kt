@@ -13,4 +13,10 @@ interface ISessionService : IEventNotifier<ISessionLifecycleHandler> {
      * When the current session was started, in Unix time milliseconds.
      */
     val startTime: Long
+
+    /**
+     * Attributes the session started by the app's next focus to [notificationId], when that focus
+     * comes from opening the notification. Call before the open brings the app to the foreground.
+     */
+    fun attributeNextSessionTo(notificationId: String)
 }
