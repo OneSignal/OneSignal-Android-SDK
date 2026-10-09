@@ -48,6 +48,15 @@ class SessionModel : Model() {
         }
 
     /**
+     * When this app was last unfocused, in Unix time milliseconds. Null until the first unfocus.
+     */
+    var unfocusTime: Long?
+        get() = getOptLongProperty(::unfocusTime.name)
+        set(value) {
+            setOptLongProperty(::unfocusTime.name, value)
+        }
+
+    /**
      * How long this session has spent as active, in milliseconds.
      */
     var activeDuration: Long
