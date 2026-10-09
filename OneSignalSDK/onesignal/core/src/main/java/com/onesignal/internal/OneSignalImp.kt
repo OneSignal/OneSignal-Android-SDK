@@ -41,6 +41,7 @@ import com.onesignal.user.UserModule
 import com.onesignal.user.internal.LoginHelper
 import com.onesignal.user.internal.LogoutHelper
 import com.onesignal.user.internal.UserSwitcher
+import com.onesignal.user.internal.applyResolvedAppId
 import com.onesignal.user.internal.identity.IdentityModelStore
 import com.onesignal.user.internal.jwt.JwtTokenStore
 import com.onesignal.user.internal.properties.PropertiesModelStore
@@ -441,7 +442,7 @@ internal class OneSignalImp : IOneSignal,
                 completeInit(InitState.FAILED)
                 return false
             }
-            configModel.appId = result.appId!! // safe because failed is false
+            applyResolvedAppId(configModel, result.appId!!) // safe because failed is false
             val forceCreateUser = result.forceCreateUser
 
             updateConfig()

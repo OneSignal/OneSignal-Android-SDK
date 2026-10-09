@@ -120,10 +120,6 @@
     <ID>ConstructorParameterNaming:SessionListener.kt$SessionListener$private val _propertiesModelStore: PropertiesModelStore</ID>
     <ID>ConstructorParameterNaming:SessionListener.kt$SessionListener$private val _sessionService: ISessionService</ID>
     <ID>ConstructorParameterNaming:SessionManager.kt$SessionManager$private val _outcomeController: IOutcomeEventsController</ID>
-    <ID>ConstructorParameterNaming:SessionService.kt$SessionService$private val _applicationService: IApplicationService</ID>
-    <ID>ConstructorParameterNaming:SessionService.kt$SessionService$private val _configModelStore: ConfigModelStore</ID>
-    <ID>ConstructorParameterNaming:SessionService.kt$SessionService$private val _sessionModelStore: SessionModelStore</ID>
-    <ID>ConstructorParameterNaming:SessionService.kt$SessionService$private val _time: ITime</ID>
     <ID>ConstructorParameterNaming:SimpleModelStore.kt$SimpleModelStore$/** * Will be called whenever a new [TModel] needs to be instantiated. */ private val _create: () -> TModel</ID>
     <ID>ConstructorParameterNaming:SimpleModelStore.kt$SimpleModelStore$_prefs: IPreferencesService? = null</ID>
     <ID>ConstructorParameterNaming:SubscriptionBackendService.kt$SubscriptionBackendService$private val _httpClient: IHttpClient</ID>

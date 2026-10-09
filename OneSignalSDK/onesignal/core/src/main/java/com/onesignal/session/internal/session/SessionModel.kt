@@ -54,4 +54,54 @@ class SessionModel : Model() {
         set(value) {
             setLongProperty(::activeDuration.name, value)
         }
+
+    /**
+     * [focusTime] from a monotonic clock ([com.onesignal.core.internal.time.ITime.elapsedRealtimeMillis]).
+     * Used instead of [focusTime] to measure [activeDuration] when [usesSessionsApi].
+     */
+    var focusElapsedRealtime: Long
+        get() = getLongProperty(::focusElapsedRealtime.name) { 0L }
+        set(value) {
+            setLongProperty(::focusElapsedRealtime.name, value)
+        }
+
+    /**
+     * Whether this session reports through the sessions API instead of the legacy session paths.
+     * Decided by [com.onesignal.features.FeatureFlag.SDK_SESSIONS_V2_API_CUTOVER] when the session
+     * starts and fixed until it ends, so a session never mixes paths. Read this rather than the
+     * feature manager, whose value can change mid-session.
+     */
+    var usesSessionsApi: Boolean
+        get() = getBooleanProperty(::usesSessionsApi.name) { false }
+        set(value) {
+            setBooleanProperty(::usesSessionsApi.name, value)
+        }
+
+    /**
+     * The OneSignal ID when this session started. Session updates keep using it after a
+     * login or user switch.
+     */
+    var onesignalId: String?
+        get() = getOptStringProperty(::onesignalId.name)
+        set(value) {
+            setOptStringProperty(::onesignalId.name, value)
+        }
+
+    /**
+     * The push subscription ID when this session started. Pinned like [onesignalId].
+     */
+    var subscriptionId: String?
+        get() = getOptStringProperty(::subscriptionId.name)
+        set(value) {
+            setOptStringProperty(::subscriptionId.name, value)
+        }
+
+    /**
+     * Null until the sessions API creates this session. Cleared when a new session starts.
+     */
+    var serverSessionId: String?
+        get() = getOptStringProperty(::serverSessionId.name)
+        set(value) {
+            setOptStringProperty(::serverSessionId.name, value)
+        }
 }

@@ -24,9 +24,13 @@ import java.util.UUID
  * Singleton which provides common mock services.
  */
 object MockHelper {
-    fun time(time: Long): ITime {
+    fun time(
+        time: Long,
+        elapsedRealtime: Long = time,
+    ): ITime {
         val mockTime = mockk<ITime>()
         every { mockTime.currentTimeMillis } returns time
+        every { mockTime.elapsedRealtimeMillis } returns elapsedRealtime
 
         return mockTime
     }

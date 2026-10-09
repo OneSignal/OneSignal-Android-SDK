@@ -289,4 +289,35 @@ class AppIdHelperTests : FunSpec({
             mockPreferencesService.getString(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.PREFS_LEGACY_APP_ID)
         }
     }
+
+    test("applyResolvedAppId drops cached feature flags when the appId changes") {
+        // Given
+        val configModel = ConfigModel()
+        configModel.appId = testAppId
+        configModel.sdkRemoteFeatureFlags = listOf("sdk_sessions_v2_api_cutover")
+        configModel.sdkRemoteFeatureFlagMetadata = "{}"
+
+        // When
+        applyResolvedAppId(configModel, differentAppId)
+
+        // Then
+        configModel.appId shouldBe differentAppId
+        configModel.sdkRemoteFeatureFlags shouldBe emptyList()
+        configModel.sdkRemoteFeatureFlagMetadata shouldBe null
+    }
+
+    test("applyResolvedAppId keeps cached feature flags for the same appId") {
+        // Given
+        val configModel = ConfigModel()
+        configModel.appId = testAppId
+        configModel.sdkRemoteFeatureFlags = listOf("sdk_sessions_v2_api_cutover")
+        configModel.sdkRemoteFeatureFlagMetadata = "{}"
+
+        // When
+        applyResolvedAppId(configModel, testAppId)
+
+        // Then
+        configModel.sdkRemoteFeatureFlags shouldBe listOf("sdk_sessions_v2_api_cutover")
+        configModel.sdkRemoteFeatureFlagMetadata shouldBe "{}"
+    }
 })
