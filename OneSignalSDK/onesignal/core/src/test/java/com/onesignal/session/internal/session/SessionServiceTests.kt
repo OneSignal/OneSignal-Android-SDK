@@ -3,14 +3,20 @@ package com.onesignal.session.internal.session
 import com.onesignal.common.threading.OneSignalDispatchers
 import com.onesignal.common.threading.runOnSerialIO
 import com.onesignal.core.internal.features.IFeatureManager
+import com.onesignal.core.internal.operations.IOperationRepo
+import com.onesignal.core.internal.operations.Operation
 import com.onesignal.core.internal.time.ITime
+import com.onesignal.debug.LogLevel
+import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.features.FeatureFlag
 import com.onesignal.mocks.IOMockHelper
 import com.onesignal.mocks.MockHelper
 import com.onesignal.mocks.MockPreferencesService
 import com.onesignal.session.internal.session.impl.SessionService
+import com.onesignal.session.internal.session.operations.CreateSessionOperation
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
@@ -47,6 +53,12 @@ private class Mocks(
     val identityModelStore = MockHelper.identityModelStore { it.onesignalId = ONESIGNAL_ID }
     val configModelStore = MockHelper.configModelStore { it.pushSubscriptionId = SUBSCRIPTION_ID }
 
+    val enqueued = mutableListOf<Operation>()
+    val operationRepo: IOperationRepo =
+        mockk<IOperationRepo>().also {
+            every { it.enqueue(capture(enqueued), any()) } just runs
+        }
+
     fun sessionModelStore(action: ((SessionModel) -> Unit)? = null): SessionModelStore {
         if (action != null) action(mockSessionModelStore.model)
         return mockSessionModelStore
@@ -60,6 +72,7 @@ private class Mocks(
             time,
             featureManager,
             identityModelStore,
+            operationRepo,
         )
 
     val spyCallback = spyk<ISessionLifecycleHandler>()
@@ -77,6 +90,8 @@ class SessionServiceTests : FunSpec({
     // re-mock/unmock runOnSerialIO themselves to assert the dispatch contract; they run last, so
     // their finally-unmock does not affect the earlier inline-dispatch tests.
     listener(IOMockHelper)
+
+    beforeEach { Logging.logLevel = LogLevel.NONE }
 
     test("session created on focus when current session invalid") {
         // Given
@@ -303,6 +318,121 @@ class SessionServiceTests : FunSpec({
         // Then
         sessionModelStore.model.onesignalId shouldBe Mocks.ONESIGNAL_ID
         sessionModelStore.model.subscriptionId shouldBe Mocks.SUBSCRIPTION_ID
+    }
+
+    test("new session enqueues a create with the start time and pinned IDs when the flag is on") {
+        // Given
+        val mocks = Mocks(sessionsApiEnabled = true)
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        val sessionModelStore = mocks.sessionModelStore { it.isValid = false }
+
+        // When
+        sessionService.onFocus(false)
+
+        // Then
+        val create = mocks.enqueued.single() as CreateSessionOperation
+        create.appId shouldBe MockHelper.DEFAULT_APP_ID
+        create.localSessionId shouldBe sessionModelStore.model.localSessionId
+        create.onesignalId shouldBe Mocks.ONESIGNAL_ID
+        create.subscriptionId shouldBe Mocks.SUBSCRIPTION_ID
+        create.startTime shouldBe mocks.currentTime
+        create.directAttributionId shouldBe null
+    }
+
+    test("each new session enqueues its own create with a new idempotency key") {
+        // Given
+        val mocks = Mocks(sessionsApiEnabled = true)
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        mocks.sessionModelStore { it.isValid = false }
+        sessionService.onFocus(false)
+        sessionService.onUnfocused()
+
+        // When
+        sessionService.backgroundRun()
+        sessionService.onFocus(false)
+
+        // Then
+        val creates = mocks.enqueued.map { it as CreateSessionOperation }
+        creates.size shouldBe 2
+        creates.map { it.localSessionId }.distinct().size shouldBe 2
+        creates.map { it.idempotencyKey }.distinct().size shouldBe 2
+    }
+
+    test("resuming within the session timeout does not enqueue another create") {
+        // Given
+        val mocks = Mocks(sessionsApiEnabled = true)
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        mocks.sessionModelStore { it.isValid = false }
+        sessionService.onFocus(false)
+
+        // When
+        sessionService.onUnfocused()
+        sessionService.onFocus(false)
+
+        // Then
+        mocks.enqueued.size shouldBe 1
+    }
+
+    test("cold start with a persisted valid session enqueues a create for the new session") {
+        // Given
+        val mocks = Mocks(sessionsApiEnabled = true)
+        val sessionModelStore =
+            mocks.sessionModelStore {
+                it.isValid = true
+                it.sessionId = "previous-session"
+            }
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+
+        // When
+        sessionService.onFocus(true)
+
+        // Then
+        val create = mocks.enqueued.single() as CreateSessionOperation
+        create.localSessionId shouldBe sessionModelStore.model.localSessionId
+        sessionModelStore.model.sessionId shouldNotBe "previous-session"
+    }
+
+    test("new session does not enqueue a create when the flag is off") {
+        // Given
+        val mocks = Mocks(sessionsApiEnabled = false)
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        mocks.sessionModelStore { it.isValid = false }
+        sessionService.subscribe(mocks.spyCallback)
+
+        // When
+        sessionService.onFocus(false)
+
+        // Then
+        mocks.enqueued shouldBe emptyList()
+        verify(exactly = 1) { mocks.spyCallback.onSessionStarted() }
+    }
+
+    test("new session does not enqueue a create without a push subscription ID") {
+        // Given
+        val mocks = Mocks(sessionsApiEnabled = true)
+        mocks.configModelStore.model.pushSubscriptionId = null
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        mocks.sessionModelStore { it.isValid = false }
+        sessionService.subscribe(mocks.spyCallback)
+
+        // When
+        sessionService.onFocus(false)
+
+        // Then
+        mocks.enqueued shouldBe emptyList()
+        verify(exactly = 1) { mocks.spyCallback.onSessionStarted() }
     }
 
     test("sessions API active duration uses the monotonic clock") {
