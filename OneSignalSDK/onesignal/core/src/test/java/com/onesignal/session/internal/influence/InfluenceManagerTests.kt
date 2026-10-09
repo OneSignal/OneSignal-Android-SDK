@@ -13,6 +13,7 @@ import io.mockk.Runs
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
+import io.mockk.verify
 
 class InfluenceManagerTests : FunSpec({
 
@@ -159,6 +160,7 @@ class InfluenceManagerTests : FunSpec({
         // Given
         val mockSessionService = mockk<ISessionService>()
         every { mockSessionService.subscribe(any()) } just Runs
+        every { mockSessionService.attributeNextSessionTo(any()) } just Runs
 
         val mockApplicationService = mockk<IApplicationService>()
         val mockConfigModelStore =
@@ -187,6 +189,21 @@ class InfluenceManagerTests : FunSpec({
         iamInfluence.influenceType.isUnattributed() shouldBe true
         iamInfluence.directId shouldBe null
         iamInfluence.ids shouldBe null
+    }
+
+    test("notification opened attributes the next session to the notification") {
+        // Given
+        val mockSessionService = mockk<ISessionService>()
+        every { mockSessionService.subscribe(any()) } just Runs
+        every { mockSessionService.attributeNextSessionTo(any()) } just Runs
+        val influenceManager =
+            InfluenceManager(mockSessionService, mockk(), MockHelper.configModelStore(), MockPreferencesService(), MockHelper.time(1111))
+
+        // When
+        influenceManager.onDirectInfluenceFromNotification("notificationId")
+
+        // Then
+        verify(exactly = 1) { mockSessionService.attributeNextSessionTo("notificationId") }
     }
 
     test("IAM clicked while open creates IAM direct influence") {
