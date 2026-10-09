@@ -11,4 +11,6 @@ internal class Time : ITime {
     override val processUptimeMillis: Long
         @RequiresApi(Build.VERSION_CODES.N)
         get() = SystemClock.uptimeMillis() - android.os.Process.getStartUptimeMillis()
+    override val elapsedRealtimeMillis: Long
+        get() = SystemClock.elapsedRealtime()
 }

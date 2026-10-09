@@ -12,6 +12,21 @@ data class AppIdResolution(
     val failed: Boolean,
 )
 
+/**
+ * Sets [appId] on [configModel]. Cached remote feature flags belong to the previous app, so they
+ * are dropped when the app changes; otherwise they apply until the new app's flags are fetched.
+ */
+fun applyResolvedAppId(
+    configModel: ConfigModel,
+    appId: String,
+) {
+    if (configModel.hasProperty(ConfigModel::appId.name) && configModel.appId != appId) {
+        configModel.sdkRemoteFeatureFlags = emptyList()
+        configModel.sdkRemoteFeatureFlagMetadata = null
+    }
+    configModel.appId = appId
+}
+
 fun resolveAppId(
     inputAppId: String?,
     configModel: ConfigModel,
