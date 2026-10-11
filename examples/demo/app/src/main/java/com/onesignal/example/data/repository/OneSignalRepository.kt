@@ -3,7 +3,7 @@ package com.onesignal.example.data.repository
 import com.onesignal.OneSignal
 import com.onesignal.example.data.model.NotificationType
 import com.onesignal.example.data.network.OneSignalService
-import com.onesignal.example.data.network.UserData
+import com.onesignal.example.data.network.UserFetchResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import com.onesignal.example.util.DemoLog
@@ -246,7 +246,7 @@ class OneSignalRepository {
     }
 
     // Fetch user data from API
-    suspend fun fetchUser(aliasLabel: String, aliasValue: String, jwt: String? = null): UserData? = withContext(Dispatchers.IO) {
+    suspend fun fetchUser(aliasLabel: String, aliasValue: String, jwt: String? = null): UserFetchResult = withContext(Dispatchers.IO) {
         DemoLog.d("Fetching user data by $aliasLabel: $aliasValue")
         OneSignalService.fetchUser(aliasLabel, aliasValue, jwt)
     }

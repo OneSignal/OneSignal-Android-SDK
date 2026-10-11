@@ -14,13 +14,18 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.onesignal.example.data.model.InAppMessageType
 import com.onesignal.example.data.model.NotificationExtensionOptions
@@ -43,6 +48,7 @@ import com.onesignal.example.ui.components.SectionCard
 import com.onesignal.example.ui.components.SingleInputDialog
 import com.onesignal.example.ui.components.ToggleRow
 import com.onesignal.example.ui.components.TrackEventDialog
+import com.onesignal.example.ui.components.UpdateJwtDialog
 import com.onesignal.example.ui.theme.DemoLayout
 import com.onesignal.example.ui.theme.OsCardBorder
 import com.onesignal.example.ui.theme.OsDivider
@@ -181,6 +187,8 @@ fun UserSection(
     externalUserId: String?,
     language: String,
     useIdentityVerification: Boolean,
+    userFetchStatus: String?,
+    jwtAskExternalId: String?,
     onUseIdentityVerificationChange: (Boolean) -> Unit,
     onLanguageChange: (String) -> Unit,
     onLogin: (String, String?) -> Unit,
@@ -191,16 +199,26 @@ fun UserSection(
     val isLoggedIn = !externalUserId.isNullOrEmpty()
     var loginOpen by remember { mutableStateOf(false) }
     var updateJwtOpen by remember { mutableStateOf(false) }
+    val snackbar = LocalSnackbarController.current
+
+    // Show the snackbar once per ask. Saving the id stops a rotation from showing it again.
+    var announcedAskId by rememberSaveable { mutableStateOf<String?>(null) }
+    LaunchedEffect(jwtAskExternalId) {
+        if (jwtAskExternalId != null && jwtAskExternalId != announcedAskId) {
+            snackbar.show("SDK asked for a JWT for $jwtAskExternalId")
+        }
+        announcedAskId = jwtAskExternalId
+    }
 
     DemoSection {
         SectionCard(title = "User", sectionKey = "user") {
             ToggleRow(
-                label = "Identity Verification",
-                description = "Use external_id for API calls",
+                label = "Fetch by external_id (JWT)",
+                description = "Demo REST fetch only. Signs with the stored JWT.",
                 checked = useIdentityVerification,
                 onCheckedChange = onUseIdentityVerificationChange,
                 testTag = "identity_verification_toggle",
-                contentDescription = "Identity verification",
+                contentDescription = "Fetch by external_id",
             )
             HorizontalDivider(color = OsDivider, modifier = Modifier.padding(vertical = DemoLayout.gap))
             CardKvRow(
@@ -217,6 +235,13 @@ fun UserSection(
                 valueTestTag = "user_external_id_value",
             )
             HorizontalDivider(color = OsDivider, modifier = Modifier.padding(vertical = DemoLayout.gap))
+            CardKvRow(
+                label = "REST fetch",
+                value = userFetchStatus ?: "—",
+                valueTestTag = "user_fetch_status_value",
+                monospaceValue = false,
+            )
+            HorizontalDivider(color = OsDivider, modifier = Modifier.padding(vertical = DemoLayout.gap))
             DropdownRow(
                 label = "Language",
                 selectedValue = language,
@@ -224,6 +249,36 @@ fun UserSection(
                 onValueSelected = onLanguageChange,
                 testTag = "user_language_dropdown",
             )
+        }
+
+        // The demo shows the SDK's ask here instead of feeding the stored token back in.
+        if (jwtAskExternalId != null) {
+            Spacer(modifier = Modifier.height(DemoLayout.gap))
+            DemoCard(
+                modifier = Modifier.testTag("jwt_ask_banner"),
+                containerColor = OsWarningBackground,
+            ) {
+                Text(
+                    "The SDK is waiting for a JWT. Requests for this user are parked until one is supplied.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = OsGrey700,
+                )
+                Text(
+                    jwtAskExternalId,
+                    style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
+                    color = OsGrey700,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier
+                        .padding(top = 4.dp)
+                        .testTag("jwt_ask_external_id_value"),
+                )
+                OutlineButton(
+                    text = "PROVIDE JWT",
+                    onClick = { updateJwtOpen = true },
+                    testTag = "jwt_ask_provide_button",
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(DemoLayout.gap))
@@ -262,17 +317,13 @@ fun UserSection(
     }
 
     if (updateJwtOpen) {
-        PairInputDialog(
-            title = "Update User JWT",
-            keyLabel = "External User Id",
-            valueLabel = "JWT Token",
+        UpdateJwtDialog(
+            initialExternalId = jwtAskExternalId ?: externalUserId.orEmpty(),
             onDismiss = { updateJwtOpen = false },
             onConfirm = { externalId, token ->
                 onUpdateJwt(externalId, token)
                 updateJwtOpen = false
             },
-            keyTestTag = "update_jwt_external_id_input",
-            valueTestTag = "update_jwt_token_input",
         )
     }
 }
