@@ -13,10 +13,15 @@ import com.onesignal.mocks.IOMockHelper
 import com.onesignal.mocks.MockHelper
 import com.onesignal.mocks.MockPreferencesService
 import com.onesignal.session.internal.session.impl.SessionService
+import com.onesignal.session.internal.session.requests.ISessionRequestQueue
+import com.onesignal.session.internal.session.requests.SessionRequest
 import com.onesignal.user.internal.backend.IdentityConstants
 import com.onesignal.user.internal.identity.IdentityModel
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
+import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
@@ -30,19 +35,21 @@ import io.mockk.unmockkStatic
 import io.mockk.verify
 import io.mockk.verifyOrder
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.test.runTest
 
 // Mocks used by every test in this file
 private class Mocks(
     var sessionsApiEnabled: Boolean = false,
 ) {
-    val currentTime = 1111L
+    var currentTime = 1111L
     var elapsedRealtime = 5000L
 
     private val mockSessionModelStore = MockHelper.sessionModelStore()
 
     val time: ITime =
         mockk<ITime>().also {
-            every { it.currentTimeMillis } returns currentTime
+            every { it.currentTimeMillis } answers { currentTime }
             every { it.elapsedRealtimeMillis } answers { elapsedRealtime }
         }
 
@@ -53,6 +60,13 @@ private class Mocks(
 
     val identityModelStore = MockHelper.identityModelStore { it.onesignalId = ONESIGNAL_ID }
     val configModelStore = MockHelper.configModelStore { it.pushSubscriptionId = SUBSCRIPTION_ID }
+
+    val enqueued = mutableListOf<SessionRequest>()
+    val sessionRequestQueue: ISessionRequestQueue =
+        mockk<ISessionRequestQueue>(relaxUnitFun = true).also {
+            every { it.enqueue(capture(enqueued)) } just runs
+            coEvery { it.enqueueAndWait(capture(enqueued)) } returns true
+        }
 
     val identityChangeHandler = slot<ISingletonModelStoreChangeHandler<IdentityModel>>()
     val configChangeHandler = slot<ISingletonModelStoreChangeHandler<ConfigModel>>()
@@ -96,6 +110,7 @@ private class Mocks(
             time,
             featureManager,
             identityModelStore,
+            sessionRequestQueue,
         )
 
     val spyCallback = spyk<ISessionLifecycleHandler>()
@@ -435,6 +450,303 @@ class SessionServiceTests : FunSpec({
 
         // Then
         sessionModelStore.model.onesignalId shouldBe "local-user"
+    }
+
+    test("local ID translations are forwarded to queued session requests") {
+        // Given
+        val mocks = Mocks()
+        mocks.identityModelStore.model.onesignalId = "local-user"
+        mocks.configModelStore.model.pushSubscriptionId = "local-subscription"
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+
+        // When
+        mocks.hydrateOnesignalId("backend-user")
+        mocks.hydratePushSubscriptionId("backend-subscription")
+
+        // Then
+        verifyOrder {
+            mocks.sessionRequestQueue.translateOnesignalId("local-user", "backend-user")
+            mocks.sessionRequestQueue.translateSubscriptionId("local-subscription", "backend-subscription", "backend-user")
+        }
+    }
+
+    test("new session enqueues a create with the start time and pinned IDs when the flag is on") {
+        // Given
+        val mocks = Mocks(sessionsApiEnabled = true)
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        val sessionModelStore = mocks.sessionModelStore { it.isValid = false }
+
+        // When
+        sessionService.onFocus(false)
+
+        // Then
+        val create = mocks.enqueued.single()
+        create.appId shouldBe MockHelper.DEFAULT_APP_ID
+        create.localSessionId shouldBe sessionModelStore.model.sessionId
+        create.onesignalId shouldBe Mocks.ONESIGNAL_ID
+        create.subscriptionId shouldBe Mocks.SUBSCRIPTION_ID
+        create.startTime shouldBe mocks.currentTime
+    }
+
+    test("each new session enqueues its own create with a new idempotency key") {
+        // Given
+        val mocks = Mocks(sessionsApiEnabled = true)
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        mocks.sessionModelStore { it.isValid = false }
+        sessionService.onFocus(false)
+        sessionService.onUnfocused()
+
+        // When
+        sessionService.backgroundRun()
+        sessionService.onFocus(false)
+
+        // Then
+        val creates = mocks.enqueued.filter { it.isCreate }
+        creates.size shouldBe 2
+        creates.map { it.localSessionId }.distinct().size shouldBe 2
+        creates.map { it.idempotencyKey }.distinct().size shouldBe 2
+    }
+
+    test("resuming within the session timeout does not enqueue another create") {
+        // Given
+        val mocks = Mocks(sessionsApiEnabled = true)
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        mocks.sessionModelStore { it.isValid = false }
+        sessionService.onFocus(false)
+
+        // When
+        sessionService.onUnfocused()
+        sessionService.onFocus(false)
+
+        // Then
+        mocks.enqueued.size shouldBe 1
+    }
+
+    test("cold start with a persisted valid session enqueues a create for the new session") {
+        // Given
+        val mocks = Mocks(sessionsApiEnabled = true)
+        val sessionModelStore =
+            mocks.sessionModelStore {
+                it.isValid = true
+                it.sessionId = "previous-session"
+            }
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+
+        // When
+        sessionService.onFocus(true)
+
+        // Then
+        val create = mocks.enqueued.single()
+        create.localSessionId shouldBe sessionModelStore.model.sessionId
+        sessionModelStore.model.sessionId shouldNotBe "previous-session"
+    }
+
+    test("new session does not enqueue a create when the flag is off") {
+        // Given
+        val mocks = Mocks(sessionsApiEnabled = false)
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        mocks.sessionModelStore { it.isValid = false }
+        sessionService.subscribe(mocks.spyCallback)
+
+        // When
+        sessionService.onFocus(false)
+
+        // Then
+        mocks.enqueued shouldBe emptyList()
+        verify(exactly = 1) { mocks.spyCallback.onSessionStarted() }
+    }
+
+    test("new session does not enqueue a create without a push subscription ID") {
+        // Given
+        val mocks = Mocks(sessionsApiEnabled = true)
+        mocks.configModelStore.model.pushSubscriptionId = null
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        mocks.sessionModelStore { it.isValid = false }
+        sessionService.subscribe(mocks.spyCallback)
+
+        // When
+        sessionService.onFocus(false)
+
+        // Then
+        mocks.enqueued shouldBe emptyList()
+        verify(exactly = 1) { mocks.spyCallback.onSessionStarted() }
+    }
+
+    test("background run sends the end with the unfocus time and final duration when the flag is on") {
+        // Given
+        val mocks = Mocks(sessionsApiEnabled = true)
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        val sessionModelStore = mocks.sessionModelStore { it.isValid = false }
+        sessionService.onFocus(false)
+        mocks.elapsedRealtime += 750L
+        mocks.currentTime = 2222L
+        sessionService.onUnfocused()
+        mocks.currentTime = 32222L
+
+        // When
+        sessionService.backgroundRun()
+
+        // Then
+        val end = mocks.enqueued.filter { !it.isCreate }.single()
+        end.appId shouldBe MockHelper.DEFAULT_APP_ID
+        end.localSessionId shouldBe sessionModelStore.model.sessionId
+        end.serverSessionId shouldBe null
+        end.onesignalId shouldBe Mocks.ONESIGNAL_ID
+        end.subscriptionId shouldBe Mocks.SUBSCRIPTION_ID
+        end.activeDuration shouldBe 750L
+        end.endTime shouldBe 2222L
+        coVerify(exactly = 1) { mocks.sessionRequestQueue.enqueueAndWait(end) }
+        sessionModelStore.model.isValid shouldBe false
+    }
+
+    test("background run ends the session by its server session ID once created") {
+        // Given
+        val mocks = Mocks(sessionsApiEnabled = true)
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        val sessionModelStore = mocks.sessionModelStore { it.isValid = false }
+        sessionService.onFocus(false)
+        sessionModelStore.model.serverSessionId = "server-session-id"
+        sessionService.onUnfocused()
+
+        // When
+        sessionService.backgroundRun()
+
+        // Then
+        val end = mocks.enqueued.filter { !it.isCreate }.single()
+        end.serverSessionId shouldBe "server-session-id"
+    }
+
+    test("background run returns when the end is not sent in time and leaves it queued") {
+        // Given
+        val mocks = Mocks(sessionsApiEnabled = true)
+        coEvery { mocks.sessionRequestQueue.enqueueAndWait(any()) } coAnswers { awaitCancellation() }
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        val sessionModelStore = mocks.sessionModelStore { it.isValid = false }
+        sessionService.onFocus(false)
+        sessionService.onUnfocused()
+
+        // When
+        runTest { sessionService.backgroundRun() }
+
+        // Then
+        coVerify(exactly = 1) { mocks.sessionRequestQueue.enqueueAndWait(match { it.isEnd }) }
+        sessionModelStore.model.isValid shouldBe false
+    }
+
+    test("cold start ends the previous sessions API session before creating a new one") {
+        // Given
+        val mocks = Mocks(sessionsApiEnabled = true)
+        mocks.sessionModelStore {
+            it.isValid = true
+            it.sessionId = "previous-session"
+            it.usesSessionsApi = true
+            it.onesignalId = Mocks.ONESIGNAL_ID
+            it.subscriptionId = Mocks.SUBSCRIPTION_ID
+            it.serverSessionId = "previous-server-session-id"
+            it.focusTime = 500L
+            it.unfocusTime = 900L
+            it.activeDuration = 400L
+        }
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+
+        // When
+        sessionService.onFocus(false)
+
+        // Then
+        val end = mocks.enqueued[0]
+        end.localSessionId shouldBe "previous-session"
+        end.serverSessionId shouldBe "previous-server-session-id"
+        end.activeDuration shouldBe 400L
+        end.endTime shouldBe 900L
+        mocks.enqueued[1].isCreate shouldBe true
+        coVerify(exactly = 0) { mocks.sessionRequestQueue.enqueueAndWait(any()) }
+    }
+
+    test("cold start after a kill while focused ends the previous session at its last focus") {
+        // Given
+        val mocks = Mocks(sessionsApiEnabled = true)
+        mocks.sessionModelStore {
+            it.isValid = true
+            it.sessionId = "previous-session"
+            it.usesSessionsApi = true
+            it.onesignalId = Mocks.ONESIGNAL_ID
+            it.subscriptionId = Mocks.SUBSCRIPTION_ID
+            it.unfocusTime = 300L
+            it.focusTime = 500L
+        }
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+
+        // When
+        sessionService.onFocus(false)
+
+        // Then
+        val end = mocks.enqueued.filter { !it.isCreate }.single()
+        end.endTime shouldBe 500L
+    }
+
+    test("session end does not send an end when the session uses the legacy path") {
+        // Given
+        val mocks = Mocks(sessionsApiEnabled = false)
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        mocks.sessionModelStore { it.isValid = false }
+        sessionService.subscribe(mocks.spyCallback)
+        sessionService.onFocus(false)
+        sessionService.onUnfocused()
+        mocks.sessionsApiEnabled = true
+
+        // When
+        sessionService.backgroundRun()
+
+        // Then
+        mocks.enqueued shouldBe emptyList()
+        coVerify(exactly = 0) { mocks.sessionRequestQueue.enqueueAndWait(any()) }
+        verify(exactly = 1) { mocks.spyCallback.onSessionEnded(any()) }
+    }
+
+    test("session end does not send an end without a push subscription ID") {
+        // Given
+        val mocks = Mocks(sessionsApiEnabled = true)
+        mocks.configModelStore.model.pushSubscriptionId = null
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        mocks.sessionModelStore { it.isValid = false }
+        sessionService.subscribe(mocks.spyCallback)
+        sessionService.onFocus(false)
+        sessionService.onUnfocused()
+
+        // When
+        sessionService.backgroundRun()
+
+        // Then
+        mocks.enqueued shouldBe emptyList()
+        verify(exactly = 1) { mocks.spyCallback.onSessionEnded(any()) }
     }
 
     test("sessions API active duration uses the monotonic clock") {

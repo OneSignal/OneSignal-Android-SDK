@@ -22,6 +22,9 @@ import com.onesignal.session.internal.session.backend.ISessionsBackendService
 import com.onesignal.session.internal.session.backend.impl.SessionsBackendService
 import com.onesignal.session.internal.session.impl.SessionListener
 import com.onesignal.session.internal.session.impl.SessionService
+import com.onesignal.session.internal.session.requests.ISessionRequestQueue
+import com.onesignal.session.internal.session.requests.SessionRequestStore
+import com.onesignal.session.internal.session.requests.impl.SessionRequestQueue
 
 internal class SessionModule : IModule {
     override fun register(builder: ServiceBuilder) {
@@ -46,5 +49,9 @@ internal class SessionModule : IModule {
         builder.register<SessionListener>().provides<IStartableService>()
         builder.register<SessionManager>().provides<ISessionManager>()
         builder.register<SessionsBackendService>().provides<ISessionsBackendService>()
+        builder.register<SessionRequestStore>().provides<SessionRequestStore>()
+        builder.register<SessionRequestQueue>()
+            .provides<ISessionRequestQueue>()
+            .provides<IStartableService>()
     }
 }
