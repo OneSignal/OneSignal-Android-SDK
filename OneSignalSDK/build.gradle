@@ -26,6 +26,9 @@ buildscript {
         startupVersion = '1.1.1'
         ktlintVersion = '0.50.0' // Used by Spotless for Kotlin formatting (compatible with Kotlin 1.7.10)
         spotlessVersion = '6.25.0'
+        // BCV hooks into 'kotlin-android', so AGP 9's built-in Kotlin stops it registering tasks.
+        // See https://github.com/Kotlin/binary-compatibility-validator/issues/312
+        binaryCompatibilityValidatorVersion = '0.16.3'
         tdunningJsonForTest = '1.0' // DO NOT upgrade for tests, using an old version so it matches AOSP
 
         sharedRepos = {
@@ -44,7 +47,8 @@ buildscript {
                 "org.jetbrains.dokka:dokka-gradle-plugin:$dokkaVersion",
                 "io.gitlab.arturbosch.detekt:detekt-gradle-plugin:$detektVersion",
                 "com.diffplug.spotless:spotless-plugin-gradle:$spotlessVersion",
-                "com.vanniktech.maven.publish:com.vanniktech.maven.publish.gradle.plugin:0.32.0"
+                "com.vanniktech.maven.publish:com.vanniktech.maven.publish.gradle.plugin:0.32.0",
+                "org.jetbrains.kotlinx:binary-compatibility-validator:$binaryCompatibilityValidatorVersion"
         ]
     }
 
@@ -52,6 +56,58 @@ buildscript {
     dependencies {
         classpath sharedDeps
     }
+}
+
+apply plugin: 'org.jetbrains.kotlinx.binary-compatibility-validator'
+
+// Tracks the public API of the published modules as committed `api/*.api` dumps, so a breaking
+// change has to show up as a reviewable diff instead of being spotted by eye.
+apiValidation {
+    // Not published, so they have no customer-facing surface to protect.
+    ignoredProjects += ['app', 'testhelpers']
+    // :kmp is a git submodule; its API is owned by OneSignal-KMP-SDK.
+    ignoredProjects += ['kmp']
+
+    // Public only because Kotlin has no cross-module internal. Subpackages are ignored too.
+    ignoredPackages += [
+        'com.onesignal.internal',
+        'com.onesignal.core.internal',
+        // Not all of debug.internal: wrapper SDKs call debug.internal.logging.Logging.
+        'com.onesignal.debug.internal.crash',
+        'com.onesignal.debug.internal.logging.logger',
+        'com.onesignal.inAppMessages.internal',
+        'com.onesignal.location.internal',
+        'com.onesignal.notifications.internal',
+        'com.onesignal.session.internal',
+        'com.onesignal.user.internal',
+        'com.onesignal.common.consistency',
+        'com.onesignal.common.events',
+        'com.onesignal.common.exceptions',
+        'com.onesignal.common.modeling',
+        'com.onesignal.common.modules',
+        'com.onesignal.common.services',
+        'com.onesignal.common.threading',
+    ]
+    // Wrapper SDKs call OneSignalWrapper and IHostPermissionPrompt, so the rest of
+    // com.onesignal.common is ignored class by class. Nested classes need their own entry.
+    ignoredClasses += [
+        'com.onesignal.common.AndroidUtils',
+        'com.onesignal.common.AndroidUtils$SchemaType',
+        'com.onesignal.common.AndroidUtils$SchemaType$Companion',
+        'com.onesignal.common.DateUtils',
+        'com.onesignal.common.DeviceUtils',
+        'com.onesignal.common.IDManager',
+        'com.onesignal.common.InputGuardKt',
+        'com.onesignal.common.JSONObjectExtensionsKt',
+        'com.onesignal.common.JSONUtils',
+        'com.onesignal.common.NetworkUtils',
+        'com.onesignal.common.NetworkUtils$ResponseStatusType',
+        'com.onesignal.common.OneSignalUtils',
+        'com.onesignal.common.PIIHasher',
+        'com.onesignal.common.RootToolsInternalMethods',
+        'com.onesignal.common.TimeUtils',
+        'com.onesignal.common.ViewUtils',
+    ]
 }
 
 allprojects {
