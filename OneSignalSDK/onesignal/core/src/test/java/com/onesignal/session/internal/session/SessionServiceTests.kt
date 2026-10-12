@@ -1,29 +1,27 @@
 package com.onesignal.session.internal.session
 
-import com.onesignal.common.modeling.ISingletonModelStoreChangeHandler
-import com.onesignal.common.modeling.ModelChangeTags
-import com.onesignal.common.modeling.ModelChangedArgs
 import com.onesignal.common.threading.OneSignalDispatchers
 import com.onesignal.common.threading.runOnSerialIO
-import com.onesignal.core.internal.config.ConfigModel
 import com.onesignal.core.internal.features.IFeatureManager
 import com.onesignal.core.internal.time.ITime
+import com.onesignal.debug.LogLevel
+import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.features.FeatureFlag
 import com.onesignal.mocks.IOMockHelper
 import com.onesignal.mocks.MockHelper
 import com.onesignal.mocks.MockPreferencesService
 import com.onesignal.session.internal.session.impl.SessionService
-import com.onesignal.user.internal.backend.IdentityConstants
-import com.onesignal.user.internal.identity.IdentityModel
+import com.onesignal.session.internal.session.queue.ISessionsApiQueue
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import io.mockk.coVerify
+import io.mockk.coVerifyOrder
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.mockkObject
 import io.mockk.mockkStatic
 import io.mockk.runs
-import io.mockk.slot
 import io.mockk.spyk
 import io.mockk.unmockkObject
 import io.mockk.unmockkStatic
@@ -52,36 +50,13 @@ private class Mocks(
         }
 
     val identityModelStore = MockHelper.identityModelStore { it.onesignalId = ONESIGNAL_ID }
-    val configModelStore = MockHelper.configModelStore { it.pushSubscriptionId = SUBSCRIPTION_ID }
+    val configModelStore =
+        MockHelper.configModelStore {
+            it.appId = APP_ID
+            it.pushSubscriptionId = SUBSCRIPTION_ID
+        }
 
-    val identityChangeHandler = slot<ISingletonModelStoreChangeHandler<IdentityModel>>()
-    val configChangeHandler = slot<ISingletonModelStoreChangeHandler<ConfigModel>>()
-
-    init {
-        every { identityModelStore.subscribe(capture(identityChangeHandler)) } just runs
-        every { configModelStore.subscribe(capture(configChangeHandler)) } just runs
-    }
-
-    /** Mirrors the user-create executor replacing a local ID with the backend ID in place. */
-    fun hydrateOnesignalId(backendId: String) {
-        val model = identityModelStore.model
-        val localId = model.onesignalId
-        model.onesignalId = backendId
-        identityChangeHandler.captured.onModelUpdated(
-            ModelChangedArgs(model, IdentityConstants.ONESIGNAL_ID, IdentityConstants.ONESIGNAL_ID, localId, backendId),
-            ModelChangeTags.HYDRATE,
-        )
-    }
-
-    fun hydratePushSubscriptionId(backendId: String) {
-        val model = configModelStore.model
-        val localId = model.pushSubscriptionId
-        model.pushSubscriptionId = backendId
-        configChangeHandler.captured.onModelUpdated(
-            ModelChangedArgs(model, ConfigModel::pushSubscriptionId.name, ConfigModel::pushSubscriptionId.name, localId, backendId),
-            ModelChangeTags.NORMAL,
-        )
-    }
+    val sessionsApiQueue = mockk<ISessionsApiQueue>(relaxed = true)
 
     fun sessionModelStore(action: ((SessionModel) -> Unit)? = null): SessionModelStore {
         if (action != null) action(mockSessionModelStore.model)
@@ -96,11 +71,13 @@ private class Mocks(
             time,
             featureManager,
             identityModelStore,
+            sessionsApiQueue,
         )
 
     val spyCallback = spyk<ISessionLifecycleHandler>()
 
     companion object {
+        const val APP_ID = "app-id"
         const val ONESIGNAL_ID = "onesignal-id"
         const val SUBSCRIPTION_ID = "subscription-id"
     }
@@ -300,141 +277,170 @@ class SessionServiceTests : FunSpec({
         sessionModelStore.model.usesSessionsApi shouldBe true
     }
 
-    test("new session pins onesignal and subscription IDs and clears the server session ID") {
+    test("new session enqueues a sessions API create when the flag is on") {
+        // Given
+        val mocks = Mocks(sessionsApiEnabled = true)
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        val sessionModelStore = mocks.sessionModelStore { it.isValid = false }
+
+        // When
+        sessionService.onFocus(false)
+
+        // Then
+        val sessionId = sessionModelStore.model.sessionId
+        verify(exactly = 1) {
+            mocks.sessionsApiQueue.enqueueCreate(
+                sessionId,
+                Mocks.APP_ID,
+                Mocks.ONESIGNAL_ID,
+                Mocks.SUBSCRIPTION_ID,
+                mocks.currentTime,
+            )
+        }
+    }
+
+    test("new session does not enqueue a create when the flag is off") {
+        // Given
+        val mocks = Mocks(sessionsApiEnabled = false)
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        mocks.sessionModelStore { it.isValid = false }
+
+        // When
+        sessionService.onFocus(false)
+
+        // Then
+        verify(exactly = 0) { mocks.sessionsApiQueue.enqueueCreate(any(), any(), any(), any(), any()) }
+    }
+
+    test("resuming a session does not enqueue another create") {
+        // Given
+        val mocks = Mocks(sessionsApiEnabled = true)
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        mocks.sessionModelStore { it.isValid = false }
+        sessionService.onFocus(false)
+
+        // When
+        sessionService.onUnfocused()
+        sessionService.onFocus(false)
+
+        // Then
+        verify(exactly = 1) { mocks.sessionsApiQueue.enqueueCreate(any(), any(), any(), any(), any()) }
+    }
+
+    test("new session does not enqueue a create without a push subscription ID") {
+        // Given
+        val mocks = Mocks(sessionsApiEnabled = true)
+        mocks.configModelStore.model.pushSubscriptionId = null
+        Logging.logLevel = LogLevel.NONE
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        mocks.sessionModelStore { it.isValid = false }
+
+        // When
+        sessionService.onFocus(false)
+
+        // Then
+        verify(exactly = 0) { mocks.sessionsApiQueue.enqueueCreate(any(), any(), any(), any(), any()) }
+    }
+
+    test("background run enqueues a sessions API end and flushes it") {
         // Given
         val mocks = Mocks()
         val sessionService = mocks.sessionService
         sessionService.bootstrap()
         sessionService.start()
+        mocks.sessionModelStore {
+            it.sessionId = "session-id"
+            it.isValid = true
+            it.usesSessionsApi = true
+            it.focusTime = 1000L
+            it.unfocusTime = 2000L
+            it.activeDuration = 555L
+        }
+
+        // When
+        sessionService.backgroundRun()
+
+        // Then
+        coVerifyOrder {
+            mocks.sessionsApiQueue.enqueueUpdate("session-id", 555L, 2000L)
+            mocks.sessionsApiQueue.flush()
+        }
+    }
+
+    test("session end time is the last focus when the app was killed while focused") {
+        // Given
+        val mocks = Mocks()
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        mocks.sessionModelStore {
+            it.sessionId = "session-id"
+            it.isValid = true
+            it.usesSessionsApi = true
+            it.focusTime = 3000L
+            it.unfocusTime = 2000L
+            it.activeDuration = 555L
+        }
+
+        // When
+        sessionService.backgroundRun()
+
+        // Then
+        verify { mocks.sessionsApiQueue.enqueueUpdate("session-id", 555L, 3000L) }
+    }
+
+    test("legacy session end does not use the sessions API") {
+        // Given
+        val mocks = Mocks()
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        mocks.sessionModelStore {
+            it.isValid = true
+            it.usesSessionsApi = false
+        }
+
+        // When
+        sessionService.backgroundRun()
+
+        // Then
+        verify(exactly = 0) { mocks.sessionsApiQueue.enqueueUpdate(any(), any(), any()) }
+        coVerify(exactly = 0) { mocks.sessionsApiQueue.flush() }
+    }
+
+    test("cold start ends the previous session before creating the next one") {
+        // Given
+        val mocks = Mocks(sessionsApiEnabled = true)
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
         val sessionModelStore =
             mocks.sessionModelStore {
-                it.isValid = false
-                it.serverSessionId = "previous-server-session"
+                it.sessionId = "previous-session"
+                it.isValid = true
+                it.usesSessionsApi = true
+                it.focusTime = 1000L
+                it.unfocusTime = 900L
+                it.activeDuration = 555L
             }
 
         // When
         sessionService.onFocus(false)
 
         // Then
-        sessionModelStore.model.onesignalId shouldBe Mocks.ONESIGNAL_ID
-        sessionModelStore.model.subscriptionId shouldBe Mocks.SUBSCRIPTION_ID
-        sessionModelStore.model.serverSessionId shouldBe null
-    }
-
-    test("pinned IDs stay the same after login within a session") {
-        // Given
-        val mocks = Mocks()
-        val sessionService = mocks.sessionService
-        sessionService.bootstrap()
-        sessionService.start()
-        val sessionModelStore = mocks.sessionModelStore { it.isValid = false }
-        sessionService.onFocus(false)
-
-        // When
-        mocks.identityModelStore.model.onesignalId = "new-user-id"
-        mocks.configModelStore.model.pushSubscriptionId = "new-subscription-id"
-        sessionService.onUnfocused()
-        sessionService.onFocus(false)
-
-        // Then
-        sessionModelStore.model.onesignalId shouldBe Mocks.ONESIGNAL_ID
-        sessionModelStore.model.subscriptionId shouldBe Mocks.SUBSCRIPTION_ID
-    }
-
-    test("pinned local IDs are replaced with backend IDs when the user is created") {
-        // Given
-        val mocks = Mocks()
-        mocks.identityModelStore.model.onesignalId = "local-user"
-        mocks.configModelStore.model.pushSubscriptionId = "local-subscription"
-        val sessionService = mocks.sessionService
-        sessionService.bootstrap()
-        sessionService.start()
-        val sessionModelStore = mocks.sessionModelStore { it.isValid = false }
-        sessionService.onFocus(false)
-
-        // When
-        mocks.hydrateOnesignalId("backend-user")
-        mocks.hydratePushSubscriptionId("backend-subscription")
-
-        // Then
-        sessionModelStore.model.onesignalId shouldBe "backend-user"
-        sessionModelStore.model.subscriptionId shouldBe "backend-subscription"
-    }
-
-    test("pinned subscription ID is not replaced after login before the anonymous user is created") {
-        // Given
-        val mocks = Mocks()
-        mocks.identityModelStore.model.onesignalId = "local-anonymous"
-        mocks.configModelStore.model.pushSubscriptionId = "local-subscription"
-        val sessionService = mocks.sessionService
-        sessionService.bootstrap()
-        sessionService.start()
-        val sessionModelStore = mocks.sessionModelStore { it.isValid = false }
-        sessionService.onFocus(false)
-
-        // When
-        val loggedInModel = IdentityModel().apply { onesignalId = "local-logged-in" }
-        every { mocks.identityModelStore.model } returns loggedInModel
-        mocks.identityChangeHandler.captured.onModelReplaced(loggedInModel, ModelChangeTags.NORMAL)
-        mocks.hydrateOnesignalId("backend-logged-in")
-        mocks.hydratePushSubscriptionId("backend-subscription")
-
-        // Then
-        sessionModelStore.model.onesignalId shouldBe "local-anonymous"
-        sessionModelStore.model.subscriptionId shouldBe "local-subscription"
-    }
-
-    test("pinned backend IDs are not replaced by later ID changes") {
-        // Given
-        val mocks = Mocks()
-        val sessionService = mocks.sessionService
-        sessionService.bootstrap()
-        sessionService.start()
-        val sessionModelStore = mocks.sessionModelStore { it.isValid = false }
-        sessionService.onFocus(false)
-
-        // When
-        mocks.hydrateOnesignalId("other-user")
-        mocks.hydratePushSubscriptionId("other-subscription")
-
-        // Then
-        sessionModelStore.model.onesignalId shouldBe Mocks.ONESIGNAL_ID
-        sessionModelStore.model.subscriptionId shouldBe Mocks.SUBSCRIPTION_ID
-    }
-
-    test("pinned local IDs are not replaced when a different local ID is translated") {
-        // Given
-        val mocks = Mocks()
-        mocks.identityModelStore.model.onesignalId = "local-user"
-        val sessionService = mocks.sessionService
-        sessionService.bootstrap()
-        sessionService.start()
-        val sessionModelStore = mocks.sessionModelStore { it.isValid = false }
-        sessionService.onFocus(false)
-
-        // When
-        mocks.identityModelStore.model.onesignalId = "local-next-user"
-        mocks.hydrateOnesignalId("backend-next-user")
-
-        // Then
-        sessionModelStore.model.onesignalId shouldBe "local-user"
-    }
-
-    test("pinned local IDs are not replaced by another local ID") {
-        // Given
-        val mocks = Mocks()
-        mocks.identityModelStore.model.onesignalId = "local-user"
-        val sessionService = mocks.sessionService
-        sessionService.bootstrap()
-        sessionService.start()
-        val sessionModelStore = mocks.sessionModelStore { it.isValid = false }
-        sessionService.onFocus(false)
-
-        // When
-        mocks.hydrateOnesignalId("local-next-user")
-
-        // Then
-        sessionModelStore.model.onesignalId shouldBe "local-user"
+        val sessionId = sessionModelStore.model.sessionId
+        verifyOrder {
+            mocks.sessionsApiQueue.enqueueUpdate("previous-session", 555L, 1000L)
+            mocks.sessionsApiQueue.enqueueCreate(sessionId, any(), any(), any(), any())
+        }
     }
 
     test("sessions API active duration uses the monotonic clock") {
@@ -506,9 +512,7 @@ class SessionServiceTests : FunSpec({
         store.model.activeDuration = 456L
         store.model.focusElapsedRealtime = 789L
         store.model.usesSessionsApi = true
-        store.model.onesignalId = Mocks.ONESIGNAL_ID
-        store.model.subscriptionId = Mocks.SUBSCRIPTION_ID
-        store.model.serverSessionId = "server-session-id"
+        store.model.unfocusTime = 321L
 
         // When
         val reloaded = SessionModelStore(prefs).model
@@ -519,9 +523,7 @@ class SessionServiceTests : FunSpec({
         reloaded.activeDuration shouldBe 456L
         reloaded.focusElapsedRealtime shouldBe 789L
         reloaded.usesSessionsApi shouldBe true
-        reloaded.onesignalId shouldBe Mocks.ONESIGNAL_ID
-        reloaded.subscriptionId shouldBe Mocks.SUBSCRIPTION_ID
-        reloaded.serverSessionId shouldBe "server-session-id"
+        reloaded.unfocusTime shouldBe 321L
     }
 
     test("onFocus dispatches the session-mutation body through runOnSerialIO (SDK-4508)") {

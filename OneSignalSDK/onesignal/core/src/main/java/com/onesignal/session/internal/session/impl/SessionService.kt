@@ -1,10 +1,6 @@
 package com.onesignal.session.internal.session.impl
 
-import com.onesignal.common.IDManager
 import com.onesignal.common.events.EventProducer
-import com.onesignal.common.modeling.ISingletonModelStoreChangeHandler
-import com.onesignal.common.modeling.Model
-import com.onesignal.common.modeling.ModelChangedArgs
 import com.onesignal.common.threading.runOnSerialIO
 import com.onesignal.core.internal.application.IApplicationLifecycleHandler
 import com.onesignal.core.internal.application.IApplicationService
@@ -22,10 +18,11 @@ import com.onesignal.session.internal.session.ISessionLifecycleHandler
 import com.onesignal.session.internal.session.ISessionService
 import com.onesignal.session.internal.session.SessionModel
 import com.onesignal.session.internal.session.SessionModelStore
+import com.onesignal.session.internal.session.queue.ISessionsApiQueue
 import com.onesignal.user.internal.backend.IdentityConstants
 import com.onesignal.user.internal.identity.IdentityModelStore
+import kotlinx.coroutines.withTimeoutOrNull
 import java.util.UUID
-import kotlin.reflect.KMutableProperty1
 
 /**
  * The implementation for [ISessionService] will continue a session as long as the app remains
@@ -45,6 +42,7 @@ internal class SessionService(
     private val time: ITime,
     private val featureManager: IFeatureManager,
     private val identityModelStore: IdentityModelStore,
+    private val sessionsApiQueue: ISessionsApiQueue,
 ) : ISessionService, IBootstrapService, IStartableService, IBackgroundService, IApplicationLifecycleHandler {
     override val startTime: Long
         // Pre-bootstrap default returns "now" so call sites computing `_time.currentTimeMillis - startTime`
@@ -81,47 +79,6 @@ internal class SessionService(
 
     override fun start() {
         applicationService.addApplicationLifecycleHandler(this)
-        identityModelStore.subscribe(PinnedLocalIdTranslator(IdentityConstants.ONESIGNAL_ID, SessionModel::onesignalId))
-        // Login before the anonymous user is created carries the local push subscription over to
-        // the new user, so its backend ID belongs to that user, not the one pinned on this session.
-        configModelStore.subscribe(
-            PinnedLocalIdTranslator(ConfigModel::pushSubscriptionId.name, SessionModel::subscriptionId) { session ->
-                val identityModel = identityModelStore.model
-                val currentOnesignalId = if (identityModel.hasProperty(IdentityConstants.ONESIGNAL_ID)) identityModel.onesignalId else null
-                session.onesignalId == currentOnesignalId
-            },
-        )
-    }
-
-    /**
-     * A session that starts before the user is created pins local IDs. When the backend replaces
-     * a local ID in place, carry it over to the pinned copy. Changes from a non-local ID, such as a
-     * login or user switch, leave the pinned IDs alone.
-     */
-    private inner class PinnedLocalIdTranslator<TModel : Model>(
-        private val sourceProperty: String,
-        private val pinnedId: KMutableProperty1<SessionModel, String?>,
-        private val appliesTo: (SessionModel) -> Boolean = { true },
-    ) : ISingletonModelStoreChangeHandler<TModel> {
-        override fun onModelReplaced(
-            model: TModel,
-            tag: String,
-        ) = Unit
-
-        override fun onModelUpdated(
-            args: ModelChangedArgs,
-            tag: String,
-        ) {
-            val localId =
-                (args.oldValue as? String)?.takeIf { args.property == sourceProperty && IDManager.isLocalId(it) }
-            val backendId = (args.newValue as? String)?.takeUnless { IDManager.isLocalId(it) }
-            if (localId == null || backendId == null) return
-
-            runOnSerialIO {
-                val session = this@SessionService.session ?: return@runOnSerialIO
-                if (pinnedId.get(session) == localId && appliesTo(session)) pinnedId.set(session, backendId)
-            }
-        }
     }
 
     /** NOTE: This triggers more often than scheduleBackgroundRunIn defined above,
@@ -129,21 +86,28 @@ internal class SessionService(
      * the SDK.
      */
     override suspend fun backgroundRun() {
-        endSession()
+        // Android 15+ blocks network access for cached background apps, so send the end while
+        // this job still runs. On timeout it stays queued and is sent on the next app open.
+        if (endSession()) withTimeoutOrNull(END_SEND_TIMEOUT_MS) { sessionsApiQueue.flush() }
     }
 
-    private fun endSession() {
+    /** Returns true if the session ended through the sessions API. */
+    private fun endSession(): Boolean {
         // Defensive: if bootstrap() has not run yet, there is no session state to end.
         // This can happen when SyncJobService races with
         // an in-flight initWithContext that has not yet reached bootstrapServices().
-        val session = this.session ?: return
-        if (!session.isValid) return
+        val session = this.session?.takeIf { it.isValid } ?: return false
         val activeDuration = session.activeDuration
         Logging.debug("SessionService.backgroundRun: Session ended. activeDuration: $activeDuration")
 
         session.isValid = false
+        if (session.usesSessionsApi) {
+            val endTime = maxOf(session.unfocusTime, session.focusTime)
+            sessionsApiQueue.enqueueUpdate(session.sessionId, activeDuration, endTime)
+        }
         sessionLifeCycleNotifier.fire { it.onSessionEnded(activeDuration) }
         session.activeDuration = 0L
+        return session.usesSessionsApi
     }
 
     /**
@@ -192,14 +156,9 @@ internal class SessionService(
             session.focusTime = session.startTime
             session.focusElapsedRealtime = focusElapsedMs
             session.usesSessionsApi = featureManager.isEnabled(FeatureFlag.SDK_SESSIONS_V2_API_CUTOVER)
-            session.onesignalId =
-                identityModelStore.model
-                    .takeIf { it.hasProperty(IdentityConstants.ONESIGNAL_ID) }
-                    ?.onesignalId
-            session.subscriptionId = config?.pushSubscriptionId
-            session.serverSessionId = null
             session.isValid = true
             Logging.debug("SessionService: New session started at ${session.startTime}")
+            if (session.usesSessionsApi) sessionsApiQueue.enqueueCreate(session, config, identityModelStore)
             sessionLifeCycleNotifier.fire { it.onSessionStarted() }
         } else {
             // existing session: just remember the focus time so we can calculate the active time
@@ -237,6 +196,7 @@ internal class SessionService(
                 unfocusTimeMs - session.focusTime
             }
         session.activeDuration += dt
+        session.unfocusTime = unfocusTimeMs
         Logging.log(LogLevel.DEBUG, "SessionService.onUnfocused adding time $dt for total: ${session.activeDuration}")
     }
 
@@ -250,4 +210,23 @@ internal class SessionService(
 
     override val hasSubscribers: Boolean
         get() = sessionLifeCycleNotifier.hasSubscribers
+
+    private companion object {
+        const val END_SEND_TIMEOUT_MS = 30_000L
+    }
+}
+
+private fun ISessionsApiQueue.enqueueCreate(
+    session: SessionModel,
+    config: ConfigModel?,
+    identityModelStore: IdentityModelStore,
+) {
+    val appId = config?.appId
+    val onesignalId = identityModelStore.model.takeIf { it.hasProperty(IdentityConstants.ONESIGNAL_ID) }?.onesignalId
+    val subscriptionId = config?.pushSubscriptionId
+    if (appId == null || onesignalId == null || subscriptionId == null) {
+        Logging.warn("SessionService: not creating session ${session.sessionId}, missing an app, user, or subscription ID")
+        return
+    }
+    enqueueCreate(session.sessionId, appId, onesignalId, subscriptionId, session.startTime)
 }

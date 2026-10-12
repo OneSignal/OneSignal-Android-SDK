@@ -78,30 +78,12 @@ class SessionModel : Model() {
         }
 
     /**
-     * The OneSignal ID when this session started. Session updates keep using it after a
-     * login or user switch.
+     * When this app was last unfocused, in Unix time milliseconds. Earlier than [focusTime] if
+     * the app was killed while focused.
      */
-    var onesignalId: String?
-        get() = getOptStringProperty(::onesignalId.name)
+    var unfocusTime: Long
+        get() = getLongProperty(::unfocusTime.name) { 0L }
         set(value) {
-            setOptStringProperty(::onesignalId.name, value)
-        }
-
-    /**
-     * The push subscription ID when this session started. Pinned like [onesignalId].
-     */
-    var subscriptionId: String?
-        get() = getOptStringProperty(::subscriptionId.name)
-        set(value) {
-            setOptStringProperty(::subscriptionId.name, value)
-        }
-
-    /**
-     * Null until the sessions API creates this session. Cleared when a new session starts.
-     */
-    var serverSessionId: String?
-        get() = getOptStringProperty(::serverSessionId.name)
-        set(value) {
-            setOptStringProperty(::serverSessionId.name, value)
+            setLongProperty(::unfocusTime.name, value)
         }
 }
