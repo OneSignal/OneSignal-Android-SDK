@@ -3,6 +3,9 @@ package com.onesignal.core.internal.operations.impl
 import com.onesignal.common.modeling.ModelStore
 import com.onesignal.core.internal.operations.Operation
 import com.onesignal.core.internal.preferences.IPreferencesService
+import com.onesignal.core.internal.preferences.PreferenceOneSignalKeys
+import com.onesignal.core.internal.preferences.PreferenceStores
+import com.onesignal.core.internal.time.ITime
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.user.internal.operations.CreateSubscriptionOperation
 import com.onesignal.user.internal.operations.DeleteAliasOperation
@@ -29,9 +32,35 @@ import com.onesignal.user.internal.operations.impl.executors.SubscriptionOperati
 import com.onesignal.user.internal.operations.impl.executors.UpdateUserOperationExecutor
 import org.json.JSONObject
 
-internal class OperationModelStore(prefs: IPreferencesService) : ModelStore<Operation>("operations", prefs) {
+internal class OperationModelStore(
+    private val prefs: IPreferencesService,
+    private val time: ITime,
+) : ModelStore<Operation>(STORE_NAME, prefs) {
+    /** Set by [create] while [load] runs, since [load] only re-persists when the store already held models. */
+    private var stampedAtLoad = false
+
     fun loadOperations() {
+        discardOversizedStore()
+        stampedAtLoad = false
         load()
+        if (stampedAtLoad) {
+            persist()
+        }
+    }
+
+    /**
+     * Resets a persisted array over [MAX_PERSISTED_LENGTH] characters instead of parsing it, login and
+     * subscription operations included. The queue cap keeps a store written by this SDK below it unless
+     * custom event payloads are very large.
+     */
+    private fun discardOversizedStore() {
+        val key = PreferenceOneSignalKeys.MODEL_STORE_PREFIX + STORE_NAME
+        val length = prefs.getString(PreferenceStores.ONESIGNAL, key, "[]")?.length ?: 0
+        if (length <= MAX_PERSISTED_LENGTH) {
+            return
+        }
+        Logging.error("OperationModelStore: discarding a persisted operation queue of $length characters, over the $MAX_PERSISTED_LENGTH limit")
+        prefs.saveString(PreferenceStores.ONESIGNAL, key, "[]")
     }
 
     override fun create(jsonObject: JSONObject?): Operation? {
@@ -69,6 +98,12 @@ internal class OperationModelStore(prefs: IPreferencesService) : ModelStore<Oper
         // populate the operation with the data.
         operation.initializeFromJson(jsonObject)
 
+        // Persisted before createdAt existed, so its clock starts now.
+        if (operation.createdAt == null) {
+            operation.createdAt = time.currentTimeMillis
+            stampedAtLoad = true
+        }
+
         return operation
     }
 
@@ -100,5 +135,10 @@ internal class OperationModelStore(prefs: IPreferencesService) : ModelStore<Oper
         }
 
         return true
+    }
+
+    companion object {
+        const val STORE_NAME = "operations"
+        const val MAX_PERSISTED_LENGTH = 1_048_576
     }
 }

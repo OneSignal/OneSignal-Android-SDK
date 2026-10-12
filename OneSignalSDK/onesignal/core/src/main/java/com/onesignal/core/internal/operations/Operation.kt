@@ -28,6 +28,16 @@ abstract class Operation(name: String) : Model() {
         }
 
     /**
+     * Unix milliseconds when [IOperationRepo] took this operation, set with its [id]. Null until then.
+     * The store stamps an operation persisted before this existed with its load time.
+     */
+    var createdAt: Long?
+        get() = getOptLongProperty(::createdAt.name)
+        internal set(value) {
+            setOptLongProperty(::createdAt.name, value)
+        }
+
+    /**
      * Whether this operation requires a valid JWT when Identity Verification is active.
      * Subclasses may override to `false` for endpoints that don't require auth.
      */

@@ -48,6 +48,7 @@ private class Mocks {
                 ExecutorMocks.getNewRecordState(configModelStore),
                 JwtTokenStore(MockPreferencesService()),
                 CoreInternalMocks.identityVerificationService(),
+                MockHelper.identityModelStore(),
             ),
         )
 

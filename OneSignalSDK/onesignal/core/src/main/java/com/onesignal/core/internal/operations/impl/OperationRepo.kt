@@ -14,9 +14,20 @@ import com.onesignal.core.internal.startup.IStartableService
 import com.onesignal.core.internal.time.ITime
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
+import com.onesignal.user.internal.identity.IdentityModelStore
 import com.onesignal.user.internal.jwt.JwtRequirement
 import com.onesignal.user.internal.jwt.JwtTokenStore
+import com.onesignal.user.internal.operations.DeleteAliasOperation
+import com.onesignal.user.internal.operations.DeleteTagOperation
 import com.onesignal.user.internal.operations.LoginUserOperation
+import com.onesignal.user.internal.operations.RefreshUserOperation
+import com.onesignal.user.internal.operations.SetAliasOperation
+import com.onesignal.user.internal.operations.SetPropertyOperation
+import com.onesignal.user.internal.operations.SetTagOperation
+import com.onesignal.user.internal.operations.TrackCustomEventOperation
+import com.onesignal.user.internal.operations.TrackPurchaseOperation
+import com.onesignal.user.internal.operations.TrackSessionEndOperation
+import com.onesignal.user.internal.operations.TrackSessionStartOperation
 import com.onesignal.user.internal.operations.impl.states.NewRecordsState
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -36,6 +47,7 @@ internal class OperationRepo(
     private val _newRecordState: NewRecordsState,
     private val _jwtTokenStore: JwtTokenStore,
     private val _identityVerificationService: IdentityVerificationService,
+    private val _identityModelStore: IdentityModelStore,
 ) : IOperationRepo, IStartableService {
 
     internal class OperationQueueItem(
@@ -140,6 +152,7 @@ internal class OperationRepo(
         Logging.log(LogLevel.DEBUG, "OperationRepo.enqueue(operation: $operation, flush: $flush)")
 
         operation.id = UUID.randomUUID().toString()
+        operation.createdAt = _time.currentTimeMillis
         scope.launch {
             internalEnqueue(OperationQueueItem(operation, bucket = enqueueIntoBucket), flush, true)
         }
@@ -154,6 +167,7 @@ internal class OperationRepo(
         Logging.log(LogLevel.DEBUG, "OperationRepo.enqueueAndWait(operation: $operation, force: $flush)")
 
         operation.id = UUID.randomUUID().toString()
+        operation.createdAt = _time.currentTimeMillis
         val waiter = WaiterWithValue<Boolean>()
         scope.launch {
             internalEnqueue(OperationQueueItem(operation, waiter, bucket = enqueueIntoBucket), flush, true)
@@ -233,6 +247,30 @@ internal class OperationRepo(
                     }
                     return
                 }
+            }
+
+            // One refresh per user is enough: UserRefreshService enqueues one every session, and a parked queue would hold them all.
+            if (op is RefreshUserOperation) {
+                val existing =
+                    queue.firstOrNull {
+                        it.operation is RefreshUserOperation && it.operation.onesignalId == op.onesignalId
+                    }
+                if (existing != null) {
+                    Logging.debug("OperationRepo: internalEnqueue - RefreshUserOperation for onesignalId: ${op.onesignalId} already exists in the queue.")
+                    if (queueItem.waiter != null && existing.waiter == null) {
+                        existing.waiter = queueItem.waiter
+                    } else {
+                        queueItem.waiter?.wake(true)
+                    }
+                    if (!addToStore) {
+                        _operationModelStore.remove(queueItem.operation.id)
+                    }
+                    return
+                }
+            }
+
+            if (!makeRoomFor(queueItem)) {
+                return
             }
 
             if (index != null) {
@@ -458,6 +496,7 @@ internal class OperationRepo(
                 synchronized(queue) {
                     for (op in response.operations.reversed()) {
                         op.id = UUID.randomUUID().toString()
+                        op.createdAt = _time.currentTimeMillis
                         val queueItem = OperationQueueItem(op, bucket = 0)
                         queue.add(0, queueItem)
                         _operationModelStore.add(0, queueItem.operation)
@@ -528,6 +567,8 @@ internal class OperationRepo(
         if (_configModelStore.model.useIdentityVerification == JwtRequirement.UNKNOWN) {
             return null
         }
+
+        dropStaleOperations()
 
         // Snapshot gate state once per pass so all queue items see the same IV view.
         val newCodePathsRun = _identityVerificationService.newCodePathsRun
@@ -604,7 +645,14 @@ internal class OperationRepo(
      */
     internal fun loadSavedOperations() {
         _operationModelStore.loadOperations()
+        val now = _time.currentTimeMillis
         for (operation in _operationModelStore.list().reversed()) {
+            // Never enqueued, and gone from the store.
+            if (isStale(operation, now)) {
+                Logging.debug("OperationRepo: dropped stale ${describe(operation, now)} at load")
+                _operationModelStore.remove(operation.id)
+                continue
+            }
             internalEnqueue(
                 OperationQueueItem(operation, bucket = enqueueIntoBucket),
                 flush = false,
@@ -614,4 +662,101 @@ internal class OperationRepo(
         }
         initialized.complete(Unit)
     }
+
+    /**
+     * Drops every queued operation past its age limit, at the top of each [getNextOps] pass once the
+     * Identity Verification requirement is known, whether or not it could execute.
+     */
+    private fun dropStaleOperations() {
+        val now = _time.currentTimeMillis
+        val stale =
+            synchronized(queue) {
+                val stale = queue.filter { isStale(it.operation, now) }
+                queue.removeAll(stale)
+                stale
+            }
+        for (item in stale) {
+            Logging.debug("OperationRepo: dropped stale ${describe(item.operation, now)}")
+        }
+        dropAndWake(stale)
+    }
+
+    /**
+     * Call inside the queue lock. At [ConfigModel.opRepoMaxQueueSize], drops the oldest operation the
+     * age limits cover, [incoming] included, which prunes an over-cap store to the cap at load. With
+     * nothing droppable queued, [incoming] is added anyway. Retries and executor-returned operations go
+     * straight back into the queue, so they can overshoot the cap by one batch.
+     *
+     * @return whether to add [incoming].
+     */
+    private fun makeRoomFor(incoming: OperationQueueItem): Boolean {
+        val cap = _configModelStore.model.opRepoMaxQueueSize
+        if (queue.size < cap) {
+            return true
+        }
+
+        val droppable = queue.filter { isAgingRuleOperation(it.operation) }
+        if (droppable.isEmpty()) {
+            Logging.warn("OperationRepo: the queue holds ${queue.size} operations and none can be dropped, adding ${incoming.operation.name}")
+            return true
+        }
+
+        val candidates = if (isAgingRuleOperation(incoming.operation)) droppable + incoming else droppable
+        val oldest = candidates.minBy { it.operation.createdAt ?: Long.MAX_VALUE }
+        queue.remove(oldest)
+        _operationModelStore.remove(oldest.operation.id)
+        oldest.waiter?.wake(false)
+        Logging.debug("OperationRepo: the queue is at $cap, dropped the oldest ${describe(oldest.operation, _time.currentTimeMillis)}")
+        return oldest !== incoming
+    }
+
+    /** The operations the age limits and the queue cap cover. */
+    private fun isAgingRuleOperation(op: Operation): Boolean =
+        when (op) {
+            is SetTagOperation, is DeleteTagOperation, is SetPropertyOperation,
+            is TrackSessionStartOperation, is TrackSessionEndOperation, is TrackPurchaseOperation,
+            is TrackCustomEventOperation, is SetAliasOperation, is DeleteAliasOperation,
+            -> true
+            else -> false
+        }
+
+    /** The age limit in milliseconds for [op], null when it never ages out. */
+    private fun maxAge(op: Operation): Long? {
+        if (!isAgingRuleOperation(op)) {
+            return null
+        }
+        val config = _configModelStore.model
+        val limits = mutableListOf<Long>()
+        when (op) {
+            is TrackCustomEventOperation -> limits.add(config.opRepoCustomEventOpMaxAge)
+            is SetAliasOperation, is DeleteAliasOperation -> Unit
+            else -> limits.add(config.opRepoPropertyOpMaxAge)
+        }
+        val owner = op.externalId
+        if (owner != null && owner != _identityModelStore.model.externalId) {
+            limits.add(config.opRepoNonCurrentUserOpMaxAge)
+        }
+        return limits.minOrNull()
+    }
+
+    private fun isStale(
+        op: Operation,
+        now: Long,
+    ): Boolean {
+        val limit = maxAge(op) ?: return false
+        return ageOf(op, now) > limit
+    }
+
+    /** A [Operation.createdAt] ahead of the clock, or none, reads as age zero. */
+    private fun ageOf(
+        op: Operation,
+        now: Long,
+    ): Long = max(0L, now - (op.createdAt ?: now))
+
+    private fun describe(
+        op: Operation,
+        now: Long,
+    ): String = "${op.name} owned by ${op.externalId}, ${ageOf(op, now) / MILLIS_PER_DAY} days old"
 }
+
+private const val MILLIS_PER_DAY = 86_400_000L
