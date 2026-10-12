@@ -251,6 +251,16 @@ interface IOneSignal {
     )
 
     /**
+     * Login with [externalId] plus [profile]. Email/SMS create or transfer that address; an alias owned elsewhere fails the request.
+     * Create User upsert (anonymous is not merged). Same id is a no-op once a backend ID exists. Failure still leaves this identity local.
+     */
+    suspend fun login(
+        externalId: String,
+        profile: OneSignalUserProfile,
+        jwtBearerToken: String? = null,
+    ): OneSignalResult<LoginData>
+
+    /**
      * Logout the current user (suspend version).
      */
     suspend fun logoutSuspend()
