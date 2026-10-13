@@ -52,6 +52,7 @@ import com.onesignal.user.internal.jwt.JwtTokenStore
 import com.onesignal.user.internal.properties.PropertiesModelStore
 import com.onesignal.user.internal.resolveAppId
 import com.onesignal.user.internal.subscriptions.SubscriptionModelStore
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.runBlocking
@@ -836,7 +837,14 @@ internal class OneSignalImp : IOneSignal,
                 return@withContext OneSignalResult.failure(ErrorCode.INVALID_ARGUMENT, it)
             }
 
-            suspendUntilInit(operationName = "login")
+            try {
+                suspendUntilInit(operationName = "login")
+            } catch (e: CancellationException) {
+                // A subclass of IllegalStateException, so it must be rethrown before the catch below.
+                throw e
+            } catch (e: IllegalStateException) {
+                return@withContext OneSignalResult.failure(ErrorCode.NOT_INITIALIZED, e.message, cause = e)
+            }
 
             if (isMissing(externalId, "login: externalId")) {
                 return@withContext OneSignalResult.failure(

@@ -1,11 +1,14 @@
 package com.onesignal.internal
 
+import com.onesignal.ErrorCode
+import com.onesignal.OneSignalUserProfile
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import io.kotest.assertions.throwables.shouldThrowUnit
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.runBlocking
 import java.lang.reflect.InvocationTargetException
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
@@ -365,5 +368,17 @@ class OneSignalImpTests : FunSpec({
         // - waitForInit() throws for NOT_STARTED/FAILED states, waits indefinitely for IN_PROGRESS
 
         // This test documents this behavior without actually waiting indefinitely
+    }
+
+    test("composite login returns NOT_INITIALIZED when init failed") {
+        val os = OneSignalImp()
+        setPrivateField(os, "initState", InitState.FAILED)
+        setPrivateField(os, "initFailureException", IllegalStateException("OneSignal initWithContext failed."))
+
+        val result = runBlocking { os.login("user", OneSignalUserProfile()) }
+
+        result.isSuccess shouldBe false
+        result.error!!.first.code shouldBe ErrorCode.NOT_INITIALIZED
+        result.error!!.first.message shouldBe "OneSignal initWithContext failed."
     }
 })
