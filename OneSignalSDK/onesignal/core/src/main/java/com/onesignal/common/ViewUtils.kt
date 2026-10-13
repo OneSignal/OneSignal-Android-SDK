@@ -9,6 +9,7 @@ import android.graphics.Rect
 import android.os.Build
 import android.view.View
 import android.view.Window
+import android.view.WindowInsets
 import kotlin.math.roundToInt
 
 object ViewUtils {
@@ -62,6 +63,52 @@ object ViewUtils {
     }
 
     fun getCutoutAndStatusBarInsets(activity: Activity): IntArray {
+        val windowInsets = activity.window.decorView.rootWindowInsets
+        if (windowInsets != null) {
+            return cutoutAndStatusBarInsetsDp(windowInsets)
+        }
+        return legacyCutoutAndStatusBarInsets(activity)
+    }
+
+    internal fun cutoutAndStatusBarInsetsDp(windowInsets: WindowInsets): IntArray {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            val insets =
+                windowInsets.getInsets(
+                    WindowInsets.Type.systemBars() or WindowInsets.Type.displayCutout(),
+                )
+            return intArrayOf(
+                pxToDp(insets.top),
+                pxToDp(insets.bottom),
+                pxToDp(insets.right),
+                pxToDp(insets.left),
+            )
+        }
+        return stableInsetsToDp(windowInsets)
+    }
+
+    // stableInset stops at the nav bar. systemWindowInsetBottom also includes the keyboard.
+    @Suppress("DEPRECATION")
+    private fun stableInsetsToDp(windowInsets: WindowInsets): IntArray {
+        var top = windowInsets.stableInsetTop
+        var bottom = windowInsets.stableInsetBottom
+        var left = windowInsets.stableInsetLeft
+        var right = windowInsets.stableInsetRight
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            windowInsets.displayCutout?.let { cutout ->
+                top = maxOf(top, cutout.safeInsetTop)
+                bottom = maxOf(bottom, cutout.safeInsetBottom)
+                left = maxOf(left, cutout.safeInsetLeft)
+                right = maxOf(right, cutout.safeInsetRight)
+            }
+        }
+        return intArrayOf(pxToDp(top), pxToDp(bottom), pxToDp(right), pxToDp(left))
+    }
+
+    private fun pxToDp(px: Int): Int {
+        return (px / Resources.getSystem().displayMetrics.density).roundToInt()
+    }
+
+    private fun legacyCutoutAndStatusBarInsets(activity: Activity): IntArray {
         val frame = getWindowVisibleDisplayFrame(activity)
         val contentView = activity.window.findViewById<View>(Window.ID_ANDROID_CONTENT)
         var rightInset = 0f
@@ -69,8 +116,7 @@ object ViewUtils {
         val topInset = (frame.top - contentView.top) / Resources.getSystem().displayMetrics.density
         val bottomInset =
             (contentView.bottom - frame.bottom) / Resources.getSystem().displayMetrics.density
-        // API 29 is the only version where the IAM bleeds under cutouts in immersize mode
-        // All other versions will not need left and right insets.
+        // This fallback only reads side cutouts on API 29.
         if (Build.VERSION.SDK_INT == Build.VERSION_CODES.Q) {
             val cutout = activity.windowManager.defaultDisplay.cutout
             if (cutout != null) {

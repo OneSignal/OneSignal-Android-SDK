@@ -1,6 +1,7 @@
 package com.onesignal.inAppMessages.internal.display
 
 import android.app.Activity
+import android.util.Base64
 import android.view.View
 import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
 import com.onesignal.core.internal.application.IApplicationService
@@ -333,6 +334,35 @@ class WebViewManagerDismissCleanupTests : FunSpec({
         manager.onActivityAvailable(activityB)
 
         getMessageViewField(manager).shouldNotBeNull()
+    }
+
+    test("encoded page includes the safe area script after the html") {
+        val activity = Robolectric.buildActivity(Activity::class.java).setup().get()
+        val content =
+            InAppMessageContent(
+                JSONObject()
+                    .put("html", "<html><body>page</body></html>")
+                    .put("display_duration", 0),
+            )
+        val manager =
+            WebViewManager(
+                InAppMessage("test-iam", MockHelper.time(1)),
+                activity,
+                content,
+                mockk(relaxed = true),
+                mockApplicationService(activity),
+                mockk(relaxed = true),
+            )
+
+        val html =
+            String(
+                Base64.decode(manager.encodedPage(content, activity), Base64.NO_WRAP),
+                Charsets.UTF_8,
+            )
+
+        (html.indexOf("page") < html.indexOf("setSafeAreaInsets")) shouldBe true
+        html.contains("typeof setSafeAreaInsets") shouldBe true
+        content.isFullBleed shouldBe false
     }
 
     test("full-bleed WebView lays out behind system bars without hiding navigation, then cleans up") {

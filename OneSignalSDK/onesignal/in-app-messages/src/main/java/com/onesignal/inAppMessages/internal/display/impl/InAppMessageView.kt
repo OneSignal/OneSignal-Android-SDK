@@ -11,6 +11,8 @@ import android.os.Build
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
+import android.view.WindowInsets
+import android.view.WindowInsetsController
 import android.view.WindowManager
 import android.view.animation.Animation
 import android.webkit.WebView
@@ -25,6 +27,38 @@ import com.onesignal.common.threading.withMain
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.inAppMessages.internal.InAppMessageContent
 import kotlinx.coroutines.delay
+
+internal fun copyHostSystemBarVisibility(
+    hostDecor: View,
+    popupDecor: View,
+) {
+    if (popupDecor === hostDecor) return
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+        val controller = popupDecor.windowInsetsController ?: return
+        val hostInsets = hostDecor.rootWindowInsets ?: return
+        val statusBars = WindowInsets.Type.statusBars()
+        val navigationBars = WindowInsets.Type.navigationBars()
+        if (hostInsets.isVisible(statusBars)) {
+            controller.show(statusBars)
+        } else {
+            controller.hide(statusBars)
+        }
+        if (hostInsets.isVisible(navigationBars)) {
+            controller.show(navigationBars)
+        } else {
+            controller.hide(navigationBars)
+        }
+        val hostController = hostDecor.windowInsetsController ?: return
+        controller.systemBarsBehavior = hostController.systemBarsBehavior
+        val appearanceMask =
+            WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS or
+                WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS
+        controller.setSystemBarsAppearance(hostController.systemBarsAppearance, appearanceMask)
+        return
+    }
+    @Suppress("DEPRECATION")
+    popupDecor.systemUiVisibility = hostDecor.systemUiVisibility
+}
 
 /**
  * Layout Documentation
@@ -316,6 +350,10 @@ internal class InAppMessageView(
             gravity,
             0,
             0,
+        )
+        copyHostSystemBarVisibility(
+            currentActivity!!.window.decorView,
+            parentRelativeLayout.rootView,
         )
     }
 

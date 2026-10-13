@@ -5,6 +5,7 @@ import android.app.Activity
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.util.Base64
 import android.view.View
 import android.view.ViewGroup
 import android.webkit.JavascriptInterface
@@ -288,9 +289,7 @@ internal class WebViewManager(
             // At time point the webView isn't attached to a view
             // Set the WebView to the max screen size then run JS to evaluate the height.
             setWebViewToMaxSize(activity, localWebView)
-            if (messageContent.isFullBleed) {
-                updateSafeAreaInsets()
-            }
+            updateSafeAreaInsets()
 
             localWebView.evaluateJavascript(GET_PAGE_META_DATA_JS_FUNCTION) { value ->
                 evaluatePageMetaDataForHeight(value)
@@ -675,6 +674,17 @@ internal class WebViewManager(
         }
     }
 
+    internal fun encodedPage(
+        content: InAppMessageContent,
+        activity: Activity,
+    ): String {
+        setContentSafeAreaInsets(content, activity)
+        return Base64.encodeToString(
+            content.contentHtml!!.toByteArray(charset("UTF-8")),
+            Base64.NO_WRAP,
+        )
+    }
+
     fun setContentSafeAreaInsets(
         content: InAppMessageContent,
         activity: Activity,
@@ -712,7 +722,8 @@ internal class WebViewManager(
 
         const val JS_OBJ_NAME = "OSAndroid"
         const val GET_PAGE_META_DATA_JS_FUNCTION = "getPageMetaData()"
-        const val SET_SAFE_AREA_INSETS_JS_FUNCTION = "setSafeAreaInsets(%s)"
+        const val SET_SAFE_AREA_INSETS_JS_FUNCTION =
+            "if (typeof setSafeAreaInsets === 'function') { setSafeAreaInsets(%s); }"
         const val SAFE_AREA_JS_OBJECT =
             "{\n" +
                 "   top: %d,\n" +
@@ -723,7 +734,7 @@ internal class WebViewManager(
         const val SET_SAFE_AREA_INSETS_SCRIPT =
             "\n\n" +
                 "<script>\n" +
-                "    setSafeAreaInsets(%s);\n" +
+                "    if (typeof setSafeAreaInsets === 'function') { setSafeAreaInsets(%s); }\n" +
                 "</script>"
         const val EVENT_TYPE_KEY = "type"
         const val EVENT_TYPE_RENDERING_COMPLETE = "rendering_complete"

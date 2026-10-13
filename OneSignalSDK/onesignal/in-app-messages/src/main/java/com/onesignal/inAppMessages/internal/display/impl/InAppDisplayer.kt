@@ -3,7 +3,6 @@ package com.onesignal.inAppMessages.internal.display.impl
 import android.annotation.TargetApi
 import android.app.Activity
 import android.os.Build
-import android.util.Base64
 import com.onesignal.common.threading.withMain
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.config.ConfigModelStore
@@ -126,11 +125,6 @@ internal class InAppDisplayer(
         content: InAppMessageContent,
     ): Boolean {
         try {
-            val base64Str =
-                Base64.encodeToString(
-                    content.contentHtml!!.toByteArray(charset("UTF-8")),
-                    Base64.NO_WRAP,
-                )
             val webViewManager = WebViewManager(message, currentActivity, content, _lifecycle, _applicationService, _promptFactory)
             // Clear lastInstance on every dismiss path so OSWebView cannot retain a destroyed Activity
             webViewManager.onDismissed = {
@@ -138,9 +132,8 @@ internal class InAppDisplayer(
             }
             lastInstance.set(webViewManager)
 
-            if (content.isFullBleed) {
-                webViewManager.setContentSafeAreaInsets(content, currentActivity)
-            }
+            // Encode after the inset script is appended. loadData only sees this string.
+            val base64Str = webViewManager.encodedPage(content, currentActivity)
 
             // Web view must be created on the main thread.
             val setUp =
