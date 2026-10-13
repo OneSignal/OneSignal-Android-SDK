@@ -4,11 +4,14 @@ import com.onesignal.ErrorCode
 import com.onesignal.OneSignalUserProfile
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
+import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.assertions.throwables.shouldThrowUnit
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import java.lang.reflect.InvocationTargetException
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
@@ -380,5 +383,15 @@ class OneSignalImpTests : FunSpec({
         result.isSuccess shouldBe false
         result.error!!.first.code shouldBe ErrorCode.NOT_INITIALIZED
         result.error!!.first.message shouldBe "OneSignal initWithContext failed."
+    }
+
+    test("composite login propagates cancellation while waiting for init") {
+        val os = OneSignalImp()
+        setPrivateField(os, "initState", InitState.IN_PROGRESS)
+        setPrivateField(os, "suspendCompletion", CompletableDeferred<Unit>())
+
+        shouldThrow<TimeoutCancellationException> {
+            runBlocking { withTimeout(200) { os.login("user", OneSignalUserProfile()) } }
+        }
     }
 })

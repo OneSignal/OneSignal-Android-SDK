@@ -837,14 +837,7 @@ internal class OneSignalImp : IOneSignal,
                 return@withContext OneSignalResult.failure(ErrorCode.INVALID_ARGUMENT, it)
             }
 
-            try {
-                suspendUntilInit(operationName = "login")
-            } catch (e: CancellationException) {
-                // A subclass of IllegalStateException, so it must be rethrown before the catch below.
-                throw e
-            } catch (e: IllegalStateException) {
-                return@withContext OneSignalResult.failure(ErrorCode.NOT_INITIALIZED, e.message, cause = e)
-            }
+            awaitInitForLogin()?.let { return@withContext it }
 
             if (isMissing(externalId, "login: externalId")) {
                 return@withContext OneSignalResult.failure(
@@ -874,6 +867,18 @@ internal class OneSignalImp : IOneSignal,
                 )
             }
             OneSignalResult.success(loginHelper.loginData(externalId, profile, fallbackOnesignalId = switched.onesignalId))
+        }
+
+    /** Waits for init; returns a NOT_INITIALIZED failure instead of throwing when it never started or failed. */
+    private suspend fun awaitInitForLogin(): OneSignalResult<LoginData>? =
+        try {
+            suspendUntilInit(operationName = "login")
+            null
+        } catch (e: CancellationException) {
+            // A subclass of IllegalStateException, so it must be rethrown before the catch below.
+            throw e
+        } catch (e: IllegalStateException) {
+            OneSignalResult.failure(ErrorCode.NOT_INITIALIZED, e.message, cause = e)
         }
 
     private fun loginFailureMessage(wait: OperationWaitResult): String =
