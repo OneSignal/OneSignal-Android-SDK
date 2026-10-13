@@ -22,43 +22,40 @@ class FCMBroadcastReceiver : BroadcastReceiver() {
             return
         }
 
-        runIngressHandoff(
+        runOrderedIngressHandoff(
             "FCMBroadcastReceiver",
             BroadcastCompletion.RECONSTRUCTIBLE_WORK_TIMEOUT_MS,
-        ) {
+        ) { ordered, pendingResult ->
             if (!isFCMMessage(intent)) {
-                setSuccessfulResultCode()
-                return@runIngressHandoff
+                setSuccessfulResultCode(pendingResult, ordered)
+                return@runOrderedIngressHandoff
             }
 
             if (NotificationIngress.persistFcm(context, intent, bundle)) {
-                setAbort()
+                setAbort(pendingResult, ordered)
             } else {
-                setSuccessfulResultCode()
+                setSuccessfulResultCode(pendingResult, ordered)
             }
         }
     }
 
-    private fun setSuccessfulResultCode() {
-        if (isOrderedBroadcast) {
-            resultCode = Activity.RESULT_OK
+    private fun setSuccessfulResultCode(
+        pendingResult: BroadcastReceiver.PendingResult?,
+        ordered: Boolean,
+    ) {
+        if (ordered && pendingResult != null) {
+            pendingResult.resultCode = Activity.RESULT_OK
         }
     }
 
-    private fun setAbort() {
-        if (isOrderedBroadcast) {
-            // Prevents other BroadcastReceivers from firing
-            abortBroadcast()
-
-            // TODO: Previous error and related to this Github issue ticket
-            //    https://github.com/OneSignal/OneSignal-Android-SDK/issues/307
-            // RESULT_OK prevents the following confusing logcat entry;
-            // W/GCM: broadcast intent callback: result=CANCELLED forIntent {
-            //    act=com.google.android.c2dm.intent.RECEIVE
-            //    flg=0x10000000
-            //    pkg=com.onesignal.sdktest (has extras)
-            // }
-            resultCode = Activity.RESULT_OK
+    private fun setAbort(
+        pendingResult: BroadcastReceiver.PendingResult?,
+        ordered: Boolean,
+    ) {
+        if (ordered && pendingResult != null) {
+            // Stops the other FCM receivers. RESULT_OK avoids the GCM result=CANCELLED log.
+            pendingResult.abortBroadcast()
+            pendingResult.resultCode = Activity.RESULT_OK
         }
     }
 

@@ -1,8 +1,7 @@
 package com.onesignal.common.events
 
 import com.onesignal.common.threading.suspendifyOnMain
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import com.onesignal.common.threading.withMain
 
 /**
  * A standard implementation that implements [ICallbackNotifier] and additional functionality to
@@ -71,7 +70,7 @@ open class CallbackProducer<THandler>() : ICallbackNotifier<THandler> {
      */
     suspend fun suspendingFireOnMain(callback: suspend (THandler) -> Unit) {
         if (this.callback != null) {
-            withContext(Dispatchers.Main) {
+            withMain {
                 callback(this@CallbackProducer.callback!!)
             }
         }

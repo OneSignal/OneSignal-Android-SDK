@@ -595,6 +595,88 @@ class SDKInitTests : FunSpec({
         }
     }
 
+    test("initWithContextSuspend returns once init is SUCCESS even when the IO dispatcher is saturated") {
+        // Observing a terminal SUCCESS must not require an IO worker.
+        val context = getApplicationContext<Context>()
+        val os = OneSignalImp()
+
+        os.initWithContext(context, "appId")
+        waitForInitialization(os)
+
+        withSaturatedOneSignalIo {
+            val result = arrayOfNulls<Boolean>(1)
+            runOnThreadAndWait { result[0] = runBlocking { os.initWithContextSuspend(context, "appId") } }
+
+            result[0] shouldBe true
+        }
+    }
+
+    test("initWithContextSuspend awaiting an in-flight init does not need an IO worker") {
+        // Waiting on another caller's init must not queue behind the work that init is doing,
+        // otherwise a caller arriving while init is IN_PROGRESS stalls until the pool drains.
+        val context = getApplicationContext<Context>()
+        val os = OneSignalImp()
+
+        val started = CountDownLatch(1)
+        val trigger = CountDownLatch(1)
+        val blockingCtx =
+            object : ContextWrapper(context) {
+                override fun getSharedPreferences(name: String, mode: Int): SharedPreferences {
+                    started.countDown()
+                    trigger.await(30, TimeUnit.SECONDS)
+                    return super.getSharedPreferences(name, mode)
+                }
+            }
+
+        // Hold init at IN_PROGRESS, then fill the pool so no worker is left for a second caller.
+        os.initWithContext(blockingCtx, "appId")
+        started.await(5, TimeUnit.SECONDS) shouldBe true
+        os.isInitialized shouldBe false
+
+        // The stalled init already holds one worker, so one more blocking task fills the pool
+        // and the rest back up the queue.
+        val release = CountDownLatch(1)
+        val occupied = CountDownLatch(1)
+        repeat(4) {
+            OneSignalDispatchers.launchOnIO {
+                occupied.countDown()
+                release.await(30, TimeUnit.SECONDS)
+            }
+        }
+
+        try {
+            occupied.await(5, TimeUnit.SECONDS) shouldBe true
+
+            val startedWaiting = CountDownLatch(1)
+            val waiter =
+                Thread {
+                    runBlocking {
+                        startedWaiting.countDown()
+                        os.initWithContextSuspend(context, "appId")
+                    }
+                }
+            waiter.isDaemon = true
+            waiter.start()
+
+            startedWaiting.await(5, TimeUnit.SECONDS) shouldBe true
+            Thread.sleep(200)
+            // Still blocked, because the init it is waiting on has not been released yet.
+            waiter.isAlive shouldBe true
+
+            trigger.countDown()
+
+            // Resuming is driven by the latch, not by a free worker, so this completes while
+            // the queued tasks above still own the pool.
+            waiter.join(5_000)
+            waiter.isAlive shouldBe false
+        } finally {
+            trigger.countDown()
+            release.countDown()
+        }
+
+        os.isInitialized shouldBe true
+    }
+
     test("login should throw exception when initWithContext is never called") {
         // Given
         val oneSignalImp = OneSignalImp()

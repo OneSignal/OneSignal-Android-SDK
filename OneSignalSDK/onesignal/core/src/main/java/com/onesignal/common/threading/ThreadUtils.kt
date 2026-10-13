@@ -2,9 +2,14 @@ package com.onesignal.common.threading
 
 import com.onesignal.debug.internal.logging.Logging
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.withContext
+import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.coroutines.EmptyCoroutineContext
 
 /**
  * Modernized ThreadUtils that leverages OneSignalDispatchers for better thread management.
@@ -26,10 +31,8 @@ import kotlinx.coroutines.withContext
  */
 fun suspendifyOnMain(block: suspend () -> Unit) {
     OneSignalDispatchers.launchOnIO {
-        try {
-            withContext(Dispatchers.Main) { block() }
-        } catch (e: Exception) {
-            Logging.error("Exception in suspendifyOnMain", e)
+        catchSuspendifyFailure("suspendifyOnMain") {
+            withMain { block() }
         }
     }
 }
@@ -65,11 +68,16 @@ fun suspendifyOnIngress(
         } catch (e: Exception) {
             Logging.error("Exception in suspendifyOnIngress", e)
             return@launchOnIngress
+        } catch (e: LinkageError) {
+            Logging.error("LinkageError in suspendifyOnIngress", e)
+            return@launchOnIngress
         }
         try {
             onSuccess()
         } catch (e: Exception) {
             Logging.error("Exception in suspendifyOnIngress onSuccess", e)
+        } catch (e: LinkageError) {
+            Logging.error("LinkageError in suspendifyOnIngress onSuccess", e)
         }
     }
 }
@@ -94,10 +102,8 @@ fun suspendifyOnDefault(block: suspend () -> Unit) {
  */
 fun suspendifyOnSerialIO(block: suspend () -> Unit) {
     OneSignalDispatchers.launchOnSerialIO {
-        try {
+        catchSuspendifyFailure("suspendifyOnSerialIO") {
             block()
-        } catch (e: Exception) {
-            Logging.error("Exception in suspendifyOnSerialIO", e)
         }
     }
 }
@@ -118,10 +124,8 @@ private fun suspendify(
     val launch: (suspend () -> Unit) -> Job =
         if (useIO) OneSignalDispatchers::launchOnIO else OneSignalDispatchers::launchOnDefault
     launch {
-        try {
+        catchSuspendifyFailure("suspendify") {
             block()
-        } catch (e: Exception) {
-            Logging.error("Exception in suspendify", e)
         }
     }
 }
@@ -147,6 +151,9 @@ fun suspendifyWithErrorHandling(
         } catch (e: Exception) {
             Logging.error("Exception in suspendifyWithErrorHandling", e)
             onError?.invoke(e)
+        } catch (e: LinkageError) {
+            Logging.error("LinkageError in suspendifyWithErrorHandling", e)
+            onError?.invoke(Exception(e))
         }
     }
 }
@@ -160,10 +167,8 @@ fun suspendifyWithErrorHandling(
  */
 fun launchOnIO(block: suspend () -> Unit): Job {
     return OneSignalDispatchers.launchOnIO {
-        try {
+        catchSuspendifyFailure("launchOnIO") {
             block()
-        } catch (e: Exception) {
-            Logging.error("Exception in launchOnIO", e)
         }
     }
 }
@@ -177,10 +182,74 @@ fun launchOnIO(block: suspend () -> Unit): Job {
  */
 fun launchOnDefault(block: suspend () -> Unit): Job {
     return OneSignalDispatchers.launchOnDefault {
-        try {
+        catchSuspendifyFailure("launchOnDefault") {
             block()
-        } catch (e: Exception) {
-            Logging.error("Exception in launchOnDefault", e)
         }
     }
+}
+
+/**
+ * LinkageError is not an Exception. NoSuchMethodError and ExceptionInInitializerError
+ * skip `catch (Exception)` and kill the process.
+ */
+private suspend fun catchSuspendifyFailure(
+    label: String,
+    block: suspend () -> Unit,
+) {
+    try {
+        block()
+    } catch (e: Exception) {
+        Logging.error("Exception in $label", e)
+    } catch (e: LinkageError) {
+        Logging.error("LinkageError in $label", e)
+    }
+}
+
+private val mainDispatcherReported = AtomicBoolean(false)
+
+/**
+ * Null when the main thread cannot be reached. Reading [Dispatchers.Main] proves nothing: with no
+ * Main module, coroutines returns a stub that only fails when dispatched to.
+ */
+fun mainDispatcherOrNull(): CoroutineDispatcher? = usableMainDispatcher { Dispatchers.Main }
+
+internal fun usableMainDispatcher(resolve: () -> CoroutineDispatcher): CoroutineDispatcher? {
+    val main =
+        try {
+            resolve()
+        } catch (e: LinkageError) {
+            reportMainDispatcherUnavailable(e)
+            return null
+        }
+
+    return try {
+        // Probe rather than dispatch. The stub throws here, and a real Main answers without
+        // scheduling anything, so a cancelled caller is never mistaken for a missing Main.
+        @OptIn(ExperimentalCoroutinesApi::class)
+        main.isDispatchNeeded(EmptyCoroutineContext)
+        main
+    } catch (e: IllegalStateException) {
+        reportMainDispatcherUnavailable(e)
+        null
+    } catch (e: LinkageError) {
+        reportMainDispatcherUnavailable(e)
+        null
+    }
+}
+
+private fun reportMainDispatcherUnavailable(cause: Throwable) {
+    if (mainDispatcherReported.compareAndSet(false, true)) {
+        Logging.error("Dispatchers.Main unavailable, skipping main thread work", cause)
+    } else {
+        Logging.debug("Dispatchers.Main unavailable, skipping main thread work")
+    }
+}
+
+/**
+ * Null when the main thread cannot be reached. A nullable [block] result is indistinguishable from
+ * a skip, so callers that need to tell them apart should check [mainDispatcherOrNull] themselves.
+ */
+suspend fun <T> withMain(block: suspend CoroutineScope.() -> T): T? {
+    val main = mainDispatcherOrNull() ?: return null
+    return withContext(main, block)
 }

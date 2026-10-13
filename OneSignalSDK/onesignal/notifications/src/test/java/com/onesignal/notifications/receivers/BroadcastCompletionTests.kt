@@ -7,6 +7,9 @@ import io.kotest.matchers.shouldBe
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicReference
 
 @RobolectricTest
 class BroadcastCompletionTests : FunSpec({
@@ -22,13 +25,18 @@ class BroadcastCompletionTests : FunSpec({
 
     test("reconstructible work finishes at its deadline") {
         val pendingResult = mockk<BroadcastReceiver.PendingResult>(relaxed = true)
-        var finishThread = ""
+        val finishThread = AtomicReference<String?>(null)
+        val finished = CountDownLatch(1)
         every { pendingResult.finish() } answers {
-            finishThread = Thread.currentThread().name
+            finishThread.set(Thread.currentThread().name)
+            finished.countDown()
         }
         BroadcastCompletion("test", pendingResult, 50)
 
-        verify(exactly = 1, timeout = 1_000) { pendingResult.finish() }
-        finishThread shouldBe "OS_BroadcastDeadline"
+        // Wait on the answer, not on mockk: verify(timeout) returns once the call is recorded,
+        // which can be before the answer above has run.
+        finished.await(5, TimeUnit.SECONDS) shouldBe true
+        finishThread.get() shouldBe "OS_BroadcastDeadline"
+        verify(exactly = 1) { pendingResult.finish() }
     }
 })

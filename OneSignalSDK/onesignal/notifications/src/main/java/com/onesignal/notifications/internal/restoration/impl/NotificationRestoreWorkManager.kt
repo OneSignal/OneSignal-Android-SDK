@@ -78,6 +78,10 @@ internal class NotificationRestoreWorkManager : INotificationRestoreWorkManager 
             } catch (e: Exception) {
                 onEnqueueFailed()
                 throw e
+            } catch (e: LinkageError) {
+                // NoSuchMethodError is not an Exception, so clear the flag here too.
+                onEnqueueFailed()
+                throw e
             }
         }
 

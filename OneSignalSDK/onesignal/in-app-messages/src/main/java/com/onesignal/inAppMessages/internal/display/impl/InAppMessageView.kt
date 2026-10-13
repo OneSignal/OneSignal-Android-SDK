@@ -21,11 +21,10 @@ import com.onesignal.common.AndroidUtils
 import com.onesignal.common.ViewUtils
 import com.onesignal.common.threading.Waiter
 import com.onesignal.common.threading.suspendifyOnIO
+import com.onesignal.common.threading.withMain
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.inAppMessages.internal.InAppMessageContent
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.withContext
 
 /**
  * Layout Documentation
@@ -140,15 +139,15 @@ internal class InAppMessageView(
     suspend fun updateHeight(pageHeight: Int) {
         this.pageHeight = pageHeight
 
-        withContext(Dispatchers.Main) {
+        withMain {
             if (webView == null) {
                 Logging.warn("WebView height update skipped, new height will be used once it is displayed.")
-                return@withContext
+                return@withMain
             }
             val layoutParams = webView!!.layoutParams
             if (layoutParams == null) {
                 Logging.warn("WebView height update skipped because of null layoutParams, new height will be used once it is displayed.")
-                return@withContext
+                return@withMain
             }
             layoutParams.height = pageHeight
             // We only need to update the WebView size since it's parent layouts are set to
@@ -257,9 +256,9 @@ internal class InAppMessageView(
         draggableRelativeLayoutParams: RelativeLayout.LayoutParams?,
         webViewLayoutParams: DraggableRelativeLayout.Params,
     ) {
-        withContext(Dispatchers.Main) {
+        withMain {
             if (webView == null) {
-                return@withContext
+                return@withMain
             }
 
             webView!!.layoutParams = relativeLayoutParams
@@ -473,13 +472,20 @@ internal class InAppMessageView(
      * when using smoothSlideViewTo on Android 4.4
      */
     private suspend fun finishAfterDelay() {
-        withContext(Dispatchers.Main) {
-            delay(ACTIVITY_FINISH_AFTER_DISMISS_DELAY_MS.toLong())
-            if (hasBackground && parentRelativeLayout != null) {
-                animateAndDismissLayout(parentRelativeLayout!!)
-            } else {
-                cleanupViewsAfterDismiss()
+        val finished =
+            withMain {
+                delay(ACTIVITY_FINISH_AFTER_DISMISS_DELAY_MS.toLong())
+                if (hasBackground && parentRelativeLayout != null) {
+                    animateAndDismissLayout(parentRelativeLayout!!)
+                } else {
+                    cleanupViewsAfterDismiss()
+                }
             }
+
+        if (finished == null) {
+            // This is the only path to onMessageWasDismissed, so the queue would stall otherwise.
+            Logging.error("Could not animate the in app message dismiss, counting it as dismissed")
+            messageController?.onMessageWasDismissed()
         }
     }
 

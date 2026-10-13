@@ -21,7 +21,7 @@ internal class UserBackendService(
         appId: String,
         identities: Map<String, String>,
         subscriptions: List<SubscriptionObject>,
-        properties: Map<String, String>,
+        properties: PropertiesObject,
         jwt: String?,
     ): CreateUserResponse {
         val requestJSON = JSONObject()
@@ -35,8 +35,8 @@ internal class UserBackendService(
                 .put("subscriptions", JSONConverter.convertToJSON(subscriptions))
         }
 
-        if (properties.isNotEmpty()) {
-            requestJSON.put("properties", JSONObject().putMap(properties))
+        if (properties.hasAtLeastOnePropertySet) {
+            requestJSON.put("properties", JSONConverter.convertToJSON(properties))
         }
 
         requestJSON.put("refresh_device_metadata", true)

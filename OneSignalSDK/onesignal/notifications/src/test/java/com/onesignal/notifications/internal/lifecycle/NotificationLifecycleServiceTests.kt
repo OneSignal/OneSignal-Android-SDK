@@ -2,8 +2,10 @@ package com.onesignal.notifications.internal.lifecycle
 
 import android.app.Activity
 import android.content.Context
+import android.content.Intent
 import androidx.test.core.app.ApplicationProvider
 import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
+import com.onesignal.common.threading.withMain
 import com.onesignal.core.internal.application.impl.ApplicationService
 import com.onesignal.core.internal.device.IDeviceService
 import com.onesignal.debug.LogLevel
@@ -12,18 +14,26 @@ import com.onesignal.mocks.MockHelper
 import com.onesignal.notifications.INotificationClickListener
 import com.onesignal.notifications.internal.analytics.IAnalyticsTracker
 import com.onesignal.notifications.internal.backend.INotificationBackendService
+import com.onesignal.notifications.internal.common.GenerateNotificationOpenIntentFromPushPayload
 import com.onesignal.notifications.internal.lifecycle.impl.NotificationLifecycleService
 import com.onesignal.notifications.internal.receivereceipt.IReceiveReceiptWorkManager
 import com.onesignal.notifications.shadows.ShadowRoboNotificationManager
 import com.onesignal.session.internal.influence.IInfluenceManager
 import com.onesignal.user.internal.subscriptions.ISubscriptionManager
 import com.onesignal.user.subscriptions.IPushSubscription
+import io.kotest.assertions.throwables.shouldNotThrowAny
 import io.kotest.core.spec.style.FunSpec
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.mockkObject
+import io.mockk.mockkStatic
 import io.mockk.spyk
+import io.mockk.unmockkObject
+import io.mockk.unmockkStatic
+import io.mockk.verify
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withTimeout
 import org.json.JSONArray
@@ -48,8 +58,8 @@ private class Mocks {
             mockSubManager
         }
 
-    val notificationLifecycleService =
-        spyk(
+    val realNotificationLifecycleService =
+        run {
             NotificationLifecycleService(
                 applicationService,
                 MockHelper.time(0),
@@ -72,8 +82,11 @@ private class Mocks {
                 mockk<IAnalyticsTracker>().apply {
                     every { trackOpenedEvent(any(), any()) } returns Unit
                 },
-            ),
-        )
+            )
+        }
+
+    // A spy is a generated subclass, so tests that need the real class covered use the instance above.
+    val notificationLifecycleService = spyk(realNotificationLifecycleService)
 
     val activity: Activity =
         run {
@@ -203,4 +216,48 @@ class NotificationLifecycleServiceTests : FunSpec({
             )
         }
     }
+
+    test("a LinkageError building the open intent stays inside openDestinationActivity") {
+        val mocks = Mocks()
+        mockkObject(GenerateNotificationOpenIntentFromPushPayload)
+        try {
+            every { GenerateNotificationOpenIntentFromPushPayload.create(any(), any()) } throws
+                NoSuchMethodError("OSNotificationOpenBehaviorFromPushPayload")
+
+            // The caller is a click handler on the main thread, so an escape here kills the app.
+            shouldNotThrowAny {
+                mocks.realNotificationLifecycleService.openDestinationActivity(mocks.activity, openPayload())
+            }
+        } finally {
+            unmockkObject(GenerateNotificationOpenIntentFromPushPayload)
+        }
+    }
+
+    test("openDestinationActivity does not start the activity when the main thread is unavailable") {
+        val mocks = Mocks()
+        val threadUtilsPath = "com.onesignal.common.threading.ThreadUtilsKt"
+        val activity = spyk(mocks.activity)
+        mockkObject(GenerateNotificationOpenIntentFromPushPayload)
+        mockkStatic(threadUtilsPath)
+        try {
+            every { GenerateNotificationOpenIntentFromPushPayload.create(any(), any()) } returns
+                mockk { every { getIntentVisible() } returns Intent() }
+            coEvery { withMain(any<suspend CoroutineScope.() -> Unit>()) } returns null
+
+            mocks.realNotificationLifecycleService.openDestinationActivity(activity, openPayload())
+
+            verify(exactly = 0) { activity.startActivity(any()) }
+        } finally {
+            unmockkStatic(threadUtilsPath)
+            unmockkObject(GenerateNotificationOpenIntentFromPushPayload)
+        }
+    }
 })
+
+private fun openPayload(): JSONArray =
+    JSONArray()
+        .put(
+            JSONObject()
+                .put("alert", "test message")
+                .put("custom", JSONObject().put("i", "UUID1")),
+        )

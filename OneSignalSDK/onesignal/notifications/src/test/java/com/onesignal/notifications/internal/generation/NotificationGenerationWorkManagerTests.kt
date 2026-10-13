@@ -1,12 +1,16 @@
 package com.onesignal.notifications.internal.generation
 
+import android.content.Context
 import androidx.work.Data
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.notifications.internal.common.NotificationRestoreReason
 import com.onesignal.notifications.internal.generation.impl.NotificationGenerationWorkManager
+import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import io.mockk.mockk
+import org.json.JSONObject
 
 class NotificationGenerationWorkManagerTests : FunSpec({
     beforeAny {
@@ -49,5 +53,18 @@ class NotificationGenerationWorkManagerTests : FunSpec({
                 .build()
 
         NotificationGenerationWorkManager.readRestoreReason(data) shouldBe NotificationRestoreReason.SHADE_RESTORE
+    }
+
+    test("enqueue failure forgets the notification id so a later delivery can retry") {
+        val manager = NotificationGenerationWorkManager()
+        val context = mockk<Context>(relaxed = true)
+        val json = JSONObject().put("custom", JSONObject().put("i", "notif-1").toString())
+
+        shouldThrow<Throwable> {
+            manager.beginEnqueueingWork(context, "notif-1", 1, json, 1L, null, false)
+        }
+        shouldThrow<Throwable> {
+            manager.beginEnqueueingWork(context, "notif-1", 1, json, 1L, null, false)
+        }
     }
 })

@@ -496,6 +496,25 @@ class LocationManagerTests : FunSpec({
         // Exception should be caught and logged (tested indirectly through no crash)
     }
 
+    test("requestPermission reports failure when the main thread is unavailable") {
+        // Given
+        mocks.setFineLocationPermission(true)
+        val locationManager = mocks.locationManager
+
+        // When: no Main dispatcher, so the prompt cannot be shown at all
+        Dispatchers.resetMain()
+        val result =
+            try {
+                locationManager.requestPermission()
+            } finally {
+                Dispatchers.setMain(UnconfinedTestDispatcher())
+            }
+
+        // Then
+        result shouldBe false
+        coVerify(exactly = 0) { mocks.permissionController.prompt(any(), any()) }
+    }
+
     test("startGetLocation does nothing when isShared is false") {
         // Given
         val mockLocationController = mocks.locationController

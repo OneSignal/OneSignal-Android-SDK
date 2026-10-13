@@ -32,6 +32,7 @@ import android.os.Build
 import androidx.annotation.ChecksSdkIntAtLeast
 import com.onesignal.common.AndroidUtils
 import com.onesignal.common.events.EventProducer
+import com.onesignal.common.threading.InFlightResult
 import com.onesignal.common.threading.Waiter
 import com.onesignal.common.threading.WaiterWithValue
 import com.onesignal.common.threading.launchOnIO
@@ -46,6 +47,7 @@ import com.onesignal.core.internal.permissions.IRequestPermissionService
 import com.onesignal.core.internal.preferences.IPreferencesService
 import com.onesignal.core.internal.preferences.PreferenceOneSignalKeys
 import com.onesignal.core.internal.preferences.PreferenceStores
+import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.notifications.R
 import com.onesignal.notifications.internal.common.NotificationHelper
 import com.onesignal.notifications.internal.permissions.INotificationPermissionChangedHandler
@@ -62,10 +64,40 @@ internal class NotificationPermissionController(
 ) : IRequestPermissionService.PermissionCallback,
     INotificationPermissionController {
     private val waiter = WaiterWithValue<Boolean>()
+    private val inFlightPrompt = InFlightResult<Boolean>()
     private val pollingWaiter = Waiter()
     private var pollingWaitInterval: Long
     private val events = EventProducer<INotificationPermissionChangedHandler>()
     private var enabled: Boolean
+
+    @Volatile
+    private var notificationsSeenEnabled = false
+
+    // Without a native prompt, disabled may be an OEM default (e.g. Huawei) whose own prompt is on screen, so a
+    // fresh install's first session never shows our dialog while notifications were never seen enabled.
+    // An app update means the app launched before; unknown install times count as fresh.
+    private val defersSettingsFallbackThisSession: Boolean by lazy {
+        val firstSession =
+            _preferenceService.getBool(
+                PreferenceStores.ONESIGNAL,
+                PreferenceOneSignalKeys.PREFS_OS_NOTIFICATION_SETTINGS_FALLBACK_ALLOWED,
+                false,
+            ) != true
+        if (firstSession) {
+            _preferenceService.saveBool(
+                PreferenceStores.ONESIGNAL,
+                PreferenceOneSignalKeys.PREFS_OS_NOTIFICATION_SETTINGS_FALLBACK_ALLOWED,
+                true,
+            )
+        }
+        val context = _application.appContext
+        val freshInstall =
+            runCatching {
+                val info = context.packageManager.getPackageInfo(context.packageName, 0)
+                info.firstInstallTime == info.lastUpdateTime
+            }.getOrDefault(true)
+        firstSession && freshInstall
+    }
 
     override val canRequestPermission: Boolean
         get() =
@@ -77,6 +109,7 @@ internal class NotificationPermissionController(
 
     init {
         this.enabled = notificationsEnabled()
+        notificationsSeenEnabled = this.enabled
         _requestPermission.registerAsCallback(PERMISSION_TYPE, this)
         pollingWaitInterval = _configModelStore.model.backgroundFetchNotificationPermissionInterval
         registerPollingLifecycleListener()
@@ -111,8 +144,15 @@ internal class NotificationPermissionController(
     }
 
     private suspend fun pollForPermission() {
+        // Decided at startup, not at the first prompt, so a later session's prompt is never deferred.
+        if (defersSettingsFallbackThisSession) {
+            Logging.debug("NotificationPermissionController: first session, settings fallback may be deferred if notifications stay disabled")
+        }
         while (true) {
             val enabled = this.notificationsEnabled()
+            if (enabled) {
+                notificationsSeenEnabled = true
+            }
             if (this.enabled != enabled) { // If the permission has changed without prompting through OneSignal
                 this.enabled = enabled
                 events.fire { it.onNotificationPermissionChanged(enabled) }
@@ -135,16 +175,7 @@ internal class NotificationPermissionController(
     }
 
     /**
-     * Prompt the user for notification permission.  Note it is possible the application
-     * will be killed while the permission prompt is being displayed to the user. When the
-     * app restarts it will begin with the permission prompt.  In this case this suspending
-     * function has been killed as well, the permission callbacks should be used to cover
-     * that case.
-     *
-     * @return true if permissions are enabled. False if they are not enabled, null if the user
-     * was directed to the permission settings and could not be determined at this time. When this
-     * does happen, the app will detect the permissions on app focus and drive permission callbacks
-     * to notify of the status.
+     * A second call joins the prompt already on screen. Starting another would resolve the first.
      */
     override suspend fun prompt(fallbackToSettings: Boolean): Boolean {
         // Calling yield() to force a suspension point because Kotlin Continuation won't work
@@ -152,25 +183,32 @@ internal class NotificationPermissionController(
         yield()
 
         if (notificationsEnabled()) {
+            notificationsSeenEnabled = true
             return true
         }
 
-        if (supportsNativePrompt) {
-            _requestPermission.startPrompt(
-                fallbackToSettings,
-                PERMISSION_TYPE,
-                ANDROID_PERMISSION_STRING,
-                this::class.java,
-            )
-        } else if (fallbackToSettings) {
-            showFallbackAlertDialog()
-        } else {
+        if (!supportsNativePrompt && !fallbackToSettings) {
             return false
         }
 
-        // this won't return until onAccept or onReject sends the response on the channel (either
-        // through the native prompt or through the fallback)
-        return waiter.waitForWake()
+        if (!supportsNativePrompt && defersSettingsFallbackThisSession && !notificationsSeenEnabled) {
+            Logging.info("NotificationPermissionController: notifications never seen enabled this session, settings fallback deferred")
+            return false
+        }
+
+        return inFlightPrompt.share(false) {
+            if (supportsNativePrompt) {
+                _requestPermission.startPrompt(
+                    fallbackToSettings,
+                    PERMISSION_TYPE,
+                    ANDROID_PERMISSION_STRING,
+                    this::class.java,
+                )
+            } else {
+                showFallbackAlertDialog()
+            }
+            waiter.waitForWake()
+        }
     }
 
     override fun subscribe(handler: INotificationPermissionChangedHandler) = events.subscribe(handler)

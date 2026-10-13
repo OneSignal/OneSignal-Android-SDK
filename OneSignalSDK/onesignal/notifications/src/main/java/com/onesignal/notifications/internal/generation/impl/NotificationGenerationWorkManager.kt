@@ -67,6 +67,10 @@ internal class NotificationGenerationWorkManager : INotificationGenerationWorkMa
         } catch (e: Exception) {
             removeNotificationIdProcessed(id)
             throw e
+        } catch (e: LinkageError) {
+            // The worker never starts when enqueue throws, so its finally will not drop this id.
+            removeNotificationIdProcessed(id)
+            throw e
         }
     }
 

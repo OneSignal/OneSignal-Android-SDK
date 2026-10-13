@@ -6,11 +6,10 @@ import android.app.PendingIntent.CanceledException
 import android.content.pm.PackageManager
 import com.google.android.gms.common.GoogleApiAvailability
 import com.onesignal.common.AndroidUtils
+import com.onesignal.common.threading.withMain
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.device.IDeviceService
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 
 internal class GooglePlayServicesUpgradePrompt(
     private val _applicationService: IApplicationService,
@@ -44,8 +43,8 @@ internal class GooglePlayServicesUpgradePrompt(
             return
         }
 
-        withContext(Dispatchers.Main) {
-            val activity = _applicationService.current ?: return@withContext
+        withMain {
+            val activity = _applicationService.current ?: return@withMain
 
             // Load resource strings so a developer can customize this dialog
             val alertBodyText =
