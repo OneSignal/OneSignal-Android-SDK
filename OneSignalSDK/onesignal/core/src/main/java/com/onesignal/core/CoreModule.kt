@@ -34,6 +34,7 @@ import com.onesignal.core.internal.language.impl.LanguageContext
 import com.onesignal.core.internal.operations.IOperationRepo
 import com.onesignal.core.internal.operations.impl.OperationModelStore
 import com.onesignal.core.internal.operations.impl.OperationRepo
+import com.onesignal.core.internal.operations.impl.OperationRetryTrigger
 import com.onesignal.core.internal.permissions.IRequestPermissionService
 import com.onesignal.core.internal.permissions.impl.RequestPermissionService
 import com.onesignal.core.internal.preferences.IPreferencesService
@@ -91,6 +92,7 @@ internal class CoreModule : IModule {
         builder.register<OperationRepo>()
             .provides<IOperationRepo>()
             .provides<IStartableService>()
+        builder.register<OperationRetryTrigger>().provides<IStartableService>()
 
         // Permissions
         builder.register<RequestPermissionService>()

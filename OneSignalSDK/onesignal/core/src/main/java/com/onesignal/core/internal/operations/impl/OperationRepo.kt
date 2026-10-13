@@ -27,7 +27,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.newSingleThreadContext
 import kotlinx.coroutines.withTimeoutOrNull
 import java.util.UUID
+import java.util.concurrent.TimeUnit
 import kotlin.math.max
+import kotlin.math.min
 import kotlin.reflect.KClass
 
 internal class OperationRepo(
@@ -46,6 +48,12 @@ internal class OperationRepo(
         val bucket: Int,
         var retries: Int = 0,
     ) {
+        // Backoff can be cut short by forceExecuteOperations; Retry-After cannot.
+        var backoffUntil: Long = 0
+        var retryAfterUntil: Long = 0
+
+        fun retryAt(): Long = max(backoffUntil, retryAfterUntil)
+
         val waiters = mutableListOf<WaiterWithValue<OperationWaitResult>>()
 
         @Volatile
@@ -78,7 +86,7 @@ internal class OperationRepo(
         }
 
         override fun toString(): String {
-            return "bucket:$bucket, retries:$retries, operation:$operation\n"
+            return "bucket:$bucket, retries:$retries, retryAt:${retryAt()}, operation:$operation\n"
         }
     }
 
@@ -99,7 +107,6 @@ internal class OperationRepo(
     internal val queue = mutableListOf<OperationQueueItem>()
     private val inFlightLogins = mutableMapOf<String, OperationQueueItem>()
     private val waiter = WaiterWithValue<LoopWaiterMessage>()
-    private val retryWaiter = WaiterWithValue<LoopWaiterMessage>()
     private var paused = false
     private val initialized = CompletableDeferred<Unit>()
 
@@ -328,7 +335,9 @@ internal class OperationRepo(
     }
 
     override fun forceExecuteOperations() {
-        retryWaiter.wake(LoopWaiterMessage(true))
+        synchronized(queue) {
+            queue.forEach { it.backoffUntil = 0 }
+        }
         waiter.wake(LoopWaiterMessage(false))
     }
 
@@ -393,8 +402,14 @@ internal class OperationRepo(
      *          with a budget.
      */
     private suspend fun waitForNewOperationAndExecutionInterval() {
-        // 1. Wait for an operation to be enqueued
-        var wakeMessage = waiter.waitForWake()
+        // 1. Wait for an operation to be enqueued, or for a backed-off one to become ready
+        val untilNextRetry = msUntilNextRetry()
+        var wakeMessage =
+            if (untilNextRetry == null) {
+                waiter.waitForWake()
+            } else {
+                withTimeoutOrNull(untilNextRetry) { waiter.waitForWake() } ?: LoopWaiterMessage(true)
+            }
 
         // 2. Now wait opRepoExecutionInterval, restart the wait
         //    time everytime something new is enqueued, to ensure
@@ -432,7 +447,6 @@ internal class OperationRepo(
                 response.idTranslations.values.forEach { _newRecordState.add(it) }
             }
 
-            var highestRetries = 0
             when (response.result) {
                 ExecutionResult.SUCCESS -> {
                     // on success we remove the operation from the store and wake any waiters
@@ -484,12 +498,15 @@ internal class OperationRepo(
                 }
                 ExecutionResult.FAIL_RETRY -> {
                     Logging.info("Operation execution failed, retrying: $operations")
-                    // add back all operations to the front of the queue to be re-executed.
+                    // Re-queue at the front with a per-op wait so unrelated ops keep running.
+                    val now = _time.currentTimeMillis
+                    val retryAfterMs = min(TimeUnit.SECONDS.toMillis((response.retryAfterSeconds ?: 0).toLong()), MAX_RETRY_DELAY_MS)
                     synchronized(queue) {
                         ops.reversed().forEach {
-                            if (++it.retries > highestRetries) {
-                                highestRetries = it.retries
-                            }
+                            it.retries++
+                            val backoffMs = min(it.retries * _configModelStore.model.opRepoDefaultFailRetryBackoff, MAX_RETRY_DELAY_MS)
+                            it.backoffUntil = now + backoffMs
+                            it.retryAfterUntil = now + retryAfterMs
                             queue.add(0, it)
                         }
                     }
@@ -524,8 +541,6 @@ internal class OperationRepo(
                 }
             }
 
-            // wait for retry and post create waiters to start next operation
-            delayBeforeNextExecution(highestRetries, response.retryAfterSeconds)
             if (response.idTranslations != null) {
                 delayForPostCreate(_configModelStore.model.opRepoPostCreateDelay)
             }
@@ -549,25 +564,6 @@ internal class OperationRepo(
     ) {
         ops.forEach { _operationModelStore.remove(it.operation.id) }
         ops.forEach { it.wakeWaiters(response.toWaitResult(false)) }
-    }
-
-    /**
-     * Wait which ever is longer, retryAfterSeconds returned by the server,
-     * or based on the retry count.
-     */
-    suspend fun delayBeforeNextExecution(
-        retries: Int,
-        retryAfterSeconds: Int?,
-    ) {
-        Logging.debug("retryAfterSeconds: $retryAfterSeconds")
-        val retryAfterSecondsNonNull = retryAfterSeconds?.toLong() ?: 0L
-        val delayForOnRetries = retries * _configModelStore.model.opRepoDefaultFailRetryBackoff
-        val delayFor = max(delayForOnRetries, retryAfterSecondsNonNull * 1_000)
-        if (delayFor < 1) return
-        Logging.debug("Operations being delay for: $delayFor ms")
-        withTimeoutOrNull(delayFor) {
-            retryWaiter.waitForWake()
-        }
     }
 
     /**
@@ -601,10 +597,18 @@ internal class OperationRepo(
         // Snapshot gate state once per pass so all queue items see the same IV view.
         val newCodePathsRun = _identityVerificationService.newCodePathsRun
         val ivBehaviorActive = _identityVerificationService.ivBehaviorActive
+        val now = _time.currentTimeMillis
         return synchronized(queue) {
+            // An op must not overtake an earlier op on the same record that is waiting to retry.
+            val waitingRecords = mutableSetOf<String>()
             val startingOp =
                 queue.firstOrNull {
-                    it.operation.canStartExecute &&
+                    if (it.retryAt() > now) {
+                        waitingRecords.add(it.operation.applyToRecordId)
+                        return@firstOrNull false
+                    }
+                    it.operation.applyToRecordId !in waitingRecords &&
+                        it.operation.canStartExecute &&
                         _newRecordState.canAccess(it.operation.applyToRecordId) &&
                         it.bucket <= bucketFilter &&
                         // Outer gate: skip IV JWT check entirely on old code path.
@@ -613,7 +617,7 @@ internal class OperationRepo(
 
             if (startingOp != null) {
                 queue.remove(startingOp)
-                val grouped = getGroupableOperations(startingOp)
+                val grouped = getGroupableOperations(startingOp, now)
                 grouped.forEach { item ->
                     val login = item.operation as? LoginUserOperation ?: return@forEach
                     inFlightLogins[login.onesignalId] = item
@@ -632,7 +636,10 @@ internal class OperationRepo(
      *
      * THIS SHOULD BE CALLED WHILE THE QUEUE IS SYNCHRONIZED!!
      */
-    private fun getGroupableOperations(startingOp: OperationQueueItem): List<OperationQueueItem> {
+    private fun getGroupableOperations(
+        startingOp: OperationQueueItem,
+        now: Long,
+    ): List<OperationQueueItem> {
         val ops = mutableListOf(startingOp)
 
         if (startingOp.operation.groupComparisonType == GroupComparisonType.NONE) {
@@ -646,7 +653,13 @@ internal class OperationRepo(
                 startingOp.operation.modifyComparisonKey
             }
 
+        val waitingRecords = mutableSetOf<String>()
         for (item in queue.toList()) {
+            if (item.retryAt() > now) {
+                waitingRecords.add(item.operation.applyToRecordId)
+                continue
+            }
+
             val itemKey =
                 if (startingOp.operation.groupComparisonType == GroupComparisonType.CREATE) {
                     item.operation.createComparisonKey
@@ -658,17 +671,23 @@ internal class OperationRepo(
                 throw Exception("Both comparison keys can not be blank!")
             }
 
-            if (!_newRecordState.canAccess(item.operation.applyToRecordId)) {
-                continue
-            }
-
-            if (itemKey == startingKey) {
+            if (itemKey == startingKey &&
+                _newRecordState.canAccess(item.operation.applyToRecordId) &&
+                item.operation.applyToRecordId !in waitingRecords
+            ) {
                 queue.remove(item)
                 ops.add(item)
             }
         }
 
         return ops
+    }
+
+    private fun msUntilNextRetry(): Long? {
+        val now = _time.currentTimeMillis
+        return synchronized(queue) {
+            queue.map { it.retryAt() }.filter { it > now }.minOrNull()?.let { it - now }
+        }
     }
 
     /**
@@ -687,5 +706,9 @@ internal class OperationRepo(
             )
         }
         initialized.complete(Unit)
+    }
+
+    companion object {
+        private val MAX_RETRY_DELAY_MS = TimeUnit.HOURS.toMillis(1)
     }
 }
