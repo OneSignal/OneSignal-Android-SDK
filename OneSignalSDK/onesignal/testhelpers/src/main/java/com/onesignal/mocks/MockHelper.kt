@@ -27,9 +27,18 @@ object MockHelper {
     fun time(time: Long): ITime {
         val mockTime = mockk<ITime>()
         every { mockTime.currentTimeMillis } returns time
+        every { mockTime.elapsedRealtimeMillis } returns time
 
         return mockTime
     }
+
+    /** Real clocks for JVM tests, where android.os.SystemClock is not available. */
+    fun systemTime(): ITime =
+        object : ITime {
+            override val currentTimeMillis: Long get() = System.currentTimeMillis()
+            override val processUptimeMillis: Long get() = System.nanoTime() / 1_000_000
+            override val elapsedRealtimeMillis: Long get() = System.nanoTime() / 1_000_000
+        }
 
     fun applicationService(): IApplicationService {
         val mockAppService = mockk<IApplicationService>()
@@ -49,7 +58,7 @@ object MockHelper {
         configModel.opRepoPostWakeDelay = 1
         configModel.opRepoPostCreateDelay = 1
         configModel.opRepoPostCreateRetryUpTo = 1
-        configModel.opRepoDefaultFailRetryBackoff = 1
+        configModel.opRepoBaseFailRetryBackoff = 1
         configModel.foregroundFetchNotificationPermissionInterval = 1
 
         configModel.appId = DEFAULT_APP_ID
