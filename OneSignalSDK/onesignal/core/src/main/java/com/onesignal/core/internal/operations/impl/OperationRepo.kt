@@ -490,10 +490,10 @@ internal class OperationRepo(
                     val followers = ops.filter { it != startingOp }
                     if (startingOp.operation is LoginUserOperation && followers.isNotEmpty()) {
                         _operationModelStore.remove(startingOp.operation.id)
-                        startingOp.wakeWaiters(response.toWaitResult(false))
                         synchronized(queue) {
                             followers.reversed().forEach { queue.add(0, it) }
                         }
+                        startingOp.wakeWaiters(response.toWaitResult(false))
                     } else {
                         dropAndWake(ops, response)
                     }
