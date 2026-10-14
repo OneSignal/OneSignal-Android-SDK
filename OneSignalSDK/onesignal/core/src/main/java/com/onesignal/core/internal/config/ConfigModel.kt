@@ -192,6 +192,15 @@ class ConfigModel : Model() {
         }
 
     /**
+     * The longest any retry waits, whether from backoff or a server Retry-After, in milliseconds.
+     */
+    var maxRetryDelay: Long
+        get() = getLongProperty(::maxRetryDelay.name) { 3_600_000 }
+        set(value) {
+            setLongProperty(::maxRetryDelay.name, value)
+        }
+
+    /**
      * How long [com.onesignal.core.internal.operations.IOperationRepo.enqueueAndAwaitResult] waits.
      * The operation stays queued after the waiter is released.
      */

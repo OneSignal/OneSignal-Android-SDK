@@ -15,4 +15,10 @@ interface ITime {
      * Returns how long the app has been running.
      */
     val processUptimeMillis: Long
+
+    /**
+     * Milliseconds since boot, including deep sleep. Unaffected by device clock changes, so use
+     * it for deadlines within this process.
+     */
+    val elapsedRealtimeMillis: Long
 }

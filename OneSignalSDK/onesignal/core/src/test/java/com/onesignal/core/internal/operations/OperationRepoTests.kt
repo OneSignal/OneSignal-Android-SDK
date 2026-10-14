@@ -8,7 +8,6 @@ import com.onesignal.core.internal.operations.impl.OperationRepo
 import com.onesignal.core.internal.operations.impl.OperationRepo.OperationQueueItem
 import com.onesignal.core.internal.preferences.PreferenceOneSignalKeys
 import com.onesignal.core.internal.preferences.PreferenceStores
-import com.onesignal.core.internal.time.impl.Time
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.mocks.CoreInternalMocks
@@ -38,6 +37,7 @@ import io.mockk.runs
 import io.mockk.slot
 import io.mockk.spyk
 import io.mockk.verify
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -90,7 +90,7 @@ private class Mocks {
                 listOf(executor),
                 operationModelStore,
                 configModelStore,
-                Time(),
+                MockHelper.systemTime(),
                 getNewRecordState(configModelStore),
                 jwtTokenStore,
                 identityVerificationService,
@@ -117,7 +117,7 @@ class OperationRepoTests : FunSpec({
                     listOf(mocks.executor),
                     operationModelStore,
                     mocks.configModelStore,
-                    Time(),
+                    MockHelper.systemTime(),
                     getNewRecordState(mocks.configModelStore),
                     JwtTokenStore(MockPreferencesService()),
                     CoreInternalMocks.identityVerificationService(),
@@ -1207,7 +1207,7 @@ class OperationRepoTests : FunSpec({
         val opRepo = mocks.operationRepo
         val waiting = mockOperation(groupComparisonType = GroupComparisonType.ALTER, applyToRecordId = "record-a")
         val starter = mockOperation(groupComparisonType = GroupComparisonType.ALTER, applyToRecordId = "record-b")
-        opRepo.queue.add(OperationQueueItem(waiting, bucket = 0).apply { backoffUntil = Long.MAX_VALUE })
+        opRepo.queue.add(OperationQueueItem(waiting, bucket = 0).apply { retryAt = Long.MAX_VALUE })
         opRepo.queue.add(OperationQueueItem(starter, bucket = 0))
 
         // When
@@ -1218,38 +1218,84 @@ class OperationRepoTests : FunSpec({
         opRepo.queue.map { it.operation } shouldBe listOf(waiting)
     }
 
-    test("Retry-After is capped at one hour") {
+    test("Retry-After is capped by maxRetryDelay") {
         // Given
         val mocks = Mocks()
         val opRepo = mocks.operationRepo
         coEvery { mocks.executor.execute(any()) } returns ExecutionResponse(ExecutionResult.FAIL_RETRY, retryAfterSeconds = 10 * 60 * 60)
 
         // When
-        val before = System.currentTimeMillis()
+        val before = System.nanoTime() / 1_000_000
         opRepo.executeOperations(listOf(OperationQueueItem(mockOperation(), bucket = 0)))
-        val after = System.currentTimeMillis()
+        val after = System.nanoTime() / 1_000_000
 
         // Then
-        val retryAfterUntil = opRepo.queue.single().retryAfterUntil
-        (retryAfterUntil >= before + 60 * 60 * 1_000L) shouldBe true
-        (retryAfterUntil <= after + 60 * 60 * 1_000L) shouldBe true
+        val retryAt = opRepo.queue.single().retryAt
+        (retryAt >= before + 60 * 60 * 1_000L) shouldBe true
+        (retryAt <= after + 60 * 60 * 1_000L) shouldBe true
     }
 
-    test("forceExecuteOperations ends backoff but still honors Retry-After") {
+    test("forceExecuteOperations ends the wait of retrying operations") {
         // Given
         val mocks = Mocks()
-        mocks.configModelStore.model.opRepoDefaultFailRetryBackoff = 60_000
         val opRepo = mocks.operationRepo
-        val backedOff = OperationQueueItem(mockOperation(), bucket = 0).apply { backoffUntil = Long.MAX_VALUE }
-        val rateLimited = OperationQueueItem(mockOperation(), bucket = 0).apply { retryAfterUntil = Long.MAX_VALUE }
-        opRepo.queue.addAll(listOf(backedOff, rateLimited))
+        val waiting = OperationQueueItem(mockOperation(), bucket = 0).apply { retryAt = Long.MAX_VALUE }
+        opRepo.queue.add(waiting)
 
         // When
         opRepo.forceExecuteOperations()
 
         // Then
-        backedOff.retryAt() shouldBe 0
-        rateLimited.retryAt() shouldBe Long.MAX_VALUE
+        waiting.retryAt shouldBe 0
+    }
+
+    test("forceExecuteOperations skips the batching wait when it ends a retry wait") {
+        // Given
+        val mocks = Mocks()
+        mocks.configModelStore.model.opRepoDefaultFailRetryBackoff = 60_000
+        val opRepo = mocks.operationRepo
+        var attempts = 0
+        val retried = CompletableDeferred<Unit>()
+        coEvery { mocks.executor.execute(any()) } answers {
+            if (attempts++ == 0) {
+                ExecutionResponse(ExecutionResult.FAIL_RETRY)
+            } else {
+                retried.complete(Unit)
+                ExecutionResponse(ExecutionResult.SUCCESS)
+            }
+        }
+        opRepo.start()
+        opRepo.enqueue(mockOperation())
+        mocks.waitForInternalEnqueue()
+        withTimeoutOrNull(1_000) { while (opRepo.queue.firstOrNull()?.retries != 1) delay(10) }
+        mocks.configModelStore.model.opRepoExecutionInterval = 60_000
+
+        // When
+        opRepo.forceExecuteOperations()
+
+        // Then
+        withTimeoutOrNull(1_000) { retried.await() } shouldBe Unit
+    }
+
+    test("a force during execute skips the next backoff but keeps Retry-After") {
+        // Given
+        val mocks = Mocks()
+        mocks.configModelStore.model.opRepoDefaultFailRetryBackoff = 60_000
+        val opRepo = mocks.operationRepo
+        coEvery { mocks.executor.execute(any()) } answers {
+            opRepo.forceExecuteOperations()
+            ExecutionResponse(ExecutionResult.FAIL_RETRY, retryAfterSeconds = 30)
+        }
+
+        // When
+        val before = System.nanoTime() / 1_000_000
+        opRepo.executeOperations(listOf(OperationQueueItem(mockOperation(), bucket = 0)))
+        val after = System.nanoTime() / 1_000_000
+
+        // Then
+        val retryAt = opRepo.queue.single().retryAt
+        (retryAt >= before + 30_000) shouldBe true
+        (retryAt <= after + 30_000) shouldBe true
     }
 
     test("ensure forceExecuteOperations immediately wakes retry waiters") {

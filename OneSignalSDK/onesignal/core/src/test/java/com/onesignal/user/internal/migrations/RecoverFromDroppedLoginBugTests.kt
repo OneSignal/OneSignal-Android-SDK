@@ -2,7 +2,6 @@ package com.onesignal.user.internal.migrations
 
 import com.onesignal.core.internal.operations.impl.OperationModelStore
 import com.onesignal.core.internal.operations.impl.OperationRepo
-import com.onesignal.core.internal.time.impl.Time
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.mocks.CoreInternalMocks
@@ -44,7 +43,7 @@ private class Mocks {
                 listOf(),
                 operationModelStore,
                 configModelStore,
-                Time(),
+                MockHelper.systemTime(),
                 ExecutorMocks.getNewRecordState(configModelStore),
                 JwtTokenStore(MockPreferencesService()),
                 CoreInternalMocks.identityVerificationService(),

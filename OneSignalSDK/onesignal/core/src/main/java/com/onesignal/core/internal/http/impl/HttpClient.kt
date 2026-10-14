@@ -15,6 +15,7 @@ import com.onesignal.core.internal.http.IHttpClient
 import com.onesignal.core.internal.preferences.IPreferencesService
 import com.onesignal.core.internal.preferences.PreferenceOneSignalKeys
 import com.onesignal.core.internal.preferences.PreferenceStores
+import com.onesignal.core.internal.time.ITime
 import com.onesignal.debug.internal.logging.Logging
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.withTimeout
@@ -24,7 +25,9 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.net.UnknownHostException
 import java.util.Scanner
+import java.util.concurrent.TimeUnit
 import javax.net.ssl.HttpsURLConnection
+import kotlin.math.min
 
 internal const val HTTP_SDK_VERSION_HEADER_KEY = "SDK-Version"
 internal val HTTP_SDK_VERSION_HEADER_VALUE = "onesignal/android/${OneSignalUtils.sdkVersion}"
@@ -33,9 +36,17 @@ internal class HttpClient(
     private val _connectionFactory: IHttpConnectionFactory,
     private val _prefs: IPreferencesService,
     private val _configModelStore: ConfigModelStore,
+    private val _time: ITime,
     private val _installIdService: IInstallIdService,
     private val _fidEnv: IFidEnv,
 ) : IHttpClient {
+    /**
+     * Set from a backend Retry-After, on [ITime.elapsedRealtimeMillis]. Until then requests fail
+     * fast with a 429 instead of being sent, so callers back off without stalling here.
+     */
+    @Volatile
+    private var delayNewRequestsUntil = 0L
+
     override suspend fun post(
         url: String,
         body: JSONObject,
@@ -77,6 +88,13 @@ internal class HttpClient(
                 "$method `$url` was called before the user provided privacy consent. Your application is set to require the user's privacy consent before the OneSignal SDK can be initialized. Please ensure the user has provided consent before calling this method. You can check the latest OneSignal consent status by calling OneSignal.privacyConsent",
             )
             return HttpResponse(0, null, null)
+        }
+
+        val delayMs = delayNewRequestsUntil - _time.elapsedRealtimeMillis
+        if (delayMs > 0) {
+            val retryAfterSeconds = TimeUnit.MILLISECONDS.toSeconds(delayMs - 1).toInt() + 1
+            Logging.debug("HttpClient: Not sending ${method ?: "GET"} $url, Retry-After has ${retryAfterSeconds}s left")
+            return HttpResponse(HTTP_TOO_MANY_REQUESTS, null, retryAfterSeconds = retryAfterSeconds)
         }
 
         try {
@@ -206,6 +224,9 @@ internal class HttpClient(
 
                     val retryAfter = retryAfterFromResponse(con)
                     val retryLimit = retryLimitFromResponse(con)
+                    val retryAfterMs = min(TimeUnit.SECONDS.toMillis((retryAfter ?: 0).toLong()), _configModelStore.model.maxRetryDelay)
+                    val newDelayUntil = _time.elapsedRealtimeMillis + retryAfterMs
+                    if (newDelayUntil > delayNewRequestsUntil) delayNewRequestsUntil = newDelayUntil
 
                     when (httpResponse) {
                         HttpURLConnection.HTTP_NOT_MODIFIED -> {
@@ -339,5 +360,6 @@ internal class HttpClient(
         private const val OS_API_VERSION = "1"
         private const val OS_ACCEPT_HEADER = "application/vnd.onesignal.v$OS_API_VERSION+json"
         private const val THREAD_ID = 10000
+        private const val HTTP_TOO_MANY_REQUESTS = 429
     }
 }

@@ -48,11 +48,8 @@ internal class OperationRepo(
         val bucket: Int,
         var retries: Int = 0,
     ) {
-        // Backoff can be cut short by forceExecuteOperations; Retry-After cannot.
-        var backoffUntil: Long = 0
-        var retryAfterUntil: Long = 0
-
-        fun retryAt(): Long = max(backoffUntil, retryAfterUntil)
+        // On ITime.elapsedRealtimeMillis.
+        var retryAt: Long = 0
 
         val waiters = mutableListOf<WaiterWithValue<OperationWaitResult>>()
 
@@ -86,7 +83,7 @@ internal class OperationRepo(
         }
 
         override fun toString(): String {
-            return "bucket:$bucket, retries:$retries, retryAt:${retryAt()}, operation:$operation\n"
+            return "bucket:$bucket, retries:$retries, retryAt:$retryAt, operation:$operation\n"
         }
     }
 
@@ -108,6 +105,10 @@ internal class OperationRepo(
     private val inFlightLogins = mutableMapOf<String, OperationQueueItem>()
     private val waiter = WaiterWithValue<LoopWaiterMessage>()
     private var paused = false
+
+    // Guarded by queue. Set by a force that lands while ops are out of the queue executing.
+    private var forcedDuringExecute = false
+
     private val initialized = CompletableDeferred<Unit>()
 
     override suspend fun awaitInitialized() {
@@ -335,10 +336,17 @@ internal class OperationRepo(
     }
 
     override fun forceExecuteOperations() {
-        synchronized(queue) {
-            queue.forEach { it.backoffUntil = 0 }
-        }
-        waiter.wake(LoopWaiterMessage(false))
+        val now = _time.elapsedRealtimeMillis
+        val endedWait =
+            synchronized(queue) {
+                forcedDuringExecute = true
+                val waiting = queue.filter { it.retryAt > now }
+                waiting.forEach { it.retryAt = 0 }
+                waiting.isNotEmpty()
+            }
+        // Skip the batching wait only when a retry was actually held back. An active Retry-After
+        // still holds: HttpClient fails the request fast and the op is rescheduled.
+        waiter.wake(LoopWaiterMessage(endedWait))
     }
 
     /**
@@ -499,14 +507,18 @@ internal class OperationRepo(
                 ExecutionResult.FAIL_RETRY -> {
                     Logging.info("Operation execution failed, retrying: $operations")
                     // Re-queue at the front with a per-op wait so unrelated ops keep running.
-                    val now = _time.currentTimeMillis
-                    val retryAfterMs = min(TimeUnit.SECONDS.toMillis((response.retryAfterSeconds ?: 0).toLong()), MAX_RETRY_DELAY_MS)
+                    val now = _time.elapsedRealtimeMillis
+                    val maxDelay = _configModelStore.model.maxRetryDelay
+                    val retryAfterMs = min(TimeUnit.SECONDS.toMillis((response.retryAfterSeconds ?: 0).toLong()), maxDelay)
                     synchronized(queue) {
+                        // A force that arrived mid-request would otherwise be lost to the new backoff.
+                        val forced = forcedDuringExecute
                         ops.reversed().forEach {
                             it.retries++
-                            val backoffMs = min(it.retries * _configModelStore.model.opRepoDefaultFailRetryBackoff, MAX_RETRY_DELAY_MS)
-                            it.backoffUntil = now + backoffMs
-                            it.retryAfterUntil = now + retryAfterMs
+                            val backoffMs = if (forced) 0L else min(it.retries * _configModelStore.model.opRepoDefaultFailRetryBackoff, maxDelay)
+                            val delayMs = max(backoffMs, retryAfterMs)
+                            it.retryAt = if (delayMs > 0) now + delayMs else 0
+                            Logging.debug("OperationRepo: retry #${it.retries} of ${it.operation.name} in $delayMs ms (backoff: $backoffMs ms, Retry-After: $retryAfterMs ms)")
                             queue.add(0, it)
                         }
                     }
@@ -597,13 +609,13 @@ internal class OperationRepo(
         // Snapshot gate state once per pass so all queue items see the same IV view.
         val newCodePathsRun = _identityVerificationService.newCodePathsRun
         val ivBehaviorActive = _identityVerificationService.ivBehaviorActive
-        val now = _time.currentTimeMillis
+        val now = _time.elapsedRealtimeMillis
         return synchronized(queue) {
             // An op must not overtake an earlier op on the same record that is waiting to retry.
             val waitingRecords = mutableSetOf<String>()
             val startingOp =
                 queue.firstOrNull {
-                    if (it.retryAt() > now) {
+                    if (it.retryAt > now) {
                         waitingRecords.add(it.operation.applyToRecordId)
                         return@firstOrNull false
                     }
@@ -617,6 +629,7 @@ internal class OperationRepo(
 
             if (startingOp != null) {
                 queue.remove(startingOp)
+                forcedDuringExecute = false
                 val grouped = getGroupableOperations(startingOp, now)
                 grouped.forEach { item ->
                     val login = item.operation as? LoginUserOperation ?: return@forEach
@@ -655,7 +668,7 @@ internal class OperationRepo(
 
         val waitingRecords = mutableSetOf<String>()
         for (item in queue.toList()) {
-            if (item.retryAt() > now) {
+            if (item.retryAt > now) {
                 waitingRecords.add(item.operation.applyToRecordId)
                 continue
             }
@@ -684,9 +697,9 @@ internal class OperationRepo(
     }
 
     private fun msUntilNextRetry(): Long? {
-        val now = _time.currentTimeMillis
+        val now = _time.elapsedRealtimeMillis
         return synchronized(queue) {
-            queue.map { it.retryAt() }.filter { it > now }.minOrNull()?.let { it - now }
+            queue.map { it.retryAt }.filter { it > now }.minOrNull()?.let { it - now }
         }
     }
 
@@ -706,9 +719,5 @@ internal class OperationRepo(
             )
         }
         initialized.complete(Unit)
-    }
-
-    companion object {
-        private val MAX_RETRY_DELAY_MS = TimeUnit.HOURS.toMillis(1)
     }
 }
