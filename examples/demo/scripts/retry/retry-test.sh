@@ -96,7 +96,8 @@ cmd_start() {
   : > "$ATTEMPTS"
   [[ -f "$RULES" ]] || echo "[]" > "$RULES"
   # Only onesignal.com is decrypted; everything else is tunnelled untouched.
-  mitmdump --listen-port "$PORT" \
+  # Loopback is enough: an emulator's 10.0.2.2 and `adb reverse` both land on it.
+  mitmdump --listen-host 127.0.0.1 --listen-port "$PORT" \
     --allow-hosts '^(.+\.)?onesignal\.com(:443)?$' \
     --set connection_strategy=lazy \
     --set termlog_verbosity=warn \
@@ -136,15 +137,16 @@ cmd_fail() {
       *) die "unknown option $1" ;;
     esac
   done
+  [[ "$status" == "0" && "$retry_after" != "null" ]] && die "--retry-after needs an HTTP status; a dropped connection has no headers"
   local method path
   read -r method path <<< "$(route_rule "$route")"
   [[ "$method" == "-" ]] && method=""
   python3 - "$RULES" "$add" "$route" "$method" "$path" "$status" "$times" "$retry_after" > "$RULES.tmp" <<'PY'
-import json, sys
+import json, sys, uuid
 rules_path, add, route, method, path, status, times, retry_after = sys.argv[1:]
 rules = json.load(open(rules_path)) if add == "true" else []
-rules.append({"route": route, "method": method or None, "path": path, "status": int(status),
-              "times": json.loads(times), "retry_after": json.loads(retry_after)})
+rules.append({"id": uuid.uuid4().hex[:8], "route": route, "method": method or None, "path": path,
+              "status": int(status), "times": json.loads(times), "retry_after": json.loads(retry_after)})
 print(json.dumps(rules))
 PY
   mv "$RULES.tmp" "$RULES"
@@ -158,18 +160,27 @@ cmd_clear() {
 
 cmd_reset_log() { : > "$ATTEMPTS"; echo "Cleared recorded attempts."; }
 
+restore_radios() {
+  [[ "$WIFI_WAS_ON" == "1" ]] && dev shell svc wifi enable || true
+  [[ "$DATA_WAS_ON" == "1" ]] && dev shell svc data enable || true
+  echo "Network restored."
+}
+
 cmd_network_flap() {
-  # Fires the SDK's network-available callback. On an emulator this also takes the proxy route
-  # offline; through `adb reverse` a physical device can still reach the proxy.
+  # Fires the SDK's online callback when the network comes back. On an emulator this also takes
+  # the proxy route offline; through `adb reverse` a physical device can still reach the proxy.
   local seconds="${1:-10}"
   resolve_device
+  [[ "$SERIAL" == *:* ]] && die "$SERIAL is wireless adb, which drops with Wi-Fi. Use USB or an emulator."
+  WIFI_WAS_ON="$(dev shell settings get global wifi_on | tr -d '\r')"
+  DATA_WAS_ON="$(dev shell settings get global mobile_data | tr -d '\r')"
+  # Only turns back on what was on, even after Ctrl-C or a failed `svc`.
+  trap restore_radios EXIT
+  trap 'exit 130' INT TERM
   echo "Wi-Fi and mobile data off on $SERIAL for ${seconds}s..."
   dev shell svc wifi disable
   dev shell svc data disable
   sleep "$seconds"
-  dev shell svc wifi enable
-  dev shell svc data enable
-  echo "Network back on."
 }
 
 cmd_fresh() {
@@ -207,9 +218,12 @@ cmd_tap() {
     *) die "usage: $0 tap <add-tag|add-alias|add-email|login|logout|toggle-push|allow-notifications> [args]" ;;
   esac
   resolve_device
+  # The grep only trims output; with pipefail a failed flow still fails `tap`.
+  local status=0
   MAESTRO_CLI_NO_ANALYTICS=1 MAESTRO_CLI_ANALYSIS_NOTIFICATION_DISABLED=true \
     maestro --device "$SERIAL" test ${env[@]+"${env[@]}"} "$SCRIPT_DIR/flows/$action.yaml" \
-    | grep -E '^ *(>|[A-Z].*(COMPLETED|FAILED|WARNED))' || true
+    | { grep -E '^ *(>|[A-Z].*(COMPLETED|FAILED|WARNED))' || true; } || status=$?
+  [[ "$status" == "0" ]] || die "maestro flow '$action' failed (exit $status)"
 }
 
 cmd_logs() {

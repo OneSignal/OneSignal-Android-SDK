@@ -6,10 +6,11 @@ Only requests carrying the SDK's `SDK-Version` header are touched, so the demo's
 pass through. Every SDK request is appended to attempts.jsonl for `retry-test.sh report`.
 
 Rules are re-read whenever rules.json changes. Each rule:
-  {"route": "update-user", "method": "PATCH", "path": "<regex>", "status": 503,
+  {"id": "<unique>", "route": "update-user", "method": "PATCH", "path": "<regex>", "status": 503,
    "retry_after": "30", "times": 3}
 `status` 0 drops the connection (the SDK sees status 0, like being offline). `times` is how many
-matching requests fail before the rule passes them through; null fails forever.
+matching requests fail before the rule passes them through; null fails forever. A rule keeps its
+remaining count across reloads, keyed by `id`.
 """
 
 import hashlib
@@ -31,7 +32,7 @@ class FaultProxy:
     def __init__(self):
         self.rules_mtime = None
         self.rules = []
-        self.remaining = []
+        self.remaining = {}
 
     def load_rules(self):
         try:
@@ -45,26 +46,29 @@ class FaultProxy:
         if mtime is not None:
             with open(RULES_PATH) as f:
                 self.rules = json.load(f)
-        self.remaining = [rule.get("times") for rule in self.rules]
+        self.remaining = {rule["id"]: self.remaining.get(rule["id"], rule.get("times")) for rule in self.rules}
         print(f"[fault] rules: {json.dumps(self.rules) if self.rules else 'none, passing everything'}")
 
     def match(self, flow):
         path = API_PATH_PREFIX.sub("", flow.request.path.split("?")[0])
-        for i, rule in enumerate(self.rules):
+        for rule in self.rules:
             if rule.get("method") and rule["method"] != flow.request.method:
                 continue
             if not re.search(rule["path"], path):
                 continue
-            if self.remaining[i] is not None:
-                if self.remaining[i] <= 0:
+            remaining = self.remaining[rule["id"]]
+            if remaining is not None:
+                if remaining <= 0:
                     continue
-                self.remaining[i] -= 1
+                self.remaining[rule["id"]] = remaining - 1
             return rule
         return None
 
     def request(self, flow: http.HTTPFlow):
         if "onesignal.com" not in flow.request.pretty_host or "SDK-Version" not in flow.request.headers:
             return
+        # Timed at the request, so gaps are between sends rather than between responses.
+        flow.metadata["fault_sent_at"] = time.time()
         self.load_rules()
         rule = self.match(flow)
         flow.metadata["fault_rule"] = rule
@@ -91,13 +95,14 @@ class FaultProxy:
 
     def record(self, flow, status, rule):
         path = API_PATH_PREFIX.sub("", flow.request.path.split("?")[0])
+        retry_after = flow.response.headers.get("Retry-After") if flow.response else None
         entry = {
-            "t": time.time(),
+            "t": flow.metadata["fault_sent_at"],
             "method": flow.request.method,
             "path": path,
             "status": status,
             "injected": rule is not None,
-            "retry_after": rule.get("retry_after") if rule else None,
+            "retry_after": retry_after,
             "body": hashlib.sha1(flow.request.raw_content or b"").hexdigest()[:8],
         }
         with open(ATTEMPTS_PATH, "a") as f:

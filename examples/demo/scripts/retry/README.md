@@ -34,13 +34,13 @@ cd examples/demo/scripts/retry
 | --- | --- |
 | `fail <route> <status> [--times N] [--retry-after S] [--add]` | Fail matching requests. Status `0` drops the connection, like being offline. Without `--times` it fails until `clear`. `--add` keeps earlier rules. Applies right away. |
 | `clear` / `rules` | Remove or show the rules |
-| `report [regex]` | Per route: each attempt, the gap since the previous one, and the gap expected |
+| `report [regex]` | Per operation: each attempt, the gap since the previous one, and the gap expected. Also lists any SDK request sent during a Retry-After |
 | `reset-log` | Forget recorded attempts, for example between scenarios |
 | `tap <action> [args]` | Use the demo: `add-tag <key> <value>`, `add-alias <label> <id>`, `add-email <email>`, `login <external id>`, `logout`, `toggle-push`, `allow-notifications` |
 | `install` | Build the demo against the local SDK and install it |
 | `fresh` / `relaunch` | Clear the demo's data and relaunch / kill and relaunch |
 | `background` / `foreground` | Press Home / bring the demo back |
-| `network-flap [s]` | Turn the device's Wi-Fi and mobile data off for `s` seconds (default 10) |
+| `network-flap [s]` | Turn the device's Wi-Fi and mobile data off for `s` seconds (default 10). Turns back on only what was on, even after Ctrl-C. Not over wireless adb |
 | `logs` | Stream the demo's OperationRepo and HttpClient logs |
 
 Routes: `create-user`, `fetch-user`, `update-user` (tags, properties, session data), `identity`
@@ -50,25 +50,34 @@ Routes: `create-user`, `fetch-user`, `update-user` (tags, properties, session da
 ## Reading `report`
 
 ```
-POST apps/<app>/users
+POST apps/<app>/users body=b8398c6a
     #     time status     body      gap         expected  note
     1     0.0s   408* b8398c6a
-    2    15.0s   408* b8398c6a    15.0s       15.0-21.0s  backoff #1
-    3    45.3s   201  b8398c6a    30.3s       30.0-36.0s  backoff #2
+    2     3.9s   408* b8398c6a     3.9s        2.5-10.0s  backoff #1
+    3    11.2s   201  b8398c6a     7.3s        5.0-15.0s  backoff #2
 ```
+
+Attempts are grouped per record (full path), and by body for routes without an id in the path
+(Create User, custom events).
 
 What the SDK should do:
 
-- **Backoff per operation**: after the Nth retryable failure an operation waits N × 15s
-  (`opRepoDefaultFailRetryBackoff`), capped at 1h, with no jitter. `HttpClient` does not re-send on
-  its own. Retryable is anything but 400, 401, 402, 403, 404, 409 and 410.
-- **Retry-After** is the minimum wait for that operation, capped at 1h. Foreground and network
-  return do not cut it short. Other routes are not held. A 429 without Retry-After waits 60s.
-- **Other records keep going**: while one operation waits, operations on other records are sent.
-  Operations on the same record wait behind it, so order is kept.
-- **Foreground and network return** end the backoff. The next attempt goes out after the queue's
-  usual 5s batching wait (`opRepoExecutionInterval`), so `report` allows up to 6s of slack, and
-  flags shorter gaps as EARLY with a note.
+- **Backoff per request**: after the Nth retryable failure the request waits 5s × 2^(N-1), capped at
+  300s (`opRepoBaseFailRetryBackoff`, `opRepoMaxFailRetryBackoff`), times a jitter of 0.5 to 1.
+  Operations batched into one request share the wait. `HttpClient` does not re-send on its own.
+  Retryable is anything but 400, 401, 402, 403, 404, 409 and 410.
+- **Retry-After** is the minimum wait for that request, capped at 1h. `HttpClient` also holds
+  every SDK request, on any route, until it passes, and `report` lists any that weren't. Foreground
+  and network return do not cut it short. A 429 without Retry-After, or with an unparsable one,
+  waits 60s.
+- **Other records keep going**: while one request backs off, operations on other records are sent
+  (outside a Retry-After). Operations on the same record wait behind it, so order is kept.
+- **Foreground, and network return while in the foreground,** end the backoff, and the attempt goes
+  out right away without the queue's 5s batching wait. `report` flags those gaps as EARLY with a
+  note. A network return in the background does nothing; the timed retry or the next foreground
+  picks it up.
+- `report` allows 5s of slack past the window (`opRepoExecutionInterval`), since an enqueue near
+  the end of a backoff can add the batching wait.
 - Backoff state is in memory. After a relaunch, queued operations are sent right away.
 
 ## Scenarios
@@ -76,15 +85,19 @@ What the SDK should do:
 Run `reset-log` before each one. Unless noted, the request should succeed after the last failure,
 and nothing should need a relaunch.
 
-1. **Backoff**: `fail create-user 408 --times 2`, then `fresh`. Gaps of 15s and 30s, then 201.
+1. **Backoff**: `fail create-user 408 --times 3`, then `fresh`. Gaps within 2.5-5s, 5-10s and
+   10-20s (plus slack), then 201.
 2. **Other records are not blocked**: `fail update-user 408`, `tap add-tag k v`, then after the
    first failure `tap toggle-push`. The subscription PATCH goes out while the tag keeps retrying.
 3. **Retry-After**: `fail update-user 429 --times 1 --retry-after 40`, then `tap add-tag k v`.
-   One retry after about 40s. `background` then `foreground` during the wait does not cut it short.
-4. **Foreground ends the backoff**: `fail update-user 408`, `tap add-tag k v`, wait for two
-   failures, then `background` and `foreground`. An attempt goes out about 5s after foreground.
-5. **Network return**: as in 4, but `network-flap 5` instead. An attempt goes out shortly after the
-   network is back.
+   One retry after about 40s. `background` then `foreground` during the wait does not cut it short,
+   and a `tap toggle-push` during the wait is not sent until it ends.
+4. **Foreground ends the backoff**: `fail update-user 408`, `tap add-tag k v`, wait for four
+   failures (a 20-40s wait), then `background` and `foreground`. An attempt goes out right after
+   foreground.
+5. **Network return**: as in 4, but `network-flap 5` with the demo in the foreground. An attempt
+   goes out right after the network is back. With the demo in the background, the flap changes
+   nothing.
 6. **Order is kept**: `fail create-user 408 --times 2`, then `fresh` and `tap login <id>` during
    the failures. Identify User (PATCH `.../identity`) is not sent until Create User succeeds.
 7. **Fetch User**: `fail fetch-user 408 --times 2`, then `tap login <id>`. Fetch User retries in
