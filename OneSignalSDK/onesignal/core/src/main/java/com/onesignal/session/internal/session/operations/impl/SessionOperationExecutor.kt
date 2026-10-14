@@ -46,7 +46,10 @@ internal class SessionOperationExecutor(
                     ),
                 )
             } catch (ex: BackendException) {
-                return failure(ex, retryMissing = false)
+                val retryMissing =
+                    newRecordState.isInMissingRetryWindow(operation.onesignalId) ||
+                        newRecordState.isInMissingRetryWindow(operation.subscriptionId)
+                return failure(ex, retryMissing)
             }
 
         return if (sessionId == null) {
@@ -86,7 +89,8 @@ internal class SessionOperationExecutor(
     ): ExecutionResponse {
         val code = ex.statusCode
         val retryable =
-            code == 0 ||
+            // HttpClient reports offline and other network errors as 0 or -1.
+            code <= 0 ||
                 code == HTTP_REQUEST_TIMEOUT ||
                 code == HTTP_TOO_MANY_REQUESTS ||
                 code >= HTTP_SERVER_ERROR ||

@@ -20,8 +20,17 @@ internal class SessionQueuePolicy(
             override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, String>?) = size > MAX_RECENT_TRANSLATIONS
         }
 
+    // Sessions with an accepted end. The queue alone misses an end that is executing.
+    private val endedSessions =
+        object : LinkedHashMap<String, Unit>() {
+            override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Unit>?) = size > MAX_ENDED_SESSIONS
+        }
+
     fun recordTranslations(idTranslations: Map<String, String>) {
         recentTranslations.putAll(idTranslations)
+        idTranslations.forEach { (localId, backendId) ->
+            if (endedSessions.remove(localId) != null) endedSessions[backendId] = Unit
+        }
     }
 
     class EnqueueResult(
@@ -34,13 +43,22 @@ internal class SessionQueuePolicy(
         incoming: OperationRepo.OperationQueueItem,
     ): EnqueueResult {
         val op = incoming.operation
-        if (op.isSessionOperation) op.translateIds(recentTranslations)
+        if (!op.isSessionOperation) return EnqueueResult(accept = true)
+        op.translateIds(recentTranslations)
 
-        if (op is UpdateSessionOperation && hasQueuedEnd(queue, op.sessionId)) {
-            Logging.debug("SessionQueuePolicy: session ${op.sessionId} already has a queued end, dropping $op")
-            return EnqueueResult(accept = false)
+        return if (op is UpdateSessionOperation && (op.sessionId in endedSessions || hasQueuedEnd(queue, op.sessionId))) {
+            Logging.debug("SessionQueuePolicy: session ${op.sessionId} already ended, dropping $op")
+            EnqueueResult(accept = false)
+        } else {
+            admit(queue, incoming)
         }
+    }
 
+    private fun admit(
+        queue: MutableList<OperationRepo.OperationQueueItem>,
+        incoming: OperationRepo.OperationQueueItem,
+    ): EnqueueResult {
+        val op = incoming.operation
         val removed = mutableListOf<OperationRepo.OperationQueueItem>()
         if (op is UpdateSessionOperation) {
             val unsent = queue.filter { (it.operation as? UpdateSessionOperation)?.sessionId == op.sessionId }
@@ -48,8 +66,10 @@ internal class SessionQueuePolicy(
             unsent.forEach {
                 val replaced = it.operation as UpdateSessionOperation
                 op.activeDuration = maxOf(op.activeDuration, replaced.activeDuration)
-                incoming.waiters.addAll(it.waiters)
-                it.waiters.clear()
+                incoming.retries = maxOf(incoming.retries, it.retries)
+                incoming.retryAt = maxOf(incoming.retryAt, it.retryAt)
+                val waiters = synchronized(it) { it.waiters.toList().also { _ -> it.waiters.clear() } }
+                incoming.attachOrWake(waiters)
             }
             queue.removeAll(unsent)
             removed.addAll(unsent)
@@ -64,6 +84,7 @@ internal class SessionQueuePolicy(
             removed.addAll(dropped)
             if (op.sessionKey == oldestSession) accept = false
         }
+        if (accept && op is UpdateSessionOperation && op.isEnd) endedSessions[op.sessionId] = Unit
         return EnqueueResult(accept, removed)
     }
 
@@ -99,5 +120,6 @@ internal class SessionQueuePolicy(
     companion object {
         const val MAX_QUEUED_SESSION_OPERATIONS = 100
         private const val MAX_RECENT_TRANSLATIONS = 50
+        private const val MAX_ENDED_SESSIONS = 50
     }
 }

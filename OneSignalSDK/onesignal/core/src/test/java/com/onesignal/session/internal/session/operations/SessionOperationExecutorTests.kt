@@ -98,7 +98,7 @@ class SessionOperationExecutorTests : FunSpec({
         }
     }
 
-    for (status in listOf(0, 408, 429, 500, 503)) {
+    for (status in listOf(-1, 0, 408, 429, 500, 503)) {
         test("status $status is retried with its Retry-After") {
             val mocks = Mocks()
             coEvery { mocks.backend.createSession(any(), any()) } throws BackendException(status, retryAfterSeconds = 7)
@@ -125,6 +125,14 @@ class SessionOperationExecutorTests : FunSpec({
         coEvery { mocks.backend.updateSession(any(), any(), any()) } throws BackendException(404)
 
         mocks.executor.execute(listOf(update())).result shouldBe ExecutionResult.FAIL_RETRY
+    }
+
+    test("create 404 while the user is new is retried") {
+        val mocks = Mocks()
+        every { mocks.newRecordState.isInMissingRetryWindow("onesignalId") } returns true
+        coEvery { mocks.backend.createSession(any(), any()) } throws BackendException(404)
+
+        mocks.executor.execute(listOf(create())).result shouldBe ExecutionResult.FAIL_RETRY
     }
 
     test("idempotency keys survive persistence") {

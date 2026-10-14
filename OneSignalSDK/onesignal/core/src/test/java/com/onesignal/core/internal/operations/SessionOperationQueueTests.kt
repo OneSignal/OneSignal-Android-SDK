@@ -14,6 +14,7 @@ import com.onesignal.session.internal.session.operations.impl.SessionOperationEx
 import com.onesignal.user.internal.jwt.JwtRequirement
 import com.onesignal.user.internal.jwt.JwtTokenStore
 import com.onesignal.user.internal.operations.ExecutorMocks.Companion.getNewRecordState
+import com.onesignal.user.internal.operations.SetTagOperation
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.shouldBe
@@ -88,6 +89,8 @@ private fun update(
     endTime: Long? = null,
 ) = UpdateSessionOperation("appId", sessionId, "onesignalId", "subscriptionId", activeDuration, endTime)
 
+private fun item(op: Operation) = OperationRepo.OperationQueueItem(op, bucket = 0)
+
 private suspend fun awaitExecuted(
     mocks: SessionQueueMocks,
     count: Int,
@@ -146,6 +149,49 @@ class SessionOperationQueueTests : FunSpec({
 
         mocks.queued() shouldContainExactly others
         mocks.operationModelStore.list().size shouldBe others.size
+    }
+
+    test("non-session operations do not count toward the cap") {
+        val policy = SessionQueuePolicy(maxQueued = 2)
+        val queue = mutableListOf(item(create(localSessionId = "local-a")), item(create(localSessionId = "local-b")))
+
+        val result = policy.onEnqueue(queue, item(SetTagOperation("appId", "onesignalId", null, "key", "value")))
+
+        result.accept shouldBe true
+        result.removed shouldBe emptyList()
+        queue.size shouldBe 2
+    }
+
+    test("a coalesced update keeps the backoff of the update it replaces") {
+        val policy = SessionQueuePolicy()
+        val backedOff = item(update()).apply {
+            retries = 3
+            retryAt = 60_000L
+        }
+        val incoming = item(update(activeDuration = 2_000L))
+
+        policy.onEnqueue(mutableListOf(backedOff), incoming)
+
+        incoming.retries shouldBe 3
+        incoming.retryAt shouldBe 60_000L
+    }
+
+    test("an update after an end that is executing is dropped") {
+        val policy = SessionQueuePolicy()
+        val queue = mutableListOf<OperationRepo.OperationQueueItem>()
+        policy.onEnqueue(queue, item(update(endTime = 9L))).accept shouldBe true
+
+        // The end leaves the queue while it executes.
+        policy.onEnqueue(queue, item(update(activeDuration = 8_000L))).accept shouldBe false
+    }
+
+    test("an end recorded under the local ID still drops updates after the create succeeds") {
+        val policy = SessionQueuePolicy()
+        policy.onEnqueue(mutableListOf(), item(update(endTime = 9L)))
+
+        policy.recordTranslations(mapOf("local-s1" to "server-s1"))
+
+        policy.onEnqueue(mutableListOf(), item(update(sessionId = "server-s1"))).accept shouldBe false
     }
 
     test("an update waits for its create and is sent with the backend session ID") {
