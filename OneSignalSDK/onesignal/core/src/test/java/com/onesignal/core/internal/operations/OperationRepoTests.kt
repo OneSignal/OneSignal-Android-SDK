@@ -1218,23 +1218,6 @@ class OperationRepoTests : FunSpec({
         opRepo.queue.map { it.operation } shouldBe listOf(waiting)
     }
 
-    test("Retry-After is capped by maxRetryAfter") {
-        // Given
-        val mocks = Mocks()
-        val opRepo = mocks.operationRepo
-        coEvery { mocks.executor.execute(any()) } returns ExecutionResponse(ExecutionResult.FAIL_RETRY, retryAfterSeconds = 10 * 60 * 60)
-
-        // When
-        val before = System.nanoTime() / 1_000_000
-        opRepo.executeOperations(listOf(OperationQueueItem(mockOperation(), bucket = 0)))
-        val after = System.nanoTime() / 1_000_000
-
-        // Then
-        val retryAfterUntil = opRepo.queue.single().retryAfterUntil
-        (retryAfterUntil >= before + 60 * 60 * 1_000L) shouldBe true
-        (retryAfterUntil <= after + 60 * 60 * 1_000L) shouldBe true
-    }
-
     test("backoff doubles from opRepoDefaultFailRetryBackoff up to opRepoMaxFailRetryBackoff, scaled by jitter") {
         // Given
         val mocks = Mocks()
@@ -1261,25 +1244,18 @@ class OperationRepoTests : FunSpec({
         }
     }
 
-    test("forceExecuteOperations ends backoff but still honors Retry-After") {
+    test("forceExecuteOperations ends the backoff of retrying operations") {
         // Given
         val mocks = Mocks()
         val opRepo = mocks.operationRepo
-        val retryAfterUntil = System.nanoTime() / 1_000_000 + 60_000
         val backedOff = OperationQueueItem(mockOperation(), bucket = 0).apply { retryAt = Long.MAX_VALUE }
-        val rateLimited =
-            OperationQueueItem(mockOperation(), bucket = 0).apply {
-                retryAt = Long.MAX_VALUE
-                this.retryAfterUntil = retryAfterUntil
-            }
-        opRepo.queue.addAll(listOf(backedOff, rateLimited))
+        opRepo.queue.add(backedOff)
 
         // When
         opRepo.forceExecuteOperations()
 
         // Then
         backedOff.retryAt shouldBe 0
-        rateLimited.retryAt shouldBe retryAfterUntil
     }
 
     test("forceExecuteOperations skips the batching wait when it ends a retry wait") {
@@ -1310,25 +1286,21 @@ class OperationRepoTests : FunSpec({
         withTimeoutOrNull(1_000) { retried.await() } shouldBe Unit
     }
 
-    test("a force during execute skips the next backoff but keeps Retry-After") {
+    test("a force during execute skips the next backoff") {
         // Given
         val mocks = Mocks()
         mocks.configModelStore.model.opRepoDefaultFailRetryBackoff = 60_000
         val opRepo = mocks.operationRepo
         coEvery { mocks.executor.execute(any()) } answers {
             opRepo.forceExecuteOperations()
-            ExecutionResponse(ExecutionResult.FAIL_RETRY, retryAfterSeconds = 30)
+            ExecutionResponse(ExecutionResult.FAIL_RETRY)
         }
 
         // When
-        val before = System.nanoTime() / 1_000_000
         opRepo.executeOperations(listOf(OperationQueueItem(mockOperation(), bucket = 0)))
-        val after = System.nanoTime() / 1_000_000
 
         // Then
-        val retryAt = opRepo.queue.single().retryAt
-        (retryAt >= before + 30_000) shouldBe true
-        (retryAt <= after + 30_000) shouldBe true
+        opRepo.queue.single().retryAt shouldBe 0
     }
 
     test("ensure forceExecuteOperations immediately wakes retry waiters") {

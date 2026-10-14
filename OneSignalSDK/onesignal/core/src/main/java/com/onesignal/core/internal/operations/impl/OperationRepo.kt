@@ -49,10 +49,9 @@ internal class OperationRepo(
         val bucket: Int,
         var retries: Int = 0,
     ) {
-        // On ITime.elapsedRealtimeMillis. retryAt includes backoff, which forceExecuteOperations
-        // can end; retryAfterUntil is the server's minimum, which it cannot.
+        // On ITime.elapsedRealtimeMillis. A force may end it early: HttpClient still holds the
+        // request until any Retry-After passes.
         var retryAt: Long = 0
-        var retryAfterUntil: Long = 0
 
         val waiters = mutableListOf<WaiterWithValue<OperationWaitResult>>()
 
@@ -345,8 +344,8 @@ internal class OperationRepo(
         val endedWait =
             synchronized(queue) {
                 forcedDuringExecute = true
-                val backedOff = queue.filter { it.retryAt > max(now, it.retryAfterUntil) }
-                backedOff.forEach { it.retryAt = it.retryAfterUntil }
+                val backedOff = queue.filter { it.retryAt > now }
+                backedOff.forEach { it.retryAt = 0 }
                 backedOff.isNotEmpty()
             }
         // Skip the batching wait only when a retry was actually held back.
@@ -519,16 +518,11 @@ internal class OperationRepo(
                         val forced = forcedDuringExecute
                         ops.reversed().forEach {
                             it.retries++
-                            val backoffMs =
-                                if (forced) {
-                                    0L
-                                } else {
-                                    val exponential = config.opRepoDefaultFailRetryBackoff shl min(it.retries - 1, MAX_BACKOFF_DOUBLINGS)
-                                    (min(exponential, config.opRepoMaxFailRetryBackoff) * jitter()).toLong()
-                                }
-                            it.retryAfterUntil = if (retryAfterMs > 0) now + retryAfterMs else 0
-                            it.retryAt = max(if (backoffMs > 0) now + backoffMs else 0, it.retryAfterUntil)
-                            Logging.debug("OperationRepo: retry #${it.retries} of ${it.operation.name} in ${max(backoffMs, retryAfterMs)} ms (backoff: $backoffMs ms, Retry-After: $retryAfterMs ms)")
+                            val exponential = config.opRepoDefaultFailRetryBackoff shl min(it.retries - 1, MAX_BACKOFF_DOUBLINGS)
+                            val backoffMs = (min(exponential, config.opRepoMaxFailRetryBackoff) * jitter()).toLong()
+                            val delayMs = if (forced) 0L else max(backoffMs, retryAfterMs)
+                            it.retryAt = if (delayMs > 0) now + delayMs else 0
+                            Logging.debug("OperationRepo: retry #${it.retries} of ${it.operation.name} in $delayMs ms (backoff: $backoffMs ms, Retry-After: $retryAfterMs ms)")
                             queue.add(0, it)
                         }
                     }

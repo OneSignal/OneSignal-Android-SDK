@@ -18,6 +18,7 @@ import com.onesignal.core.internal.preferences.PreferenceStores
 import com.onesignal.core.internal.time.ITime
 import com.onesignal.debug.internal.logging.Logging
 import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withTimeout
 import org.json.JSONObject
 import java.net.ConnectException
@@ -42,8 +43,8 @@ internal class HttpClient(
     private val _fidEnv: IFidEnv,
 ) : IHttpClient {
     /**
-     * Set from a backend Retry-After, on [ITime.elapsedRealtimeMillis]. Until then requests fail
-     * fast with a 429 instead of being sent, so callers back off without stalling here.
+     * Delay making network requests until we reach this time, on [ITime.elapsedRealtimeMillis].
+     * Used when the OneSignal backend returns a Retry-After value.
      */
     @Volatile
     private var delayNewRequestsUntil = 0L
@@ -91,12 +92,8 @@ internal class HttpClient(
             return HttpResponse(0, null, null)
         }
 
-        val delayMs = delayNewRequestsUntil - _time.elapsedRealtimeMillis
-        if (delayMs > 0) {
-            val retryAfterSeconds = TimeUnit.MILLISECONDS.toSeconds(delayMs - 1).toInt() + 1
-            Logging.debug("HttpClient: Not sending ${method ?: "GET"} $url, Retry-After has ${retryAfterSeconds}s left")
-            return HttpResponse(HTTP_TOO_MANY_REQUESTS, null, retryAfterSeconds = retryAfterSeconds)
-        }
+        val delayUntil = delayNewRequestsUntil - _time.elapsedRealtimeMillis
+        if (delayUntil > 0) delay(delayUntil)
 
         try {
             return withTimeout(getThreadTimeout(timeout).toLong()) {
@@ -363,6 +360,5 @@ internal class HttpClient(
         private const val OS_API_VERSION = "1"
         private const val OS_ACCEPT_HEADER = "application/vnd.onesignal.v$OS_API_VERSION+json"
         private const val THREAD_ID = 10000
-        private const val HTTP_TOO_MANY_REQUESTS = 429
     }
 }

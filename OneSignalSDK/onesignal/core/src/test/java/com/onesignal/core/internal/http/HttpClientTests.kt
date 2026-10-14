@@ -19,6 +19,7 @@ import io.kotest.matchers.types.beInstanceOf
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.withTimeoutOrNull
 import org.json.JSONObject
 
 class Mocks {
@@ -258,15 +259,17 @@ class HttpClientTests : FunSpec({
         response.retryAfterSeconds shouldBe 60
     }
 
-    // Retry-After applies to all traffic, but requests fail fast instead of waiting so a single
-    // caller, like the operation queue, never stalls on it.
-    test("after a Retry-After, requests fail fast without being sent until it passes") {
+    // If the OneSignal server ever responses with a Retry-After we want to
+    // make sure we delay any future requests until that delay has past. To
+    // be safe we assume the server's Retry-After value means all traffic
+    // should be delayed until then.
+    test("ensure next request is delayed by the Retry-After value") {
         // Given
         val mocks = Mocks()
 
         val mockRetryAfterResponse = MockHttpConnectionFactory.MockResponse()
         mockRetryAfterResponse.status = 429
-        mockRetryAfterResponse.mockProps["Retry-After"] = "10"
+        mockRetryAfterResponse.mockProps["Retry-After"] = "1"
         mockRetryAfterResponse.errorResponseBody = "{}"
 
         val mockSuccessfulResponse = MockHttpConnectionFactory.MockResponse()
@@ -278,23 +281,26 @@ class HttpClientTests : FunSpec({
         mocks.httpClient.post("URL", JSONObject())
 
         mocks.factory.mockResponse = mockSuccessfulResponse
-        mocks.now += 4_500
-        val response2 = mocks.httpClient.post("URL", JSONObject())
+        val response2 =
+            withTimeoutOrNull(500) {
+                mocks.httpClient.post("URL", JSONObject())
+            }
 
-        mocks.now += 5_500
-        val response3 = mocks.httpClient.post("URL", JSONObject())
+        mocks.now += 1_000
+        val response3 =
+            withTimeoutOrNull(100) {
+                mocks.httpClient.post("URL", JSONObject())
+            }
 
         // Then
-        response2.statusCode shouldBe 429
-        response2.retryAfterSeconds shouldBe 6
-        response3.statusCode shouldBe 200
-        mocks.factory.connections.size shouldBe 2
+        response2 shouldBe null
+        response3?.statusCode shouldBe 200
     }
 
-    test("the Retry-After window is capped by maxRetryAfter") {
+    test("the Retry-After delay is capped by maxRetryAfter") {
         // Given
         val mocks = Mocks()
-        mocks.mockConfigModel.model.maxRetryAfter = 2_000
+        mocks.mockConfigModel.model.maxRetryAfter = 100
 
         val mockRetryAfterResponse = MockHttpConnectionFactory.MockResponse()
         mockRetryAfterResponse.status = 429
@@ -310,11 +316,13 @@ class HttpClientTests : FunSpec({
         mocks.httpClient.post("URL", JSONObject())
 
         mocks.factory.mockResponse = mockSuccessfulResponse
-        mocks.now += 2_000
-        val response = mocks.httpClient.post("URL", JSONObject())
+        val response =
+            withTimeoutOrNull(1_000) {
+                mocks.httpClient.post("URL", JSONObject())
+            }
 
         // Then
-        response.statusCode shouldBe 200
+        response?.statusCode shouldBe 200
     }
 
     test("Authorization header is set when OptionalHeaders.jwt is provided") {
