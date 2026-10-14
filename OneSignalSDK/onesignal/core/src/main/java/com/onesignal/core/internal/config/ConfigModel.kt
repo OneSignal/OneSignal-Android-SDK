@@ -183,10 +183,10 @@ class ConfigModel : Model() {
      * The first retry backoff after FAIL_RETRY, in milliseconds. It doubles with each further
      * failure of the same operation, up to [opRepoMaxFailRetryBackoff], and is then jittered.
      */
-    var opRepoDefaultFailRetryBackoff: Long
-        get() = getLongProperty(::opRepoDefaultFailRetryBackoff.name) { 5_000 }
+    var opRepoBaseFailRetryBackoff: Long
+        get() = getLongProperty(::opRepoBaseFailRetryBackoff.name) { 5_000 }
         set(value) {
-            setLongProperty(::opRepoDefaultFailRetryBackoff.name, value)
+            setLongProperty(::opRepoBaseFailRetryBackoff.name, value)
         }
 
     /**

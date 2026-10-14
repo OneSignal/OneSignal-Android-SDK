@@ -509,20 +509,22 @@ internal class OperationRepo(
                 }
                 ExecutionResult.FAIL_RETRY -> {
                     Logging.info("Operation execution failed, retrying: $operations")
-                    // Re-queue at the front with a per-op wait so unrelated ops keep running.
+                    // Re-queue at the front with a wait on these records only. Other records keep
+                    // going, though HttpClient still holds every request during a Retry-After.
                     val now = _time.elapsedRealtimeMillis
                     val config = _configModelStore.model
                     val retryAfterMs = min(TimeUnit.SECONDS.toMillis((response.retryAfterSeconds ?: 0).toLong()), config.maxRetryAfter)
+                    ops.forEach { it.retries++ }
+                    // One wait for the whole batch so it retries as a single request.
+                    val retries = ops.maxOf { it.retries }
+                    val exponential = config.opRepoBaseFailRetryBackoff shl min(retries - 1, MAX_BACKOFF_DOUBLINGS)
+                    val backoffMs = (min(exponential, config.opRepoMaxFailRetryBackoff) * jitter()).toLong()
                     synchronized(queue) {
                         // A force that arrived mid-request would otherwise be lost to the new backoff.
-                        val forced = forcedDuringExecute
+                        val delayMs = if (forcedDuringExecute) 0L else max(backoffMs, retryAfterMs)
+                        Logging.debug("OperationRepo: retry #$retries of $operations in $delayMs ms (backoff: $backoffMs ms, Retry-After: $retryAfterMs ms)")
                         ops.reversed().forEach {
-                            it.retries++
-                            val exponential = config.opRepoDefaultFailRetryBackoff shl min(it.retries - 1, MAX_BACKOFF_DOUBLINGS)
-                            val backoffMs = (min(exponential, config.opRepoMaxFailRetryBackoff) * jitter()).toLong()
-                            val delayMs = if (forced) 0L else max(backoffMs, retryAfterMs)
                             it.retryAt = if (delayMs > 0) now + delayMs else 0
-                            Logging.debug("OperationRepo: retry #${it.retries} of ${it.operation.name} in $delayMs ms (backoff: $backoffMs ms, Retry-After: $retryAfterMs ms)")
                             queue.add(0, it)
                         }
                     }

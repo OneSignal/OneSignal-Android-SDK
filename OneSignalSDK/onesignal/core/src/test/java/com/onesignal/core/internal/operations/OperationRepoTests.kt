@@ -1153,7 +1153,7 @@ class OperationRepoTests : FunSpec({
     test("a retrying operation does not block operations on other records") {
         // Given
         val mocks = Mocks()
-        mocks.configModelStore.model.opRepoDefaultFailRetryBackoff = 60_000
+        mocks.configModelStore.model.opRepoBaseFailRetryBackoff = 60_000
         val opRepo = mocks.operationRepo
         val failing = mockOperation(applyToRecordId = "record-a")
         val unrelated = mockOperation(applyToRecordId = "record-b")
@@ -1173,7 +1173,7 @@ class OperationRepoTests : FunSpec({
     test("an operation waits behind a retrying operation on the same record and keeps its order") {
         // Given
         val mocks = Mocks()
-        mocks.configModelStore.model.opRepoDefaultFailRetryBackoff = 200
+        mocks.configModelStore.model.opRepoBaseFailRetryBackoff = 200
         val opRepo = mocks.operationRepo
         val first = mockOperation(applyToRecordId = "record-a")
         val second = mockOperation(applyToRecordId = "record-a")
@@ -1203,7 +1203,7 @@ class OperationRepoTests : FunSpec({
     test("a waiting operation is not grouped into another operation's request") {
         // Given
         val mocks = Mocks()
-        mocks.configModelStore.model.opRepoDefaultFailRetryBackoff = 60_000
+        mocks.configModelStore.model.opRepoBaseFailRetryBackoff = 60_000
         val opRepo = mocks.operationRepo
         val waiting = mockOperation(groupComparisonType = GroupComparisonType.ALTER, applyToRecordId = "record-a")
         val starter = mockOperation(groupComparisonType = GroupComparisonType.ALTER, applyToRecordId = "record-b")
@@ -1218,10 +1218,10 @@ class OperationRepoTests : FunSpec({
         opRepo.queue.map { it.operation } shouldBe listOf(waiting)
     }
 
-    test("backoff doubles from opRepoDefaultFailRetryBackoff up to opRepoMaxFailRetryBackoff, scaled by jitter") {
+    test("backoff doubles from opRepoBaseFailRetryBackoff up to opRepoMaxFailRetryBackoff, scaled by jitter") {
         // Given
         val mocks = Mocks()
-        mocks.configModelStore.model.opRepoDefaultFailRetryBackoff = 5_000
+        mocks.configModelStore.model.opRepoBaseFailRetryBackoff = 5_000
         mocks.configModelStore.model.opRepoMaxFailRetryBackoff = 30_000
         val opRepo = mocks.operationRepo
         opRepo.jitter = { 0.5 }
@@ -1244,6 +1244,27 @@ class OperationRepoTests : FunSpec({
         }
     }
 
+    test("a failed batch shares one retry time so it retries together") {
+        // Given
+        val mocks = Mocks()
+        mocks.configModelStore.model.opRepoBaseFailRetryBackoff = 5_000
+        val opRepo = mocks.operationRepo
+        var nextJitter = 0.5
+        opRepo.jitter = { nextJitter.also { nextJitter += 0.1 } }
+        coEvery { mocks.executor.execute(any()) } returns ExecutionResponse(ExecutionResult.FAIL_RETRY)
+        val retried = OperationQueueItem(mockOperation(), bucket = 0, retries = 2)
+        val fresh = OperationQueueItem(mockOperation(), bucket = 0)
+
+        // When
+        opRepo.executeOperations(listOf(retried, fresh))
+
+        // Then
+        retried.retries shouldBe 3
+        fresh.retries shouldBe 1
+        (retried.retryAt > 0) shouldBe true
+        fresh.retryAt shouldBe retried.retryAt
+    }
+
     test("forceExecuteOperations ends the backoff of retrying operations") {
         // Given
         val mocks = Mocks()
@@ -1261,7 +1282,7 @@ class OperationRepoTests : FunSpec({
     test("forceExecuteOperations skips the batching wait when it ends a retry wait") {
         // Given
         val mocks = Mocks()
-        mocks.configModelStore.model.opRepoDefaultFailRetryBackoff = 60_000
+        mocks.configModelStore.model.opRepoBaseFailRetryBackoff = 60_000
         val opRepo = mocks.operationRepo
         var attempts = 0
         val retried = CompletableDeferred<Unit>()
@@ -1289,7 +1310,7 @@ class OperationRepoTests : FunSpec({
     test("a force during execute skips the next backoff") {
         // Given
         val mocks = Mocks()
-        mocks.configModelStore.model.opRepoDefaultFailRetryBackoff = 60_000
+        mocks.configModelStore.model.opRepoBaseFailRetryBackoff = 60_000
         val opRepo = mocks.operationRepo
         coEvery { mocks.executor.execute(any()) } answers {
             opRepo.forceExecuteOperations()
@@ -1306,7 +1327,7 @@ class OperationRepoTests : FunSpec({
     test("ensure forceExecuteOperations immediately wakes retry waiters") {
         // Given
         val mocks = Mocks()
-        mocks.configModelStore.model.opRepoDefaultFailRetryBackoff = 5_000
+        mocks.configModelStore.model.opRepoBaseFailRetryBackoff = 5_000
         val opRepo = mocks.operationRepo
         coEvery {
             mocks.executor.execute(any())

@@ -8,9 +8,7 @@ import com.onesignal.core.internal.startup.IStartableService
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
- * Ends the retry backoff of queued operations when the app comes to the foreground, and when the
- * device comes back online while it is in the foreground. Network changes in the background are
- * left to the timed retry or the next foreground.
+ * Ends retry backoff on foreground, and on coming back online while in the foreground.
  */
 internal class OperationRetryTrigger(
     private val applicationService: IApplicationService,
