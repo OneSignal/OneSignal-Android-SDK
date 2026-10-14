@@ -1,0 +1,11 @@
+appId: com.onesignal.example
+---
+- scrollUntilVisible:
+    element:
+      id: app_section
+    direction: UP
+    visibilityPercentage: 10
+- scrollUntilVisible:
+    element:
+      id: ${TARGET}
+    centerElement: true

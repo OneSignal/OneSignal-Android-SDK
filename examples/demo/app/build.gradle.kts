@@ -134,6 +134,30 @@ android {
     }
 }
 
+// `-PRETRY_TEST_CA=<pem>` makes debug builds trust that CA, so scripts/retry can proxy SDK traffic
+// without installing a certificate on the device.
+demoOverride("RETRY_TEST_CA")?.let { caPath ->
+    val resDir = layout.buildDirectory.dir("generated/retryTestCa/res").get().asFile
+    file(caPath).copyTo(resDir.resolve("raw/retry_test_ca.pem"), overwrite = true)
+    resDir.resolve("xml/network_security_config.xml").apply {
+        parentFile.mkdirs()
+        writeText(
+            """
+            <?xml version="1.0" encoding="utf-8"?>
+            <network-security-config>
+                <debug-overrides>
+                    <trust-anchors>
+                        <certificates src="user" />
+                        <certificates src="@raw/retry_test_ca" />
+                    </trust-anchors>
+                </debug-overrides>
+            </network-security-config>
+            """.trimIndent(),
+        )
+    }
+    android.sourceSets.getByName("debug").res.srcDir(resDir)
+}
+
 dependencies {
     // Kotlin
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlinVersion")

@@ -1,0 +1,8 @@
+appId: com.onesignal.example
+---
+- runFlow:
+    file: _scroll-to.yaml
+    env:
+      TARGET: logout_user_button
+- tapOn:
+    id: logout_user_button

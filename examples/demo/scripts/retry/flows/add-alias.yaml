@@ -1,0 +1,16 @@
+appId: com.onesignal.example
+---
+- runFlow:
+    file: _scroll-to.yaml
+    env:
+      TARGET: add_alias_button
+- tapOn:
+    id: add_alias_button
+- tapOn:
+    id: alias_label_input
+- inputText: ${KEY}
+- tapOn:
+    id: alias_id_input
+- inputText: ${VALUE}
+- tapOn:
+    id: singlepair_confirm_button
