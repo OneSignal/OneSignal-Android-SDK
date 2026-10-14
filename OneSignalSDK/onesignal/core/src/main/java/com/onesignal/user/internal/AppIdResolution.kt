@@ -36,10 +36,5 @@ fun resolveAppId(
         return AppIdResolution(appId = legacyAppId, forceCreateUser = true, failed = false)
     }
 
-    // An invalid input with nothing cached still initializes, so later SDK calls don't throw.
-    if (inputAppId != null) {
-        return AppIdResolution(appId = inputAppId, forceCreateUser = true, failed = false)
-    }
-
     return AppIdResolution(appId = null, forceCreateUser = false, failed = true)
 }

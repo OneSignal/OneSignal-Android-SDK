@@ -236,7 +236,7 @@ class AppIdHelperTests : FunSpec({
         result.failed shouldBe false
     }
 
-    test("empty appId with nothing cached still resolves so init does not fail") {
+    test("empty appId with nothing cached fails resolution so init is skipped") {
         val configModel = ConfigModel()
 
         val mockPreferencesService = mockk<IPreferencesService>()
@@ -246,9 +246,8 @@ class AppIdHelperTests : FunSpec({
 
         val result = resolveAppId("", configModel, mockPreferencesService)
 
-        result.appId shouldBe ""
-        result.forceCreateUser shouldBe true
-        result.failed shouldBe false
+        result.appId shouldBe null
+        result.failed shouldBe true
     }
 
     test("resolveAppId with existing appId property but same value") {

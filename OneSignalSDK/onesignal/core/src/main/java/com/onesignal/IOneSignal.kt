@@ -79,13 +79,14 @@ interface IOneSignal {
      * Initialize the OneSignal SDK.  This should be called during startup of the application.
      *
      * @param context The Android context the SDK should use.
-     * @param appId The application ID the OneSignal SDK is bound to.
+     * @param appId The application ID the OneSignal SDK is bound to. If null or invalid, the cached
+     * app ID is used; if none is cached, initialization is skipped and an error is logged.
      *
      * @return true if the SDK could be successfully initialized, false otherwise.
      */
     fun initWithContext(
-        context: Context,
-        appId: String,
+        context: Context?,
+        appId: String?,
     ): Boolean
 
     /**
@@ -170,7 +171,7 @@ interface IOneSignal {
      * @return true if the SDK could be successfully initialized, false otherwise.
      */
     suspend fun initWithContextSuspend(
-        context: Context,
+        context: Context?,
         appId: String? = null,
     ): Boolean
 
