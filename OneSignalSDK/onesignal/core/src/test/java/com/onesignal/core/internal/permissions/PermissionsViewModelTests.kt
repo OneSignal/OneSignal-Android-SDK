@@ -3,6 +3,7 @@ package com.onesignal.core.internal.permissions
 import android.app.Activity
 import android.content.pm.PackageManager
 import com.onesignal.OneSignal
+import com.onesignal.core.internal.permissions.impl.PermissionsResultHandler
 import com.onesignal.core.internal.permissions.impl.RequestPermissionService
 import com.onesignal.core.internal.preferences.IPreferencesService
 import com.onesignal.core.internal.preferences.PreferenceOneSignalKeys
@@ -43,6 +44,7 @@ class PermissionsViewModelTests : FunSpec({
         mockkObject(OneSignal)
         every { OneSignal.getService<RequestPermissionService>() } returns mockRequestService
         every { OneSignal.getService<IPreferencesService>() } returns mockPrefService
+        every { mockRequestService.resultHandler } returns PermissionsResultHandler(mockRequestService, mockPrefService)
         Logging.logLevel = LogLevel.NONE
     }
 

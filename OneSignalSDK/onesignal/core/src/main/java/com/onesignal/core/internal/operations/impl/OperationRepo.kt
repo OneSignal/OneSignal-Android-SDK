@@ -5,11 +5,13 @@ import com.onesignal.common.threading.WaiterWithValue
 import com.onesignal.common.threading.suspendifyOnIO
 import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.config.impl.IdentityVerificationService
+import com.onesignal.core.internal.operations.ExecutionResponse
 import com.onesignal.core.internal.operations.ExecutionResult
 import com.onesignal.core.internal.operations.GroupComparisonType
 import com.onesignal.core.internal.operations.IOperationExecutor
 import com.onesignal.core.internal.operations.IOperationRepo
 import com.onesignal.core.internal.operations.Operation
+import com.onesignal.core.internal.operations.OperationWaitResult
 import com.onesignal.core.internal.startup.IStartableService
 import com.onesignal.core.internal.time.ITime
 import com.onesignal.debug.LogLevel
@@ -25,7 +27,10 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.newSingleThreadContext
 import kotlinx.coroutines.withTimeoutOrNull
 import java.util.UUID
+import java.util.concurrent.TimeUnit
 import kotlin.math.max
+import kotlin.math.min
+import kotlin.random.Random
 import kotlin.reflect.KClass
 
 internal class OperationRepo(
@@ -40,12 +45,47 @@ internal class OperationRepo(
 
     internal class OperationQueueItem(
         val operation: Operation,
-        var waiter: WaiterWithValue<Boolean>? = null, // waiter may transfer during operation de-dupe
+        waiter: WaiterWithValue<OperationWaitResult>? = null,
         val bucket: Int,
         var retries: Int = 0,
     ) {
+        // On ITime.elapsedRealtimeMillis. A force may end it early: HttpClient still holds the
+        // request until any Retry-After passes.
+        var retryAt: Long = 0
+
+        val waiters = mutableListOf<WaiterWithValue<OperationWaitResult>>()
+
+        @Volatile
+        var completedResult: OperationWaitResult? = null
+            private set
+
+        init {
+            if (waiter != null) waiters.add(waiter)
+        }
+
+        fun wakeWaiters(result: OperationWaitResult) {
+            val toWake: List<WaiterWithValue<OperationWaitResult>>
+            synchronized(this) {
+                completedResult = result
+                toWake = waiters.toList()
+                waiters.clear()
+            }
+            toWake.forEach { it.wake(result) }
+        }
+
+        fun attachOrWake(incoming: List<WaiterWithValue<OperationWaitResult>>) {
+            val completed =
+                synchronized(this) {
+                    completedResult ?: run {
+                        waiters.addAll(incoming)
+                        return
+                    }
+                }
+            incoming.forEach { it.wake(completed) }
+        }
+
         override fun toString(): String {
-            return "bucket:$bucket, retries:$retries, operation:$operation\n"
+            return "bucket:$bucket, retries:$retries, retryAt:$retryAt, operation:$operation\n"
         }
     }
 
@@ -64,9 +104,15 @@ internal class OperationRepo(
 
     private val executorsMap: Map<String, IOperationExecutor>
     internal val queue = mutableListOf<OperationQueueItem>()
+    private val inFlightLogins = mutableMapOf<String, OperationQueueItem>()
     private val waiter = WaiterWithValue<LoopWaiterMessage>()
-    private val retryWaiter = WaiterWithValue<LoopWaiterMessage>()
     private var paused = false
+
+    // Guarded by queue. Set by a force that lands while ops are out of the queue executing.
+    private var forcedDuringExecute = false
+
+    internal var jitter: () -> Double = { Random.nextDouble(MIN_JITTER, 1.0) }
+
     private val initialized = CompletableDeferred<Unit>()
 
     override suspend fun awaitInitialized() {
@@ -145,20 +191,26 @@ internal class OperationRepo(
         }
     }
 
-    override suspend fun enqueueAndWait(
+    override suspend fun enqueueAndAwaitResult(
         operation: Operation,
         flush: Boolean,
-    ): Boolean {
-        if (shouldSuppressAnonymousOp(operation)) return false
+    ): OperationWaitResult {
+        if (shouldSuppressAnonymousOp(operation)) return OperationWaitResult(false)
 
         Logging.log(LogLevel.DEBUG, "OperationRepo.enqueueAndWait(operation: $operation, force: $flush)")
 
         operation.id = UUID.randomUUID().toString()
-        val waiter = WaiterWithValue<Boolean>()
+        val waiter = WaiterWithValue<OperationWaitResult>()
         scope.launch {
             internalEnqueue(OperationQueueItem(operation, waiter, bucket = enqueueIntoBucket), flush, true)
         }
-        return waiter.waitForWake()
+        val timeoutMs = _configModelStore.model.opRepoAwaitTimeout
+        return withTimeoutOrNull(timeoutMs) {
+            waiter.waitForWake()
+        } ?: run {
+            Logging.warn("OperationRepo.enqueueAndWait timed out after $timeoutMs ms: $operation")
+            OperationWaitResult(false)
+        }
     }
 
     /**
@@ -203,31 +255,38 @@ internal class OperationRepo(
             // Dedupe LoginUserOperation by onesignalId.
             val op = queueItem.operation
             if (op is LoginUserOperation) {
-                val existing =
+                val existingInQueue =
                     queue.firstOrNull {
                         it.operation is LoginUserOperation && it.operation.onesignalId == op.onesignalId
                     }
+                val existing = existingInQueue ?: inFlightLogins[op.onesignalId]
                 if (existing != null) {
-                    val existingOp = existing.operation as LoginUserOperation
-                    // Preserve the anon-user conversion link if the queued op lacks it (e.g. RecoverFromDroppedLoginBug enqueued with null).
-                    // Skip local ids: merging one would flip canStartExecute to false and strand the op,
-                    // since a local id that never hit the backend will never receive an idTranslation.
-                    val incomingExistingId = op.existingOnesignalId
-                    if (incomingExistingId != null &&
-                        !IDManager.isLocalId(incomingExistingId) &&
-                        existingOp.existingOnesignalId == null
-                    ) {
-                        Logging.debug("OperationRepo: internalEnqueue - merging existingOnesignalId=$incomingExistingId into queued LoginUserOperation for onesignalId: ${op.onesignalId}.")
-                        existingOp.existingOnesignalId = incomingExistingId
-                    } else {
-                        Logging.debug("OperationRepo: internalEnqueue - LoginUserOperation for onesignalId: ${op.onesignalId} already exists in the queue.")
+                    if (paused) {
+                        queueItem.waiters.forEach { it.wake(OperationWaitResult(false)) }
+                        if (!addToStore) {
+                            _operationModelStore.remove(queueItem.operation.id)
+                        }
+                        return
                     }
-                    // Transfer the waiter so enqueueAndWait callers see the queued op's real execution result.
-                    if (queueItem.waiter != null && existing.waiter == null) {
-                        existing.waiter = queueItem.waiter
-                    } else {
-                        queueItem.waiter?.wake(true)
+                    // Attach waiters, or wake them if execute already finished (post-create delay).
+                    if (existingInQueue != null) {
+                        val existingOp = existing.operation as LoginUserOperation
+                        // Preserve the anon-user conversion link if the queued op lacks it (e.g. RecoverFromDroppedLoginBug enqueued with null).
+                        // Skip local ids: merging one would flip canStartExecute to false and strand the op,
+                        // since a local id that never hit the backend will never receive an idTranslation.
+                        val incomingExistingId = op.existingOnesignalId
+                        if (incomingExistingId != null &&
+                            !IDManager.isLocalId(incomingExistingId) &&
+                            existingOp.existingOnesignalId == null
+                        ) {
+                            Logging.debug("OperationRepo: internalEnqueue - merging existingOnesignalId=$incomingExistingId into queued LoginUserOperation for onesignalId: ${op.onesignalId}.")
+                            existingOp.existingOnesignalId = incomingExistingId
+                        } else {
+                            Logging.debug("OperationRepo: internalEnqueue - LoginUserOperation for onesignalId: ${op.onesignalId} already exists in the queue.")
+                        }
+                        existingOp.mergeProfileFrom(op)
                     }
+                    existing.attachOrWake(queueItem.waiters)
                     if (!addToStore) {
                         _operationModelStore.remove(queueItem.operation.id)
                     }
@@ -281,8 +340,16 @@ internal class OperationRepo(
     }
 
     override fun forceExecuteOperations() {
-        retryWaiter.wake(LoopWaiterMessage(true))
-        waiter.wake(LoopWaiterMessage(false))
+        val now = _time.elapsedRealtimeMillis
+        val endedWait =
+            synchronized(queue) {
+                forcedDuringExecute = true
+                val backedOff = queue.filter { it.retryAt > now }
+                backedOff.forEach { it.retryAt = 0 }
+                backedOff.isNotEmpty()
+            }
+        // Skip the batching wait only when a retry was actually held back.
+        waiter.wake(LoopWaiterMessage(endedWait))
     }
 
     /**
@@ -294,7 +361,7 @@ internal class OperationRepo(
         val removedIds: List<String> =
             synchronized(queue) {
                 val anonymous = queue.filter { it.operation.externalId == null }
-                anonymous.forEach { it.waiter?.wake(false) }
+                anonymous.forEach { it.wakeWaiters(OperationWaitResult(false)) }
                 queue.removeAll(anonymous)
                 // IV=ON never transfers anonymous state; clear existingOnesignalId so the
                 // executor takes the createUser (upsert) path. The merge-anon-into-identified
@@ -346,8 +413,14 @@ internal class OperationRepo(
      *          with a budget.
      */
     private suspend fun waitForNewOperationAndExecutionInterval() {
-        // 1. Wait for an operation to be enqueued
-        var wakeMessage = waiter.waitForWake()
+        // 1. Wait for an operation to be enqueued, or for a backed-off one to become ready
+        val untilNextRetry = msUntilNextRetry()
+        var wakeMessage =
+            if (untilNextRetry == null) {
+                waiter.waitForWake()
+            } else {
+                withTimeoutOrNull(untilNextRetry) { waiter.waitForWake() } ?: LoopWaiterMessage(true)
+            }
 
         // 2. Now wait opRepoExecutionInterval, restart the wait
         //    time everytime something new is enqueued, to ensure
@@ -385,12 +458,11 @@ internal class OperationRepo(
                 response.idTranslations.values.forEach { _newRecordState.add(it) }
             }
 
-            var highestRetries = 0
             when (response.result) {
                 ExecutionResult.SUCCESS -> {
                     // on success we remove the operation from the store and wake any waiters
                     ops.forEach { _operationModelStore.remove(it.operation.id) }
-                    ops.forEach { it.waiter?.wake(true) }
+                    ops.forEach { it.wakeWaiters(response.toWaitResult(true)) }
                 }
                 ExecutionResult.FAIL_UNAUTHORIZED -> {
                     // Outer gate: dispatch to IV extension only on new code paths.
@@ -401,36 +473,58 @@ internal class OperationRepo(
                                 ops,
                                 _jwtTokenStore,
                                 _identityVerificationService.ivBehaviorActive,
+                                response,
                             )
                     if (!handled) {
                         // IV inactive or anon op: drop and wake waiters, matching FAIL_NORETRY.
                         Logging.warn("Operation execution failed without retry: $operations")
-                        dropAndWake(ops)
+                        dropAndWake(ops, response)
                     }
                 }
                 ExecutionResult.FAIL_NORETRY,
                 ExecutionResult.FAIL_CONFLICT,
                 -> {
                     Logging.warn("Operation execution failed without retry: $operations")
-                    dropAndWake(ops)
+                    // Login 4xx is terminal for login only. Grouped push create/transfer stay queued
+                    // so a later successful login can translate their local onesignalId.
+                    val followers = ops.filter { it != startingOp }
+                    if (startingOp.operation is LoginUserOperation && followers.isNotEmpty()) {
+                        _operationModelStore.remove(startingOp.operation.id)
+                        synchronized(queue) {
+                            followers.reversed().forEach { queue.add(0, it) }
+                        }
+                        startingOp.wakeWaiters(response.toWaitResult(false))
+                    } else {
+                        dropAndWake(ops, response)
+                    }
                 }
                 ExecutionResult.SUCCESS_STARTING_ONLY -> {
                     // remove the starting operation from the store and wake any waiters, then
                     // add back all but the starting op to the front of the queue to be re-executed
                     _operationModelStore.remove(startingOp.operation.id)
-                    startingOp.waiter?.wake(true)
+                    startingOp.wakeWaiters(response.toWaitResult(true))
                     synchronized(queue) {
                         ops.filter { it != startingOp }.reversed().forEach { queue.add(0, it) }
                     }
                 }
                 ExecutionResult.FAIL_RETRY -> {
                     Logging.info("Operation execution failed, retrying: $operations")
-                    // add back all operations to the front of the queue to be re-executed.
+                    // Re-queue at the front with a wait on these records only. Other records keep
+                    // going, though HttpClient still holds every request during a Retry-After.
+                    val now = _time.elapsedRealtimeMillis
+                    val config = _configModelStore.model
+                    val retryAfterMs = min(TimeUnit.SECONDS.toMillis((response.retryAfterSeconds ?: 0).toLong()), config.maxRetryAfter)
+                    ops.forEach { it.retries++ }
+                    // One wait for the whole batch so it retries as a single request.
+                    val retries = ops.maxOf { it.retries }
+                    val exponential = config.opRepoBaseFailRetryBackoff shl min(retries - 1, MAX_BACKOFF_DOUBLINGS)
+                    val backoffMs = (min(exponential, config.opRepoMaxFailRetryBackoff) * jitter()).toLong()
                     synchronized(queue) {
+                        // A force that arrived mid-request would otherwise be lost to the new backoff.
+                        val delayMs = if (forcedDuringExecute) 0L else max(backoffMs, retryAfterMs)
+                        Logging.debug("OperationRepo: retry #$retries of $operations in $delayMs ms (backoff: $backoffMs ms, Retry-After: $retryAfterMs ms)")
                         ops.reversed().forEach {
-                            if (++it.retries > highestRetries) {
-                                highestRetries = it.retries
-                            }
+                            it.retryAt = if (delayMs > 0) now + delayMs else 0
                             queue.add(0, it)
                         }
                     }
@@ -440,7 +534,7 @@ internal class OperationRepo(
                     // keep the failed operation and pause the operation repo from executing
                     paused = true
                     // Unblock any enqueueAndWait callers so loginSuspend doesn't hang.
-                    ops.forEach { it.waiter?.wake(false) }
+                    ops.forEach { it.wakeWaiters(response.toWaitResult(false)) }
                     // Re-queue with waiter = null: the operation is preserved for retry
                     // on next cold start, but the original waiter is detached since it
                     // was already woken above.
@@ -465,40 +559,29 @@ internal class OperationRepo(
                 }
             }
 
-            // wait for retry and post create waiters to start next operation
-            delayBeforeNextExecution(highestRetries, response.retryAfterSeconds)
             if (response.idTranslations != null) {
                 delayForPostCreate(_configModelStore.model.opRepoPostCreateDelay)
             }
         } catch (e: Throwable) {
             Logging.log(LogLevel.ERROR, "Error attempting to execute operation: $ops", e)
             dropAndWake(ops)
+        } finally {
+            synchronized(queue) {
+                ops.forEach { item ->
+                    val login = item.operation as? LoginUserOperation ?: return@forEach
+                    inFlightLogins.remove(login.onesignalId)
+                }
+            }
         }
     }
 
-    /** Drop ops from the persistent store and wake any waiters with `false` (failure). */
-    private fun dropAndWake(ops: List<OperationQueueItem>) {
-        ops.forEach { _operationModelStore.remove(it.operation.id) }
-        ops.forEach { it.waiter?.wake(false) }
-    }
-
-    /**
-     * Wait which ever is longer, retryAfterSeconds returned by the server,
-     * or based on the retry count.
-     */
-    suspend fun delayBeforeNextExecution(
-        retries: Int,
-        retryAfterSeconds: Int?,
+    /** Drop ops from the persistent store and wake any waiters with failure. */
+    private fun dropAndWake(
+        ops: List<OperationQueueItem>,
+        response: ExecutionResponse? = null,
     ) {
-        Logging.debug("retryAfterSeconds: $retryAfterSeconds")
-        val retryAfterSecondsNonNull = retryAfterSeconds?.toLong() ?: 0L
-        val delayForOnRetries = retries * _configModelStore.model.opRepoDefaultFailRetryBackoff
-        val delayFor = max(delayForOnRetries, retryAfterSecondsNonNull * 1_000)
-        if (delayFor < 1) return
-        Logging.debug("Operations being delay for: $delayFor ms")
-        withTimeoutOrNull(delayFor) {
-            retryWaiter.waitForWake()
-        }
+        ops.forEach { _operationModelStore.remove(it.operation.id) }
+        ops.forEach { it.wakeWaiters(response.toWaitResult(false)) }
     }
 
     /**
@@ -532,10 +615,18 @@ internal class OperationRepo(
         // Snapshot gate state once per pass so all queue items see the same IV view.
         val newCodePathsRun = _identityVerificationService.newCodePathsRun
         val ivBehaviorActive = _identityVerificationService.ivBehaviorActive
+        val now = _time.elapsedRealtimeMillis
         return synchronized(queue) {
+            // An op must not overtake an earlier op on the same record that is waiting to retry.
+            val waitingRecords = mutableSetOf<String>()
             val startingOp =
                 queue.firstOrNull {
-                    it.operation.canStartExecute &&
+                    if (it.retryAt > now) {
+                        waitingRecords.add(it.operation.applyToRecordId)
+                        return@firstOrNull false
+                    }
+                    it.operation.applyToRecordId !in waitingRecords &&
+                        it.operation.canStartExecute &&
                         _newRecordState.canAccess(it.operation.applyToRecordId) &&
                         it.bucket <= bucketFilter &&
                         // Outer gate: skip IV JWT check entirely on old code path.
@@ -544,7 +635,13 @@ internal class OperationRepo(
 
             if (startingOp != null) {
                 queue.remove(startingOp)
-                getGroupableOperations(startingOp)
+                forcedDuringExecute = false
+                val grouped = getGroupableOperations(startingOp, now)
+                grouped.forEach { item ->
+                    val login = item.operation as? LoginUserOperation ?: return@forEach
+                    inFlightLogins[login.onesignalId] = item
+                }
+                grouped
             } else {
                 null
             }
@@ -558,7 +655,10 @@ internal class OperationRepo(
      *
      * THIS SHOULD BE CALLED WHILE THE QUEUE IS SYNCHRONIZED!!
      */
-    private fun getGroupableOperations(startingOp: OperationQueueItem): List<OperationQueueItem> {
+    private fun getGroupableOperations(
+        startingOp: OperationQueueItem,
+        now: Long,
+    ): List<OperationQueueItem> {
         val ops = mutableListOf(startingOp)
 
         if (startingOp.operation.groupComparisonType == GroupComparisonType.NONE) {
@@ -572,7 +672,13 @@ internal class OperationRepo(
                 startingOp.operation.modifyComparisonKey
             }
 
+        val waitingRecords = mutableSetOf<String>()
         for (item in queue.toList()) {
+            if (item.retryAt > now) {
+                waitingRecords.add(item.operation.applyToRecordId)
+                continue
+            }
+
             val itemKey =
                 if (startingOp.operation.groupComparisonType == GroupComparisonType.CREATE) {
                     item.operation.createComparisonKey
@@ -584,17 +690,23 @@ internal class OperationRepo(
                 throw Exception("Both comparison keys can not be blank!")
             }
 
-            if (!_newRecordState.canAccess(item.operation.applyToRecordId)) {
-                continue
-            }
-
-            if (itemKey == startingKey) {
+            if (itemKey == startingKey &&
+                _newRecordState.canAccess(item.operation.applyToRecordId) &&
+                item.operation.applyToRecordId !in waitingRecords
+            ) {
                 queue.remove(item)
                 ops.add(item)
             }
         }
 
         return ops
+    }
+
+    private fun msUntilNextRetry(): Long? {
+        val now = _time.elapsedRealtimeMillis
+        return synchronized(queue) {
+            queue.map { it.retryAt }.filter { it > now }.minOrNull()?.let { it - now }
+        }
     }
 
     /**
@@ -613,5 +725,12 @@ internal class OperationRepo(
             )
         }
         initialized.complete(Unit)
+    }
+
+    companion object {
+        private const val MIN_JITTER = 0.5
+
+        // Keeps the shift from overflowing; the backoff is capped long before this.
+        private const val MAX_BACKOFF_DOUBLINGS = 20
     }
 }

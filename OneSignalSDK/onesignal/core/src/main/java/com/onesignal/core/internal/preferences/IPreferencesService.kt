@@ -223,6 +223,12 @@ object PreferenceOneSignalKeys {
      */
     const val PREFS_OS_PROMPTED_PERMISSION_PREFIX = "PROMPTED_PERMISSION_"
 
+    /**
+     * (Boolean) Set when the first SDK session starts. On a fresh install without the native
+     * notification prompt, that session defers the settings fallback (disabled may be an OEM default).
+     */
+    const val PREFS_OS_NOTIFICATION_SETTINGS_FALLBACK_ALLOWED = "NOTIFICATION_SETTINGS_FALLBACK_ALLOWED"
+
     // HTTP
 
     /**

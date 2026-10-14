@@ -5,32 +5,20 @@ import android.content.pm.PackageManager
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.onesignal.OneSignal
+import com.onesignal.core.internal.permissions.impl.PermissionPromptRequest
+import com.onesignal.core.internal.permissions.impl.PermissionsResultHandler
 import com.onesignal.core.internal.permissions.impl.RequestPermissionService
-import com.onesignal.core.internal.preferences.IPreferencesService
-import com.onesignal.core.internal.preferences.PreferenceOneSignalKeys
-import com.onesignal.core.internal.preferences.PreferenceStores
-import com.onesignal.debug.internal.logging.Logging
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-/**
- * ViewModel that handles the business logic for permission requests.
- * This separates the permission handling logic from the Activity lifecycle.
- * Uses AndroidX ViewModel with StateFlow for lifecycle-aware state management.
- *
- * Responsibilities:
- * - Store permission request state (survives configuration changes)
- * - Handle permission result business logic
- * - Manage callbacks and preferences
- * - Does NOT hold Activity references or call Activity APIs directly
- */
+/** Permission state for PermissionsActivity. Survives rotation and does not hold the Activity. */
 class PermissionsViewModel : ViewModel() {
-    // Lazy initialization to ensure OneSignal is ready before accessing services
+    // OneSignal.getService throws before init.
     private val requestPermissionService: RequestPermissionService by lazy { OneSignal.getService() }
-    private val preferenceService: IPreferencesService by lazy { OneSignal.getService() }
+    private val resultHandler: PermissionsResultHandler by lazy { requestPermissionService.resultHandler }
 
     private val _shouldFinish = MutableStateFlow(false)
     val shouldFinish: StateFlow<Boolean> = _shouldFinish.asStateFlow()
@@ -43,11 +31,7 @@ class PermissionsViewModel : ViewModel() {
 
     private var androidPermissionString: String? = null
 
-    /**
-     * Initialize OneSignal and the ViewModel with intent data.
-     * Returns false if initialization fails.
-     * @param activity Activity context (not stored, used only for initialization)
-     */
+    /** Returns false when init or the intent extras fail. Does not retain [activity]. */
     suspend fun initialize(
         activity: Activity,
         permissionType: String?,
@@ -82,11 +66,7 @@ class PermissionsViewModel : ViewModel() {
         return true
     }
 
-    /**
-     * Reset the waiting flag. This should be called when the activity is interrupted
-     * or destroyed without completing the permission request flow.
-     * This ensures the permission dialog can be shown again.
-     */
+    /** Clears waiting so an interrupted activity can prompt again. */
     fun resetWaitingState() {
         _waiting.value = false
     }
@@ -99,12 +79,7 @@ class PermissionsViewModel : ViewModel() {
         requestPermissionService.shouldShowRequestPermissionRationaleBeforeRequest = shouldShowRationale
     }
 
-    /**
-     * Handle the permission request result.
-     * Activity should call this with the result from onRequestPermissionsResult.
-     *
-     * @param shouldShowRationaleAfter The result of shouldShowRequestPermissionRationale AFTER the user responded
-     */
+    /** [shouldShowRationaleAfter] is the reading after the user answered. */
     fun onRequestPermissionsResult(
         permissions: Array<String>,
         grantResults: IntArray,
@@ -116,118 +91,22 @@ class PermissionsViewModel : ViewModel() {
         viewModelScope.launch {
             delay(DELAY_TIME_CALLBACK_CALL.toLong())
 
-            val granted: Boolean
-            val showSettings: Boolean
+            val granted = grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED
 
-            if (permissions.isEmpty()) {
-                granted = false
-                showSettings = false
-            } else {
-                val permission = permissions[0]
-                granted = grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED
-
-                if (granted) {
-                    preferenceService.saveBool(
-                        PreferenceStores.ONESIGNAL,
-                        "${PreferenceOneSignalKeys.PREFS_OS_USER_RESOLVED_PERMISSION_PREFIX}$permission",
-                        true,
-                    )
-                    showSettings = false
-                } else {
-                    showSettings = shouldShowSettings(permission, shouldShowRationaleAfter)
-                }
-
-                // Record that OneSignal has now requested this permission at least once. This
-                // must be persisted after shouldShowSettings() reads it so the recovery path
-                // only considers requests prior to the current one.
-                preferenceService.saveBool(
-                    PreferenceStores.ONESIGNAL,
-                    "${PreferenceOneSignalKeys.PREFS_OS_PROMPTED_PERMISSION_PREFIX}$permission",
-                    true,
-                )
-            }
-
-            // Execute the callback
-            executeCallback(granted, showSettings)
+            resultHandler.handleResult(
+                PermissionPromptRequest(
+                    permissionRequestType,
+                    permissions.firstOrNull(),
+                    requestPermissionService.fallbackToSettings,
+                    requestPermissionService.shouldShowRequestPermissionRationaleBeforeRequest,
+                ),
+                granted,
+                shouldShowRationaleAfter,
+            )
 
             // Signal the activity to finish
             _shouldFinish.value = true
         }
-    }
-
-    private fun executeCallback(
-        granted: Boolean,
-        showSettings: Boolean,
-    ) {
-        permissionRequestType?.let { type ->
-            val callback =
-                requestPermissionService.getCallback(type)
-                    ?: throw RuntimeException("Missing handler for permissionRequestType: $type")
-
-            if (granted) {
-                callback.onAccept()
-            } else {
-                callback.onReject(showSettings)
-            }
-        } ?: run {
-            // There is a small chance ViewModel was never fully initialized (e.g. process death or OneSignal init hanging while prompting).
-            // We can't safely resolve a callback in this state, so just finish the flow.
-            Logging.error("PermissionsViewModel: Cannot resolve callback because permissionRequestType is null. Ending permission flow.")
-            _shouldFinish.value = true
-        }
-    }
-
-    /**
-     * Determine if we should show the settings fallback.
-     * This matches the original logic from the Activity.
-     *
-     * We want to show settings after the user has clicked "Don't Allow" 2 times.
-     * After the first time shouldShowRequestPermissionRationale becomes true, after
-     * the second time shouldShowRequestPermissionRationale becomes false again. We
-     * look for the change from `true` -> `false`. When this happens we remember this
-     * rejection, as the user will never be prompted again.
-     *
-     * @param permission The permission string
-     * @param shouldShowRationaleAfter The result of shouldShowRequestPermissionRationale AFTER the user responded
-     */
-    private fun shouldShowSettings(
-        permission: String,
-        shouldShowRationaleAfter: Boolean,
-    ): Boolean {
-        if (!requestPermissionService.fallbackToSettings) {
-            return false
-        }
-
-        val resolvedKey = "${PreferenceOneSignalKeys.PREFS_OS_USER_RESOLVED_PERMISSION_PREFIX}$permission"
-        val rationaleBefore = requestPermissionService.shouldShowRequestPermissionRationaleBeforeRequest
-
-        // We want to show settings after the user has clicked "Don't Allow" 2 times.
-        // After the first time shouldShowRequestPermissionRationale becomes true, after
-        // the second time shouldShowRequestPermissionRationale becomes false again. We
-        // look for the change from `true` -> `false`. When this happens we remember this
-        // rejection, as the user will never be prompted again.
-        if (rationaleBefore && !shouldShowRationaleAfter) {
-            preferenceService.saveBool(PreferenceStores.ONESIGNAL, resolvedKey, true)
-            return false
-        }
-
-        // Recovery path for an already permanently-denied permission. If the OS won't surface
-        // its prompt (rationale is false before and after a denied request) but OneSignal has
-        // requested this permission before, the permission is permanently blocked even though
-        // we never witnessed the true -> false transition (e.g. it was denied across a prior
-        // session or outside OneSignal's flow). Remember it so the fallback is no longer stuck.
-        val hasPromptedBefore =
-            preferenceService.getBool(
-                PreferenceStores.ONESIGNAL,
-                "${PreferenceOneSignalKeys.PREFS_OS_PROMPTED_PERMISSION_PREFIX}$permission",
-                false,
-            ) ?: false
-        if (hasPromptedBefore && !rationaleBefore && !shouldShowRationaleAfter) {
-            preferenceService.saveBool(PreferenceStores.ONESIGNAL, resolvedKey, true)
-            return true
-        }
-
-        return preferenceService.getBool(PreferenceStores.ONESIGNAL, resolvedKey, false) ?: false
     }
 
     override fun onCleared() {

@@ -1,0 +1,6 @@
+appId: com.onesignal.example
+---
+- launchApp
+- tapOn:
+    text: Allow
+    optional: true

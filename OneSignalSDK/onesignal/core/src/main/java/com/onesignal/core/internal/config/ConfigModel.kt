@@ -108,7 +108,7 @@ class ConfigModel : Model() {
      * The timeout in milliseconds for an HTTP connection GET request.
      */
     var httpGetTimeout: Int
-        get() = getIntProperty(::httpGetTimeout.name) { 60000 }
+        get() = getIntProperty(::httpGetTimeout.name) { DEFAULT_TIMEOUT_MS.toInt() }
         set(value) {
             setIntProperty(::httpGetTimeout.name, value)
         }
@@ -174,21 +174,47 @@ class ConfigModel : Model() {
      * to re-create records as a last resort.
      */
     var opRepoPostCreateRetryUpTo: Long
-        get() = getLongProperty(::opRepoPostCreateRetryUpTo.name) { 60_000 }
+        get() = getLongProperty(::opRepoPostCreateRetryUpTo.name) { DEFAULT_TIMEOUT_MS }
         set(value) {
             setLongProperty(::opRepoPostCreateRetryUpTo.name, value)
         }
 
     /**
-     * The number of milliseconds times the number of times FAIL_RETRY
-     * is returned from an executor for a specific operation. AKA this
-     * backoff will increase each time we retry a specific operation
-     * by this value.
+     * The first retry backoff after FAIL_RETRY, in milliseconds. It doubles with each further
+     * failure of the same operation, up to [opRepoMaxFailRetryBackoff], and is then jittered.
      */
-    var opRepoDefaultFailRetryBackoff: Long
-        get() = getLongProperty(::opRepoDefaultFailRetryBackoff.name) { 15_000 }
+    var opRepoBaseFailRetryBackoff: Long
+        get() = getLongProperty(::opRepoBaseFailRetryBackoff.name) { 5_000 }
         set(value) {
-            setLongProperty(::opRepoDefaultFailRetryBackoff.name, value)
+            setLongProperty(::opRepoBaseFailRetryBackoff.name, value)
+        }
+
+    /**
+     * The longest retry backoff, in milliseconds, before jitter.
+     */
+    var opRepoMaxFailRetryBackoff: Long
+        get() = getLongProperty(::opRepoMaxFailRetryBackoff.name) { 300_000 }
+        set(value) {
+            setLongProperty(::opRepoMaxFailRetryBackoff.name, value)
+        }
+
+    /**
+     * The longest a server Retry-After is honored, in milliseconds.
+     */
+    var maxRetryAfter: Long
+        get() = getLongProperty(::maxRetryAfter.name) { 3_600_000 }
+        set(value) {
+            setLongProperty(::maxRetryAfter.name, value)
+        }
+
+    /**
+     * How long [com.onesignal.core.internal.operations.IOperationRepo.enqueueAndAwaitResult] waits.
+     * The operation stays queued after the waiter is released.
+     */
+    var opRepoAwaitTimeout: Long
+        get() = getLongProperty(::opRepoAwaitTimeout.name) { DEFAULT_TIMEOUT_MS }
+        set(value) {
+            setLongProperty(::opRepoAwaitTimeout.name, value)
         }
 
     /**
@@ -385,6 +411,10 @@ class ConfigModel : Model() {
         }
 
         return null
+    }
+
+    companion object {
+        const val DEFAULT_TIMEOUT_MS = 60_000L
     }
 }
 

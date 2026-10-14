@@ -23,7 +23,12 @@ import io.mockk.slot
 import io.mockk.spyk
 import io.mockk.unmockkObject
 import io.mockk.verify
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
+import kotlin.concurrent.thread
+import kotlin.time.Duration.Companion.seconds
 
 @RobolectricTest
 class LocationPermissionControllerTests : FunSpec({
@@ -57,6 +62,38 @@ class LocationPermissionControllerTests : FunSpec({
         response shouldBe true
         deltaTime shouldBeGreaterThan 1000
         verify(exactly = 1) { mockRequestPermissionService.startPrompt(false, any(), "permission", any()) }
+    }
+
+    test("a second prompt joins the one already in flight") {
+        val mockRequestPermissionService = mockk<IRequestPermissionService>()
+        val locationPermissionController =
+            LocationPermissionController(
+                mockRequestPermissionService,
+                AndroidMockHelper.applicationService(),
+            )
+
+        val second = CompletableDeferred<Boolean>()
+        var started = false
+        every { mockRequestPermissionService.startPrompt(any(), any(), any(), any()) } answers {
+            if (!started) {
+                started = true
+                thread {
+                    second.complete(runBlocking { locationPermissionController.prompt(true, "permission") })
+                }
+                Thread.sleep(200)
+            }
+            locationPermissionController.onAccept()
+        }
+
+        val first =
+            withTimeout(5.seconds) {
+                val owner = locationPermissionController.prompt(false, "permission")
+                val joined = second.await()
+                owner to joined
+            }
+
+        first shouldBe (true to true)
+        verify(exactly = 1) { mockRequestPermissionService.startPrompt(any(), any(), any(), any()) }
     }
 
     test("prompt will return false once permission is rejected by user") {

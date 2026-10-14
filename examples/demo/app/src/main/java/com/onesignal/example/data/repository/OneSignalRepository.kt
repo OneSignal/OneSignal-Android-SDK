@@ -1,6 +1,7 @@
 package com.onesignal.example.data.repository
 
 import com.onesignal.OneSignal
+import com.onesignal.example.data.model.CompositeLoginExample
 import com.onesignal.example.data.model.NotificationType
 import com.onesignal.example.data.network.OneSignalService
 import com.onesignal.example.data.network.UserData
@@ -19,6 +20,19 @@ class OneSignalRepository {
         DemoLog.d("Logging in user with externalUserId: $externalUserId, jwt: ${if (jwtToken != null) "provided" else "none"}")
         OneSignal.login(externalUserId, jwtToken)
         DemoLog.d("Logged in user with onesignalId: ${OneSignal.User.onesignalId}")
+    }
+
+    suspend fun loginUserWithProfile(
+        externalUserId: String,
+        email: String?,
+        sms: String?,
+        jwtToken: String? = null,
+    ) = withContext(Dispatchers.IO) {
+        DemoLog.d("Composite login externalUserId: $externalUserId email=$email sms=$sms")
+        val profile = CompositeLoginExample.profile(email, sms)
+        val result = OneSignal.login(externalUserId, profile, jwtToken)
+        DemoLog.d("Composite login result: $result")
+        result
     }
 
     suspend fun updateUserJwt(externalUserId: String, jwtToken: String) = withContext(Dispatchers.IO) {

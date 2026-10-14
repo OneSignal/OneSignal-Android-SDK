@@ -1,5 +1,6 @@
 package com.onesignal.core.internal.operations
 
+import com.onesignal.OneSignalUserProfile
 import com.onesignal.common.threading.Waiter
 import com.onesignal.common.threading.WaiterWithValue
 import com.onesignal.core.internal.operations.impl.OperationModelStore
@@ -7,7 +8,6 @@ import com.onesignal.core.internal.operations.impl.OperationRepo
 import com.onesignal.core.internal.operations.impl.OperationRepo.OperationQueueItem
 import com.onesignal.core.internal.preferences.PreferenceOneSignalKeys
 import com.onesignal.core.internal.preferences.PreferenceStores
-import com.onesignal.core.internal.time.impl.Time
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.mocks.CoreInternalMocks
@@ -15,8 +15,13 @@ import com.onesignal.mocks.MockHelper
 import com.onesignal.mocks.MockPreferencesService
 import com.onesignal.user.internal.jwt.JwtRequirement
 import com.onesignal.user.internal.jwt.JwtTokenStore
+import com.onesignal.user.internal.operations.CreateSubscriptionOperation
 import com.onesignal.user.internal.operations.ExecutorMocks.Companion.getNewRecordState
 import com.onesignal.user.internal.operations.LoginUserOperation
+import com.onesignal.user.internal.operations.impl.executors.LoginUserOperationExecutor
+import com.onesignal.user.internal.operations.impl.executors.SubscriptionOperationExecutor
+import com.onesignal.user.internal.subscriptions.SubscriptionStatus
+import com.onesignal.user.internal.subscriptions.SubscriptionType
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.ints.shouldBeGreaterThan
 import io.kotest.matchers.ints.shouldBeLessThan
@@ -32,6 +37,7 @@ import io.mockk.runs
 import io.mockk.slot
 import io.mockk.spyk
 import io.mockk.verify
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -84,7 +90,7 @@ private class Mocks {
                 listOf(executor),
                 operationModelStore,
                 configModelStore,
-                Time(),
+                MockHelper.systemTime(),
                 getNewRecordState(configModelStore),
                 jwtTokenStore,
                 identityVerificationService,
@@ -111,7 +117,7 @@ class OperationRepoTests : FunSpec({
                     listOf(mocks.executor),
                     operationModelStore,
                     mocks.configModelStore,
-                    Time(),
+                    MockHelper.systemTime(),
                     getNewRecordState(mocks.configModelStore),
                     JwtTokenStore(MockPreferencesService()),
                     CoreInternalMocks.identityVerificationService(),
@@ -188,6 +194,71 @@ class OperationRepoTests : FunSpec({
         merged.existingOnesignalId shouldBe "anon-uuid"
     }
 
+    test("enqueue dedupes LoginUserOperation for same onesignalId and merges profile fields") {
+        val mocks = Mocks()
+        val operationRepo = mocks.operationRepo
+
+        val queuedOp = LoginUserOperation("appId", "local-new", "alice", null)
+        queuedOp.id = UUID.randomUUID().toString()
+        synchronized(operationRepo.queue) {
+            operationRepo.queue.add(OperationQueueItem(queuedOp, bucket = 0))
+        }
+
+        val incomingOp =
+            LoginUserOperation(
+                "appId",
+                "local-new",
+                "alice",
+                null,
+                OneSignalUserProfile(
+                    email = "a@b.com",
+                    tags = mapOf("plan" to "pro"),
+                ),
+            )
+
+        operationRepo.enqueue(incomingOp)
+        mocks.waitForInternalEnqueue()
+
+        operationRepo.queue.size shouldBe 1
+        val merged = operationRepo.queue.first().operation as LoginUserOperation
+        merged.email shouldBe "a@b.com"
+        merged.tags shouldBe mapOf("plan" to "pro")
+    }
+
+    test("enqueue dedupe last-write-wins for incoming email and phone") {
+        val mocks = Mocks()
+        val operationRepo = mocks.operationRepo
+
+        val queuedOp =
+            LoginUserOperation(
+                "appId",
+                "local-new",
+                "alice",
+                null,
+                OneSignalUserProfile(email = "first@b.com", sms = "+15555550100"),
+            )
+        queuedOp.id = UUID.randomUUID().toString()
+        synchronized(operationRepo.queue) {
+            operationRepo.queue.add(OperationQueueItem(queuedOp, bucket = 0))
+        }
+
+        val incomingOp =
+            LoginUserOperation(
+                "appId",
+                "local-new",
+                "alice",
+                null,
+                OneSignalUserProfile(email = "second@b.com", sms = "+15555550999"),
+            )
+
+        operationRepo.enqueue(incomingOp)
+        mocks.waitForInternalEnqueue()
+
+        val merged = operationRepo.queue.first().operation as LoginUserOperation
+        merged.email shouldBe "second@b.com"
+        merged.sms shouldBe "+15555550999"
+    }
+
     test("enqueue dedupe does not merge a local existingOnesignalId onto the queued op") {
         // Regression: when upgrading from 5.0.0-5.1.7, an anon user's backend-create
         // may have been dropped, so its onesignalId is still "local-". If
@@ -218,11 +289,6 @@ class OperationRepoTests : FunSpec({
     }
 
     test("enqueue dedupe wakes both queued and incoming enqueueAndWait callers on SUCCESS") {
-        // A LoginUserOperation is queued via enqueueAndWait while the loop is not yet
-        // started, so it sits in the queue with its waiter attached. A second
-        // enqueueAndWait arrives for the same onesignalId. Dedupe wakes the incoming
-        // caller immediately with true; the queued op's waiter wakes with the real
-        // execution result when SUCCESS lands.
         val mocks = Mocks()
         val opRepo = mocks.operationRepo
         val executeOperationsCall = mockExecuteOperations(opRepo)
@@ -230,26 +296,237 @@ class OperationRepoTests : FunSpec({
         val queuedOp = LoginUserOperation("appId", "alice", "ext", "anon-uuid")
         val incomingOp = LoginUserOperation("appId", "alice", "ext", "anon-uuid")
 
-        // When — first enqueueAndWait runs (loop not started, op stays in queue).
-        // UNDISPATCHED so enqueueAndWait reaches its scope.launch + suspend before
-        // we send the incoming op below; otherwise the scope's single thread would
-        // see the incoming op's internalEnqueue first and dedupe direction reverses.
         val queuedDone = WaiterWithValue<Boolean>()
         launch(start = CoroutineStart.UNDISPATCHED) {
             queuedDone.wake(opRepo.enqueueAndWait(queuedOp))
         }
         mocks.waitForInternalEnqueue()
 
-        // Incoming dedupes against the queued op and is woken immediately
-        val incomingResult = withTimeout(1_000) { opRepo.enqueueAndWait(incomingOp) }
-        // Run the loop; mocked executor SUCCESS wakes the queued op's waiter
+        val incomingDone = WaiterWithValue<Boolean>()
+        launch(start = CoroutineStart.UNDISPATCHED) {
+            incomingDone.wake(opRepo.enqueueAndWait(incomingOp))
+        }
+        mocks.waitForInternalEnqueue()
+
         opRepo.start()
         executeOperationsCall.waitForWake()
+        val incomingResult = withTimeout(1_000) { incomingDone.waitForWake() }
         val queuedResult = withTimeout(1_000) { queuedDone.waitForWake() }
 
-        // Then
         incomingResult shouldBe true
         queuedResult shouldBe true
+    }
+
+    test("enqueue dedupe wakes both waiters with the real FAIL_NORETRY result") {
+        val mocks = Mocks()
+        val opRepo = mocks.operationRepo
+        val executeOperationsCall = mockExecuteOperations(opRepo, OperationWaitResult(false, 400, "bad phone"))
+
+        val queuedOp = LoginUserOperation("appId", "alice", "ext", null, OneSignalUserProfile(sms = "+1"))
+        val incomingOp = LoginUserOperation("appId", "alice", "ext", null, OneSignalUserProfile(email = "a@b.com"))
+
+        val queuedDone = WaiterWithValue<OperationWaitResult>()
+        launch(start = CoroutineStart.UNDISPATCHED) {
+            queuedDone.wake(opRepo.enqueueAndAwaitResult(queuedOp))
+        }
+        mocks.waitForInternalEnqueue()
+
+        val incomingDone = WaiterWithValue<OperationWaitResult>()
+        launch(start = CoroutineStart.UNDISPATCHED) {
+            incomingDone.wake(opRepo.enqueueAndAwaitResult(incomingOp))
+        }
+        mocks.waitForInternalEnqueue()
+
+        opRepo.start()
+        executeOperationsCall.waitForWake()
+        val incomingResult = withTimeout(1_000) { incomingDone.waitForWake() }
+        val queuedResult = withTimeout(1_000) { queuedDone.waitForWake() }
+
+        incomingResult.success shouldBe false
+        incomingResult.httpStatusCode shouldBe 400
+        queuedResult.success shouldBe false
+        queuedResult.httpStatusCode shouldBe 400
+    }
+
+    test("FAIL_NORETRY on login keeps grouped create-subscription in the queue") {
+        val mocks = Mocks()
+        every { mocks.executor.operations } returns
+            listOf(
+                LoginUserOperationExecutor.LOGIN_USER,
+                SubscriptionOperationExecutor.CREATE_SUBSCRIPTION,
+            )
+        coEvery { mocks.executor.execute(any()) } returns
+            ExecutionResponse(ExecutionResult.FAIL_NORETRY, httpStatusCode = 400)
+
+        val opRepo = mocks.operationRepo
+        val loginOp = LoginUserOperation("appId", "local-alice", "alice", null)
+        val createOp =
+            CreateSubscriptionOperation(
+                "appId",
+                "local-alice",
+                "alice",
+                "local-push",
+                SubscriptionType.PUSH,
+                true,
+                "push-token",
+                SubscriptionStatus.SUBSCRIBED,
+            )
+
+        val loginDone = WaiterWithValue<OperationWaitResult>()
+        launch(start = CoroutineStart.UNDISPATCHED) {
+            loginDone.wake(opRepo.enqueueAndAwaitResult(loginOp))
+        }
+        mocks.waitForInternalEnqueue()
+        opRepo.enqueue(createOp)
+        mocks.waitForInternalEnqueue()
+
+        opRepo.start()
+        val loginResult = withTimeout(2_000) { loginDone.waitForWake() }
+
+        loginResult.success shouldBe false
+        opRepo.containsInstanceOf<LoginUserOperation>() shouldBe false
+        mocks.operationModelStore.list().none { it is LoginUserOperation } shouldBe true
+        opRepo.queue.map { it.operation } shouldBe listOf(createOp)
+        verify { mocks.operationModelStore.remove(loginOp.id) }
+        verify(exactly = 0) { mocks.operationModelStore.remove(createOp.id) }
+        coVerify {
+            mocks.executor.execute(
+                match {
+                    it.size == 2 &&
+                        it[0] is LoginUserOperation &&
+                        it[1] is CreateSubscriptionOperation
+                },
+            )
+        }
+    }
+
+    test("FAIL_NORETRY on login does not pause so a later login can execute") {
+        val mocks = Mocks()
+        every { mocks.executor.operations } returns listOf(LoginUserOperationExecutor.LOGIN_USER)
+        coEvery { mocks.executor.execute(any()) } returns
+            ExecutionResponse(ExecutionResult.FAIL_NORETRY, httpStatusCode = 409, httpResponse = "user-1") andThen
+            ExecutionResponse(ExecutionResult.SUCCESS)
+
+        val opRepo = mocks.operationRepo
+        opRepo.start()
+        val first =
+            withTimeout(2_000) {
+                opRepo.enqueueAndAwaitResult(
+                    LoginUserOperation(
+                        "appId",
+                        "local-alice",
+                        "alice",
+                        null,
+                        OneSignalUserProfile(aliases = mapOf("facebook" to "bob")),
+                    ),
+                )
+            }
+        first.success shouldBe false
+        first.httpStatusCode shouldBe 409
+
+        val second =
+            withTimeout(2_000) {
+                opRepo.enqueueAndAwaitResult(LoginUserOperation("appId", "local-alice", "alice", null))
+            }
+        second.success shouldBe true
+        coVerify(exactly = 2) { mocks.executor.execute(any()) }
+    }
+
+    test("enqueueAndAwaitResult same login after FAIL_PAUSE returns false without hanging") {
+        val mocks = Mocks()
+        every { mocks.executor.operations } returns listOf(LoginUserOperationExecutor.LOGIN_USER)
+        coEvery { mocks.executor.execute(any()) } returns ExecutionResponse(ExecutionResult.FAIL_PAUSE_OPREPO)
+
+        val opRepo = mocks.operationRepo
+        opRepo.start()
+        val first =
+            withTimeout(2_000) {
+                opRepo.enqueueAndAwaitResult(LoginUserOperation("appId", "local-alice", "alice", null))
+            }
+        first.success shouldBe false
+
+        val second =
+            withTimeout(500) {
+                opRepo.enqueueAndAwaitResult(LoginUserOperation("appId", "local-alice", "alice", null))
+            }
+        second.success shouldBe false
+        coVerify(exactly = 1) { mocks.executor.execute(any()) }
+    }
+
+    test("enqueue dedupes LoginUserOperation that is already in-flight") {
+        val mocks = Mocks()
+        every { mocks.executor.operations } returns listOf(LoginUserOperationExecutor.LOGIN_USER)
+        val executeStarted = Waiter()
+        val releaseExecute = Waiter()
+        coEvery { mocks.executor.execute(any()) } coAnswers {
+            executeStarted.wake()
+            releaseExecute.waitForWake()
+            ExecutionResponse(ExecutionResult.SUCCESS)
+        }
+
+        val opRepo = mocks.operationRepo
+        opRepo.start()
+        val firstDone = WaiterWithValue<OperationWaitResult>()
+        launch(start = CoroutineStart.UNDISPATCHED) {
+            firstDone.wake(
+                opRepo.enqueueAndAwaitResult(LoginUserOperation("appId", "local-alice", "alice", null)),
+            )
+        }
+        executeStarted.waitForWake()
+
+        val secondDone = WaiterWithValue<OperationWaitResult>()
+        launch(start = CoroutineStart.UNDISPATCHED) {
+            secondDone.wake(
+                opRepo.enqueueAndAwaitResult(LoginUserOperation("appId", "local-alice", "alice", null)),
+            )
+        }
+        verify(exactly = 2, timeout = 1_000) {
+            opRepo["internalEnqueue"](
+                any<OperationQueueItem>(), any<Boolean>(), any<Boolean>(), any<Int>()
+            )
+        }
+
+        releaseExecute.wake()
+        val firstResult = withTimeout(2_000) { firstDone.waitForWake() }
+        val secondResult = withTimeout(2_000) { secondDone.waitForWake() }
+
+        firstResult.success shouldBe true
+        secondResult.success shouldBe true
+        coVerify(exactly = 1) { mocks.executor.execute(any()) }
+    }
+
+    test("duplicate login during post-create delay wakes with the completed result") {
+        val mocks = Mocks()
+        every { mocks.executor.operations } returns listOf(LoginUserOperationExecutor.LOGIN_USER)
+        coEvery { mocks.executor.execute(any()) } returns
+            ExecutionResponse(
+                ExecutionResult.SUCCESS,
+                idTranslations = mapOf("local-alice" to "backend-alice"),
+            )
+
+        val opRepo = mocks.operationRepo
+        val delayStarted = Waiter()
+        val releaseDelay = Waiter()
+        coEvery { opRepo.delayForPostCreate(any()) } coAnswers {
+            delayStarted.wake()
+            releaseDelay.waitForWake()
+        }
+
+        opRepo.start()
+        val first =
+            withTimeout(2_000) {
+                opRepo.enqueueAndAwaitResult(LoginUserOperation("appId", "local-alice", "alice", null))
+            }
+        first.success shouldBe true
+        delayStarted.waitForWake()
+
+        val second =
+            withTimeout(1_000) {
+                opRepo.enqueueAndAwaitResult(LoginUserOperation("appId", "local-alice", "alice", null))
+            }
+        second.success shouldBe true
+        coVerify(exactly = 1) { mocks.executor.execute(any()) }
+        releaseDelay.wake()
     }
 
     test("containsInstanceOf") {
@@ -332,7 +609,6 @@ class OperationRepoTests : FunSpec({
         // Given
         val mocks = Mocks()
         val opRepo = mocks.operationRepo
-        coEvery { opRepo.delayBeforeNextExecution(any(), any()) } just runs
         coEvery {
             mocks.executor.execute(any())
         } returns ExecutionResponse(ExecutionResult.FAIL_RETRY) andThen ExecutionResponse(ExecutionResult.SUCCESS)
@@ -356,7 +632,6 @@ class OperationRepoTests : FunSpec({
                     it[0] shouldBe operation
                 },
             )
-            opRepo.delayBeforeNextExecution(1, null)
             mocks.executor.execute(
                 withArg {
                     it.count() shouldBe 1
@@ -797,7 +1072,7 @@ class OperationRepoTests : FunSpec({
             // ensure the order: IDs are translated, operation removed from the store, then delay for postCreateDelay
             operation.translateIds(idTranslation)
             mocks.operationModelStore.remove(opId)
-            mocks.operationRepo.delayBeforeNextExecution(any(), any())
+            mocks.operationRepo.delayForPostCreate(any())
         }
     }
 
@@ -875,13 +1150,188 @@ class OperationRepoTests : FunSpec({
         mocks.operationRepo.queue[1].operation shouldBe op2
     }
 
-    test("ensure forceExecuteOperations immediately wakes retry waiters") {
+    test("a retrying operation does not block operations on other records") {
+        // Given
+        val mocks = Mocks()
+        mocks.configModelStore.model.opRepoBaseFailRetryBackoff = 60_000
+        val opRepo = mocks.operationRepo
+        val failing = mockOperation(applyToRecordId = "record-a")
+        val unrelated = mockOperation(applyToRecordId = "record-b")
+        coEvery { mocks.executor.execute(listOf(failing)) } returns ExecutionResponse(ExecutionResult.FAIL_RETRY)
+
+        // When
+        opRepo.start()
+        opRepo.enqueue(failing)
+        mocks.waitForInternalEnqueue()
+        val response = withTimeoutOrNull(1_000) { opRepo.enqueueAndWait(unrelated) }
+
+        // Then
+        response shouldBe true
+        opRepo.queue.map { it.operation } shouldBe listOf(failing)
+    }
+
+    test("an operation waits behind a retrying operation on the same record and keeps its order") {
+        // Given
+        val mocks = Mocks()
+        mocks.configModelStore.model.opRepoBaseFailRetryBackoff = 200
+        val opRepo = mocks.operationRepo
+        val first = mockOperation(applyToRecordId = "record-a")
+        val second = mockOperation(applyToRecordId = "record-a")
+        val executed = mutableListOf<Operation>()
+        var firstAttempts = 0
+        coEvery { mocks.executor.execute(any()) } answers {
+            val ops = firstArg<List<Operation>>()
+            executed.addAll(ops)
+            if (ops.first() === first && firstAttempts++ == 0) {
+                ExecutionResponse(ExecutionResult.FAIL_RETRY)
+            } else {
+                ExecutionResponse(ExecutionResult.SUCCESS)
+            }
+        }
+
+        // When
+        opRepo.start()
+        opRepo.enqueue(first)
+        mocks.waitForInternalEnqueue()
+        val response = withTimeoutOrNull(2_000) { opRepo.enqueueAndWait(second) }
+
+        // Then
+        response shouldBe true
+        executed shouldBe listOf(first, first, second)
+    }
+
+    test("a waiting operation is not grouped into another operation's request") {
+        // Given
+        val mocks = Mocks()
+        mocks.configModelStore.model.opRepoBaseFailRetryBackoff = 60_000
+        val opRepo = mocks.operationRepo
+        val waiting = mockOperation(groupComparisonType = GroupComparisonType.ALTER, applyToRecordId = "record-a")
+        val starter = mockOperation(groupComparisonType = GroupComparisonType.ALTER, applyToRecordId = "record-b")
+        opRepo.queue.add(OperationQueueItem(waiting, bucket = 0).apply { retryAt = Long.MAX_VALUE })
+        opRepo.queue.add(OperationQueueItem(starter, bucket = 0))
+
+        // When
+        val ops = opRepo.getNextOps(0)
+
+        // Then
+        ops?.map { it.operation } shouldBe listOf(starter)
+        opRepo.queue.map { it.operation } shouldBe listOf(waiting)
+    }
+
+    test("backoff doubles from opRepoBaseFailRetryBackoff up to opRepoMaxFailRetryBackoff, scaled by jitter") {
+        // Given
+        val mocks = Mocks()
+        mocks.configModelStore.model.opRepoBaseFailRetryBackoff = 5_000
+        mocks.configModelStore.model.opRepoMaxFailRetryBackoff = 30_000
+        val opRepo = mocks.operationRepo
+        opRepo.jitter = { 0.5 }
+        coEvery { mocks.executor.execute(any()) } returns ExecutionResponse(ExecutionResult.FAIL_RETRY)
+        val item = OperationQueueItem(mockOperation(), bucket = 0)
+
+        // When
+        val backoffs =
+            (1..5).map {
+                val before = System.nanoTime() / 1_000_000
+                opRepo.executeOperations(listOf(item))
+                opRepo.queue.clear()
+                item.retryAt - before
+            }
+
+        // Then
+        backoffs.zip(listOf(2_500L, 5_000L, 10_000L, 15_000L, 15_000L)).forEach { (actual, expected) ->
+            (actual >= expected) shouldBe true
+            (actual <= expected + 1_000) shouldBe true
+        }
+    }
+
+    test("a failed batch shares one retry time so it retries together") {
+        // Given
+        val mocks = Mocks()
+        mocks.configModelStore.model.opRepoBaseFailRetryBackoff = 5_000
+        val opRepo = mocks.operationRepo
+        var nextJitter = 0.5
+        opRepo.jitter = { nextJitter.also { nextJitter += 0.1 } }
+        coEvery { mocks.executor.execute(any()) } returns ExecutionResponse(ExecutionResult.FAIL_RETRY)
+        val retried = OperationQueueItem(mockOperation(), bucket = 0, retries = 2)
+        val fresh = OperationQueueItem(mockOperation(), bucket = 0)
+
+        // When
+        opRepo.executeOperations(listOf(retried, fresh))
+
+        // Then
+        retried.retries shouldBe 3
+        fresh.retries shouldBe 1
+        (retried.retryAt > 0) shouldBe true
+        fresh.retryAt shouldBe retried.retryAt
+    }
+
+    test("forceExecuteOperations ends the backoff of retrying operations") {
         // Given
         val mocks = Mocks()
         val opRepo = mocks.operationRepo
+        val backedOff = OperationQueueItem(mockOperation(), bucket = 0).apply { retryAt = Long.MAX_VALUE }
+        opRepo.queue.add(backedOff)
+
+        // When
+        opRepo.forceExecuteOperations()
+
+        // Then
+        backedOff.retryAt shouldBe 0
+    }
+
+    test("forceExecuteOperations skips the batching wait when it ends a retry wait") {
+        // Given
+        val mocks = Mocks()
+        mocks.configModelStore.model.opRepoBaseFailRetryBackoff = 60_000
+        val opRepo = mocks.operationRepo
+        var attempts = 0
+        val retried = CompletableDeferred<Unit>()
+        coEvery { mocks.executor.execute(any()) } answers {
+            if (attempts++ == 0) {
+                ExecutionResponse(ExecutionResult.FAIL_RETRY)
+            } else {
+                retried.complete(Unit)
+                ExecutionResponse(ExecutionResult.SUCCESS)
+            }
+        }
+        opRepo.start()
+        opRepo.enqueue(mockOperation())
+        mocks.waitForInternalEnqueue()
+        withTimeoutOrNull(1_000) { while (opRepo.queue.firstOrNull()?.retries != 1) delay(10) }
+        mocks.configModelStore.model.opRepoExecutionInterval = 60_000
+
+        // When
+        opRepo.forceExecuteOperations()
+
+        // Then
+        withTimeoutOrNull(1_000) { retried.await() } shouldBe Unit
+    }
+
+    test("a force during execute skips the next backoff") {
+        // Given
+        val mocks = Mocks()
+        mocks.configModelStore.model.opRepoBaseFailRetryBackoff = 60_000
+        val opRepo = mocks.operationRepo
+        coEvery { mocks.executor.execute(any()) } answers {
+            opRepo.forceExecuteOperations()
+            ExecutionResponse(ExecutionResult.FAIL_RETRY)
+        }
+
+        // When
+        opRepo.executeOperations(listOf(OperationQueueItem(mockOperation(), bucket = 0)))
+
+        // Then
+        opRepo.queue.single().retryAt shouldBe 0
+    }
+
+    test("ensure forceExecuteOperations immediately wakes retry waiters") {
+        // Given
+        val mocks = Mocks()
+        mocks.configModelStore.model.opRepoBaseFailRetryBackoff = 5_000
+        val opRepo = mocks.operationRepo
         coEvery {
             mocks.executor.execute(any())
-        } returns ExecutionResponse(ExecutionResult.FAIL_RETRY, retryAfterSeconds = 5) andThen ExecutionResponse(ExecutionResult.SUCCESS)
+        } returns ExecutionResponse(ExecutionResult.FAIL_RETRY) andThen ExecutionResponse(ExecutionResult.SUCCESS)
 
         // When
         opRepo.start()
@@ -891,7 +1341,7 @@ class OperationRepoTests : FunSpec({
             withTimeoutOrNull(999) {
                 opRepo.enqueueAndWait(mockOperation())
             }
-        // Forcing execution to bypass 5 second retry period
+        // Forcing execution to bypass 5 second backoff
         opRepo.forceExecuteOperations()
         val response2 =
             withTimeoutOrNull(100) {
@@ -1132,6 +1582,46 @@ class OperationRepoTests : FunSpec({
         verify(exactly = 0) { mocks.operationModelStore.remove(opId) }
     }
 
+    test("FAIL_NORETRY wakes enqueueAndAwaitResult with HTTP status and body") {
+        val mocks = Mocks()
+        coEvery { mocks.executor.execute(any()) } returns
+            ExecutionResponse(
+                ExecutionResult.FAIL_NORETRY,
+                httpStatusCode = 400,
+                httpResponse = """{"errors":["invalid phone"]}""",
+            )
+
+        mocks.operationRepo.start()
+        val result =
+            runBlocking {
+                withTimeout(2_000) {
+                    mocks.operationRepo.enqueueAndAwaitResult(mockOperation())
+                }
+            }
+
+        result.success shouldBe false
+        result.httpStatusCode shouldBe 400
+        result.httpResponse shouldBe """{"errors":["invalid phone"]}"""
+    }
+
+    test("enqueueAndAwaitResult returns failure when the await timeout elapses") {
+        val mocks = Mocks()
+        mocks.configModelStore.model.opRepoAwaitTimeout = 50
+        coEvery { mocks.executor.execute(any()) } coAnswers {
+            delay(10_000)
+            ExecutionResponse(ExecutionResult.SUCCESS)
+        }
+
+        mocks.operationRepo.start()
+        val result =
+            withTimeout(1_000) {
+                mocks.operationRepo.enqueueAndAwaitResult(mockOperation())
+            }
+
+        result.success shouldBe false
+        result.httpStatusCode shouldBe null
+    }
+
     test("FAIL_UNAUTHORIZED with IV inactive falls back to default drop-on-fail") {
         val mocks = Mocks()
         mocks.identityVerificationService = CoreInternalMocks.identityVerificationService(
@@ -1193,11 +1683,16 @@ class OperationRepoTests : FunSpec({
 
         private fun mockOperationNonGroupable() = mockOperation(groupComparisonType = GroupComparisonType.NONE)
 
-        private fun mockExecuteOperations(opRepo: OperationRepo): WaiterWithValue<Boolean> {
+        private fun mockExecuteOperations(
+            opRepo: OperationRepo,
+            waitResult: OperationWaitResult = OperationWaitResult(true),
+        ): WaiterWithValue<Boolean> {
             val executeWaiter = WaiterWithValue<Boolean>()
             coEvery { opRepo.executeOperations(any()) } coAnswers {
                 executeWaiter.wake(true)
-                firstArg<List<OperationRepo.OperationQueueItem>>().forEach { it.waiter?.wake(true) }
+                firstArg<List<OperationRepo.OperationQueueItem>>().forEach {
+                    it.wakeWaiters(waitResult)
+                }
             }
             return executeWaiter
         }
