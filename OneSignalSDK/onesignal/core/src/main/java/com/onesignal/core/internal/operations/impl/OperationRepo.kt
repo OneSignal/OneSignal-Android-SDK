@@ -107,6 +107,7 @@ internal class OperationRepo(
     private val inFlightLogins = mutableMapOf<String, OperationQueueItem>()
     private val waiter = WaiterWithValue<LoopWaiterMessage>()
     private var paused = false
+    private val sessionQueuePolicy = SessionQueuePolicy()
 
     // Guarded by queue. Set by a force that lands while ops are out of the queue executing.
     private var forcedDuringExecute = false
@@ -187,7 +188,7 @@ internal class OperationRepo(
 
         operation.id = UUID.randomUUID().toString()
         scope.launch {
-            internalEnqueue(OperationQueueItem(operation, bucket = enqueueIntoBucket), flush, true)
+            enqueueNew(OperationQueueItem(operation, bucket = enqueueIntoBucket), flush)
         }
     }
 
@@ -202,7 +203,7 @@ internal class OperationRepo(
         operation.id = UUID.randomUUID().toString()
         val waiter = WaiterWithValue<OperationWaitResult>()
         scope.launch {
-            internalEnqueue(OperationQueueItem(operation, waiter, bucket = enqueueIntoBucket), flush, true)
+            enqueueNew(OperationQueueItem(operation, waiter, bucket = enqueueIntoBucket), flush)
         }
         val timeoutMs = _configModelStore.model.opRepoAwaitTimeout
         return withTimeoutOrNull(timeoutMs) {
@@ -218,12 +219,13 @@ internal class OperationRepo(
      * they cannot be authenticated and would otherwise sit in the queue forever, blocked by
      * `hasValidJwtIfRequired`. LoginUserOperation is exempt because it's enqueued
      * intentionally during logout and purged later by [removeOperationsWithoutExternalId]
-     * if needed. Outer-gated on `newCodePathsRun` so Phase 1 customers stay byte-for-byte
+     * if needed. Ops with `requiresJwt = false` are exempt since they can still execute.
+     * Outer-gated on `newCodePathsRun` so Phase 1 customers stay byte-for-byte
      * on the legacy enqueue path.
      */
     private fun shouldSuppressAnonymousOp(op: Operation): Boolean {
         if (!_identityVerificationService.newCodePathsRun) return false
-        if (op is LoginUserOperation) return false
+        if (op is LoginUserOperation || !op.requiresJwt) return false
         val suppress =
             _configModelStore.model.useIdentityVerification == JwtRequirement.REQUIRED &&
                 op.externalId == null
@@ -231,6 +233,23 @@ internal class OperationRepo(
             Logging.debug("OperationRepo: suppressing anonymous op under IV-required: $op")
         }
         return suppress
+    }
+
+    private fun enqueueNew(
+        queueItem: OperationQueueItem,
+        flush: Boolean,
+    ) {
+        val accepted =
+            synchronized(queue) {
+                val result = sessionQueuePolicy.onEnqueue(queue, queueItem)
+                dropAndWake(result.removed)
+                result.accept
+            }
+        if (accepted) {
+            internalEnqueue(queueItem, flush, true)
+        } else {
+            queueItem.wakeWaiters(OperationWaitResult(false))
+        }
     }
 
     /**
@@ -353,14 +372,14 @@ internal class OperationRepo(
     }
 
     /**
-     * Drops queued operations whose externalId is null. Called by the IV-aware HYDRATE
+     * Drops queued operations whose externalId is null and that require a JWT. Called by the IV-aware HYDRATE
      * choreography in [OperationRepoIvExtensions] when `jwt_required` becomes REQUIRED
      * to evict anon ops that can no longer execute.
      */
     internal fun removeOperationsWithoutExternalId() {
         val removedIds: List<String> =
             synchronized(queue) {
-                val anonymous = queue.filter { it.operation.externalId == null }
+                val anonymous = queue.filter { it.operation.externalId == null && it.operation.requiresJwt }
                 anonymous.forEach { it.wakeWaiters(OperationWaitResult(false)) }
                 queue.removeAll(anonymous)
                 // IV=ON never transfers anonymous state; clear existingOnesignalId so the
@@ -454,6 +473,7 @@ internal class OperationRepo(
                 ops.forEach { it.operation.translateIds(response.idTranslations) }
                 synchronized(queue) {
                     queue.forEach { it.operation.translateIds(response.idTranslations) }
+                    sessionQueuePolicy.recordTranslations(response.idTranslations)
                 }
                 response.idTranslations.values.forEach { _newRecordState.add(it) }
             }
@@ -582,6 +602,8 @@ internal class OperationRepo(
     ) {
         ops.forEach { _operationModelStore.remove(it.operation.id) }
         ops.forEach { it.wakeWaiters(response.toWaitResult(false)) }
+        val orphans = synchronized(queue) { ops.flatMap { sessionQueuePolicy.onDropped(queue, it.operation) } }
+        if (orphans.isNotEmpty()) dropAndWake(orphans)
     }
 
     /**

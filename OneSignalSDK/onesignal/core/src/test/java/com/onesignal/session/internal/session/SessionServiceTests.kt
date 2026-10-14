@@ -1,5 +1,6 @@
 package com.onesignal.session.internal.session
 
+import com.onesignal.common.IDManager
 import com.onesignal.common.modeling.ISingletonModelStoreChangeHandler
 import com.onesignal.common.modeling.ModelChangeTags
 import com.onesignal.common.modeling.ModelChangedArgs
@@ -17,6 +18,7 @@ import com.onesignal.user.internal.backend.IdentityConstants
 import com.onesignal.user.internal.identity.IdentityModel
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
@@ -310,6 +312,7 @@ class SessionServiceTests : FunSpec({
             mocks.sessionModelStore {
                 it.isValid = false
                 it.serverSessionId = "previous-server-session"
+                it.localSessionId = "local-previous"
             }
 
         // When
@@ -319,6 +322,8 @@ class SessionServiceTests : FunSpec({
         sessionModelStore.model.onesignalId shouldBe Mocks.ONESIGNAL_ID
         sessionModelStore.model.subscriptionId shouldBe Mocks.SUBSCRIPTION_ID
         sessionModelStore.model.serverSessionId shouldBe null
+        sessionModelStore.model.localSessionId shouldNotBe "local-previous"
+        IDManager.isLocalId(sessionModelStore.model.localSessionId) shouldBe true
     }
 
     test("pinned IDs stay the same after login within a session") {
