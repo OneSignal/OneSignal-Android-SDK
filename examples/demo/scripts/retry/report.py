@@ -131,7 +131,11 @@ def main():
     with open(path) as f:
         for line in f:
             if line.strip():
-                entries.append(json.loads(line))
+                try:
+                    entries.append(json.loads(line))
+                except json.JSONDecodeError:
+                    # The proxy may be mid-write on the last line.
+                    continue
 
     if not entries:
         print("No SDK requests recorded yet.")

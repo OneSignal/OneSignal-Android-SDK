@@ -139,7 +139,10 @@ cmd_fail() {
   done
   [[ "$status" == "0" && "$retry_after" != "null" ]] && die "--retry-after needs an HTTP status; a dropped connection has no headers"
   local method path
-  read -r method path <<< "$(route_rule "$route")"
+  # A die inside $(...) only exits the subshell, so check it here or a typo becomes a match-all rule.
+  local spec
+  spec="$(route_rule "$route")" || exit 1
+  read -r method path <<< "$spec"
   [[ "$method" == "-" ]] && method=""
   python3 - "$RULES" "$add" "$route" "$method" "$path" "$status" "$times" "$retry_after" > "$RULES.tmp" <<'PY'
 import json, sys, uuid
@@ -161,9 +164,11 @@ cmd_clear() {
 cmd_reset_log() { : > "$ATTEMPTS"; echo "Cleared recorded attempts."; }
 
 restore_radios() {
-  [[ "$WIFI_WAS_ON" == "1" ]] && dev shell svc wifi enable || true
-  [[ "$DATA_WAS_ON" == "1" ]] && dev shell svc data enable || true
-  echo "Network restored."
+  # wifi_on is 2 when Wi-Fi is on in airplane mode, so anything but 0 counts as on.
+  local ok=true
+  if [[ "$WIFI_WAS_ON" != "0" ]]; then dev shell svc wifi enable || ok=false; fi
+  if [[ "$DATA_WAS_ON" != "0" ]]; then dev shell svc data enable || ok=false; fi
+  if $ok; then echo "Network restored."; else echo "error: could not turn the network back on; check $SERIAL" >&2; fi
 }
 
 cmd_network_flap() {
@@ -171,7 +176,8 @@ cmd_network_flap() {
   # the proxy route offline; through `adb reverse` a physical device can still reach the proxy.
   local seconds="${1:-10}"
   resolve_device
-  [[ "$SERIAL" == *:* ]] && die "$SERIAL is wireless adb, which drops with Wi-Fi. Use USB or an emulator."
+  [[ "$SERIAL" == *:* || "$SERIAL" == *._adb-tls-connect._tcp* ]] \
+    && die "$SERIAL is wireless adb, which drops with Wi-Fi. Use USB or an emulator."
   WIFI_WAS_ON="$(dev shell settings get global wifi_on | tr -d '\r')"
   DATA_WAS_ON="$(dev shell settings get global mobile_data | tr -d '\r')"
   # Only turns back on what was on, even after Ctrl-C or a failed `svc`.
@@ -180,7 +186,8 @@ cmd_network_flap() {
   echo "Wi-Fi and mobile data off on $SERIAL for ${seconds}s..."
   dev shell svc wifi disable
   dev shell svc data disable
-  sleep "$seconds"
+  # Waited on in the background so a SIGTERM runs the trap right away.
+  sleep "$seconds" & wait $!
 }
 
 cmd_fresh() {
