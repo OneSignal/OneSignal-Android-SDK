@@ -220,7 +220,8 @@ cmd_tap() {
   local action="${1:-}" env=()
   case "$action" in
     add-tag|add-alias) [[ $# -eq 3 ]] || die "usage: $0 tap $action <key> <value>"; env=(-e "KEY=$2" -e "VALUE=$3") ;;
-    add-email|login) [[ $# -eq 2 ]] || die "usage: $0 tap $action <value>"; env=(-e "VALUE=$2") ;;
+    add-email) [[ $# -eq 2 ]] || die "usage: $0 tap $action <value>"; env=(-e "VALUE=$2") ;;
+    login) [[ $# -eq 2 || $# -eq 3 ]] || die "usage: $0 tap login <external id> [jwt]"; env=(-e "VALUE=$2" -e "JWT=${3:-}") ;;
     logout|toggle-push|allow-notifications) ;;
     *) die "usage: $0 tap <add-tag|add-alias|add-email|login|logout|toggle-push|allow-notifications> [args]" ;;
   esac
@@ -267,7 +268,7 @@ App / environment
   install                   Build the demo against the local SDK, trusting the mitmproxy CA, and install it
   tap <action> [args]       Drive the demo's UI with Maestro:
                               add-tag <key> <value>, add-alias <label> <id>, add-email <email>,
-                              login <external id>, logout, toggle-push, allow-notifications
+                              login <external id> [jwt], logout, toggle-push, allow-notifications
   relaunch                  Kill and relaunch the demo app
   fresh                     Clear the demo app's data (new SDK user) and relaunch
   background | foreground   Send the demo app to the background, or bring it back

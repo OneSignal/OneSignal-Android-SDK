@@ -9,5 +9,12 @@ appId: com.onesignal.example
 - tapOn:
     id: login_user_id_input
 - inputText: ${VALUE}
+- runFlow:
+    when:
+      true: ${JWT != ''}
+    commands:
+      - tapOn:
+          id: login_user_jwt_input
+      - inputText: ${JWT}
 - tapOn:
     id: singleinput_confirm_button

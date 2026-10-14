@@ -36,7 +36,7 @@ cd examples/demo/scripts/retry
 | `clear` / `rules` | Remove or show the rules |
 | `report [regex]` | Per operation: each attempt, the gap since the previous one, and the gap expected. Also lists any SDK request sent during a Retry-After |
 | `reset-log` | Forget recorded attempts, for example between scenarios |
-| `tap <action> [args]` | Use the demo: `add-tag <key> <value>`, `add-alias <label> <id>`, `add-email <email>`, `login <external id>`, `logout`, `toggle-push`, `allow-notifications` |
+| `tap <action> [args]` | Use the demo: `add-tag <key> <value>`, `add-alias <label> <id>`, `add-email <email>`, `login <external id> [jwt]`, `logout`, `toggle-push`, `allow-notifications` |
 | `install` | Build the demo against the local SDK and install it |
 | `fresh` / `relaunch` | Clear the demo's data and relaunch / kill and relaunch |
 | `background` / `foreground` | Press Home / bring the demo back |
@@ -109,7 +109,11 @@ and nothing should need a relaunch.
     Wait for a few failures, then `clear`. Everything goes out on its next attempt.
 11. **Login/logout while failing**: `fail all 408`, `tap login b`, `tap logout`, `tap login c`,
     then `clear`. Requests for each user go out in order.
-12. **Identity Verification**: repeat 1, 2 and 6 with an app that requires JWT.
+12. **Identity Verification**: `install` with `ORG_GRADLE_PROJECT_ONESIGNAL_APP_ID=<IV app id>` and
+    log in with `tap login <id> <jwt>`. No anonymous Create User is sent, so in 1 and 6 the Create
+    User comes from the login, and 6 checks that a `tap add-tag` during the failures waits for it.
+    Repeat 1, 2, 6 and 10. For 10, the JWT must also claim the alias and email, and the JWT must
+    expire within an hour.
 
 ## Troubleshooting
 
