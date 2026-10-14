@@ -32,6 +32,8 @@ EXECUTOR_ROUTE = re.compile(r"^apps/[^/]+/(users(/by/.*)?|subscriptions/.+|custo
 IGNORED_ROUTE = re.compile(r"/iams$")
 # Routes without a record id in the path. Their attempts are told apart by body instead.
 NO_ID_ROUTE = re.compile(r"(/users|/subscriptions|/custom_events)$")
+# Remote logging is sent by the shared KMP logger, not HttpClient, so the gate doesn't apply.
+NOT_GATED_ROUTE = re.compile(r"^sdk/log$")
 
 
 def operation_key(entry):
@@ -109,7 +111,8 @@ def print_gate_violations(entries):
     violations = [
         entry
         for entry in entries
-        if any(start < entry["t"] < end - CLOCK_SLACK for start, end in windows)
+        if not NOT_GATED_ROUTE.search(entry["path"])
+        and any(start < entry["t"] < end - CLOCK_SLACK for start, end in windows)
     ]
     if not windows:
         return
