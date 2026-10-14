@@ -826,7 +826,7 @@ internal class OneSignalImp : IOneSignal,
     }
 
     override suspend fun login(
-        externalId: String,
+        externalId: String?,
         profile: OneSignalUserProfile,
         jwtBearerToken: String?,
     ): OneSignalResult<LoginData> =
@@ -834,12 +834,13 @@ internal class OneSignalImp : IOneSignal,
             Logging.log(LogLevel.DEBUG, "login(externalId: $externalId, profile: $profile, jwtBearerToken: ...${jwtBearerToken?.takeLast(8)})")
 
             profile.validationError()?.let {
+                Logging.error("login(externalId, profile) rejected: $it")
                 return@withContext OneSignalResult.failure(ErrorCode.INVALID_ARGUMENT, it)
             }
 
             awaitInitForLogin()?.let { return@withContext it }
 
-            if (isMissing(externalId, "login: externalId")) {
+            if (isMissing(externalId, "login: externalId") || externalId == null) {
                 return@withContext OneSignalResult.failure(
                     ErrorCode.INVALID_ARGUMENT,
                     "login: externalId is required",

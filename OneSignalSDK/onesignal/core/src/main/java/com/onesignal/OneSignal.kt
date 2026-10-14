@@ -431,7 +431,7 @@ object OneSignal {
     @JvmStatic
     @JvmOverloads
     suspend fun login(
-        externalId: String,
+        externalId: String?,
         profile: OneSignalUserProfile,
         jwtBearerToken: String? = null,
     ): OneSignalResult<LoginData> = oneSignal.login(externalId, profile, jwtBearerToken)

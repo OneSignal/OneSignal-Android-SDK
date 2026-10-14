@@ -255,7 +255,7 @@ interface IOneSignal {
      * Same id is a no-op once a backend ID exists. Backend failure leaves this identity local; INVALID_ARGUMENT and NOT_INITIALIZED change nothing.
      */
     suspend fun login(
-        externalId: String,
+        externalId: String?,
         profile: OneSignalUserProfile,
         jwtBearerToken: String? = null,
     ): OneSignalResult<LoginData>
