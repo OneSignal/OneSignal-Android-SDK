@@ -13,6 +13,8 @@ PID_FILE="$STATE_DIR/proxy.pid"
 PORT="${RETRY_TEST_PORT:-8899}"
 PACKAGE="${RETRY_TEST_PACKAGE:-com.onesignal.example}"
 CA_CERT="$HOME/.mitmproxy/mitmproxy-ca-cert.pem"
+IV_APP_ID="${RETRY_TEST_IV_APP_ID:-}"
+IV_KEY="${RETRY_TEST_IV_KEY:-}"
 
 export RETRY_TEST_STATE_DIR="$STATE_DIR"
 mkdir -p "$STATE_DIR"
@@ -206,8 +208,10 @@ cmd_install() {
   # required by OneSignalSDK/ but only labels the build.
   resolve_device
   ensure_ca
+  local app_id=()
+  [[ -n "$IV_APP_ID" ]] && app_id=(-PONESIGNAL_APP_ID="$IV_APP_ID")
   (cd "$SDK_DIR" && ANDROID_SERIAL="$SERIAL" ./gradlew -q :app:installGmsDebug \
-    -PSDK_VERSION="${SDK_VERSION:-0.0.0-retry-test}" -PRETRY_TEST_CA="$CA_CERT")
+    -PSDK_VERSION="${SDK_VERSION:-0.0.0-retry-test}" -PRETRY_TEST_CA="$CA_CERT" ${app_id[@]+"${app_id[@]}"})
   dev shell pm grant "$PACKAGE" android.permission.POST_NOTIFICATIONS 2>/dev/null || true
   # The stylus handwriting prompt on newer emulators swallows Maestro's text input.
   dev shell settings put secure stylus_handwriting_enabled 0
@@ -221,7 +225,11 @@ cmd_tap() {
   case "$action" in
     add-tag|add-alias) [[ $# -eq 3 ]] || die "usage: $0 tap $action <key> <value>"; env=(-e "KEY=$2" -e "VALUE=$3") ;;
     add-email) [[ $# -eq 2 ]] || die "usage: $0 tap $action <value>"; env=(-e "VALUE=$2") ;;
-    login) [[ $# -eq 2 || $# -eq 3 ]] || die "usage: $0 tap login <external id> [jwt]"; env=(-e "VALUE=$2" -e "JWT=${3:-}") ;;
+    login)
+      [[ $# -eq 2 || $# -eq 3 ]] || die "usage: $0 tap login <external id> [jwt]"
+      local jwt="${3:-}"
+      [[ -z "$jwt" && -n "$IV_KEY" ]] && { jwt="$(cmd_jwt "$2")" || exit 1; }
+      env=(-e "VALUE=$2" -e "JWT=$jwt") ;;
     logout|toggle-push|allow-notifications) ;;
     *) die "usage: $0 tap <add-tag|add-alias|add-email|login|logout|toggle-push|allow-notifications> [args]" ;;
   esac
@@ -232,6 +240,12 @@ cmd_tap() {
     maestro --device "$SERIAL" test ${env[@]+"${env[@]}"} "$SCRIPT_DIR/flows/$action.yaml" \
     | { grep -E '^ *(>|[A-Z].*(COMPLETED|FAILED|WARNED))' || true; } || status=$?
   [[ "$status" == "0" ]] || die "maestro flow '$action' failed (exit $status)"
+}
+
+cmd_jwt() {
+  [[ -n "$IV_APP_ID" && -n "$IV_KEY" ]] || die "set RETRY_TEST_IV_APP_ID and RETRY_TEST_IV_KEY (path to the app's private key)"
+  [[ -r "$IV_KEY" ]] || die "can't read $IV_KEY"
+  python3 "$SCRIPT_DIR/make_jwt.py" "$IV_KEY" "$IV_APP_ID" "$@"
 }
 
 cmd_logs() {
@@ -269,6 +283,9 @@ App / environment
   tap <action> [args]       Drive the demo's UI with Maestro:
                               add-tag <key> <value>, add-alias <label> <id>, add-email <email>,
                               login <external id> [jwt], logout, toggle-push, allow-notifications
+                            With RETRY_TEST_IV_KEY set, login signs a JWT when none is given.
+  jwt <external id> [label=id] [email:addr] [sms:number]
+                            Print an Identity Verification JWT claiming those aliases and subscriptions
   relaunch                  Kill and relaunch the demo app
   fresh                     Clear the demo app's data (new SDK user) and relaunch
   background | foreground   Send the demo app to the background, or bring it back
@@ -276,7 +293,8 @@ App / environment
 
 Routes: create-user fetch-user update-user identity remove-alias create-sub update-sub
         delete-sub transfer-sub identity-by-sub custom-events all
-Env: RETRY_TEST_SERIAL (adb serial), RETRY_TEST_PORT ($PORT), RETRY_TEST_PACKAGE ($PACKAGE)
+Env: RETRY_TEST_SERIAL (adb serial), RETRY_TEST_PORT ($PORT), RETRY_TEST_PACKAGE ($PACKAGE),
+     RETRY_TEST_IV_APP_ID and RETRY_TEST_IV_KEY (Identity Verification app and its private key path)
 EOF
 }
 
@@ -293,6 +311,7 @@ case "${1:-help}" in
   fresh) cmd_fresh ;;
   install) cmd_install ;;
   tap) shift; cmd_tap "$@" ;;
+  jwt) shift; cmd_jwt "$@" ;;
   relaunch) resolve_device; dev shell am force-stop "$PACKAGE"; launch_app ;;
   background) resolve_device; dev shell input keyevent KEYCODE_HOME && echo "Demo app backgrounded." ;;
   foreground) resolve_device; launch_app && echo "Demo app foregrounded." ;;
