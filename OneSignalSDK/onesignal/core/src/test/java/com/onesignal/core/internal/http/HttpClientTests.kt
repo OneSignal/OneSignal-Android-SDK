@@ -6,7 +6,6 @@ import com.onesignal.core.internal.device.impl.HTTP_FID_ENV_HEADER_KEY
 import com.onesignal.core.internal.device.impl.InstallIdService
 import com.onesignal.core.internal.http.impl.HttpClient
 import com.onesignal.core.internal.http.impl.OptionalHeaders
-import com.onesignal.core.internal.time.impl.Time
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.mocks.MockHelper
@@ -27,7 +26,7 @@ class Mocks {
     internal val installIdService = InstallIdService(MockPreferencesService())
     internal val fidEnv = FakeFidEnv()
     internal val httpClient by lazy {
-        HttpClient(factory, MockPreferencesService(), mockConfigModel, Time(), installIdService, fidEnv)
+        HttpClient(factory, MockPreferencesService(), mockConfigModel, installIdService, fidEnv)
     }
 }
 
@@ -221,19 +220,14 @@ class HttpClientTests : FunSpec({
         response.retryAfterSeconds shouldBe 60
     }
 
-    // If the OneSignal server ever responses with a Retry-After we want to
-    // make sure we delay any future requests until that delay has past. To
-    // be safe we assume the server's Retry-After value means all traffic
-    // should be delayed until then. If we wanted finer grain control we
-    // could work with the the backend to decide which endpoints should be
-    // affected.
-    test("ensure next request is delayed by the Retry-After value") {
+    // Callers wait out Retry-After themselves, so other requests are not held.
+    test("a Retry-After response does not delay the next request") {
         // Given
         val mocks = Mocks()
 
         val mockRetryAfterResponse = MockHttpConnectionFactory.MockResponse()
         mockRetryAfterResponse.status = 429
-        mockRetryAfterResponse.mockProps["Retry-After"] = "1"
+        mockRetryAfterResponse.mockProps["Retry-After"] = "10"
         mockRetryAfterResponse.errorResponseBody = "{}"
 
         val mockSuccessfulResponse = MockHttpConnectionFactory.MockResponse()
@@ -246,18 +240,13 @@ class HttpClientTests : FunSpec({
 
         mocks.factory.mockResponse = mockSuccessfulResponse
         val response2 =
-            withTimeoutOrNull(975) {
-                mocks.httpClient.post("URL", JSONObject())
-            }
-
-        val response3 =
-            withTimeoutOrNull(100) {
+            withTimeoutOrNull(1_000) {
                 mocks.httpClient.post("URL", JSONObject())
             }
 
         // Then
-        response2 shouldBe null
-        response3 shouldNotBe null
+        response2 shouldNotBe null
+        response2!!.statusCode shouldBe 200
     }
 
     test("Authorization header is set when OptionalHeaders.jwt is provided") {

@@ -15,10 +15,8 @@ import com.onesignal.core.internal.http.IHttpClient
 import com.onesignal.core.internal.preferences.IPreferencesService
 import com.onesignal.core.internal.preferences.PreferenceOneSignalKeys
 import com.onesignal.core.internal.preferences.PreferenceStores
-import com.onesignal.core.internal.time.ITime
 import com.onesignal.debug.internal.logging.Logging
 import kotlinx.coroutines.TimeoutCancellationException
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.withTimeout
 import org.json.JSONObject
 import java.net.ConnectException
@@ -35,16 +33,9 @@ internal class HttpClient(
     private val _connectionFactory: IHttpConnectionFactory,
     private val _prefs: IPreferencesService,
     private val _configModelStore: ConfigModelStore,
-    private val _time: ITime,
     private val _installIdService: IInstallIdService,
     private val _fidEnv: IFidEnv,
 ) : IHttpClient {
-    /**
-     * Delay making network requests until we reach this time.
-     * Used when the OneSignal backend returns a Retry-After value.
-     */
-    private var delayNewRequestsUntil = 0L
-
     override suspend fun post(
         url: String,
         body: JSONObject,
@@ -87,9 +78,6 @@ internal class HttpClient(
             )
             return HttpResponse(0, null, null)
         }
-
-        val delayUntil = delayNewRequestsUntil - _time.currentTimeMillis
-        if (delayUntil > 0) delay(delayUntil)
 
         try {
             return withTimeout(getThreadTimeout(timeout).toLong()) {
@@ -218,8 +206,6 @@ internal class HttpClient(
 
                     val retryAfter = retryAfterFromResponse(con)
                     val retryLimit = retryLimitFromResponse(con)
-                    val newDelayUntil = _time.currentTimeMillis + (retryAfter ?: 0) * 1_000
-                    if (newDelayUntil > delayNewRequestsUntil) delayNewRequestsUntil = newDelayUntil
 
                     when (httpResponse) {
                         HttpURLConnection.HTTP_NOT_MODIFIED -> {
