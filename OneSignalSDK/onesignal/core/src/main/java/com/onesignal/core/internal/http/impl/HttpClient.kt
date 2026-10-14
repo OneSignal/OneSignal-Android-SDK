@@ -27,6 +27,7 @@ import java.net.UnknownHostException
 import java.util.Scanner
 import java.util.concurrent.TimeUnit
 import javax.net.ssl.HttpsURLConnection
+import kotlin.math.ceil
 import kotlin.math.min
 
 internal const val HTTP_SDK_VERSION_HEADER_KEY = "SDK-Version"
@@ -224,7 +225,7 @@ internal class HttpClient(
 
                     val retryAfter = retryAfterFromResponse(con)
                     val retryLimit = retryLimitFromResponse(con)
-                    val retryAfterMs = min(TimeUnit.SECONDS.toMillis((retryAfter ?: 0).toLong()), _configModelStore.model.maxRetryDelay)
+                    val retryAfterMs = min(TimeUnit.SECONDS.toMillis((retryAfter ?: 0).toLong()), _configModelStore.model.maxRetryAfter)
                     val newDelayUntil = _time.elapsedRealtimeMillis + retryAfterMs
                     if (newDelayUntil > delayNewRequestsUntil) delayNewRequestsUntil = newDelayUntil
 
@@ -323,7 +324,9 @@ internal class HttpClient(
         val retryAfterStr = con.getHeaderField("Retry-After")
         return if (retryAfterStr != null) {
             Logging.debug("HttpClient: Response Retry-After: $retryAfterStr")
-            retryAfterStr.toIntOrNull() ?: _configModelStore.model.httpRetryAfterParseFailFallback
+            val maxSeconds = TimeUnit.MILLISECONDS.toSeconds(_configModelStore.model.maxRetryAfter).toDouble()
+            retryAfterStr.trim().toDoubleOrNull()?.takeIf { it.isFinite() && it >= 0 }?.let { ceil(min(it, maxSeconds)).toInt() }
+                ?: _configModelStore.model.httpRetryAfterParseFailFallback
         } else if (con.responseCode == 429) {
             _configModelStore.model.httpRetryAfterParseFailFallback
         } else {

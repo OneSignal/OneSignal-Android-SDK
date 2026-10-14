@@ -30,6 +30,7 @@ import java.util.UUID
 import java.util.concurrent.TimeUnit
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.random.Random
 import kotlin.reflect.KClass
 
 internal class OperationRepo(
@@ -48,8 +49,10 @@ internal class OperationRepo(
         val bucket: Int,
         var retries: Int = 0,
     ) {
-        // On ITime.elapsedRealtimeMillis.
+        // On ITime.elapsedRealtimeMillis. retryAt includes backoff, which forceExecuteOperations
+        // can end; retryAfterUntil is the server's minimum, which it cannot.
         var retryAt: Long = 0
+        var retryAfterUntil: Long = 0
 
         val waiters = mutableListOf<WaiterWithValue<OperationWaitResult>>()
 
@@ -108,6 +111,8 @@ internal class OperationRepo(
 
     // Guarded by queue. Set by a force that lands while ops are out of the queue executing.
     private var forcedDuringExecute = false
+
+    internal var jitter: () -> Double = { Random.nextDouble(MIN_JITTER, 1.0) }
 
     private val initialized = CompletableDeferred<Unit>()
 
@@ -340,12 +345,11 @@ internal class OperationRepo(
         val endedWait =
             synchronized(queue) {
                 forcedDuringExecute = true
-                val waiting = queue.filter { it.retryAt > now }
-                waiting.forEach { it.retryAt = 0 }
-                waiting.isNotEmpty()
+                val backedOff = queue.filter { it.retryAt > max(now, it.retryAfterUntil) }
+                backedOff.forEach { it.retryAt = it.retryAfterUntil }
+                backedOff.isNotEmpty()
             }
-        // Skip the batching wait only when a retry was actually held back. An active Retry-After
-        // still holds: HttpClient fails the request fast and the op is rescheduled.
+        // Skip the batching wait only when a retry was actually held back.
         waiter.wake(LoopWaiterMessage(endedWait))
     }
 
@@ -508,17 +512,23 @@ internal class OperationRepo(
                     Logging.info("Operation execution failed, retrying: $operations")
                     // Re-queue at the front with a per-op wait so unrelated ops keep running.
                     val now = _time.elapsedRealtimeMillis
-                    val maxDelay = _configModelStore.model.maxRetryDelay
-                    val retryAfterMs = min(TimeUnit.SECONDS.toMillis((response.retryAfterSeconds ?: 0).toLong()), maxDelay)
+                    val config = _configModelStore.model
+                    val retryAfterMs = min(TimeUnit.SECONDS.toMillis((response.retryAfterSeconds ?: 0).toLong()), config.maxRetryAfter)
                     synchronized(queue) {
                         // A force that arrived mid-request would otherwise be lost to the new backoff.
                         val forced = forcedDuringExecute
                         ops.reversed().forEach {
                             it.retries++
-                            val backoffMs = if (forced) 0L else min(it.retries * _configModelStore.model.opRepoDefaultFailRetryBackoff, maxDelay)
-                            val delayMs = max(backoffMs, retryAfterMs)
-                            it.retryAt = if (delayMs > 0) now + delayMs else 0
-                            Logging.debug("OperationRepo: retry #${it.retries} of ${it.operation.name} in $delayMs ms (backoff: $backoffMs ms, Retry-After: $retryAfterMs ms)")
+                            val backoffMs =
+                                if (forced) {
+                                    0L
+                                } else {
+                                    val exponential = config.opRepoDefaultFailRetryBackoff shl min(it.retries - 1, MAX_BACKOFF_DOUBLINGS)
+                                    (min(exponential, config.opRepoMaxFailRetryBackoff) * jitter()).toLong()
+                                }
+                            it.retryAfterUntil = if (retryAfterMs > 0) now + retryAfterMs else 0
+                            it.retryAt = max(if (backoffMs > 0) now + backoffMs else 0, it.retryAfterUntil)
+                            Logging.debug("OperationRepo: retry #${it.retries} of ${it.operation.name} in ${max(backoffMs, retryAfterMs)} ms (backoff: $backoffMs ms, Retry-After: $retryAfterMs ms)")
                             queue.add(0, it)
                         }
                     }
@@ -719,5 +729,12 @@ internal class OperationRepo(
             )
         }
         initialized.complete(Unit)
+    }
+
+    companion object {
+        private const val MIN_JITTER = 0.5
+
+        // Keeps the shift from overflowing; the backoff is capped long before this.
+        private const val MAX_BACKOFF_DOUBLINGS = 20
     }
 }

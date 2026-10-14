@@ -16,9 +16,11 @@ import com.onesignal.core.internal.config.impl.FeatureFlagsRefreshService
 import com.onesignal.core.internal.config.impl.IdentityVerificationService
 import com.onesignal.core.internal.database.IDatabaseProvider
 import com.onesignal.core.internal.database.impl.DatabaseProvider
+import com.onesignal.core.internal.device.IConnectivityMonitor
 import com.onesignal.core.internal.device.IDeviceService
 import com.onesignal.core.internal.device.IFidEnv
 import com.onesignal.core.internal.device.IInstallIdService
+import com.onesignal.core.internal.device.impl.ConnectivityMonitor
 import com.onesignal.core.internal.device.impl.DeviceService
 import com.onesignal.core.internal.device.impl.FidEnvService
 import com.onesignal.core.internal.device.impl.InstallIdService
@@ -70,6 +72,7 @@ internal class CoreModule : IModule {
             .provides<IApplicationService>()
         builder.register<DeviceService>().provides<IDeviceService>()
         builder.register<FidEnvService>().provides<IFidEnv>()
+        builder.register<ConnectivityMonitor>().provides<IConnectivityMonitor>()
         builder.register<Time>().provides<ITime>()
         builder.register<DatabaseProvider>().provides<IDatabaseProvider>()
         builder.register<InstallIdService>().provides<IInstallIdService>()

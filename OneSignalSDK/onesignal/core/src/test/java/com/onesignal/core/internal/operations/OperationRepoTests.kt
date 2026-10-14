@@ -1218,7 +1218,7 @@ class OperationRepoTests : FunSpec({
         opRepo.queue.map { it.operation } shouldBe listOf(waiting)
     }
 
-    test("Retry-After is capped by maxRetryDelay") {
+    test("Retry-After is capped by maxRetryAfter") {
         // Given
         val mocks = Mocks()
         val opRepo = mocks.operationRepo
@@ -1230,23 +1230,56 @@ class OperationRepoTests : FunSpec({
         val after = System.nanoTime() / 1_000_000
 
         // Then
-        val retryAt = opRepo.queue.single().retryAt
-        (retryAt >= before + 60 * 60 * 1_000L) shouldBe true
-        (retryAt <= after + 60 * 60 * 1_000L) shouldBe true
+        val retryAfterUntil = opRepo.queue.single().retryAfterUntil
+        (retryAfterUntil >= before + 60 * 60 * 1_000L) shouldBe true
+        (retryAfterUntil <= after + 60 * 60 * 1_000L) shouldBe true
     }
 
-    test("forceExecuteOperations ends the wait of retrying operations") {
+    test("backoff doubles from opRepoDefaultFailRetryBackoff up to opRepoMaxFailRetryBackoff, scaled by jitter") {
+        // Given
+        val mocks = Mocks()
+        mocks.configModelStore.model.opRepoDefaultFailRetryBackoff = 5_000
+        mocks.configModelStore.model.opRepoMaxFailRetryBackoff = 30_000
+        val opRepo = mocks.operationRepo
+        opRepo.jitter = { 0.5 }
+        coEvery { mocks.executor.execute(any()) } returns ExecutionResponse(ExecutionResult.FAIL_RETRY)
+        val item = OperationQueueItem(mockOperation(), bucket = 0)
+
+        // When
+        val backoffs =
+            (1..5).map {
+                val before = System.nanoTime() / 1_000_000
+                opRepo.executeOperations(listOf(item))
+                opRepo.queue.clear()
+                item.retryAt - before
+            }
+
+        // Then
+        backoffs.zip(listOf(2_500L, 5_000L, 10_000L, 15_000L, 15_000L)).forEach { (actual, expected) ->
+            (actual >= expected) shouldBe true
+            (actual <= expected + 1_000) shouldBe true
+        }
+    }
+
+    test("forceExecuteOperations ends backoff but still honors Retry-After") {
         // Given
         val mocks = Mocks()
         val opRepo = mocks.operationRepo
-        val waiting = OperationQueueItem(mockOperation(), bucket = 0).apply { retryAt = Long.MAX_VALUE }
-        opRepo.queue.add(waiting)
+        val retryAfterUntil = System.nanoTime() / 1_000_000 + 60_000
+        val backedOff = OperationQueueItem(mockOperation(), bucket = 0).apply { retryAt = Long.MAX_VALUE }
+        val rateLimited =
+            OperationQueueItem(mockOperation(), bucket = 0).apply {
+                retryAt = Long.MAX_VALUE
+                this.retryAfterUntil = retryAfterUntil
+            }
+        opRepo.queue.addAll(listOf(backedOff, rateLimited))
 
         // When
         opRepo.forceExecuteOperations()
 
         // Then
-        waiting.retryAt shouldBe 0
+        backedOff.retryAt shouldBe 0
+        rateLimited.retryAt shouldBe retryAfterUntil
     }
 
     test("forceExecuteOperations skips the batching wait when it ends a retry wait") {

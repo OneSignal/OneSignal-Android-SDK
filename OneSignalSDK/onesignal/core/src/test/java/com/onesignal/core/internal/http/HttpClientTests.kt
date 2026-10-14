@@ -209,6 +209,40 @@ class HttpClientTests : FunSpec({
         response.retryAfterSeconds shouldBe 60
     }
 
+    test("should use set fallback retryAfterSeconds if Retry-After is negative") {
+        // Given
+        val mocks = Mocks()
+        mocks.response.status = 429
+        mocks.response.mockProps["Retry-After"] = "-5"
+        mocks.response.errorResponseBody = "{}"
+
+        // When
+        val response = mocks.httpClient.post("URL", JSONObject())
+
+        // Then
+        response.retryAfterSeconds shouldBe 60
+    }
+
+    test("should round a fractional Retry-After up and cap it by maxRetryAfter") {
+        // Given
+        val mocks = Mocks()
+        mocks.response.status = 429
+        mocks.response.mockProps["Retry-After"] = " 1.5 "
+        mocks.response.errorResponseBody = "{}"
+        val capped = Mocks()
+        capped.response.status = 429
+        capped.response.mockProps["Retry-After"] = "999999999999"
+        capped.response.errorResponseBody = "{}"
+
+        // When
+        val response = mocks.httpClient.post("URL", JSONObject())
+        val cappedResponse = capped.httpClient.post("URL", JSONObject())
+
+        // Then
+        response.retryAfterSeconds shouldBe 2
+        cappedResponse.retryAfterSeconds shouldBe 3600
+    }
+
     // Since 429 means "Too Many Requests", for some reason the server doesn't give us a
     // Retry-After we should assume a our safe fallback.
     test("should use set fallback retryAfterSeconds if 429 and Retry-After is missing") {
@@ -257,10 +291,10 @@ class HttpClientTests : FunSpec({
         mocks.factory.connections.size shouldBe 2
     }
 
-    test("the Retry-After window is capped by maxRetryDelay") {
+    test("the Retry-After window is capped by maxRetryAfter") {
         // Given
         val mocks = Mocks()
-        mocks.mockConfigModel.model.maxRetryDelay = 2_000
+        mocks.mockConfigModel.model.maxRetryAfter = 2_000
 
         val mockRetryAfterResponse = MockHttpConnectionFactory.MockResponse()
         mockRetryAfterResponse.status = 429
