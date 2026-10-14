@@ -5,7 +5,8 @@ the gap the SDK should have waited. Usage: report.py <attempts.jsonl> [route reg
 Expected gaps model OperationRepo's per-operation backoff:
   - After the Nth retryable failure an operation waits N * 15s (opRepoDefaultFailRetryBackoff),
     capped at 1h. There is no jitter and HttpClient does not re-send on its own.
-  - Retry-After is the minimum wait, capped at 1h. An unparsable value counts as 60s.
+  - Retry-After is the minimum wait, capped at 1h. An unparsable value, or a 429 without one,
+    counts as 60s.
   - The queue may wait up to opRepoExecutionInterval (5s) more if something else was enqueued
     during the backoff, so a few seconds of slack is allowed.
 A foreground or network return ends the backoff early (but not Retry-After), so short gaps right
@@ -33,8 +34,10 @@ def route_key(entry):
     return f"{entry['method']} {path}"
 
 
-def backoff_window(failures, retry_after):
+def backoff_window(failures, status, retry_after):
     low = min(failures * BACKOFF_STEP, MAX_DELAY)
+    if retry_after is None and status == 429:
+        retry_after = RETRY_AFTER_PARSE_FAIL
     has_floor = retry_after is not None
     if has_floor:
         try:
@@ -95,7 +98,7 @@ def main():
                 expected = None
             else:
                 failures += 1
-                low, high, has_floor = backoff_window(failures, entry.get("retry_after"))
+                low, high, has_floor = backoff_window(failures, status, entry.get("retry_after"))
                 expected = (low, high, f"backoff #{failures}" + (", Retry-After" if has_floor else ""))
     print("\n* = failure injected by the proxy")
 

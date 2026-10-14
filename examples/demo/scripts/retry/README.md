@@ -62,9 +62,8 @@ What the SDK should do:
 - **Backoff per operation**: after the Nth retryable failure an operation waits N × 15s
   (`opRepoDefaultFailRetryBackoff`), capped at 1h, with no jitter. `HttpClient` does not re-send on
   its own. Retryable is anything but 400, 401, 402, 403, 404, 409 and 410.
-- **Retry-After** is the minimum wait, capped at 1h. Foreground and network return do not cut it
-  short. `HttpClient` also holds every later SDK request until the Retry-After window ends, so
-  other routes pause too.
+- **Retry-After** is the minimum wait for that operation, capped at 1h. Foreground and network
+  return do not cut it short. Other routes are not held. A 429 without Retry-After waits 60s.
 - **Other records keep going**: while one operation waits, operations on other records are sent.
   Operations on the same record wait behind it, so order is kept.
 - **Foreground and network return** end the backoff. The next attempt goes out after the queue's
