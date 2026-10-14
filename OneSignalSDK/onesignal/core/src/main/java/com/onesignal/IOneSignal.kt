@@ -22,6 +22,9 @@ interface IOneSignal {
     /**
      * The user manager for accessing user-scoped
      * management.
+     *
+     * Before init succeeds this is a stand-in: listener and setting registrations are replayed once
+     * init succeeds, other calls are logged and ignored.
      */
     val user: IUserManager
 
@@ -82,7 +85,8 @@ interface IOneSignal {
      * @param appId The application ID the OneSignal SDK is bound to. If null or invalid, the cached
      * app ID is used; if none is cached, initialization is skipped and an error is logged.
      *
-     * @return true if the SDK could be successfully initialized, false otherwise.
+     * @return true once initialization has started (or is already running or done), false for a
+     * null [context] or an immediate startup failure. Check [isInitialized] for the outcome.
      */
     fun initWithContext(
         context: Context?,
@@ -166,7 +170,8 @@ interface IOneSignal {
      * Initialize the OneSignal SDK, suspend until initialization is completed
      *
      * @param context The Android context the SDK should use.
-     * @param appId The application ID the OneSignal SDK is bound to.
+     * @param appId The application ID the OneSignal SDK is bound to. If null or invalid, the cached
+     * app ID is used; if none is cached, initialization is skipped and an error is logged.
      *
      * @return true if the SDK could be successfully initialized, false otherwise.
      */
@@ -177,31 +182,31 @@ interface IOneSignal {
 
     /**
      * Get the session manager without blocking the calling thread.
-     * Suspends until the SDK is initialized.
+     * Suspends while initialization is in progress; if the SDK is not initialized, returns a stand-in (see [user]).
      */
     suspend fun getSession(): ISessionManager
 
     /**
      * Get the notifications manager without blocking the calling thread.
-     * Suspends until the SDK is initialized.
+     * Suspends while initialization is in progress; if the SDK is not initialized, returns a stand-in (see [user]).
      */
     suspend fun getNotifications(): INotificationsManager
 
     /**
      * Get the location manager without blocking the calling thread.
-     * Suspends until the SDK is initialized.
+     * Suspends while initialization is in progress; if the SDK is not initialized, returns a stand-in (see [user]).
      */
     suspend fun getLocation(): ILocationManager
 
     /**
      * Get the in-app messages manager without blocking the calling thread.
-     * Suspends until the SDK is initialized.
+     * Suspends while initialization is in progress; if the SDK is not initialized, returns a stand-in (see [user]).
      */
     suspend fun getInAppMessages(): IInAppMessagesManager
 
     /**
      * Get the user manager without blocking the calling thread.
-     * Suspends until the SDK is initialized.
+     * Suspends while initialization is in progress; if the SDK is not initialized, returns a stand-in (see [user]).
      */
     suspend fun getUser(): IUserManager
 
@@ -267,8 +272,8 @@ interface IOneSignal {
     suspend fun logoutSuspend()
 
     /**
-     * Update the JWT bearer token associated with [externalId] (suspend version). Suspends
-     * until SDK initialization is complete, then stores the JWT and wakes the operation queue.
+     * Update the JWT bearer token associated with [externalId] (suspend version). Suspends while
+     * initialization is in progress, then stores the JWT; if the SDK is not initialized it logs instead.
      *
      * @param externalId The external ID the JWT belongs to.
      * @param token The new JWT bearer token issued by your backend.

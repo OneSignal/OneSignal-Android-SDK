@@ -288,4 +288,28 @@ class AppIdHelperTests : FunSpec({
             mockPreferencesService.getString(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.PREFS_LEGACY_APP_ID)
         }
     }
+
+    test("an invalid cached appId is not used") {
+        for (cached in listOf("", "app\u0000id")) {
+            val configModel = ConfigModel().apply { appId = cached }
+            val prefs = mockk<IPreferencesService>()
+            every { prefs.getString(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.PREFS_LEGACY_APP_ID) } returns cached
+
+            val result = resolveAppId("", configModel, prefs)
+
+            result.failed shouldBe true
+            result.appId shouldBe null
+        }
+    }
+
+    test("an invalid cached config appId falls through to a valid legacy appId") {
+        val configModel = ConfigModel().apply { appId = "" }
+        val prefs = mockk<IPreferencesService>()
+        every { prefs.getString(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.PREFS_LEGACY_APP_ID) } returns legacyAppId
+
+        val result = resolveAppId(null, configModel, prefs)
+
+        result.appId shouldBe legacyAppId
+        result.failed shouldBe false
+    }
 })

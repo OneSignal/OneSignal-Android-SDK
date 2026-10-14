@@ -4,10 +4,6 @@ import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
-import kotlinx.coroutines.CompletableDeferred
-import java.lang.reflect.InvocationTargetException
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.TimeUnit
 
 class OneSignalImpTests : FunSpec({
     beforeAny {
@@ -15,19 +11,8 @@ class OneSignalImpTests : FunSpec({
     }
 
     fun markInitialized(os: OneSignalImp) {
-        val initStateField = OneSignalImp::class.java.getDeclaredField("initState")
-        initStateField.isAccessible = true
-        initStateField.set(os, InitState.SUCCESS)
-    }
-
-    fun setPrivateField(
-        os: OneSignalImp,
-        name: String,
-        value: Any,
-    ) {
-        val field = OneSignalImp::class.java.getDeclaredField(name)
-        field.isAccessible = true
-        field.set(os, value)
+        os.gate.tryStart()
+        os.gate.complete(InitState.SUCCESS)
     }
 
     test("attempting login before initWithContext is ignored without throwing") {
@@ -76,27 +61,6 @@ class OneSignalImpTests : FunSpec({
         os.isInitialized shouldBe false
     }
 
-    test("isReady returns synchronously without dispatching when initState is SUCCESS") {
-        val os = OneSignalImp()
-        markInitialized(os)
-
-        val isReady = OneSignalImp::class.java.getDeclaredMethod("isReady", String::class.java)
-        isReady.isAccessible = true
-        isReady.invoke(os, "test") shouldBe true
-    }
-
-    test("isReady returns false without throwing at NOT_STARTED and FAILED") {
-        val os = OneSignalImp()
-        Logging.logLevel = LogLevel.NONE
-        val isReady = OneSignalImp::class.java.getDeclaredMethod("isReady", String::class.java)
-        isReady.isAccessible = true
-
-        isReady.invoke(os, "test") shouldBe false
-
-        setPrivateField(os, "initState", InitState.FAILED)
-        isReady.invoke(os, "test") shouldBe false
-    }
-
     test("blockingGet returns synchronously without dispatching when initState is SUCCESS") {
         val os = OneSignalImp()
         markInitialized(os)
@@ -106,40 +70,6 @@ class OneSignalImpTests : FunSpec({
 
         val getter = { "value" }
         blockingGet.invoke(os, getter) shouldBe "value"
-    }
-
-    test("isReady at IN_PROGRESS awaits the completion signal on the caller's event loop") {
-        // The IN_PROGRESS wait uses a dispatcher-less runBlocking so it resumes on the caller's
-        // own event loop off the completion signal alone, rather than depending on a free worker
-        // in a (possibly saturated) IO pool (#1163).
-        val os = OneSignalImp()
-        setPrivateField(os, "initState", InitState.IN_PROGRESS)
-        val deferred = CompletableDeferred<Unit>()
-        setPrivateField(os, "suspendCompletion", deferred)
-
-        val isReady = OneSignalImp::class.java.getDeclaredMethod("isReady", String::class.java)
-        isReady.isAccessible = true
-
-        val failure = arrayOfNulls<Throwable>(1)
-        val finished = CountDownLatch(1)
-        Thread {
-            try {
-                isReady.invoke(os, "test")
-            } catch (t: InvocationTargetException) {
-                failure[0] = t.targetException
-            } finally {
-                finished.countDown()
-            }
-        }.start()
-
-        // Still parked on the not-yet-completed signal (pre-fix it would throw/finish immediately).
-        finished.await(300, TimeUnit.MILLISECONDS) shouldBe false
-
-        setPrivateField(os, "initState", InitState.SUCCESS)
-        deferred.complete(Unit)
-
-        finished.await(2, TimeUnit.SECONDS) shouldBe true
-        failure[0] shouldBe null
     }
 
     // Comprehensive tests for deprecated properties that should work before and after initialization

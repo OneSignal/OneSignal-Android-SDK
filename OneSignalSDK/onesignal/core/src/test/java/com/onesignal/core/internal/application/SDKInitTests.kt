@@ -7,21 +7,32 @@ import androidx.test.core.app.ApplicationProvider.getApplicationContext
 import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
 import com.onesignal.common.AndroidUtils
 import com.onesignal.common.threading.OneSignalDispatchers
+import com.onesignal.core.internal.operations.IOperationRepo
+import com.onesignal.core.internal.operations.impl.OperationRepo
 import com.onesignal.core.internal.preferences.PreferenceOneSignalKeys.PREFS_LEGACY_APP_ID
+import com.onesignal.debug.ILogListener
 import com.onesignal.debug.LogLevel
+import com.onesignal.debug.OneSignalLogEvent
 import com.onesignal.debug.internal.logging.Logging
+import com.onesignal.internal.InitGate
+import com.onesignal.internal.InitState
 import com.onesignal.internal.OneSignalImp
+import com.onesignal.user.internal.UserManager
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.maps.shouldContain
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.mockk.every
+import io.mockk.mockk
 import io.mockk.mockkObject
 import io.mockk.unmockkObject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
+import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
@@ -164,6 +175,95 @@ class SDKInitTests : FunSpec({
         user.getTags() shouldContain ("key" to "value")
     }
 
+    test("a retry after a failed init does not enqueue duplicate operations") {
+        val context = IsolatedPrefsContext(getApplicationContext())
+        val os = OneSignalImp()
+        os.initWithContext(context, "")
+        os.user
+        os.isInitialized shouldBe false
+
+        os.initWithContext(context, "appId")
+        waitForInitialization(os)
+        os.user.addTag("retryKey", "value")
+
+        val repo = os.getService(IOperationRepo::class.java) as OperationRepo
+        fun tagOps() = synchronized(repo.queue) { repo.queue.count { it.operation.toString().contains("retryKey") } }
+        repeat(50) { if (tagOps() == 0) Thread.sleep(20) }
+        Thread.sleep(200)
+        tagOps() shouldBe 1
+    }
+
+    test("observers and listeners registered before init are applied once init succeeds") {
+        val os = OneSignalImp()
+        os.user.addObserver(mockk(relaxed = true))
+        // Core-only test: the in-app messages module is absent, so replaying this throws and must not break init.
+        os.inAppMessages.addClickListener(mockk(relaxed = true))
+
+        os.initWithContext(IsolatedPrefsContext(getApplicationContext()), "appId")
+        waitForInitialization(os)
+
+        val userManager = os.user as UserManager
+        repeat(50) { if (!userManager.changeHandlersNotifier.hasSubscribers) Thread.sleep(20) }
+        userManager.changeHandlersNotifier.hasSubscribers shouldBe true
+        os.isInitialized shouldBe true
+    }
+
+    test("a call before init logs one error naming the call, with the failure trace once per attempt") {
+        val events = CopyOnWriteArrayList<OneSignalLogEvent>()
+        val listener = ILogListener { events += it }
+        Logging.addListener(listener)
+        try {
+            val os = OneSignalImp()
+            os.user.addTag("key", "value")
+            events.filter { it.level == LogLevel.ERROR }.map { it.entry.substringAfter("] ") } shouldBe
+                listOf("'User.addTag' ignored: call initWithContext with a valid appId first.")
+
+            os.initWithContext(IsolatedPrefsContext(getApplicationContext()), "")
+            os.user
+            events.clear()
+            os.user.addTag("key", "value")
+            os.user.addTag("key", "value")
+
+            val errors = events.filter { it.level == LogLevel.ERROR && it.entry.contains("'User.addTag'") }
+            errors.size shouldBe 2
+            errors.count { it.entry.contains("OneSignal initWithContext failed.") } shouldBe 1
+        } finally {
+            Logging.removeListener(listener)
+        }
+    }
+
+    test("a consent change made after init applied the stored values is not lost") {
+        val context = IsolatedPrefsContext(getApplicationContext())
+        val os = OneSignalImp()
+        os.consentGiven = false
+        os.initWithContext(context, "appId")
+        waitForInitialization(os)
+
+        // Re-enter the window between updateConfig and SUCCESS, where the setter used to write only the local copy.
+        val state = InitGate::class.java.getDeclaredField("state").apply { isAccessible = true }
+        state.set(os.gate, InitState.IN_PROGRESS)
+        os.consentGiven = true
+        state.set(os.gate, InitState.SUCCESS)
+
+        os.consentGiven shouldBe true
+    }
+
+    test("cancelling initWithContextSuspend before init runs does not leave init stuck in progress") {
+        val context = IsolatedPrefsContext(getApplicationContext())
+        val os = OneSignalImp()
+
+        runBlocking {
+            launch {
+                cancel()
+                os.initWithContextSuspend(context, "appId")
+            }.join()
+        }
+
+        os.gate.state shouldBe InitState.FAILED
+        os.initWithContext(context, "appId") shouldBe true
+        waitForInitialization(os)
+    }
+
     test("initWithContext with a null context returns false without throwing") {
         val os = OneSignalImp()
 
@@ -251,7 +351,7 @@ class SDKInitTests : FunSpec({
     }
 
     test("initWithContext with an empty appId falls back to the cached appId") {
-        val context = getApplicationContext<Context>()
+        val context = IsolatedPrefsContext(getApplicationContext())
         context.getSharedPreferences("OneSignal", Context.MODE_PRIVATE).edit()
             .putString(PREFS_LEGACY_APP_ID, "cachedAppId")
             .commit()

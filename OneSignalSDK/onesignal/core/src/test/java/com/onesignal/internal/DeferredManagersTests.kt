@@ -14,6 +14,7 @@ import com.onesignal.user.state.IUserStateObserver
 import com.onesignal.user.subscriptions.IPushSubscription
 import com.onesignal.user.subscriptions.IPushSubscriptionObserver
 import io.kotest.core.spec.style.FunSpec
+import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.shouldBe
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -21,30 +22,67 @@ import io.mockk.confirmVerified
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import io.mockk.verifyOrder
 import kotlinx.coroutines.runBlocking
 
-private class Readiness<T : Any>(private val real: T) {
+private class FakeSource<T : Any>(private val real: T) : ManagerSource<T> {
     var ready = false
+    val ignored = mutableListOf<String>()
+    val queued = mutableListOf<String>()
+    val awaited = mutableListOf<String>()
 
-    fun resolve(): T? = if (ready) real else null
+    override fun get(member: String): T? = if (ready) real else null.also { ignored += member }
+
+    override fun peek(): T? = if (ready) real else null
+
+    override suspend fun await(member: String): T? {
+        awaited += member
+        return get(member)
+    }
+
+    override fun logQueued(member: String) {
+        queued += member
+    }
 }
 
-// Runs every call before ready (nothing reaches the real manager), then after (each one forwards).
+// Before ready, nothing reaches the real manager and each call is logged by name; after, each forwards once.
 private fun <T : Any> assertForwardsOnlyWhenReady(
     real: T,
-    readiness: Readiness<T>,
+    source: FakeSource<T>,
     deferred: T,
-    calls: List<T.() -> Unit>,
+    calls: List<Pair<String, T.() -> Unit>>,
 ) {
-    calls.forEach { deferred.it() }
+    calls.forEach { (_, call) -> deferred.call() }
     confirmVerified(real)
+    source.ignored shouldContainExactly calls.map { it.first }
 
-    readiness.ready = true
-    calls.forEach { call ->
+    source.ready = true
+    calls.forEach { (_, call) ->
         deferred.call()
         verify(exactly = 1) { real.call() }
     }
     confirmVerified(real)
+}
+
+// Before ready, registrations are queued (not forwarded); replay applies them in order, once.
+private fun <T : Any> assertQueuesAndReplays(
+    real: T,
+    source: FakeSource<T>,
+    deferred: DeferredManager<T>,
+    calls: List<Pair<String, T.() -> Unit>>,
+) {
+    @Suppress("UNCHECKED_CAST")
+    val manager = deferred as T
+    calls.forEach { (_, call) -> manager.call() }
+    confirmVerified(real)
+    source.queued shouldContainExactly calls.map { it.first }
+    source.ignored shouldBe emptyList()
+
+    source.ready = true
+    deferred.replay(real)
+    verifyOrder { calls.forEach { (_, call) -> real.call() } }
+    deferred.replay(real)
+    calls.forEach { (_, call) -> verify(exactly = 1) { real.call() } }
 }
 
 class DeferredManagersTests : FunSpec({
@@ -53,58 +91,72 @@ class DeferredManagersTests : FunSpec({
         every { real.onesignalId } returns "osid"
         every { real.externalId } returns "extid"
         every { real.getTags() } returns mapOf("k" to "v")
-        val readiness = Readiness(real)
-        val deferred = DeferredUserManager(readiness::resolve)
+        val source = FakeSource(real)
+        val deferred = DeferredUserManager(source)
 
         deferred.onesignalId shouldBe ""
         deferred.externalId shouldBe ""
         deferred.getTags() shouldBe emptyMap()
 
-        readiness.ready = true
+        source.ready = true
         deferred.onesignalId shouldBe "osid"
         deferred.externalId shouldBe "extid"
         deferred.getTags() shouldBe mapOf("k" to "v")
     }
 
-    test("DeferredUserManager forwards every method only once ready") {
+    test("DeferredUserManager forwards every action only once ready") {
         val real = mockk<IUserManager>(relaxed = true)
-        val readiness = Readiness(real)
-        val observer = mockk<IUserStateObserver>()
+        val source = FakeSource(real)
 
         assertForwardsOnlyWhenReady(
             real,
-            readiness,
-            DeferredUserManager(readiness::resolve),
+            source,
+            DeferredUserManager(source),
             listOf(
-                { setLanguage("en") },
-                { addAlias("label", "id") },
-                { addAliases(mapOf("label" to "id")) },
-                { removeAlias("label") },
-                { removeAliases(listOf("label")) },
-                { addEmail("a@b.c") },
-                { removeEmail("a@b.c") },
-                { addSms("+15555550100") },
-                { removeSms("+15555550100") },
-                { addTag("key", "value") },
-                { addTags(mapOf("key" to "value")) },
-                { removeTag("key") },
-                { removeTags(listOf("key")) },
-                { addObserver(observer) },
-                { removeObserver(observer) },
-                { trackEvent("event", mapOf("p" to 1)) },
+                "setLanguage" to { setLanguage("en") },
+                "addAlias" to { addAlias("label", "id") },
+                "addAliases" to { addAliases(mapOf("label" to "id")) },
+                "removeAlias" to { removeAlias("label") },
+                "removeAliases" to { removeAliases(listOf("label")) },
+                "addEmail" to { addEmail("a@b.c") },
+                "removeEmail" to { removeEmail("a@b.c") },
+                "addSms" to { addSms("+15555550100") },
+                "removeSms" to { removeSms("+15555550100") },
+                "addTag" to { addTag("key", "value") },
+                "addTags" to { addTags(mapOf("key" to "value")) },
+                "removeTag" to { removeTag("key") },
+                "removeTags" to { removeTags(listOf("key")) },
+                "trackEvent" to { trackEvent("event", mapOf("p" to 1)) },
             ),
         )
     }
 
-    test("push subscription captured before ready forwards to the real one once ready") {
+    test("DeferredUserManager queues observer registrations and replays them") {
+        val real = mockk<IUserManager>(relaxed = true)
+        val source = FakeSource(real)
+        val observer = mockk<IUserStateObserver>()
+
+        assertQueuesAndReplays(
+            real,
+            source,
+            DeferredUserManager(source),
+            listOf(
+                "addObserver" to { addObserver(observer) },
+                "removeObserver" to { removeObserver(observer) },
+            ),
+        )
+    }
+
+    test("push subscription captured before ready forwards actions and replays observers") {
         val realPush = mockk<IPushSubscription>(relaxed = true)
         every { realPush.id } returns "subid"
         every { realPush.token } returns "token"
         every { realPush.optedIn } returns true
-        val realUser = mockk<IUserManager>()
+        val realUser = mockk<IUserManager>(relaxed = true)
         every { realUser.pushSubscription } returns realPush
-        val readiness = Readiness(realUser)
-        val captured = DeferredUserManager(readiness::resolve).pushSubscription
+        val source = FakeSource(realUser)
+        val deferredUser = DeferredUserManager(source)
+        val captured = deferredUser.pushSubscription
         val observer = mockk<IPushSubscriptionObserver>()
 
         captured.id shouldBe ""
@@ -113,32 +165,32 @@ class DeferredManagersTests : FunSpec({
         captured.optIn()
         captured.optOut()
         captured.addObserver(observer)
-        captured.removeObserver(observer)
         confirmVerified(realPush)
+        source.ignored shouldContainExactly
+            listOf("pushSubscription.id", "pushSubscription.token", "pushSubscription.optedIn", "pushSubscription.optIn", "pushSubscription.optOut")
+        source.queued shouldContainExactly listOf("pushSubscription.addObserver")
 
-        readiness.ready = true
+        source.ready = true
+        deferredUser.replay(realUser)
+        verify(exactly = 1) { realPush.addObserver(observer) }
         captured.id shouldBe "subid"
         captured.token shouldBe "token"
         captured.optedIn shouldBe true
         captured.optIn()
-        captured.optOut()
-        captured.addObserver(observer)
         captured.removeObserver(observer)
         verify(exactly = 1) {
             realPush.optIn()
-            realPush.optOut()
-            realPush.addObserver(observer)
             realPush.removeObserver(observer)
         }
     }
 
-    test("DeferredNotificationsManager returns defaults before ready and forwards every method once ready") {
+    test("DeferredNotificationsManager returns defaults before ready, forwards actions and replays listeners") {
         val real = mockk<INotificationsManager>(relaxed = true)
         every { real.permission } returns true
         every { real.canRequestPermission } returns true
         coEvery { real.requestPermission(any()) } returns true
-        val readiness = Readiness(real)
-        val deferred = DeferredNotificationsManager(readiness::resolve)
+        val source = FakeSource(real)
+        val deferred = DeferredNotificationsManager(source)
         val permissionObserver = mockk<IPermissionObserver>()
         val lifecycleListener = mockk<INotificationLifecycleListener>()
         val clickListener = mockk<INotificationClickListener>()
@@ -146,21 +198,31 @@ class DeferredManagersTests : FunSpec({
         deferred.permission shouldBe false
         deferred.canRequestPermission shouldBe false
         runBlocking { deferred.requestPermission(true) } shouldBe false
+        source.ignored.clear()
 
-        assertForwardsOnlyWhenReady(
+        assertQueuesAndReplays(
             real,
-            readiness,
+            source,
             deferred,
             listOf(
-                { removeNotification(1) },
-                { removeGroupedNotifications("group") },
-                { clearAllNotifications() },
-                { addPermissionObserver(permissionObserver) },
-                { removePermissionObserver(permissionObserver) },
-                { addForegroundLifecycleListener(lifecycleListener) },
-                { removeForegroundLifecycleListener(lifecycleListener) },
-                { addClickListener(clickListener) },
-                { removeClickListener(clickListener) },
+                "addPermissionObserver" to { addPermissionObserver(permissionObserver) },
+                "removePermissionObserver" to { removePermissionObserver(permissionObserver) },
+                "addForegroundLifecycleListener" to { addForegroundLifecycleListener(lifecycleListener) },
+                "removeForegroundLifecycleListener" to { removeForegroundLifecycleListener(lifecycleListener) },
+                "addClickListener" to { addClickListener(clickListener) },
+                "removeClickListener" to { removeClickListener(clickListener) },
+            ),
+        )
+
+        source.ready = false
+        assertForwardsOnlyWhenReady(
+            real,
+            source,
+            deferred,
+            listOf(
+                "removeNotification" to { removeNotification(1) },
+                "removeGroupedNotifications" to { removeGroupedNotifications("group") },
+                "clearAllNotifications" to { clearAllNotifications() },
             ),
         )
 
@@ -170,66 +232,116 @@ class DeferredManagersTests : FunSpec({
         coVerify(exactly = 1) { real.requestPermission(true) }
     }
 
-    test("DeferredInAppMessagesManager returns defaults before ready and forwards every method once ready") {
+    test("DeferredInAppMessagesManager forwards actions and replays listeners and paused") {
         val real = mockk<IInAppMessagesManager>(relaxed = true)
         every { real.paused } returns true
-        val readiness = Readiness(real)
-        val deferred = DeferredInAppMessagesManager(readiness::resolve)
+        val source = FakeSource(real)
+        val deferred = DeferredInAppMessagesManager(source)
         val lifecycleListener = mockk<IInAppMessageLifecycleListener>()
         val clickListener = mockk<IInAppMessageClickListener>()
 
         deferred.paused shouldBe false
+        source.ignored.clear()
 
-        assertForwardsOnlyWhenReady(
+        assertQueuesAndReplays(
             real,
-            readiness,
+            source,
             deferred,
             listOf(
-                { paused = true },
-                { addTrigger("key", "value") },
-                { addTriggers(mapOf("key" to "value")) },
-                { removeTrigger("key") },
-                { removeTriggers(listOf("key")) },
-                { clearTriggers() },
-                { addLifecycleListener(lifecycleListener) },
-                { removeLifecycleListener(lifecycleListener) },
-                { addClickListener(clickListener) },
-                { removeClickListener(clickListener) },
+                "paused" to { paused = true },
+                "addLifecycleListener" to { addLifecycleListener(lifecycleListener) },
+                "removeLifecycleListener" to { removeLifecycleListener(lifecycleListener) },
+                "addClickListener" to { addClickListener(clickListener) },
+                "removeClickListener" to { removeClickListener(clickListener) },
+            ),
+        )
+
+        source.ready = false
+        assertForwardsOnlyWhenReady(
+            real,
+            source,
+            deferred,
+            listOf(
+                "addTrigger" to { addTrigger("key", "value") },
+                "addTriggers" to { addTriggers(mapOf("key" to "value")) },
+                "removeTrigger" to { removeTrigger("key") },
+                "removeTriggers" to { removeTriggers(listOf("key")) },
+                "clearTriggers" to { clearTriggers() },
             ),
         )
 
         deferred.paused shouldBe true
     }
 
-    test("DeferredSessionManager forwards every method only once ready") {
+    test("DeferredSessionManager forwards every action only once ready") {
         val real = mockk<ISessionManager>(relaxed = true)
-        val readiness = Readiness(real)
+        val source = FakeSource(real)
 
         assertForwardsOnlyWhenReady(
             real,
-            readiness,
-            DeferredSessionManager(readiness::resolve),
+            source,
+            DeferredSessionManager(source),
             listOf(
-                { addOutcome("outcome") },
-                { addUniqueOutcome("outcome") },
-                { addOutcomeWithValue("outcome", 1.5f) },
+                "addOutcome" to { addOutcome("outcome") },
+                "addUniqueOutcome" to { addUniqueOutcome("outcome") },
+                "addOutcomeWithValue" to { addOutcomeWithValue("outcome", 1.5f) },
             ),
         )
     }
 
-    test("DeferredLocationManager returns defaults before ready and forwards every method once ready") {
+    test("DeferredLocationManager replays isShared and suspends for requestPermission") {
         val real = mockk<ILocationManager>(relaxed = true)
         every { real.isShared } returns true
         coEvery { real.requestPermission() } returns true
-        val readiness = Readiness(real)
-        val deferred = DeferredLocationManager(readiness::resolve)
+        val source = FakeSource(real)
+        val deferred = DeferredLocationManager(source)
 
         deferred.isShared shouldBe false
         runBlocking { deferred.requestPermission() } shouldBe false
+        source.ignored.clear()
 
-        assertForwardsOnlyWhenReady(real, readiness, deferred, listOf({ isShared = true }))
+        assertQueuesAndReplays(real, source, deferred, listOf("isShared" to { isShared = true }))
 
         deferred.isShared shouldBe true
         runBlocking { deferred.requestPermission() } shouldBe true
+        source.awaited shouldContainExactly listOf("requestPermission", "requestPermission")
+    }
+
+    test("suspend members resolve through await, never the blocking get") {
+        val real = mockk<INotificationsManager>(relaxed = true)
+        val source = FakeSource(real).apply { ready = true }
+
+        runBlocking { DeferredNotificationsManager(source).requestPermission(false) }
+
+        source.awaited shouldContainExactly listOf("requestPermission")
+    }
+
+    test("a registration made after replay forwards instead of queueing") {
+        val real = mockk<IUserManager>(relaxed = true)
+        val source = FakeSource(real)
+        val deferred = DeferredUserManager(source)
+        val observer = mockk<IUserStateObserver>()
+
+        deferred.replay(real)
+        deferred.addObserver(observer)
+
+        source.queued shouldBe emptyList()
+        verify(exactly = 0) { real.addObserver(observer) }
+        source.ignored shouldContainExactly listOf("addObserver")
+    }
+
+    test("a replayed call that throws does not stop the rest") {
+        val real = mockk<IInAppMessagesManager>(relaxed = true)
+        val clickListener = mockk<IInAppMessageClickListener>()
+        every { real.paused = any() } throws IllegalStateException("module missing")
+        val source = FakeSource(real)
+        val deferred = DeferredInAppMessagesManager(source)
+        com.onesignal.debug.internal.logging.Logging.logLevel = com.onesignal.debug.LogLevel.NONE
+
+        deferred.paused = true
+        deferred.addClickListener(clickListener)
+        deferred.replay(real)
+
+        verify(exactly = 1) { real.addClickListener(clickListener) }
     }
 })
