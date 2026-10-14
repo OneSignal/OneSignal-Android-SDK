@@ -1,5 +1,6 @@
 package com.onesignal
 
+import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
@@ -37,6 +38,13 @@ class OneSignalUserProfileTests : FunSpec({
         tags["plan"] = "changed"
 
         profile.tags shouldBe mapOf("plan" to "pro")
+    }
+
+    test("tags and aliases cannot be mutated through a Java cast") {
+        val profile = OneSignalUserProfile.builder().setTags(mapOf("plan" to "pro", "tier" to "gold")).setAliases(mapOf("crm" to "1", "erp" to "2")).build()
+
+        shouldThrow<UnsupportedOperationException> { (profile.tags as MutableMap<String, String>).put("plan", "x") }
+        shouldThrow<UnsupportedOperationException> { (profile.aliases as MutableMap<String, String>).clear() }
     }
 
     test("toString redacts email and sms") {
