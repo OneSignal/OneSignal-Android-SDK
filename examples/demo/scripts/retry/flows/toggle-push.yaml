@@ -1,0 +1,8 @@
+appId: com.onesignal.example
+---
+- runFlow:
+    file: _scroll-to.yaml
+    env:
+      TARGET: push_enabled_toggle
+- tapOn:
+    id: push_enabled_toggle
