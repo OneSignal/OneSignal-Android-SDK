@@ -30,7 +30,7 @@ enum class ErrorSource {
  * `else` branch.
  */
 enum class ErrorCode(val source: ErrorSource) {
-    /** [IOneSignal.initWithContextSuspend] has not been called. */
+    /** The SDK is not initialized: init was never called, was skipped, or failed (e.g. storage locked in direct boot). */
     NOT_INITIALIZED(ErrorSource.CLIENT),
 
     /**

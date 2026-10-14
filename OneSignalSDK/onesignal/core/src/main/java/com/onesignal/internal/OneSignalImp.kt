@@ -870,7 +870,7 @@ internal class OneSignalImp : IOneSignal,
         }
 
     /** Waits for init; returns a NOT_INITIALIZED failure instead of throwing when it never started or failed. */
-    private suspend fun awaitInitForLogin(): OneSignalResult<LoginData>? =
+    internal suspend fun awaitInitForLogin(): OneSignalResult<LoginData>? =
         try {
             suspendUntilInit(operationName = "login")
             null
@@ -878,6 +878,8 @@ internal class OneSignalImp : IOneSignal,
             // A subclass of IllegalStateException, so it must be rethrown before the catch below.
             throw e
         } catch (e: IllegalStateException) {
+            // Logged because this used to throw: a caller that ignores the result would otherwise see nothing.
+            Logging.error("login(externalId, profile) skipped: ${e.message}")
             OneSignalResult.failure(ErrorCode.NOT_INITIALIZED, e.message, cause = e)
         }
 
