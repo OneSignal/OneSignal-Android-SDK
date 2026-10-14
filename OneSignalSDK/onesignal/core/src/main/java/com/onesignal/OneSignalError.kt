@@ -24,7 +24,10 @@ enum class ErrorSource {
  *
  * An enum rather than a sealed hierarchy so that Java callers get a native `switch` and the
  * wrapper bridges get a trivial name-to-string marshal. The backend half of the catalog is
- * deliberately *not* modelled here — see [BACKEND_ERROR].
+ * deliberately *not* modelled here; see [BACKEND_ERROR].
+ *
+ * New codes will be added in later releases, so a `when` or `switch` over this enum should keep an
+ * `else` branch.
  */
 enum class ErrorCode(val source: ErrorSource) {
     /** [IOneSignal.initWithContextSuspend] has not been called. */
