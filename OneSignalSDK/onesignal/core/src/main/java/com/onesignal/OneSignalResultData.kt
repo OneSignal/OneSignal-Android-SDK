@@ -16,10 +16,9 @@ sealed interface OneSignalResultData {
  * The payloads themselves.
  *
  * Several of these start with no fields. That is intentional, and it is why none of them is a
- * `data class` or an `object`: a regular class with an internal constructor can gain nullable or
- * defaulted fields later without changing any signature, without a singleton blocking per-call
- * state, and without silently altering generated equals/hashCode/toString/copy behavior that a
- * customer may have come to depend on.
+ * `data class` or an `object`: a regular class can gain fields without a singleton blocking per-call
+ * state or a generated copy/equals changing under customers. The constructors are internal, which
+ * Java still sees as public: new fields change those JVM signatures, so they are not supported API.
  *
  * Field names here are also the wire keys, so they are additive-only: never renamed, never removed.
  */

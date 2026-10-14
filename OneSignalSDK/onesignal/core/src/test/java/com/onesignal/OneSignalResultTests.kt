@@ -80,7 +80,7 @@ class OneSignalResultTests : FunSpec({
                 ),
             )
 
-        error.error.size shouldBe 2
+        error.details.size shouldBe 2
         error.first.backendCode shouldBe "user-1"
         error.toList().map { it["backendCode"] } shouldBe listOf("user-1", "user-3")
     }
@@ -339,10 +339,10 @@ class OneSignalResultTests : FunSpec({
                 LoginData::fromMap,
             )
 
-        restored.error!!.error.size shouldBe 2
-        restored.error!!.error[0].code shouldBe ErrorCode.STORAGE_LOCKED
-        restored.error!!.error[1].code shouldBe ErrorCode.UNKNOWN
-        restored.error!!.error[1].message shouldBe "42"
+        restored.error!!.details.size shouldBe 2
+        restored.error!!.details[0].code shouldBe ErrorCode.STORAGE_LOCKED
+        restored.error!!.details[1].code shouldBe ErrorCode.UNKNOWN
+        restored.error!!.details[1].message shouldBe "42"
     }
 
     // isSuccess reads error, callers read data. Neither or both leaves the two disagreeing.
@@ -386,7 +386,7 @@ class OneSignalResultTests : FunSpec({
             )
 
         @Suppress("UNCHECKED_CAST")
-        shouldThrow<UnsupportedOperationException> { (restored.error!!.error as MutableList<Any?>).clear() }
+        shouldThrow<UnsupportedOperationException> { (restored.error!!.details as MutableList<Any?>).clear() }
 
         restored.error!!.first.code shouldBe ErrorCode.BACKEND_ERROR
     }

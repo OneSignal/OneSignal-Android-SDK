@@ -18,19 +18,18 @@ import org.json.JSONObject
  * The presence of [error] is what defines the outcome; [isSuccess] and the wire-level `success`
  * flag are both derived from it, so the two can never disagree.
  *
- * The constructor is private on purpose. An `internal` constructor still emits as JVM-public, so
- * Java outside this module could build an envelope that violates the either/or invariant; private
- * closes that hole. Callers construct through [success], [failure], or [fromMap].
+ * Construct through [success], [failure], or [fromMap]. The internal companion is still reachable
+ * from Java, so the either/or invariant is enforced in `init`, not by visibility.
  *
- * From Kotlin:
+ * From Kotlin, inside a coroutine:
  * ```kotlin
- * val result = OneSignal.login("user-123")
+ * val result = OneSignal.login("user-123", OneSignalUserProfile.builder().setEmail("a@b.co").build())
  * if (result.isSuccess) println(result.data?.onesignalId) else println(result.error?.first?.code)
  * ```
  *
  * From Java the generated accessors read naturally:
  * ```java
- * if (result.isSuccess()) { result.getData(); } else { result.getError(); }
+ * if (result.isSuccess()) { result.getData(); } else { result.getError().getDetails(); }
  * ```
  */
 class OneSignalResult<T : OneSignalResultData> private constructor(

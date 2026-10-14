@@ -49,7 +49,7 @@ enum class ErrorCode(val source: ErrorSource) {
 /**
  * Describes why a OneSignal call failed.
  *
- * One request can fail for several reasons at once, so [error] is a list of [Detail]. Everything
+ * One request can fail for several reasons at once, so [details] is a list of [Detail]. Everything
  * the SDK raises locally has exactly one reason, which [first] reads without the indexing
  * ceremony.
  *
@@ -60,12 +60,11 @@ enum class ErrorCode(val source: ErrorSource) {
  *   "error": [ { "code": "STORAGE_LOCKED", "source": "CLIENT", "backendCode": null, "message": "..." } ] }
  * ```
  *
- * The constructor is private on purpose. An `internal` constructor still emits as JVM-public, so
- * Java outside this module could build an error with no reasons and leave [first] throwing; private
- * closes that hole. Callers construct through [of] or [fromWire].
+ * Construct through [of] or [fromWire]. The internal companion is still reachable from Java, so the
+ * never-empty invariant is enforced in `init`, not by visibility.
  */
 class OneSignalError private constructor(
-    error: List<Detail>,
+    details: List<Detail>,
     /**
      * The throwable behind the failure, when there was one.
      *
@@ -83,13 +82,13 @@ class OneSignalError private constructor(
      * the copy itself cannot be emptied either. Java sees a plain `List` and `clear()` is one
      * keystroke away from `get()`; both would leave [first] throwing.
      */
-    val error: List<Detail> = Collections.unmodifiableList(error.toList())
+    val details: List<Detail> = Collections.unmodifiableList(details.toList())
 
     init {
         // [first] is documented as always safe to read, and the wire projection of an empty error
-        // would claim failure while explaining nothing. Both factories guard this; the check is
-        // here so a future caller of the constructor cannot quietly break the invariant.
-        require(this.error.isNotEmpty()) { "OneSignalError requires at least one Detail." }
+        // would claim failure while explaining nothing. Every factory, including Java callers of the
+        // JVM-public companion, passes through here.
+        require(this.details.isNotEmpty()) { "OneSignalError requires at least one Detail." }
     }
 
     /**
@@ -189,12 +188,12 @@ class OneSignalError private constructor(
 
     /** The first reason, which is the only one for every failure the SDK raises locally. */
     val first: Detail
-        get() = error.first()
+        get() = details.first()
 
     /** Projects this error onto the cross-SDK wire shape consumed by the wrapper bridges. */
-    fun toList(): List<Map<String, Any?>> = error.map { it.toMap() }
+    fun toList(): List<Map<String, Any?>> = details.map { it.toMap() }
 
-    override fun toString(): String = "OneSignalError(error=$error)"
+    override fun toString(): String = "OneSignalError(details=$details)"
 
     internal companion object {
         private val json =
