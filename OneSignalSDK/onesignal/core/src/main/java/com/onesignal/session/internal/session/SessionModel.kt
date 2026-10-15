@@ -97,6 +97,16 @@ class SessionModel : Model() {
         }
 
     /**
+     * Identifies this session's queued sessions API requests until [serverSessionId] is known.
+     * A new local ID for each session.
+     */
+    var localSessionId: String
+        get() = getStringProperty(::localSessionId.name) { "" }
+        set(value) {
+            setStringProperty(::localSessionId.name, value)
+        }
+
+    /**
      * Null until the sessions API creates this session. Cleared when a new session starts.
      */
     var serverSessionId: String?

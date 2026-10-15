@@ -197,6 +197,7 @@ internal class SessionService(
                     .takeIf { it.hasProperty(IdentityConstants.ONESIGNAL_ID) }
                     ?.onesignalId
             session.subscriptionId = config?.pushSubscriptionId
+            session.localSessionId = IDManager.createLocalId()
             session.serverSessionId = null
             session.isValid = true
             Logging.debug("SessionService: New session started at ${session.startTime}")
