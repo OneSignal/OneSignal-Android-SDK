@@ -3,7 +3,11 @@ package com.onesignal.notifications.internal.registration
 import com.onesignal.user.internal.subscriptions.SubscriptionStatus
 
 internal interface IPushRegistrator {
-    class RegisterResult(val id: String?, val status: SubscriptionStatus)
+    class RegisterResult(
+        val id: String?,
+        val status: SubscriptionStatus,
+        val isExistingTokenInvalid: Boolean = false,
+    )
 
     /**
      * Register the provided context for push notifications.

@@ -30,33 +30,29 @@ internal class PushTokenManager(
             else -> {
                 val registerResult = _pushRegistrator.registerForPush()
 
-                if (registerResult.status.value == SubscriptionStatus.SUBSCRIBED.value) {
-                    pushTokenStatus = registerResult.status
-                } else if (registerResult.status.value < SubscriptionStatus.SUBSCRIBED.value) {
-                    // Only allow errored statuses if we have never gotten a token. This ensures the
-                    // device will not later be marked unsubscribed due to any inconsistencies returned
-                    // by Google Play services. Also do not override a config error status if we got a
-                    // runtime error
-                    if (pushToken == null &&
-                        (
-                            pushTokenStatus == SubscriptionStatus.NO_PERMISSION ||
-                                pushStatusRuntimeError(pushTokenStatus)
-                            )
-                    ) {
-                        pushTokenStatus = registerResult.status
+                val shouldUpdate =
+                    when {
+                        registerResult.status.value == SubscriptionStatus.SUBSCRIBED.value -> true
+                        registerResult.status.value < SubscriptionStatus.SUBSCRIBED.value ->
+                            shouldUpdateErrorStatus(registerResult)
+                        else -> pushTokenStatus.isRetryableTokenError
                     }
-                } else if (pushStatusRuntimeError(pushTokenStatus)) {
-                    pushTokenStatus = registerResult.status
-                }
 
-                pushToken = registerResult.id
+                if (shouldUpdate) {
+                    pushTokenStatus = registerResult.status
+                    pushToken = registerResult.id
+                }
             }
         }
 
         return PushTokenResponse(pushToken, pushTokenStatus)
     }
 
-    private fun pushStatusRuntimeError(status: SubscriptionStatus): Boolean {
-        return status.value < -6
-    }
+    private fun shouldUpdateErrorStatus(registerResult: IPushRegistrator.RegisterResult): Boolean =
+        when {
+            registerResult.isExistingTokenInvalid -> true
+            pushToken != null -> false
+            !registerResult.status.isRetryableTokenError -> true
+            else -> pushTokenStatus == SubscriptionStatus.NO_PERMISSION || pushTokenStatus.isRetryableTokenError
+        }
 }

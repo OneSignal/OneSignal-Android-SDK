@@ -264,6 +264,9 @@
     <ID>MagicNumber:SubscriptionModel.kt$SubscriptionStatus.FIREBASE_FCM_ERROR_IOEXCEPTION_OTHER$11</ID>
     <ID>MagicNumber:SubscriptionModel.kt$SubscriptionStatus.FIREBASE_FCM_ERROR_IOEXCEPTION_SERVICE_NOT_AVAILABLE$9</ID>
     <ID>MagicNumber:SubscriptionModel.kt$SubscriptionStatus.FIREBASE_FCM_ERROR_MISC_EXCEPTION$12</ID>
+    <ID>MagicNumber:SubscriptionModel.kt$SubscriptionStatus.FIREBASE_FCM_FID_DEFAULT_APP_MISSING$32</ID>
+    <ID>MagicNumber:SubscriptionModel.kt$SubscriptionStatus.FIREBASE_FCM_FID_REGISTER_API_UNAVAILABLE$33</ID>
+    <ID>MagicNumber:SubscriptionModel.kt$SubscriptionStatus.FIREBASE_FCM_FID_REGISTRATION_FAILED$34</ID>
     <ID>MagicNumber:SubscriptionModel.kt$SubscriptionStatus.FIREBASE_FCM_INIT_ERROR$8</ID>
     <ID>MagicNumber:SubscriptionModel.kt$SubscriptionStatus.HMS_API_EXCEPTION_OTHER$27</ID>
     <ID>MagicNumber:SubscriptionModel.kt$SubscriptionStatus.HMS_ARGUMENTS_INVALID$26</ID>

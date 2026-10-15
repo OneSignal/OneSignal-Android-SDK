@@ -171,7 +171,7 @@ class SubscriptionManagerTests : FunSpec({
         }
     }
 
-    test("update push subscription updates model store") {
+    test("changed push token updates the existing subscription instead of adding another") {
         // Given
         val mockSubscriptionModelStore = mockk<SubscriptionModelStore>()
         val mockApplicationService = mockk<IApplicationService>()
@@ -198,8 +198,10 @@ class SubscriptionManagerTests : FunSpec({
         subscriptionManager.addOrUpdatePushSubscriptionToken("pushToken2", SubscriptionStatus.SUBSCRIBED)
 
         // Then
+        pushSubscription.id shouldBe "subscription1"
         pushSubscription.address shouldBe "pushToken2"
         pushSubscription.status shouldBe SubscriptionStatus.SUBSCRIBED
+        verify(exactly = 0) { mockSubscriptionModelStore.add(any()) }
     }
 
     test("remove email subscription removes from model store") {
@@ -644,6 +646,7 @@ class SubscriptionManagerTests : FunSpec({
                 SubscriptionStatus.HMS_TOKEN_TIMEOUT,
                 SubscriptionStatus.HMS_API_EXCEPTION_OTHER,
                 SubscriptionStatus.FIREBASE_FCM_ERROR_IOEXCEPTION_AUTHENTICATION_FAILED,
+                SubscriptionStatus.FIREBASE_FCM_FID_REGISTRATION_FAILED,
             )
 
         for (status in retryableErrors) {
@@ -789,6 +792,7 @@ class SubscriptionManagerTests : FunSpec({
                 SubscriptionStatus.HMS_TOKEN_TIMEOUT,
                 SubscriptionStatus.HMS_API_EXCEPTION_OTHER,
                 SubscriptionStatus.FIREBASE_FCM_ERROR_IOEXCEPTION_AUTHENTICATION_FAILED,
+                SubscriptionStatus.FIREBASE_FCM_FID_REGISTRATION_FAILED,
             )
     }
 
@@ -804,6 +808,8 @@ class SubscriptionManagerTests : FunSpec({
             SubscriptionStatus.HMS_ARGUMENTS_INVALID,
             SubscriptionStatus.MANUALLY_UNSUBSCRIBED,
             SubscriptionStatus.DISABLED_FROM_REST_API,
+            SubscriptionStatus.FIREBASE_FCM_FID_DEFAULT_APP_MISSING,
+            SubscriptionStatus.FIREBASE_FCM_FID_REGISTER_API_UNAVAILABLE,
             SubscriptionStatus.ERROR,
         ).forEach { it.isRetryableTokenError shouldBe false }
     }

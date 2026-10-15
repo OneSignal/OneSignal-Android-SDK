@@ -51,6 +51,8 @@ internal abstract class PushRegistratorAbstractGoogle(
     @Throws(ExecutionException::class, InterruptedException::class, IOException::class)
     abstract suspend fun getToken(senderId: String): String
 
+    protected open fun resolveSenderId(configuredSenderId: String?): String? = configuredSenderId
+
     override suspend fun registerForPush(): IPushRegistrator.RegisterResult {
         if (!_configModelStore.model.isInitializedWithRemote) {
             return IPushRegistrator.RegisterResult(null, SubscriptionStatus.FIREBASE_FCM_INIT_ERROR)
@@ -61,7 +63,8 @@ internal abstract class PushRegistratorAbstractGoogle(
             return IPushRegistrator.RegisterResult(null, SubscriptionStatus.MISSING_FIREBASE_FCM_LIBRARY)
         }
 
-        return if (!isValidProjectNumber(_configModelStore.model.googleProjectNumber)) {
+        val senderId = resolveSenderId(_configModelStore.model.googleProjectNumber)
+        return if (senderId == null || !isValidProjectNumber(senderId)) {
             Logging.warn(
                 "Missing Google Project number!\nPlease enter a Google Project number / Sender ID on under App Settings > Android > Configuration on the OneSignal dashboard.",
             )
@@ -70,7 +73,7 @@ internal abstract class PushRegistratorAbstractGoogle(
                 SubscriptionStatus.INVALID_FCM_SENDER_ID,
             )
         } else {
-            internalRegisterForPush(_configModelStore.model.googleProjectNumber!!)
+            internalRegisterForPush(senderId)
         }
     }
 
@@ -120,6 +123,7 @@ internal abstract class PushRegistratorAbstractGoogle(
         )
     }
 
+    @Suppress("LongMethod", "NestedBlockDepth", "ReturnCount")
     private suspend fun attemptRegistration(
         senderId: String,
         currentRetry: Int,
@@ -131,6 +135,10 @@ internal abstract class PushRegistratorAbstractGoogle(
                 registrationId,
                 SubscriptionStatus.SUBSCRIBED,
             )
+        } catch (e: FCMSenderIdMismatchException) {
+            return invalidSenderIdResult(e)
+        } catch (e: FCMInstallationIdException) {
+            return installationIdErrorResult(e)
         } catch (e: IOException) {
             val pushStatus: SubscriptionStatus = pushStatusFromThrowable(e)
             val exceptionMessage: String? = AndroidUtils.getRootCauseMessage(e)
@@ -140,7 +148,7 @@ internal abstract class PushRegistratorAbstractGoogle(
                 // Wrapping with new Exception so the current line is included in the stack trace.
                 val exception = Exception(e)
                 if (currentRetry >= REGISTRATION_RETRY_COUNT - 1) {
-                    Logging.info("Retry count of $REGISTRATION_RETRY_COUNT exceed! Could not get a $providerName Token.", exception)
+                    Logging.error("Retry count of $REGISTRATION_RETRY_COUNT exceed! Could not get a $providerName Token.", exception)
                 } else {
                     Logging.info("'Google Play services' returned $exceptionMessage error. Current retry count: $currentRetry", exception)
 
@@ -152,12 +160,12 @@ internal abstract class PushRegistratorAbstractGoogle(
             } else {
                 // Wrapping with new Exception so the current line is included in the stack trace.
                 val exception = Exception(e)
-                Logging.warn("Error Getting $providerName Token", exception)
+                Logging.error("Error Getting $providerName Token", exception)
 
                 return IPushRegistrator.RegisterResult(null, pushStatus)
             }
         } catch (t: Throwable) {
-            Logging.warn("Unknown error getting $providerName Token", t)
+            Logging.error("Unknown error getting $providerName Token", t)
             return IPushRegistrator.RegisterResult(
                 null,
                 SubscriptionStatus.FIREBASE_FCM_ERROR_MISC_EXCEPTION,
@@ -165,6 +173,15 @@ internal abstract class PushRegistratorAbstractGoogle(
         }
 
         return null
+    }
+
+    private fun invalidSenderIdResult(exception: FCMSenderIdMismatchException): IPushRegistrator.RegisterResult {
+        Logging.error(exception.message ?: "FCM sender ID mismatch", exception)
+        return IPushRegistrator.RegisterResult(
+            null,
+            SubscriptionStatus.INVALID_FCM_SENDER_ID,
+            isExistingTokenInvalid = true,
+        )
     }
 
     private fun pushStatusFromThrowable(throwable: Throwable): SubscriptionStatus {
@@ -180,24 +197,29 @@ internal abstract class PushRegistratorAbstractGoogle(
         }
     }
 
-    private fun isValidProjectNumber(senderId: String?): Boolean {
-        val isProjectNumberValidFormat: Boolean =
-            try {
-                senderId!!.toFloat()
-                true
-            } catch (t: Throwable) {
-                false
-            }
-
-        if (!isProjectNumberValidFormat) {
-            return false
-        }
-
-        return true
-    }
+    private fun isValidProjectNumber(senderId: String): Boolean = senderId.toFloatOrNull() != null
 
     companion object {
         private const val REGISTRATION_RETRY_COUNT = 5
         private const val REGISTRATION_RETRY_BACKOFF_MS = 10000
     }
+}
+
+private fun installationIdErrorResult(exception: FCMInstallationIdException): IPushRegistrator.RegisterResult {
+    Logging.error(exception.message ?: "Firebase Installation ID registration failed", exception)
+    val status =
+        when (exception.reason) {
+            FCMInstallationIdFailureReason.NO_DEFAULT_FIREBASE_APP ->
+                SubscriptionStatus.FIREBASE_FCM_FID_DEFAULT_APP_MISSING
+            FCMInstallationIdFailureReason.REGISTER_API_UNAVAILABLE ->
+                SubscriptionStatus.FIREBASE_FCM_FID_REGISTER_API_UNAVAILABLE
+            FCMInstallationIdFailureReason.PLAY_SERVICES_OUTDATED,
+            FCMInstallationIdFailureReason.REGISTRATION_FAILED,
+            ->
+                SubscriptionStatus.FIREBASE_FCM_FID_REGISTRATION_FAILED
+        }
+    return IPushRegistrator.RegisterResult(
+        null,
+        status,
+    )
 }
