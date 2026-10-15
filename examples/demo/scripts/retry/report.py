@@ -12,8 +12,10 @@ Expected gaps model OperationRepo's backoff:
     up to opRepoExecutionInterval (5s), so that much slack is allowed.
 A foreground, or a network return while in the foreground, ends the backoff early (but not
 Retry-After), so short gaps right after those are fine.
-Success is 200, 201, 202 and 304, as in HttpResponse.isSuccess. 400, 402, 404, 409 and 410 end a
-request, so the same body sent again is unexpected. With Identity Verification a 401 or 403 holds
+Success is 200, 201, 202 and 304, as in HttpResponse.isSuccess. 400, 402, 409 and 410 end a
+request, so the same body sent again is unexpected. A 404 is scored as a backoff, since most
+executors retry it (inside the new-record window, or by requeueing for the current user); login
+and custom events stop on it. With Identity Verification a 401 or 403 holds
 the request, and its retry count, until a new JWT is set; without it the request ends.
 """
 
@@ -31,7 +33,7 @@ RETRY_AFTER_PARSE_FAIL = 60
 QUEUE_SLACK = 5.0
 CLOCK_SLACK = 1.0
 SUCCESS = (200, 201, 202, 304)
-NOT_RETRIED = (400, 401, 402, 403, 404, 409, 410)
+NOT_RETRIED = (400, 401, 402, 403, 409, 410)
 HELD = (401, 403)
 EXECUTOR_ROUTE = re.compile(r"^apps/[^/]+/(users(/by/.*)?|subscriptions/.+|custom_events)$")
 IGNORED_ROUTE = re.compile(r"/iams$")
