@@ -223,13 +223,14 @@ internal class OperationRepo(
      * they cannot be authenticated and would otherwise sit in the queue forever, blocked by
      * `hasValidJwtIfRequired`. LoginUserOperation is exempt because it's enqueued
      * intentionally during logout and purged later by [removeOperationsWithoutExternalId]
-     * if needed. Ops with `requiresJwt = false` are exempt since they can still execute.
+     * if needed. Ops with `requiresJwt = false` are exempt since they can still execute, except a
+     * session create that waits on an anonymous user or subscription that will never be created.
      * Outer-gated on `newCodePathsRun` so Phase 1 customers stay byte-for-byte
      * on the legacy enqueue path.
      */
     private fun shouldSuppressAnonymousOp(op: Operation): Boolean {
         if (!_identityVerificationService.newCodePathsRun) return false
-        if (op is LoginUserOperation || !op.requiresJwt) return false
+        if (op is LoginUserOperation || !(op.requiresJwt || op.waitsForAnonymousUser)) return false
         val suppress =
             _configModelStore.model.useIdentityVerification == JwtRequirement.REQUIRED &&
                 op.externalId == null
@@ -407,9 +408,9 @@ internal class OperationRepo(
         removedIds.forEach { _operationModelStore.remove(it) }
     }
 
-    // Session ops take no JWT, but a create can't be sent until its user exists.
+    // Session ops take no JWT, but a create can't be sent until its user and subscription exist.
     private val Operation.waitsForAnonymousUser: Boolean
-        get() = this is CreateSessionOperation && IDManager.isLocalId(onesignalId)
+        get() = this is CreateSessionOperation && (IDManager.isLocalId(onesignalId) || IDManager.isLocalId(subscriptionId))
 
     /**
      * Post-HYDRATE maintenance: scheduled on IO so it runs *after* `loadSavedOperations`

@@ -241,6 +241,13 @@ class SessionOperationQueueTests : FunSpec({
         policy.onEnqueue(mutableListOf(), item(update(sessionId = "local-s1"))).accept shouldBe true
     }
 
+    test("an update for a session whose end was loaded from the store is rejected") {
+        val policy = SessionQueuePolicy()
+        policy.onLoaded(update(endTime = 2_000L))
+
+        policy.onEnqueue(mutableListOf(), item(update())).accept shouldBe false
+    }
+
     test("session operations are not stored before privacy consent") {
         val mocks = SessionQueueMocks()
         mocks.configModelStore.model.consentRequired = true
@@ -371,15 +378,26 @@ class SessionOperationQueueTests : FunSpec({
 
     test("a create for an anonymous user that was never created is purged with its updates under identity verification") {
         val mocks = SessionQueueMocks()
-        mocks.configModelStore.model.useIdentityVerification = JwtRequirement.REQUIRED
         mocks.identityVerificationService = CoreInternalMocks.identityVerificationService(newCodePathsRun = true, ivBehaviorActive = true)
         val kept = create(localSessionId = "local-s2", onesignalId = "local-user", externalId = "alice")
 
         mocks.enqueueAll(create(onesignalId = "local-anon"), update(sessionId = "local-s1"), kept)
+        mocks.configModelStore.model.useIdentityVerification = JwtRequirement.REQUIRED
         mocks.operationRepo.removeOperationsWithoutExternalId()
 
         mocks.queued() shouldContainExactly listOf(kept)
         mocks.operationModelStore.list() shouldContainExactly listOf(kept)
+    }
+
+    test("a create for an anonymous user that was never created is not enqueued under identity verification") {
+        val mocks = SessionQueueMocks()
+        mocks.configModelStore.model.useIdentityVerification = JwtRequirement.REQUIRED
+        mocks.identityVerificationService = CoreInternalMocks.identityVerificationService(newCodePathsRun = true, ivBehaviorActive = true)
+
+        mocks.operationRepo.enqueueAndAwaitResult(create(onesignalId = "local-anon")).success shouldBe false
+
+        mocks.queued() shouldBe emptyList()
+        mocks.operationModelStore.list() shouldBe emptyList()
     }
 })
 

@@ -48,6 +48,7 @@ internal class SessionQueuePolicy(
     /** For operations loaded from the store, which skip [onEnqueue]. */
     fun onLoaded(op: Operation) {
         if (op is CreateSessionOperation) creates[op.localSessionId] = op
+        if (op is UpdateSessionOperation && op.isEnd) closedSessions[op.sessionId] = Unit
     }
 
     class EnqueueResult(
