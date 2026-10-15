@@ -12,9 +12,9 @@ Expected gaps model OperationRepo's backoff:
     up to opRepoExecutionInterval (5s), so that much slack is allowed.
 A foreground, or a network return while in the foreground, ends the backoff early (but not
 Retry-After), so short gaps right after those are fine.
-Success is 200, 201, 202 and 304, as in HttpResponse.isSuccess. 400, 401, 402, 403, 404, 409 and
-410 end a request, so the same body sent again is unexpected, except after a 401 or 403 once a new
-JWT is set.
+Success is 200, 201, 202 and 304, as in HttpResponse.isSuccess. 400, 402, 404, 409 and 410 end a
+request, so the same body sent again is unexpected. With Identity Verification a 401 or 403 holds
+the request, and its retry count, until a new JWT is set; without it the request ends.
 """
 
 import json
@@ -32,6 +32,7 @@ QUEUE_SLACK = 5.0
 CLOCK_SLACK = 1.0
 SUCCESS = (200, 201, 202, 304)
 NOT_RETRIED = (400, 401, 402, 403, 404, 409, 410)
+HELD = (401, 403)
 EXECUTOR_ROUTE = re.compile(r"^apps/[^/]+/(users(/by/.*)?|subscriptions/.+|custom_events)$")
 IGNORED_ROUTE = re.compile(r"/iams$")
 # Routes without a record id in the path. Their attempts are told apart by body instead.
@@ -90,7 +91,7 @@ def print_operation(key, entries):
                 note = kind
         elif ended and entry.get("body") == ended.get("body"):
             note = f"UNEXPECTED resend after {ended['status']}"
-            if ended["status"] in (401, 403):
+            if ended["status"] in HELD:
                 note += "; fine once a new JWT is set"
         elif ended:
             note = f"new request after {ended['status']}"
@@ -102,8 +103,12 @@ def print_operation(key, entries):
         print(f"  {i + 1:>3} {entry['t'] - start:>7.1f}s {entry['status']:>5}{mark} {entry.get('body', ''):>8} {gap_text:>8} {expected_text:>16}  {note}")
 
         status = entry["status"]
+        if ended and ended["status"] in HELD and entry.get("body") != ended.get("body"):
+            failures = 0
         ended = entry if status in NOT_RETRIED else None
-        if status in SUCCESS or status in NOT_RETRIED:
+        if status in HELD:
+            expected = None
+        elif status in SUCCESS or status in NOT_RETRIED:
             failures = 0
             expected = None
         else:

@@ -67,8 +67,9 @@ What the SDK should do:
   300s (`opRepoBaseFailRetryBackoff`, `opRepoMaxFailRetryBackoff`), times a jitter of 0.5 to 1.
   Operations batched into one request share the wait. `HttpClient` does not re-send on its own.
   Success is 200, 201, 202 and 304. Retryable is anything else but 400, 401, 402, 403, 404, 409
-  and 410, which end the request. `report` flags the same body sent again after one of those,
-  which is only fine after a 401 or 403 once a new JWT is set.
+  and 410, which end the request. With Identity Verification a 401 or 403 instead holds it, and
+  its retry count, until a new JWT is set. `report` flags the same body sent again after one of
+  those, which is only fine after a 401 or 403 once a new JWT is set.
 - **Retry-After** is the minimum wait for that request, capped at 1h. `HttpClient` also holds
   every SDK request, on any route, until it passes, and `report` lists any that weren't. Foreground
   and network return do not cut it short. A 429 without Retry-After, or with an unparsable one,
