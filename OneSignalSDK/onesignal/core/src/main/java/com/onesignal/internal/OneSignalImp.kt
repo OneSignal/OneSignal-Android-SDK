@@ -880,7 +880,7 @@ internal class OneSignalImp : IOneSignal,
             throw e
         } catch (e: IllegalStateException) {
             // Callers can ignore the result, so the failure has to show up in the log.
-            Logging.warn("login(externalId, profile) skipped: ${e.message}", e)
+            Logging.error("login(externalId, profile) skipped: ${e.message}", e)
             OneSignalResult.failure(ErrorCode.NOT_INITIALIZED, e.message, cause = e)
         }
 
