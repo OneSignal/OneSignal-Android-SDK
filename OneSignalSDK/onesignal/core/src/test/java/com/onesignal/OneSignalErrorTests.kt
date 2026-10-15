@@ -43,9 +43,9 @@ class OneSignalErrorTests : FunSpec({
 
         val error = OneSignalError.fromBackendResponse(409, body)
 
-        error.error.map { it.backendCode } shouldBe listOf("user-1", "user-3")
-        error.error.map { it.message } shouldBe listOf("alias conflict", "invalid external id")
-        error.error.all { it.httpStatus == 409 } shouldBe true
+        error.details.map { it.backendCode } shouldBe listOf("user-1", "user-3")
+        error.details.map { it.message } shouldBe listOf("alias conflict", "invalid external id")
+        error.details.all { it.httpStatus == 409 } shouldBe true
     }
 
     test("fromBackendResponse keeps a plain body as the message") {

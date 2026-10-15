@@ -1,20 +1,18 @@
 package com.onesignal
 
 import com.onesignal.common.OneSignalUtils
+import java.util.Collections
 
 /**
  * Profile applied at login. Email/SMS create or transfer that address onto this user; they do not replace other subscriptions.
+ * Build one with [builder]. There is no public constructor, so adding a field never breaks compiled callers.
  */
-class OneSignalUserProfile @JvmOverloads constructor(
-    email: String? = null,
-    sms: String? = null,
-    tags: Map<String, String> = emptyMap(),
-    aliases: Map<String, String> = emptyMap(),
-) {
-    val email: String? = email?.takeIf { it.isNotBlank() }
-    val sms: String? = sms?.takeIf { it.isNotBlank() }
-    val tags: Map<String, String> = tags.toMap()
-    val aliases: Map<String, String> = aliases.toMap()
+// Takes the Builder so the synthetic accessor's JVM signature stays fixed as fields are added.
+class OneSignalUserProfile private constructor(builder: Builder) {
+    val email: String? = builder.email?.takeIf { it.isNotBlank() }
+    val sms: String? = builder.sms?.takeIf { it.isNotBlank() }
+    val tags: Map<String, String> = Collections.unmodifiableMap(builder.tags.toMap())
+    val aliases: Map<String, String> = Collections.unmodifiableMap(builder.aliases.toMap())
 
     internal val hasFields: Boolean
         get() =
@@ -50,12 +48,16 @@ class OneSignalUserProfile @JvmOverloads constructor(
     override fun toString(): String =
         "OneSignalUserProfile(email=${redact(email)}, sms=${redact(sms)}, tags=${tags.size}, aliases=${aliases.size})"
 
-    /** Java builder. Use this instead of the constructor when only some fields are set. */
+    /** Builds a [OneSignalUserProfile]. Unset fields stay empty. */
     class Builder {
-        private var email: String? = null
-        private var sms: String? = null
-        private var tags: Map<String, String> = emptyMap()
-        private var aliases: Map<String, String> = emptyMap()
+        internal var email: String? = null
+            private set
+        internal var sms: String? = null
+            private set
+        internal var tags: Map<String, String> = emptyMap()
+            private set
+        internal var aliases: Map<String, String> = emptyMap()
+            private set
 
         /** Email to create or transfer onto this user at login. */
         fun setEmail(email: String?) = apply { this.email = email }
@@ -70,13 +72,21 @@ class OneSignalUserProfile @JvmOverloads constructor(
         fun setAliases(aliases: Map<String, String>) = apply { this.aliases = aliases.toMap() }
 
         /** Builds the profile. */
-        fun build() = OneSignalUserProfile(email, sms, tags, aliases)
+        fun build() = OneSignalUserProfile(this)
     }
 
     companion object {
-        /** Returns a new Java builder. */
+        /** Returns a new builder. */
         @JvmStatic
         fun builder() = Builder()
+
+        /** SDK-internal Kotlin shorthand; the mangled JVM name keeps it out of the public API. */
+        internal operator fun invoke(
+            email: String? = null,
+            sms: String? = null,
+            tags: Map<String, String> = emptyMap(),
+            aliases: Map<String, String> = emptyMap(),
+        ) = Builder().setEmail(email).setSms(sms).setTags(tags).setAliases(aliases).build()
 
         private fun redact(value: String?): String = if (value == null) "null" else "<set>"
     }

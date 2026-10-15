@@ -8,6 +8,8 @@ import com.onesignal.core.internal.time.ITime
 internal class Time : ITime {
     override val currentTimeMillis: Long
         get() = System.currentTimeMillis()
+    override val elapsedRealtimeMillis: Long
+        get() = SystemClock.elapsedRealtime()
     override val processUptimeMillis: Long
         @RequiresApi(Build.VERSION_CODES.N)
         get() = SystemClock.uptimeMillis() - android.os.Process.getStartUptimeMillis()

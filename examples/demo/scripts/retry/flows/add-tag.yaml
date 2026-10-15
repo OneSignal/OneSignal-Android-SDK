@@ -1,0 +1,16 @@
+appId: com.onesignal.example
+---
+- runFlow:
+    file: _scroll-to.yaml
+    env:
+      TARGET: add_tag_button
+- tapOn:
+    id: add_tag_button
+- tapOn:
+    id: tag_key_input
+- inputText: ${KEY}
+- tapOn:
+    id: tag_value_input
+- inputText: ${VALUE}
+- tapOn:
+    id: singlepair_confirm_button

@@ -1,0 +1,13 @@
+appId: com.onesignal.example
+---
+- runFlow:
+    file: _scroll-to.yaml
+    env:
+      TARGET: add_email_button
+- tapOn:
+    id: add_email_button
+- tapOn:
+    id: email_input
+- inputText: ${VALUE}
+- tapOn:
+    id: singleinput_confirm_button

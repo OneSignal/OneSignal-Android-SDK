@@ -16,9 +16,11 @@ import com.onesignal.core.internal.config.impl.FeatureFlagsRefreshService
 import com.onesignal.core.internal.config.impl.IdentityVerificationService
 import com.onesignal.core.internal.database.IDatabaseProvider
 import com.onesignal.core.internal.database.impl.DatabaseProvider
+import com.onesignal.core.internal.device.IConnectivityMonitor
 import com.onesignal.core.internal.device.IDeviceService
 import com.onesignal.core.internal.device.IFidEnv
 import com.onesignal.core.internal.device.IInstallIdService
+import com.onesignal.core.internal.device.impl.ConnectivityMonitor
 import com.onesignal.core.internal.device.impl.DeviceService
 import com.onesignal.core.internal.device.impl.FidEnvService
 import com.onesignal.core.internal.device.impl.InstallIdService
@@ -34,6 +36,7 @@ import com.onesignal.core.internal.language.impl.LanguageContext
 import com.onesignal.core.internal.operations.IOperationRepo
 import com.onesignal.core.internal.operations.impl.OperationModelStore
 import com.onesignal.core.internal.operations.impl.OperationRepo
+import com.onesignal.core.internal.operations.impl.OperationRetryTrigger
 import com.onesignal.core.internal.permissions.IRequestPermissionService
 import com.onesignal.core.internal.permissions.impl.RequestPermissionService
 import com.onesignal.core.internal.preferences.IPreferencesService
@@ -69,6 +72,7 @@ internal class CoreModule : IModule {
             .provides<IApplicationService>()
         builder.register<DeviceService>().provides<IDeviceService>()
         builder.register<FidEnvService>().provides<IFidEnv>()
+        builder.register<ConnectivityMonitor>().provides<IConnectivityMonitor>()
         builder.register<Time>().provides<ITime>()
         builder.register<DatabaseProvider>().provides<IDatabaseProvider>()
         builder.register<InstallIdService>().provides<IInstallIdService>()
@@ -91,6 +95,7 @@ internal class CoreModule : IModule {
         builder.register<OperationRepo>()
             .provides<IOperationRepo>()
             .provides<IStartableService>()
+        builder.register<OperationRetryTrigger>().provides<IStartableService>()
 
         // Permissions
         builder.register<RequestPermissionService>()

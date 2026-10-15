@@ -160,7 +160,7 @@ internal class LoginUserOperationExecutor(
                     )
                     createUser(loginUserOp, operations)
                 }
-                else -> ExecutionResponse(result.result)
+                else -> ExecutionResponse(result.result, retryAfterSeconds = result.retryAfterSeconds)
             }
         }
     }
