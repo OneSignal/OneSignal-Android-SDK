@@ -879,8 +879,8 @@ internal class OneSignalImp : IOneSignal,
             // A subclass of IllegalStateException, so it must be rethrown before the catch below.
             throw e
         } catch (e: IllegalStateException) {
-            // Logged because this used to throw: a caller that ignores the result would otherwise see nothing.
-            Logging.error("login(externalId, profile) skipped: ${e.message}")
+            // Callers can ignore the result, so the failure has to show up in the log.
+            Logging.warn("login(externalId, profile) skipped: ${e.message}", e)
             OneSignalResult.failure(ErrorCode.NOT_INITIALIZED, e.message, cause = e)
         }
 
