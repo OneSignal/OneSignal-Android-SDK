@@ -251,11 +251,11 @@ interface IOneSignal {
     )
 
     /**
-     * Login with [externalId] plus [profile]. Email/SMS create or transfer that address; an alias owned elsewhere fails the request.
-     * Create User upsert (anonymous is not merged). Same id is a no-op once a backend ID exists. Failure still leaves this identity local.
+     * Login with [externalId] plus [profile] as one Create User upsert (anonymous is not merged). Email/SMS create or transfer; a foreign alias fails it.
+     * Same id is a no-op once a backend ID exists. Backend failure leaves this identity local; INVALID_ARGUMENT and NOT_INITIALIZED change nothing.
      */
     suspend fun login(
-        externalId: String,
+        externalId: String?,
         profile: OneSignalUserProfile,
         jwtBearerToken: String? = null,
     ): OneSignalResult<LoginData>

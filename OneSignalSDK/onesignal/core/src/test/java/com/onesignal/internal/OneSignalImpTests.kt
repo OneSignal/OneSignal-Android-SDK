@@ -1,11 +1,20 @@
 package com.onesignal.internal
 
+import com.onesignal.ErrorCode
+import com.onesignal.LoginData
+import com.onesignal.OneSignalResult
+import com.onesignal.OneSignalUserProfile
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import io.kotest.assertions.throwables.shouldThrowUnit
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import java.lang.reflect.InvocationTargetException
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
@@ -365,5 +374,56 @@ class OneSignalImpTests : FunSpec({
         // - waitForInit() throws for NOT_STARTED/FAILED states, waits indefinitely for IN_PROGRESS
 
         // This test documents this behavior without actually waiting indefinitely
+    }
+
+    test("composite login returns NOT_INITIALIZED when init failed") {
+        val os = OneSignalImp()
+        val initFailure = IllegalStateException("OneSignal initWithContext failed.")
+        Logging.logLevel = LogLevel.NONE
+        setPrivateField(os, "initState", InitState.FAILED)
+        setPrivateField(os, "initFailureException", initFailure)
+
+        val result = runBlocking { os.login("user", OneSignalUserProfile()) }
+
+        result.isSuccess shouldBe false
+        result.error!!.first.code shouldBe ErrorCode.NOT_INITIALIZED
+        result.error!!.first.message shouldBe "OneSignal initWithContext failed."
+        result.error!!.cause shouldBe initFailure
+    }
+
+    test("composite login with a null externalId returns INVALID_ARGUMENT instead of throwing") {
+        val os = OneSignalImp()
+        Logging.logLevel = LogLevel.NONE
+        setPrivateField(os, "initState", InitState.SUCCESS)
+
+        val result = runBlocking { os.login(null, OneSignalUserProfile()) }
+
+        result.error!!.first.code shouldBe ErrorCode.INVALID_ARGUMENT
+        result.error!!.first.message shouldBe "login: externalId is required"
+    }
+
+    test("the login init wait rethrows cancellation instead of reporting NOT_INITIALIZED") {
+        val os = OneSignalImp()
+        Logging.logLevel = LogLevel.NONE
+        setPrivateField(os, "initState", InitState.IN_PROGRESS)
+        setPrivateField(os, "suspendCompletion", CompletableDeferred<Unit>())
+        var outcome: OneSignalResult<LoginData>? = null
+        var cancelled = false
+
+        runBlocking {
+            val job =
+                launch(start = CoroutineStart.UNDISPATCHED) {
+                    try {
+                        outcome = os.awaitInitForLogin()
+                    } catch (e: CancellationException) {
+                        cancelled = true
+                        throw e
+                    }
+                }
+            job.cancelAndJoin()
+        }
+
+        cancelled shouldBe true
+        outcome shouldBe null
     }
 })

@@ -30,7 +30,7 @@ enum class ErrorSource {
  * `else` branch.
  */
 enum class ErrorCode(val source: ErrorSource) {
-    /** [IOneSignal.initWithContextSuspend] has not been called. */
+    /** [IOneSignal.initWithContextSuspend] was never called, or it failed. */
     NOT_INITIALIZED(ErrorSource.CLIENT),
 
     /**

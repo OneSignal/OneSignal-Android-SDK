@@ -3,6 +3,7 @@ package com.onesignal.core.internal.application
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider.getApplicationContext
 import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
+import com.onesignal.ErrorCode
 import com.onesignal.OneSignalUserProfile
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
@@ -292,16 +293,15 @@ class SDKInitSuspendTests : FunSpec({
         }
     }
 
-    test("composite login should throw exception when initWithContext is never called") {
+    test("composite login returns NOT_INITIALIZED when initWithContext is never called") {
         val oneSignalImp = OneSignalImp()
 
         runBlocking {
-            val exception =
-                shouldThrow<IllegalStateException> {
-                    oneSignalImp.login("testUser", OneSignalUserProfile())
-                }
+            val result = oneSignalImp.login("testUser", OneSignalUserProfile())
 
-            exception.message shouldBe "Must call 'initWithContext' before 'login'"
+            result.isSuccess shouldBe false
+            result.error!!.first.code shouldBe ErrorCode.NOT_INITIALIZED
+            result.error!!.first.message shouldBe "Must call 'initWithContext' before 'login'"
         }
     }
 
