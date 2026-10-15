@@ -1,19 +1,17 @@
 package com.onesignal.user.internal
 
 import com.onesignal.common.hasNullByte
-import com.onesignal.common.isMissing
 import com.onesignal.core.internal.config.ConfigModel
 import com.onesignal.core.internal.preferences.IPreferencesService
 import com.onesignal.core.internal.preferences.PreferenceOneSignalKeys
 import com.onesignal.core.internal.preferences.PreferenceStores
-import com.onesignal.internal.SdkOperation
 
 internal fun resolveAppIdV2(
     inputAppId: String?,
     configModel: ConfigModel,
     preferencesService: IPreferencesService,
 ): AppIdResolution {
-    val validInputAppId = inputAppId?.takeUnless { isMissing(it, SdkOperation.INIT_WITH_CONTEXT, "appId") }
+    val validInputAppId = inputAppId?.takeIf { isUsableAppId(it) }
 
     // Case 1: AppId provided as input
     if (validInputAppId != null) {
@@ -36,4 +34,4 @@ internal fun resolveAppIdV2(
     return AppIdResolution(appId = null, forceCreateUser = false, failed = true)
 }
 
-private fun isUsableAppId(appId: String?): Boolean = !appId.isNullOrEmpty() && !hasNullByte(appId)
+internal fun isUsableAppId(appId: String?): Boolean = !appId.isNullOrEmpty() && !hasNullByte(appId)

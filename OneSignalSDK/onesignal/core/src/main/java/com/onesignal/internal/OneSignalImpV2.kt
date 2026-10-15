@@ -48,6 +48,7 @@ import com.onesignal.user.internal.LoginHelper
 import com.onesignal.user.internal.LogoutHelper
 import com.onesignal.user.internal.UserSwitcher
 import com.onesignal.user.internal.identity.IdentityModelStore
+import com.onesignal.user.internal.isUsableAppId
 import com.onesignal.user.internal.jwt.JwtTokenStore
 import com.onesignal.user.internal.properties.PropertiesModelStore
 import com.onesignal.user.internal.resolveAppIdV2
@@ -128,6 +129,7 @@ internal class OneSignalImpV2 : IOneSignal,
     private val deferredLocation = DeferredLocationManager(locationSource)
     private val deferredInAppMessages = DeferredInAppMessagesManager(inAppMessagesSource)
     private val deferredUser = DeferredUserManager(userSource)
+    private val deferredJwtListeners = DeferredJwtListeners(GatedSource(SdkOperation.JWT_LISTENERS, JwtTokenStore::class.java))
 
     override val session: ISessionManager
         get() = sessionSource.peek() ?: deferredSession
@@ -164,6 +166,7 @@ internal class OneSignalImpV2 : IOneSignal,
         deferredNotifications.replay(services.getService())
         deferredInAppMessages.replay(services.getService())
         deferredLocation.replay(services.getService())
+        deferredJwtListeners.replay(services.getService())
     }
 
     // Services required by this class
@@ -203,14 +206,8 @@ internal class OneSignalImpV2 : IOneSignal,
                 }
             }.build()
 
-    // Off-main work routes through OneSignal's centralized dispatcher pool rather than ad-hoc
-    // threads / Dispatchers.IO.
-    //
-    // Resolved per-access (get()) rather than captured once: an eager `val` would construct the
-    // lazy `pools.IO` dispatcher during OneSignalImp construction on the main thread (before
-    // prewarm() runs), and would pin this instance to one pool generation -- so after
-    // resetForTest() swaps `pools` and shutdownNow()'s the old executor, a reused instance would
-    // dispatch onto a dead pool. The getter always reads the current generation's warm dispatcher.
+    // Read per access: an eager val would build the IO pool on main before prewarm() and keep
+    // pointing at a dead pool after resetForTest() swaps generations.
     private val ioDispatcher: CoroutineDispatcher get() = OneSignalDispatchers.IO
 
     // get the current config model, if there is one
@@ -423,11 +420,6 @@ internal class OneSignalImpV2 : IOneSignal,
         return initWithContextSuspend(context, null)
     }
 
-    // ReturnCount: 4 returns vs detekt's limit of 2. The function intentionally has
-    // multiple early-return failure paths (user-locked, missing appId, exception). The
-    // existing detekt baseline entry was for the unannotated signature; once we added
-    // @Suppress(TooGenericExceptionCaught) the baseline ID no longer matched, so we
-    // suppress ReturnCount inline rather than churning the baseline.
     @Suppress("ReturnCount", "TooGenericExceptionCaught")
     private fun internalInit(
         context: Context,
@@ -453,6 +445,9 @@ internal class OneSignalImpV2 : IOneSignal,
                 if (appId == null) Logging.warn(message) else Logging.error(message)
                 gate.complete(InitState.FAILED)
                 return false
+            }
+            if (appId != null && !isUsableAppId(appId)) {
+                Logging.warn("initWithContext: appId is empty or contains a null byte, using the cached app ID instead.")
             }
             configModel.appId = result.appId!! // safe because failed is false
             val forceCreateUser = result.forceCreateUser
@@ -513,15 +508,9 @@ internal class OneSignalImpV2 : IOneSignal,
         operationRepo.forceExecuteOperations()
     }
 
-    override fun addUserJwtInvalidatedListener(listener: IUserJwtInvalidatedListener) {
-        if (!gate.isReady(SdkOperation.ADD_USER_JWT_INVALIDATED_LISTENER)) return
-        jwtTokenStore.addUserJwtInvalidatedListener(listener)
-    }
+    override fun addUserJwtInvalidatedListener(listener: IUserJwtInvalidatedListener) = deferredJwtListeners.add(listener)
 
-    override fun removeUserJwtInvalidatedListener(listener: IUserJwtInvalidatedListener) {
-        if (!gate.isReady(SdkOperation.REMOVE_USER_JWT_INVALIDATED_LISTENER)) return
-        jwtTokenStore.removeUserJwtInvalidatedListener(listener)
-    }
+    override fun removeUserJwtInvalidatedListener(listener: IUserJwtInvalidatedListener) = deferredJwtListeners.remove(listener)
 
     override fun <T> hasService(c: Class<T>): Boolean = services.hasService(c)
 

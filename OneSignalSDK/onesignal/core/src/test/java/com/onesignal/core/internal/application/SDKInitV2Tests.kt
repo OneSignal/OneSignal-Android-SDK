@@ -5,6 +5,7 @@ import android.content.ContextWrapper
 import android.content.SharedPreferences
 import androidx.test.core.app.ApplicationProvider.getApplicationContext
 import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
+import com.onesignal.IUserJwtInvalidatedListener
 import com.onesignal.common.AndroidUtils
 import com.onesignal.common.threading.OneSignalDispatchers
 import com.onesignal.core.internal.operations.IOperationRepo
@@ -18,6 +19,7 @@ import com.onesignal.internal.InitGate
 import com.onesignal.internal.InitState
 import com.onesignal.internal.OneSignalImpV2
 import com.onesignal.user.internal.UserManager
+import com.onesignal.user.internal.jwt.JwtTokenStore
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.maps.shouldContain
 import io.kotest.matchers.shouldBe
@@ -84,7 +86,7 @@ class SDKInitV2Tests : FunSpec({
                 }
             }
         // Daemon so a stuck waitForInit() (e.g. if a dispatch is rejected under pool pressure)
-        // can never keep the test JVM alive and trip the 6h CI timeout (SDK-4213).
+        // can never keep the test JVM alive and trip the 6h CI timeout.
         thread.isDaemon = true
         thread.start()
         thread.join(2_000)
@@ -113,7 +115,7 @@ class SDKInitV2Tests : FunSpec({
 
     test("accessor after initWithContext without appID returns a default instead of throwing") {
         // Given
-        val context = getApplicationContext<Context>()
+        val context = IsolatedPrefsContext(getApplicationContext())
         val os = OneSignalImpV2()
 
         // When
@@ -152,7 +154,7 @@ class SDKInitV2Tests : FunSpec({
         val os = OneSignalImpV2()
         val user = os.user
 
-        os.initWithContext(getApplicationContext(), "appId")
+        os.initWithContext(IsolatedPrefsContext(getApplicationContext()), "appId")
         waitForInitialization(os)
 
         user.addTag("key", "value")
@@ -221,6 +223,44 @@ class SDKInitV2Tests : FunSpec({
         }
 
         stateAtReplay shouldBe InitState.IN_PROGRESS
+    }
+
+    test("a JWT invalidated listener added before init is replayed, and a removal before init cancels it") {
+        val os = OneSignalImpV2()
+        val fired = CountDownLatch(1)
+        val removedFired = CountDownLatch(1)
+        val removed = IUserJwtInvalidatedListener { removedFired.countDown() }
+        os.addUserJwtInvalidatedListener { fired.countDown() }
+        os.addUserJwtInvalidatedListener(removed)
+        os.removeUserJwtInvalidatedListener(removed)
+
+        os.initWithContext(IsolatedPrefsContext(getApplicationContext()), "appId")
+        waitForInitialization(os)
+        val store = os.getService(JwtTokenStore::class.java)
+        store.putJwt("ext", "token")
+        store.invalidateJwt("ext")
+
+        fired.await(2, TimeUnit.SECONDS) shouldBe true
+        removedFired.await(200, TimeUnit.MILLISECONDS) shouldBe false
+    }
+
+    test("an empty appId that falls back to a cached appId logs a warning, not an error") {
+        val context = IsolatedPrefsContext(getApplicationContext())
+        context.getSharedPreferences("OneSignal", Context.MODE_PRIVATE).edit().putString(PREFS_LEGACY_APP_ID, "cachedAppId").commit()
+        val events = CopyOnWriteArrayList<OneSignalLogEvent>()
+        val listener = ILogListener { events += it }
+        Logging.addListener(listener)
+        val os = OneSignalImpV2()
+        try {
+            os.initWithContext(context, "")
+            waitForInitialization(os)
+        } finally {
+            Logging.removeListener(listener)
+        }
+
+        os.isInitialized shouldBe true
+        events.filter { it.level == LogLevel.ERROR && it.entry.contains("appId") } shouldBe emptyList()
+        events.count { it.level == LogLevel.WARN && it.entry.contains("using the cached app ID") } shouldBe 1
     }
 
     test("a call before init logs one error naming the call, with the failure trace once per attempt") {
@@ -335,14 +375,9 @@ class SDKInitV2Tests : FunSpec({
 
     test("initWithContext with no appId succeeds when configModel has appId") {
         // Given
-        val context = getApplicationContext<Context>()
+        val context = IsolatedPrefsContext(getApplicationContext())
         val os = OneSignalImpV2()
-
-        // Clear any existing appId from previous tests by clearing SharedPreferences
         val prefs = context.getSharedPreferences("OneSignal", Context.MODE_PRIVATE)
-        prefs.edit()
-            .clear()
-            .commit()
 
         // Set up a legacy appId in SharedPreferences to simulate a previous test scenario
         // This simulates the case where a previous test has set an appId that can be resolved
@@ -417,7 +452,7 @@ class SDKInitV2Tests : FunSpec({
                 os.user // This should block until either trigger is released or timed out
             }
 
-        // Daemon so a stuck waitForInit() can never keep the test JVM alive (SDK-4213 CI hang).
+        // Daemon so a stuck waitForInit() can never keep the test JVM alive.
         accessorThread.isDaemon = true
         accessorThread.start()
         accessorThread.join(500)
@@ -471,7 +506,7 @@ class SDKInitV2Tests : FunSpec({
                 }
             }
 
-        // Daemon so a stuck waitForInit() can never keep the test JVM alive (SDK-4213 CI hang).
+        // Daemon so a stuck waitForInit() can never keep the test JVM alive.
         accessorThread.isDaemon = true
         accessorThread.start()
         accessorThread.join(500)

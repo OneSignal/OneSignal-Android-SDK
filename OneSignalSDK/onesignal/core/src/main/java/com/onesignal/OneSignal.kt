@@ -47,8 +47,7 @@ object OneSignal {
 
     /**
      * The session manager for accessing session-scoped management.
-     * Before [initWithContext] succeeds this is a stand-in: listener and setting registrations are
-     * replayed once init succeeds, other calls are logged and ignored.
+     * Before [initWithContext] succeeds this is a stand-in: outcome calls are logged and ignored.
      */
     @JvmStatic
     val Session: ISessionManager

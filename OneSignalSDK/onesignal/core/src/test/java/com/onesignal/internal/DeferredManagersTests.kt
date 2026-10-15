@@ -1,5 +1,6 @@
 package com.onesignal.internal
 
+import com.onesignal.IUserJwtInvalidatedListener
 import com.onesignal.inAppMessages.IInAppMessageClickListener
 import com.onesignal.inAppMessages.IInAppMessageLifecycleListener
 import com.onesignal.inAppMessages.IInAppMessagesManager
@@ -10,6 +11,7 @@ import com.onesignal.notifications.INotificationsManager
 import com.onesignal.notifications.IPermissionObserver
 import com.onesignal.session.ISessionManager
 import com.onesignal.user.IUserManager
+import com.onesignal.user.internal.jwt.JwtTokenStore
 import com.onesignal.user.state.IUserStateObserver
 import com.onesignal.user.subscriptions.IPushSubscription
 import com.onesignal.user.subscriptions.IPushSubscriptionObserver
@@ -399,5 +401,25 @@ class DeferredManagersTests : FunSpec({
         verify(exactly = 0) { iam.paused = true }
         verify(exactly = 1) { location.isShared = true }
         verify(exactly = 0) { location.isShared = false }
+    }
+
+    test("JWT invalidated listeners are queued before ready, replayed once, and a removal cancels its add") {
+        val store = mockk<JwtTokenStore>(relaxed = true)
+        val source = FakeSource(store)
+        val deferred = DeferredJwtListeners(source)
+        val kept = mockk<IUserJwtInvalidatedListener>()
+        val cancelled = mockk<IUserJwtInvalidatedListener>()
+
+        deferred.add(kept)
+        deferred.add(cancelled)
+        deferred.remove(cancelled)
+        confirmVerified(store)
+        source.ignored shouldBe emptyList()
+
+        deferred.replay(store)
+        deferred.replay(store)
+        verify(exactly = 1) { store.addUserJwtInvalidatedListener(kept) }
+        verify(exactly = 0) { store.addUserJwtInvalidatedListener(cancelled) }
+        verify(exactly = 0) { store.removeUserJwtInvalidatedListener(any()) }
     }
 })

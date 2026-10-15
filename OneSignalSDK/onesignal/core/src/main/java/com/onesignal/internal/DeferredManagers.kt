@@ -1,5 +1,6 @@
 package com.onesignal.internal
 
+import com.onesignal.IUserJwtInvalidatedListener
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.inAppMessages.IInAppMessageClickListener
 import com.onesignal.inAppMessages.IInAppMessageLifecycleListener
@@ -11,6 +12,7 @@ import com.onesignal.notifications.INotificationsManager
 import com.onesignal.notifications.IPermissionObserver
 import com.onesignal.session.ISessionManager
 import com.onesignal.user.IUserManager
+import com.onesignal.user.internal.jwt.JwtTokenStore
 import com.onesignal.user.state.IUserStateObserver
 import com.onesignal.user.subscriptions.IPushSubscription
 import com.onesignal.user.subscriptions.IPushSubscriptionObserver
@@ -56,12 +58,15 @@ internal open class DeferredManager<T : Any>(
         if (index >= 0) pending.removeAt(index)
     }
 
+    // [onQueued] runs under the queue lock, so a getter cache it sets always matches what replays.
     protected fun setOrQueue(
         member: String,
+        onQueued: () -> Unit,
         call: (T) -> Unit,
     ) = forwardOrQueue(member, call) {
         pending.removeAll { it.member == member }
         pending.add(Pending(member, null, call))
+        onQueued()
     }
 
     private fun forwardOrQueue(
@@ -223,8 +228,7 @@ internal class DeferredInAppMessagesManager(
     override var paused: Boolean
         get() = source.peek()?.paused ?: queuedPaused ?: source.get("paused")?.paused ?: false
         set(value) {
-            queuedPaused = value
-            setOrQueue("paused") { it.paused = value }
+            setOrQueue("paused", { queuedPaused = value }) { it.paused = value }
         }
 
     override fun addTrigger(
@@ -274,9 +278,20 @@ internal class DeferredLocationManager(
     override var isShared: Boolean
         get() = source.peek()?.isShared ?: queuedIsShared ?: source.get("isShared")?.isShared ?: false
         set(value) {
-            queuedIsShared = value
-            setOrQueue("isShared") { it.isShared = value }
+            setOrQueue("isShared", { queuedIsShared = value }) { it.isShared = value }
         }
 
     override suspend fun requestPermission(): Boolean = source.await("requestPermission")?.requestPermission() ?: false
+}
+
+internal class DeferredJwtListeners(
+    source: ManagerSource<JwtTokenStore>,
+) : DeferredManager<JwtTokenStore>(source) {
+    fun add(listener: IUserJwtInvalidatedListener) =
+        registerOrQueue("addUserJwtInvalidatedListener", listener) { it.addUserJwtInvalidatedListener(listener) }
+
+    fun remove(listener: IUserJwtInvalidatedListener) =
+        unregisterOrCancel("removeUserJwtInvalidatedListener", "addUserJwtInvalidatedListener", listener) {
+            it.removeUserJwtInvalidatedListener(listener)
+        }
 }
