@@ -93,9 +93,9 @@ internal class OneSignalImp : IOneSignal,
                     val oldValue = _consentGiven
                     _consentGiven = value
                     if (configApplied) configModel.consentGiven = value
-                    oldValue != value && value
+                    configApplied && oldValue != value && value
                 }
-            if (grantedNow && isInitialized) {
+            if (grantedNow) {
                 operationRepo.forceExecuteOperations()
             }
         }
@@ -225,6 +225,7 @@ internal class OneSignalImp : IOneSignal,
 
     // Set once services are bootstrapped; a retry after FAILED must not subscribe listeners twice.
     private var startupService: StartupService? = null
+    private val bootstrapper = StartupService(services)
     private val loginLogoutLock: Any = Any()
     private val applicationServiceLock: Any = Any()
 
@@ -276,9 +277,11 @@ internal class OneSignalImp : IOneSignal,
         // lazy supplier — `enabledFeatureFlags` is read per-event, so resolving the manager
         // can be deferred until services have bootstrapped.
         val featureManagerProvider = { services.getService<IFeatureManager>() }
-        observabilityManager =
-            LoggerLifecycleManager(context = context, featureManagerProvider = featureManagerProvider)
-                .also { it.initializeFromCachedConfig() }
+        if (observabilityManager == null) {
+            observabilityManager =
+                LoggerLifecycleManager(context = context, featureManagerProvider = featureManagerProvider)
+                    .also { it.initializeFromCachedConfig() }
+        }
         logStartupDiagnostics(context)
 
         PreferenceStoreFix.ensureNoObfuscatedPrefStore(context)
@@ -347,7 +350,7 @@ internal class OneSignalImp : IOneSignal,
         startupService?.let { return it }
 
         initEssentials(context)
-        val started = StartupService(services).also { it.bootstrap() }
+        val started = bootstrapper.also { it.bootstrap() }
         startupService = started
 
         // Now that the IoC container is ready, subscribe the observability lifecycle
@@ -456,10 +459,11 @@ internal class OneSignalImp : IOneSignal,
 
             updateConfig()
             userSwitcher.initUser(forceCreateUser)
+            // Before start, so services never act on a setting the app already changed; before SUCCESS,
+            // so no direct call can overtake a queued one. Replayed calls must not go through the gate.
+            replayDeferredCalls()
             startupService.scheduleStart()
             gate.complete(InitState.SUCCESS)
-            // After SUCCESS, so a replayed call that reaches back into OneSignal does not wait on this init.
-            replayDeferredCalls()
             return true
         } catch (e: Exception) {
             // Never rethrow: the sync initWithContext runs this via suspendifyOnIO, with no caller to

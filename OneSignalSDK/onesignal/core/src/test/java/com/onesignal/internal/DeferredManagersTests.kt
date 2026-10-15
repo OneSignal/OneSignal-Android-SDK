@@ -142,7 +142,6 @@ class DeferredManagersTests : FunSpec({
             DeferredUserManager(source),
             listOf(
                 "addObserver" to { addObserver(observer) },
-                "removeObserver" to { removeObserver(observer) },
             ),
         )
     }
@@ -206,11 +205,8 @@ class DeferredManagersTests : FunSpec({
             deferred,
             listOf(
                 "addPermissionObserver" to { addPermissionObserver(permissionObserver) },
-                "removePermissionObserver" to { removePermissionObserver(permissionObserver) },
                 "addForegroundLifecycleListener" to { addForegroundLifecycleListener(lifecycleListener) },
-                "removeForegroundLifecycleListener" to { removeForegroundLifecycleListener(lifecycleListener) },
                 "addClickListener" to { addClickListener(clickListener) },
-                "removeClickListener" to { removeClickListener(clickListener) },
             ),
         )
 
@@ -250,9 +246,7 @@ class DeferredManagersTests : FunSpec({
             listOf(
                 "paused" to { paused = true },
                 "addLifecycleListener" to { addLifecycleListener(lifecycleListener) },
-                "removeLifecycleListener" to { removeLifecycleListener(lifecycleListener) },
                 "addClickListener" to { addClickListener(clickListener) },
-                "removeClickListener" to { removeClickListener(clickListener) },
             ),
         )
 
@@ -343,5 +337,67 @@ class DeferredManagersTests : FunSpec({
         deferred.replay(real)
 
         verify(exactly = 1) { real.addClickListener(clickListener) }
+    }
+
+    test("a removal before replay cancels its queued add, so add and remove pairs never pile up") {
+        val real = mockk<INotificationsManager>(relaxed = true)
+        val deferred = DeferredNotificationsManager(FakeSource(real))
+        val kept = mockk<INotificationClickListener>()
+
+        repeat(1_000) {
+            val listener = mockk<INotificationClickListener>()
+            deferred.addClickListener(listener)
+            deferred.removeClickListener(listener)
+        }
+        deferred.addClickListener(kept)
+        val pending = DeferredManager::class.java.getDeclaredField("pending").apply { isAccessible = true }
+        (pending.get(deferred) as List<*>).size shouldBe 1
+
+        deferred.replay(real)
+        verify(exactly = 1) { real.addClickListener(any()) }
+        verify(exactly = 1) { real.addClickListener(kept) }
+        verify(exactly = 0) { real.removeClickListener(any()) }
+    }
+
+    test("a removal cancels only the matching queued add of the same kind") {
+        val real = mockk<IUserManager>(relaxed = true)
+        every { real.pushSubscription } returns mockk(relaxed = true)
+        val deferred = DeferredUserManager(FakeSource(real))
+        val first = mockk<IUserStateObserver>()
+        val second = mockk<IUserStateObserver>()
+
+        deferred.addObserver(first)
+        deferred.addObserver(second)
+        deferred.removeObserver(first)
+        deferred.replay(real)
+
+        verify(exactly = 0) { real.addObserver(first) }
+        verify(exactly = 1) { real.addObserver(second) }
+    }
+
+    test("a setting changed twice before replay applies only its latest value, and reads back before init") {
+        val iam = mockk<IInAppMessagesManager>(relaxed = true)
+        val iamSource = FakeSource(iam)
+        val deferredIam = DeferredInAppMessagesManager(iamSource)
+        val location = mockk<ILocationManager>(relaxed = true)
+        val locationSource = FakeSource(location)
+        val deferredLocation = DeferredLocationManager(locationSource)
+
+        deferredIam.paused = true
+        deferredIam.paused = false
+        deferredLocation.isShared = false
+        deferredLocation.isShared = true
+
+        deferredIam.paused shouldBe false
+        deferredLocation.isShared shouldBe true
+        iamSource.ignored shouldBe emptyList()
+        locationSource.ignored shouldBe emptyList()
+
+        deferredIam.replay(iam)
+        deferredLocation.replay(location)
+        verify(exactly = 1) { iam.paused = false }
+        verify(exactly = 0) { iam.paused = true }
+        verify(exactly = 1) { location.isShared = true }
+        verify(exactly = 0) { location.isShared = false }
     }
 })

@@ -202,10 +202,25 @@ class SDKInitTests : FunSpec({
         os.initWithContext(IsolatedPrefsContext(getApplicationContext()), "appId")
         waitForInitialization(os)
 
-        val userManager = os.user as UserManager
-        repeat(50) { if (!userManager.changeHandlersNotifier.hasSubscribers) Thread.sleep(20) }
-        userManager.changeHandlersNotifier.hasSubscribers shouldBe true
+        (os.user as UserManager).changeHandlersNotifier.hasSubscribers shouldBe true
         os.isInitialized shouldBe true
+    }
+
+    test("pre-init registrations are replayed before init reports success") {
+        val os = OneSignalImp()
+        var stateAtReplay: InitState? = null
+        // The in-app messages module is absent here, so its replayed call logs synchronously on the init thread.
+        val listener = ILogListener { if (it.entry.contains("Replaying 'addClickListener'")) stateAtReplay = os.gate.state }
+        Logging.addListener(listener)
+        try {
+            os.inAppMessages.addClickListener(mockk(relaxed = true))
+            os.initWithContext(IsolatedPrefsContext(getApplicationContext()), "appId")
+            waitForInitialization(os)
+        } finally {
+            Logging.removeListener(listener)
+        }
+
+        stateAtReplay shouldBe InitState.IN_PROGRESS
     }
 
     test("a call before init logs one error naming the call, with the failure trace once per attempt") {
@@ -241,11 +256,18 @@ class SDKInitTests : FunSpec({
 
         // Re-enter the window between updateConfig and SUCCESS, where the setter used to write only the local copy.
         val state = InitGate::class.java.getDeclaredField("state").apply { isAccessible = true }
+        val repo = os.getService(IOperationRepo::class.java) as OperationRepo
+        val forced = OperationRepo::class.java.getDeclaredField("forcedDuringExecute").apply { isAccessible = true }
+        synchronized(repo.queue) {
+            repo.queue.clear()
+            forced.set(repo, false)
+        }
         state.set(os.gate, InitState.IN_PROGRESS)
         os.consentGiven = true
         state.set(os.gate, InitState.SUCCESS)
 
         os.consentGiven shouldBe true
+        forced.get(repo) shouldBe true
     }
 
     test("cancelling initWithContextSuspend before init runs does not leave init stuck in progress") {

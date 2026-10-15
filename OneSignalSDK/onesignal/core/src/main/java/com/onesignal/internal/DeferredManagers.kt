@@ -28,23 +28,52 @@ internal interface ManagerSource<T : Any> {
     fun logQueued(member: String)
 }
 
-// Handed out before init; apps may keep it, so every call re-resolves. Registrations (listeners,
-// observers, settings) are queued and replayed in order on success; other calls are logged and dropped.
+// Handed out before init; apps may keep it, so every call re-resolves. Registrations are queued and
+// replayed in order on success (a removal cancels its queued add, a setting keeps its latest value);
+// other calls are logged and dropped.
 internal open class DeferredManager<T : Any>(
     protected val source: ManagerSource<T>,
 ) {
-    private val pending = mutableListOf<Pair<String, (T) -> Unit>>()
+    private class Pending<T>(val member: String, val target: Any?, val call: (T) -> Unit)
+
+    private val pending = mutableListOf<Pending<T>>()
     private var replayed = false
 
-    protected fun forwardOrQueue(
+    protected fun registerOrQueue(
+        member: String,
+        target: Any,
+        call: (T) -> Unit,
+    ) = forwardOrQueue(member, call) { pending.add(Pending(member, target, call)) }
+
+    // Before replay the real manager holds nothing, so a removal only has to cancel the queued add.
+    protected fun unregisterOrCancel(
+        member: String,
+        addMember: String,
+        target: Any,
+        call: (T) -> Unit,
+    ) = forwardOrQueue(member, call) {
+        val index = pending.indexOfLast { it.member == addMember && it.target === target }
+        if (index >= 0) pending.removeAt(index)
+    }
+
+    protected fun setOrQueue(
         member: String,
         call: (T) -> Unit,
+    ) = forwardOrQueue(member, call) {
+        pending.removeAll { it.member == member }
+        pending.add(Pending(member, null, call))
+    }
+
+    private fun forwardOrQueue(
+        member: String,
+        call: (T) -> Unit,
+        enqueue: () -> Unit,
     ) {
         source.peek()?.let {
             call(it)
             return
         }
-        val queued = synchronized(pending) { if (!replayed) pending.add(member to call) else false }
+        val queued = synchronized(pending) { if (!replayed) true.also { enqueue() } else false }
         if (queued) source.logQueued(member) else source.get(member)?.let(call)
     }
 
@@ -55,11 +84,11 @@ internal open class DeferredManager<T : Any>(
                 replayed = true
                 pending.toList().also { pending.clear() }
             }
-        for ((member, call) in calls) {
+        for (entry in calls) {
             try {
-                call(real)
+                entry.call(real)
             } catch (e: Exception) {
-                Logging.error("Replaying '$member' after initWithContext failed", e)
+                Logging.error("Replaying '${entry.member}' after initWithContext failed", e)
             }
         }
     }
@@ -109,9 +138,9 @@ internal class DeferredUserManager(
 
     override fun getTags(): Map<String, String> = source.get("getTags")?.getTags() ?: emptyMap()
 
-    override fun addObserver(observer: IUserStateObserver) = forwardOrQueue("addObserver") { it.addObserver(observer) }
+    override fun addObserver(observer: IUserStateObserver) = registerOrQueue("addObserver", observer) { it.addObserver(observer) }
 
-    override fun removeObserver(observer: IUserStateObserver) = forwardOrQueue("removeObserver") { it.removeObserver(observer) }
+    override fun removeObserver(observer: IUserStateObserver) = unregisterOrCancel("removeObserver", "addObserver", observer) { it.removeObserver(observer) }
 
     override fun trackEvent(
         name: String,
@@ -147,9 +176,9 @@ internal class DeferredPushSubscription(
 
     override fun optOut() = source.get("optOut")?.optOut() ?: Unit
 
-    override fun addObserver(observer: IPushSubscriptionObserver) = forwardOrQueue("addObserver") { it.addObserver(observer) }
+    override fun addObserver(observer: IPushSubscriptionObserver) = registerOrQueue("addObserver", observer) { it.addObserver(observer) }
 
-    override fun removeObserver(observer: IPushSubscriptionObserver) = forwardOrQueue("removeObserver") { it.removeObserver(observer) }
+    override fun removeObserver(observer: IPushSubscriptionObserver) = unregisterOrCancel("removeObserver", "addObserver", observer) { it.removeObserver(observer) }
 }
 
 internal class DeferredNotificationsManager(
@@ -168,29 +197,35 @@ internal class DeferredNotificationsManager(
     override fun clearAllNotifications() = source.get("clearAllNotifications")?.clearAllNotifications() ?: Unit
 
     override fun addPermissionObserver(observer: IPermissionObserver) =
-        forwardOrQueue("addPermissionObserver") { it.addPermissionObserver(observer) }
+        registerOrQueue("addPermissionObserver", observer) { it.addPermissionObserver(observer) }
 
     override fun removePermissionObserver(observer: IPermissionObserver) =
-        forwardOrQueue("removePermissionObserver") { it.removePermissionObserver(observer) }
+        unregisterOrCancel("removePermissionObserver", "addPermissionObserver", observer) { it.removePermissionObserver(observer) }
 
     override fun addForegroundLifecycleListener(listener: INotificationLifecycleListener) =
-        forwardOrQueue("addForegroundLifecycleListener") { it.addForegroundLifecycleListener(listener) }
+        registerOrQueue("addForegroundLifecycleListener", listener) { it.addForegroundLifecycleListener(listener) }
 
     override fun removeForegroundLifecycleListener(listener: INotificationLifecycleListener) =
-        forwardOrQueue("removeForegroundLifecycleListener") { it.removeForegroundLifecycleListener(listener) }
+        unregisterOrCancel("removeForegroundLifecycleListener", "addForegroundLifecycleListener", listener) { it.removeForegroundLifecycleListener(listener) }
 
-    override fun addClickListener(listener: INotificationClickListener) = forwardOrQueue("addClickListener") { it.addClickListener(listener) }
+    override fun addClickListener(listener: INotificationClickListener) = registerOrQueue("addClickListener", listener) { it.addClickListener(listener) }
 
     override fun removeClickListener(listener: INotificationClickListener) =
-        forwardOrQueue("removeClickListener") { it.removeClickListener(listener) }
+        unregisterOrCancel("removeClickListener", "addClickListener", listener) { it.removeClickListener(listener) }
 }
 
 internal class DeferredInAppMessagesManager(
     source: ManagerSource<IInAppMessagesManager>,
 ) : DeferredManager<IInAppMessagesManager>(source), IInAppMessagesManager {
+    @Volatile
+    private var queuedPaused: Boolean? = null
+
     override var paused: Boolean
-        get() = source.get("paused")?.paused ?: false
-        set(value) = forwardOrQueue("paused") { it.paused = value }
+        get() = source.peek()?.paused ?: queuedPaused ?: source.get("paused")?.paused ?: false
+        set(value) {
+            queuedPaused = value
+            setOrQueue("paused") { it.paused = value }
+        }
 
     override fun addTrigger(
         key: String,
@@ -206,15 +241,15 @@ internal class DeferredInAppMessagesManager(
     override fun clearTriggers() = source.get("clearTriggers")?.clearTriggers() ?: Unit
 
     override fun addLifecycleListener(listener: IInAppMessageLifecycleListener) =
-        forwardOrQueue("addLifecycleListener") { it.addLifecycleListener(listener) }
+        registerOrQueue("addLifecycleListener", listener) { it.addLifecycleListener(listener) }
 
     override fun removeLifecycleListener(listener: IInAppMessageLifecycleListener) =
-        forwardOrQueue("removeLifecycleListener") { it.removeLifecycleListener(listener) }
+        unregisterOrCancel("removeLifecycleListener", "addLifecycleListener", listener) { it.removeLifecycleListener(listener) }
 
-    override fun addClickListener(listener: IInAppMessageClickListener) = forwardOrQueue("addClickListener") { it.addClickListener(listener) }
+    override fun addClickListener(listener: IInAppMessageClickListener) = registerOrQueue("addClickListener", listener) { it.addClickListener(listener) }
 
     override fun removeClickListener(listener: IInAppMessageClickListener) =
-        forwardOrQueue("removeClickListener") { it.removeClickListener(listener) }
+        unregisterOrCancel("removeClickListener", "addClickListener", listener) { it.removeClickListener(listener) }
 }
 
 internal class DeferredSessionManager(
@@ -233,9 +268,15 @@ internal class DeferredSessionManager(
 internal class DeferredLocationManager(
     source: ManagerSource<ILocationManager>,
 ) : DeferredManager<ILocationManager>(source), ILocationManager {
+    @Volatile
+    private var queuedIsShared: Boolean? = null
+
     override var isShared: Boolean
-        get() = source.get("isShared")?.isShared ?: false
-        set(value) = forwardOrQueue("isShared") { it.isShared = value }
+        get() = source.peek()?.isShared ?: queuedIsShared ?: source.get("isShared")?.isShared ?: false
+        set(value) {
+            queuedIsShared = value
+            setOrQueue("isShared") { it.isShared = value }
+        }
 
     override suspend fun requestPermission(): Boolean = source.await("requestPermission")?.requestPermission() ?: false
 }
