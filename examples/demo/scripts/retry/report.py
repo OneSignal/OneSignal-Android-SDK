@@ -12,6 +12,9 @@ Expected gaps model OperationRepo's backoff:
     up to opRepoExecutionInterval (5s), so that much slack is allowed.
 A foreground, or a network return while in the foreground, ends the backoff early (but not
 Retry-After), so short gaps right after those are fine.
+Success is 200, 201, 202 and 304, as in HttpResponse.isSuccess. 400, 401, 402, 403, 404, 409 and
+410 end a request, so the same body sent again is unexpected, except after a 401 or 403 once a new
+JWT is set.
 """
 
 import json
@@ -27,6 +30,7 @@ MAX_RETRY_AFTER = 3600
 RETRY_AFTER_PARSE_FAIL = 60
 QUEUE_SLACK = 5.0
 CLOCK_SLACK = 1.0
+SUCCESS = (200, 201, 202, 304)
 NOT_RETRIED = (400, 401, 402, 403, 404, 409, 410)
 EXECUTOR_ROUTE = re.compile(r"^apps/[^/]+/(users(/by/.*)?|subscriptions/.+|custom_events)$")
 IGNORED_ROUTE = re.compile(r"/iams$")
@@ -69,13 +73,14 @@ def print_operation(key, entries):
     print(f"  {'#':>3} {'time':>8} {'status':>6} {'body':>8} {'gap':>8} {'expected':>16}  note")
     failures = 0
     expected = None
+    ended = None
     start = entries[0]["t"]
     for i, entry in enumerate(entries):
         gap = entry["t"] - entries[i - 1]["t"] if i else None
         note = ""
         if expected and gap is not None:
             low, high, kind = expected
-            if gap < low - CLOCK_SLACK:
+            if gap < low:
                 note = f"EARLY ({kind})"
                 if not kind.endswith("Retry-After"):
                     note += "; fine if right after a foreground or network return"
@@ -83,6 +88,12 @@ def print_operation(key, entries):
                 note = f"LATE ({kind})"
             else:
                 note = kind
+        elif ended and entry.get("body") == ended.get("body"):
+            note = f"UNEXPECTED resend after {ended['status']}"
+            if ended["status"] in (401, 403):
+                note += "; fine once a new JWT is set"
+        elif ended:
+            note = f"new request after {ended['status']}"
         elif gap is not None:
             note = "new attempt"
         expected_text = f"{expected[0]:.1f}-{expected[1]:.1f}s" if expected else ""
@@ -91,7 +102,8 @@ def print_operation(key, entries):
         print(f"  {i + 1:>3} {entry['t'] - start:>7.1f}s {entry['status']:>5}{mark} {entry.get('body', ''):>8} {gap_text:>8} {expected_text:>16}  {note}")
 
         status = entry["status"]
-        if 200 <= status < 300 or status in NOT_RETRIED:
+        ended = entry if status in NOT_RETRIED else None
+        if status in SUCCESS or status in NOT_RETRIED:
             failures = 0
             expected = None
         else:
@@ -112,7 +124,7 @@ def print_gate_violations(entries):
         entry
         for entry in entries
         if not NOT_GATED_ROUTE.search(entry["path"])
-        and any(start < entry["t"] < end - CLOCK_SLACK for start, end in windows)
+        and any(start < entry["t"] < end for start, end in windows)
     ]
     if not windows:
         return
