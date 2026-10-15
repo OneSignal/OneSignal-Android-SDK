@@ -71,7 +71,9 @@ What the SDK should do:
   login and custom events stop on it. A 401 or 403 on a request signed with a Bearer token instead
   holds it, and its retry count, until a new JWT is set. `report` flags the same body sent again
   after a request ended, and takes a different body after a hold as a new request, which is a
-  guess: a held operation batched with newer ones also comes back with a new body.
+  guess: a held operation batched with newer ones also comes back with a new body. A logged-in
+  Create User dropped on a 4xx is sent again on the next cold start (`RecoverFromDroppedLoginBug`),
+  so that resend is flagged too but is expected.
 - **Retry-After** is the minimum wait for that request, capped at 1h. `HttpClient` also holds
   every SDK request, on any route, until it passes, and `report` lists any that weren't. Foreground
   and network return do not cut it short. A 429 without Retry-After, or with an unparsable one,
