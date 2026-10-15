@@ -104,6 +104,7 @@ class FaultProxy:
             "injected": rule is not None,
             "retry_after": retry_after,
             "body": hashlib.sha1(flow.request.raw_content or b"").hexdigest()[:8],
+            "bearer": flow.request.headers.get("Authorization", "").startswith("Bearer "),
         }
         with open(ATTEMPTS_PATH, "a") as f:
             f.write(json.dumps(entry) + "\n")
