@@ -22,7 +22,7 @@ internal class SessionsBackendService(
             JSONObject()
                 .put("onesignal_id", request.onesignalId)
                 .put("subscription_id", request.subscriptionId)
-                .put("device_type", request.deviceType)
+                .put("subscription_type", request.subscriptionType)
                 .put("start_time", toIso8601(request.startTime))
                 .put("idempotency_key", request.idempotencyKey)
         request.directAttributionId?.let { body.put("direct_attribution_id", it) }

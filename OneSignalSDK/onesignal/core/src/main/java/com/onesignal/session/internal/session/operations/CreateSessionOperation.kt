@@ -45,7 +45,7 @@ internal class CreateSessionOperation() : Operation(SessionOperationExecutor.CRE
         }
 
     /** Stable across retries and restarts, so the backend recognizes a resent create. */
-    val idempotencyKey: String get() = localSessionId
+    val idempotencyKey: String get() = localSessionId.removePrefix(IDManager.LOCAL_PREFIX)
 
     /** Responses so far that had no session_id. */
     var missingSessionIdAttempts: Int

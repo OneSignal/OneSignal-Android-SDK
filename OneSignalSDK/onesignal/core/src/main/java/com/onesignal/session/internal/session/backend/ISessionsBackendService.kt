@@ -31,7 +31,7 @@ internal interface ISessionsBackendService {
 internal data class CreateSessionRequest(
     val onesignalId: String,
     val subscriptionId: String,
-    val deviceType: Int,
+    val subscriptionType: String,
     /** Unix time in seconds, sent as ISO 8601 UTC. */
     val startTime: Long,
     val idempotencyKey: String,
