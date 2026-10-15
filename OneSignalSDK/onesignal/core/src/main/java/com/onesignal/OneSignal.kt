@@ -4,7 +4,7 @@ import android.content.Context
 import com.onesignal.common.services.IServiceProvider
 import com.onesignal.debug.IDebugManager
 import com.onesignal.inAppMessages.IInAppMessagesManager
-import com.onesignal.internal.OneSignalImp
+import com.onesignal.internal.NeverCrashKillSwitch
 import com.onesignal.location.ILocationManager
 import com.onesignal.notifications.INotificationsManager
 import com.onesignal.session.ISessionManager
@@ -37,41 +37,44 @@ object OneSignal {
         get() = oneSignal.sdkVersion
 
     /**
-     * The user manager for accessing user-scoped management.  Initialized only after [initWithContext]
-     * has been called, and initialized with a device-scoped user until (or if) [login] has been
-     * called.
+     * The user manager for accessing user-scoped management, with a device-scoped user until (or
+     * if) [login] is called. Before [initWithContext] succeeds this is a stand-in: listener and setting registrations are
+     * replayed once init succeeds, other calls are logged and ignored.
      */
     @JvmStatic
     val User: IUserManager
         get() = oneSignal.user
 
     /**
-     * The session manager for accessing session-scoped management.  Initialized only after [initWithContext]
-     * has been called.
+     * The session manager for accessing session-scoped management.
+     * Before [initWithContext] succeeds this is a stand-in: outcome calls are logged and ignored.
      */
     @JvmStatic
     val Session: ISessionManager
         get() = oneSignal.session
 
     /**
-     * The notification manager for accessing device-scoped notification management. Initialized
-     * only after [initWithContext] has been called.
+     * The notification manager for accessing device-scoped notification management.
+     * Before [initWithContext] succeeds this is a stand-in: listener and setting registrations are
+     * replayed once init succeeds, other calls are logged and ignored.
      */
     @JvmStatic
     val Notifications: INotificationsManager
         get() = oneSignal.notifications
 
     /**
-     * The location manager for accessing device-scoped location management. Initialized
-     * only after [initWithContext] has been called.
+     * The location manager for accessing device-scoped location management.
+     * Before [initWithContext] succeeds this is a stand-in: listener and setting registrations are
+     * replayed once init succeeds, other calls are logged and ignored.
      */
     @JvmStatic
     val Location: ILocationManager
         get() = oneSignal.location
 
     /**
-     * The In App Messaging manager for accessing device-scoped IAP management. Initialized
-     * only after [initWithContext] has been called.
+     * The In App Messaging manager for accessing device-scoped IAP management.
+     * Before [initWithContext] succeeds this is a stand-in: listener and setting registrations are
+     * replayed once init succeeds, other calls are logged and ignored.
      */
     @JvmStatic
     val InAppMessages: IInAppMessagesManager
@@ -125,12 +128,13 @@ object OneSignal {
      * Initialize the OneSignal SDK.  This should be called during startup of the application.
      *
      * @param context The Android context the SDK should use.
-     * @param appId The application ID the OneSignal SDK is bound to.
+     * @param appId The application ID the OneSignal SDK is bound to. If null or invalid, the cached
+     * app ID is used; if none is cached, initialization is skipped and an error is logged.
      */
     @JvmStatic
     fun initWithContext(
-        context: Context,
-        appId: String,
+        context: Context?,
+        appId: String?,
     ) {
         oneSignal.initWithContext(context, appId)
     }
@@ -141,12 +145,13 @@ object OneSignal {
      * Uses Dispatchers.IO internally to prevent ANRs and optimize for I/O operations.
      *
      * @param context Application context is recommended for SDK operations
-     * @param appId The application ID the OneSignal SDK is bound to.
+     * @param appId The application ID the OneSignal SDK is bound to. If null or invalid, the cached
+     * app ID is used; if none is cached, initialization is skipped and an error is logged.
      * @return Boolean indicating if initialization was successful.
      */
     @JvmStatic
     suspend fun initWithContextSuspend(
-        context: Context,
+        context: Context?,
         appId: String? = null,
     ): Boolean {
         return oneSignal.initWithContextSuspend(context, appId)
@@ -376,8 +381,9 @@ object OneSignal {
     fun removeUserJwtInvalidatedListener(listener: IUserJwtInvalidatedListener) =
         oneSignal.removeUserJwtInvalidatedListener(listener)
 
+    @Suppress("MemberNameEqualsClassName")
     private val oneSignal: IOneSignal by lazy {
-        OneSignalImp()
+        NeverCrashKillSwitch.create()
     }
 
     /**

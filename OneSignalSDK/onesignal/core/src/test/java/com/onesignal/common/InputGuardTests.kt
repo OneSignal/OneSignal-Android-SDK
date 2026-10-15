@@ -2,6 +2,7 @@ package com.onesignal.common
 
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
+import com.onesignal.internal.SdkOperation
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 
@@ -23,5 +24,12 @@ class InputGuardTests : FunSpec({
         isMissing("\u0000: 1", "login: externalId") shouldBe true
         isMissing("abc\u0000", "addAlias: id") shouldBe true
         hasMissingEntries(mapOf("external_id" to "\u0000: 1"), "addAliases", allowEmptyValue = false) shouldBe true
+    }
+
+    test("the operation overload applies the same checks and logs the public API name") {
+        isMissing(null, SdkOperation.LOGIN, "externalId") shouldBe true
+        isMissing("\u0000", SdkOperation.LOGIN, "externalId") shouldBe true
+        isMissing("user-1", SdkOperation.LOGIN, "externalId") shouldBe false
+        "${SdkOperation.LOGIN}: externalId" shouldBe "login: externalId"
     }
 })

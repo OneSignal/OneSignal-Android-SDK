@@ -53,56 +53,12 @@ class SDKInitSuspendTests : FunSpec({
     }
 
     test("initWithContextSuspend with null appId fails when configModel has no appId") {
-        // Given
-        val context = getApplicationContext<Context>()
-
-        // COMPLETE STATE RESET: Clear ALL SharedPreferences and wait for completion
-        val prefs = context.getSharedPreferences("OneSignal", Context.MODE_PRIVATE)
-        prefs.edit().clear().commit()
-
-        // Clear any other potential SharedPreferences files
-        val otherPrefs = context.getSharedPreferences("com.onesignal", Context.MODE_PRIVATE)
-        otherPrefs.edit().clear().commit()
-
-        // Clear any other potential preference stores that might exist
-        try {
-            val allPrefs = context.getSharedPreferences("OneSignal", Context.MODE_PRIVATE)
-            allPrefs.edit().clear().commit()
-        } catch (e: Exception) {
-            // Ignore any errors during cleanup
-        }
-
-        // Wait longer to ensure all cleanup operations are complete
-        Thread.sleep(100)
-
-        // Verify cleanup worked - this should be empty
-        val verifyPrefs = context.getSharedPreferences("OneSignal", Context.MODE_PRIVATE)
-        val allKeys = verifyPrefs.all
-        if (allKeys.isNotEmpty()) {
-            println("WARNING: SharedPreferences still contains keys after cleanup: $allKeys")
-            // Force clear again
-            verifyPrefs.edit().clear().commit()
-            Thread.sleep(50)
-        }
-
-        // Create a completely fresh OneSignalImp instance for this test
+        // Fresh prefs files: other tests' background inits write the shared store, which made this flaky.
+        val context = IsolatedPrefsContext(getApplicationContext())
         val os = OneSignalImp()
 
         runBlocking {
-            // When
-            val result = os.initWithContextSuspend(context, null)
-
-            // Debug output for CI/CD troubleshooting
-            println("DEBUG: initWithContextSuspend result = $result")
-            println("DEBUG: os.isInitialized = ${os.isInitialized}")
-
-            // Additional debug: Check what's in SharedPreferences after the call
-            val debugPrefs = context.getSharedPreferences("OneSignal", Context.MODE_PRIVATE)
-            val debugKeys = debugPrefs.all
-            println("DEBUG: SharedPreferences after initWithContextSuspend: $debugKeys")
-
-            // Then - should return false because no appId is provided and configModel doesn't have an appId
-            result shouldBe false
+            os.initWithContextSuspend(context, null) shouldBe false
             os.isInitialized shouldBe false
         }
     }
