@@ -416,6 +416,7 @@ class OneSignalImpTests : FunSpec({
 
     test("the login init wait rethrows cancellation instead of reporting NOT_INITIALIZED") {
         val os = OneSignalImp()
+        Logging.logLevel = LogLevel.NONE
         setPrivateField(os, "initState", InitState.IN_PROGRESS)
         setPrivateField(os, "suspendCompletion", CompletableDeferred<Unit>())
         var outcome: OneSignalResult<LoginData>? = null
