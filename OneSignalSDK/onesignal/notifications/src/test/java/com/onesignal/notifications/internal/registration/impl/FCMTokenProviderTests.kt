@@ -24,7 +24,8 @@ private fun registration(
     senderId: String? = SENDER_ID,
     register: () -> Task<*> = { completedTask() },
     installationId: () -> Task<String> = { Tasks.forResult("installation-id") },
-) = FCMTokenProvider.InstallationIdRegistration(senderId, register, installationId)
+    playServicesVersion: Int = 261200000,
+) = FCMTokenProvider.InstallationIdRegistration(senderId, register, installationId) { playServicesVersion }
 
 private fun installationIdFlag(
     value: String = "true",
@@ -278,10 +279,33 @@ class FCMTokenProviderTests : FunSpec({
             }
 
         thrown.reason shouldBe FCMInstallationIdFailureReason.REGISTER_API_UNAVAILABLE
-        thrown.message!! shouldContain "25.1.0 or newer"
+        thrown.message!! shouldContain "25.1.2 or newer"
         thrown.message!! shouldContain "ProGuard"
         thrown.message!! shouldContain "manifest merging"
         thrown.message!! shouldContain "registerApi=false"
+    }
+
+    test("refuses to register on Play services that would return a legacy token instead") {
+        val thrown =
+            withContext(Dispatchers.IO) {
+                shouldThrow<FCMInstallationIdException> {
+                    FCMTokenProvider.getToken(
+                        SENDER_ID,
+                        { installationIdFlag() },
+                        { Tasks.forException(disabledLegacyApi) },
+                        installationIdApiAvailable = { true },
+                        installationIdRegistration = {
+                            registration(
+                                register = { throw AssertionError("should not register on outdated Play services") },
+                                playServicesVersion = 261199999,
+                            )
+                        },
+                    )
+                }
+            }
+
+        thrown.reason shouldBe FCMInstallationIdFailureReason.PLAY_SERVICES_OUTDATED
+        thrown.message!! shouldContain "261199999"
     }
 
     test("invokes register reflectively") {
@@ -304,7 +328,7 @@ class FCMTokenProviderTests : FunSpec({
     test("explains the problem when register is missing") {
         val thrown = shouldThrow<IllegalStateException> { FCMTokenProvider.invokeRegister(WithoutRegister()) }
 
-        thrown.message!! shouldContain "25.1.0 or newer"
+        thrown.message!! shouldContain "25.1.2 or newer"
         thrown.cause.shouldBeInstanceOf<NoSuchMethodException>()
     }
 })

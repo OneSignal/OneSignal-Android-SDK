@@ -1,6 +1,7 @@
 package com.onesignal.notifications.internal.registration.impl
 
 import android.content.Context
+import android.content.pm.PackageInfo
 import android.os.Bundle
 import androidx.test.core.app.ApplicationProvider
 import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
@@ -35,6 +36,7 @@ import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withContext
+import org.robolectric.Shadows.shadowOf
 import java.io.IOException
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.ExecutionException
@@ -58,12 +60,25 @@ private fun defaultApp(
     return app
 }
 
+private fun installPlayServices(versionCode: Int) {
+    val context = ApplicationProvider.getApplicationContext<Context>()
+    shadowOf(context.packageManager).installPackage(
+        PackageInfo().apply {
+            packageName = "com.google.android.gms"
+            @Suppress("DEPRECATION")
+            this.versionCode = versionCode
+        },
+    )
+}
+
 private fun registrator(
     legacyToken: Task<String>,
     installedApps: List<FirebaseApp> = emptyList(),
     configModelStore: ConfigModelStore = MockHelper.configModelStore(),
     deviceService: IDeviceService = mockk(relaxed = true),
+    playServicesVersion: Int = 261200000,
 ): PushRegistratorFCM {
+    installPlayServices(playServicesVersion)
     val messaging = mockk<FirebaseMessaging>()
     every { messaging.token } returns legacyToken
 
@@ -99,6 +114,7 @@ private data class FidFailureCase(
 private fun fidRegistration(
     registerResult: Task<Void>,
     installationId: Task<String> = Tasks.forResult("installation-id"),
+    playServicesVersion: Int = 261200000,
 ): FidRegistration {
     val metaData = Bundle().apply { putBoolean("firebase_messaging_installation_id_enabled", true) }
     mockkObject(AndroidUtils)
@@ -126,6 +142,7 @@ private fun fidRegistration(
             installedApps = listOf(app),
             configModelStore = configModelStore,
             deviceService = deviceService,
+            playServicesVersion = playServicesVersion,
         )
     return FidRegistration(registrator, messaging)
 }
@@ -696,6 +713,28 @@ class PushRegistratorFCMTests : FunSpec({
         result.id shouldBe null
         result.status shouldBe SubscriptionStatus.FIREBASE_FCM_FID_REGISTRATION_FAILED
         result.isExistingTokenInvalid shouldBe false
+    }
+
+    test("reports outdated Play services as a retryable FID failure without calling register") {
+        val fid = fidRegistration(registerResult = Tasks.forResult(null), playServicesVersion = 261199999)
+
+        val result = registerSkippingBackoff(fid.registrator)
+
+        result.id shouldBe null
+        result.status shouldBe SubscriptionStatus.FIREBASE_FCM_FID_REGISTRATION_FAILED
+        result.isExistingTokenInvalid shouldBe false
+        verify(exactly = 0) { FCMTokenProvider.invokeRegister(fid.messaging) }
+    }
+
+    test("treats missing Play services as too old for FID registration") {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val fid = fidRegistration(registerResult = Tasks.forResult(null))
+        shadowOf(context.packageManager).deletePackage("com.google.android.gms")
+
+        val result = registerSkippingBackoff(fid.registrator)
+
+        result.status shouldBe SubscriptionStatus.FIREBASE_FCM_FID_REGISTRATION_FAILED
+        verify(exactly = 0) { FCMTokenProvider.invokeRegister(fid.messaging) }
     }
 
     listOf(

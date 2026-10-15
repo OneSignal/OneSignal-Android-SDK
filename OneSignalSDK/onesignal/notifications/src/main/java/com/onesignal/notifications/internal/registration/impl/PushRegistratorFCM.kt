@@ -1,5 +1,7 @@
 package com.onesignal.notifications.internal.registration.impl
 
+import android.content.Context
+import android.content.pm.PackageManager
 import android.util.Base64
 import com.google.android.gms.tasks.Task
 import com.google.android.gms.tasks.Tasks
@@ -136,6 +138,7 @@ internal class PushRegistratorFCM(
             senderId = hostFirebaseSenderId(hostApp),
             register = { FCMTokenProvider.invokeRegister(hostApp.get(FirebaseMessaging::class.java)) },
             installationId = { FirebaseInstallations.getInstance(hostApp).id },
+            playServicesVersion = { playServicesVersion(_applicationService.appContext) },
         )
     }
 
@@ -177,11 +180,23 @@ internal class PushRegistratorFCM(
     }
 }
 
+private const val GOOGLE_PLAY_SERVICES_PACKAGE = "com.google.android.gms"
+
+// Matches how firebase-messaging reads the version, with 0 when Play services is absent.
+@Suppress("DEPRECATION")
+private fun playServicesVersion(context: Context): Int =
+    try {
+        context.packageManager.getPackageInfo(GOOGLE_PLAY_SERVICES_PACKAGE, 0).versionCode
+    } catch (_: PackageManager.NameNotFoundException) {
+        0
+    }
+
 internal class FCMSenderIdMismatchException(message: String) : IllegalStateException(message)
 
 internal enum class FCMInstallationIdFailureReason {
     NO_DEFAULT_FIREBASE_APP,
     REGISTER_API_UNAVAILABLE,
+    PLAY_SERVICES_OUTDATED,
     REGISTRATION_FAILED,
 }
 
@@ -221,10 +236,29 @@ private fun requireInstallationIdRegisterApi(diagnostics: FCMInstallationIdDiagn
             FCMInstallationIdFailureReason.REGISTER_API_UNAVAILABLE,
             "Firebase Installation ID registration cannot start because " +
                 "FirebaseMessaging.register() is unavailable (${diagnostics.summary()}). " +
-                "Use firebase-messaging 25.1.0 or newer and ensure OneSignal's consumer " +
+                "Use firebase-messaging 25.1.2 or newer and ensure OneSignal's consumer " +
                 "ProGuard rules are applied. If another dependency enabled " +
                 "firebase_messaging_installation_id_enabled through manifest merging, " +
                 "override it to false in your application manifest to use the legacy FCM token API.",
+        )
+    }
+}
+
+// Below this version, firebase-messaging's register() silently requests a legacy token instead of
+//   registering the installation id, and that token is never exposed while the flag is on.
+private const val MIN_PLAY_SERVICES_VERSION_FOR_INSTALLATION_ID = 261200000
+
+private fun requireInstallationIdPlayServicesSupport(
+    registration: FCMTokenProvider.InstallationIdRegistration,
+    diagnostics: FCMInstallationIdDiagnostics,
+) {
+    val version = registration.playServicesVersion()
+    if (version < MIN_PLAY_SERVICES_VERSION_FOR_INSTALLATION_ID) {
+        throw FCMInstallationIdException(
+            FCMInstallationIdFailureReason.PLAY_SERVICES_OUTDATED,
+            "Firebase Installation ID registration needs Google Play services " +
+                "$MIN_PLAY_SERVICES_VERSION_FOR_INSTALLATION_ID or newer, but this device has $version " +
+                "(${diagnostics.summary()}). It will be tried again on the next session.",
         )
     }
 }
@@ -332,6 +366,7 @@ internal object FCMTokenProvider {
         val senderId: String?,
         val register: () -> Task<*>,
         val installationId: () -> Task<String>,
+        val playServicesVersion: () -> Int,
     )
 
     class InstallationIdFlag(
@@ -389,6 +424,7 @@ internal object FCMTokenProvider {
 
         validateSenderId(senderId, registration.senderId)
         requireInstallationIdRegisterApi(diagnostics)
+        requireInstallationIdPlayServicesSupport(registration, diagnostics)
         return retrieveInstallationId(registration, diagnostics)
     }
 
@@ -456,7 +492,7 @@ internal object FCMTokenProvider {
 
     /**
      * Calls register() reflectively. FirebaseMessaging.register was added in firebase-messaging
-     * 25.1.0. This module compiles against the preferred 24.0.0, but the non-strict Gradle
+     * 25.1.0, but installation id registration needs 25.1.2 or newer. This module compiles against the preferred 24.0.0, but the non-strict Gradle
      * constraint lets apps select newer versions through conflict resolution.
      */
     fun hasRegisterMethod(targetClass: Class<*>): Boolean =
@@ -476,7 +512,7 @@ internal object FCMTokenProvider {
                     FCMInstallationIdFailureReason.REGISTER_API_UNAVAILABLE,
                     "Firebase Installation ID registration is enabled but " +
                         "FirebaseMessaging.register() was not found. It requires firebase-messaging " +
-                        "25.1.0 or newer, and has to survive minification, so check that OneSignal's " +
+                        "25.1.2 or newer, and has to survive minification, so check that OneSignal's " +
                         "consumer ProGuard rules are applied.",
                     e,
                 )

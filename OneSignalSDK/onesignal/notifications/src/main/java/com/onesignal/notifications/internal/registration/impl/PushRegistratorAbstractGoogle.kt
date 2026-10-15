@@ -213,7 +213,9 @@ private fun installationIdErrorResult(exception: FCMInstallationIdException): IP
                 SubscriptionStatus.FIREBASE_FCM_FID_DEFAULT_APP_MISSING
             FCMInstallationIdFailureReason.REGISTER_API_UNAVAILABLE ->
                 SubscriptionStatus.FIREBASE_FCM_FID_REGISTER_API_UNAVAILABLE
-            FCMInstallationIdFailureReason.REGISTRATION_FAILED ->
+            FCMInstallationIdFailureReason.PLAY_SERVICES_OUTDATED,
+            FCMInstallationIdFailureReason.REGISTRATION_FAILED,
+            ->
                 SubscriptionStatus.FIREBASE_FCM_FID_REGISTRATION_FAILED
         }
     return IPushRegistrator.RegisterResult(

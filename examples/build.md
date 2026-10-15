@@ -56,7 +56,7 @@ dependency even when the application does not declare it.
 
 When the resolved value is `true`, the application must:
 
-- Use `com.google.firebase:firebase-messaging:25.1.0` or newer. Firebase Messaging 25.x requires
+- Use `com.google.firebase:firebase-messaging:25.1.2` or newer. Firebase Messaging 25.x requires
   `minSdk` 23; apps that must support API 21 or 22 should keep using the legacy token path.
 - Use `compileSdk` 34 or newer.
 - Add the Firebase project's `google-services.json` to the app module and apply the
@@ -64,6 +64,9 @@ When the resolved value is `true`, the application must:
 - Configure that Firebase project with the same sender ID as the OneSignal Android app.
 - Preserve `FirebaseMessaging.register()` during minification. OneSignal publishes the required
   consumer ProGuard rules, so ensure dependency consumer rules are not disabled or discarded.
+
+Devices also need Google Play services 261200000 or newer. On older versions, OneSignal reports
+the push subscription as not subscribed with status `-34` and retries on a later session.
 
 To keep using the legacy FCM token path when a dependency enables the flag, override the merged
 value in the application manifest:
