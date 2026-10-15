@@ -116,6 +116,7 @@ interface IOneSignal {
      * trust for the login operation.  Required when identity verification has been enabled. See
      * [Identity Verification | OneSignal](https://documentation.onesignal.com/docs/identity-verification)
      */
+    @Throws(IllegalStateException::class)
     fun login(
         externalId: String,
         jwtBearerToken: String? = null,
@@ -154,6 +155,7 @@ interface IOneSignal {
      * Pure pub/sub: only listeners subscribed at the time of the invalidation receive the
      * event. Subscribe early (e.g. in `Application.onCreate`) to avoid missing events.
      */
+    @Throws(IllegalStateException::class)
     fun addUserJwtInvalidatedListener(listener: IUserJwtInvalidatedListener)
 
     /** Unsubscribe a listener previously registered via [addUserJwtInvalidatedListener]. */

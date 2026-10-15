@@ -329,6 +329,7 @@ object OneSignal {
      * [Identity Verification | OneSignal](https://documentation.onesignal.com/docs/identity-verification)
      */
     @JvmStatic
+    @Throws(IllegalStateException::class)
     fun login(
         externalId: String,
         jwtBearerToken: String? = null,
