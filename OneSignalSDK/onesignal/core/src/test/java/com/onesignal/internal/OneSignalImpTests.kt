@@ -2,8 +2,13 @@ package com.onesignal.internal
 
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
+import io.kotest.assertions.throwables.shouldThrowUnit
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import kotlinx.coroutines.CompletableDeferred
+import java.lang.reflect.InvocationTargetException
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 
 class OneSignalImpTests : FunSpec({
     beforeAny {
@@ -11,19 +16,44 @@ class OneSignalImpTests : FunSpec({
     }
 
     fun markInitialized(os: OneSignalImp) {
-        os.gate.tryStart()
-        os.gate.complete(InitState.SUCCESS)
+        val initStateField = OneSignalImp::class.java.getDeclaredField("initState")
+        initStateField.isAccessible = true
+        initStateField.set(os, InitState.SUCCESS)
     }
 
-    test("attempting login before initWithContext is ignored without throwing") {
+    fun setPrivateField(
+        os: OneSignalImp,
+        name: String,
+        value: Any,
+    ) {
+        val field = OneSignalImp::class.java.getDeclaredField(name)
+        field.isAccessible = true
+        field.set(os, value)
+    }
+
+    test("attempting login before initWithContext throws exception") {
+        // Given
         val os = OneSignalImp()
-        // NONE: otherwise Logging.error calls the unmocked android.util.Log.
-        Logging.logLevel = LogLevel.NONE
 
-        os.login("login-id")
-        os.login("")
+        // When
+        val exception =
+            shouldThrowUnit<Exception> {
+                os.login("login-id")
+            }
 
-        os.isInitialized shouldBe false
+        // Then
+        exception.message shouldBe "Must call 'initWithContext' before 'login'"
+    }
+
+    test("login with empty externalId before init still throws") {
+        val os = OneSignalImp()
+
+        val exception =
+            shouldThrowUnit<Exception> {
+                os.login("")
+            }
+
+        exception.message shouldBe "Must call 'initWithContext' before 'login'"
     }
 
     test("login with empty externalId after init does not switch user") {
@@ -52,13 +82,29 @@ class OneSignalImpTests : FunSpec({
         os.updateUserJwt("user", "")
     }
 
-    test("attempting logout before initWithContext is ignored without throwing") {
+    test("attempting logout before initWithContext throws exception") {
+        // Given
         val os = OneSignalImp()
-        Logging.logLevel = LogLevel.NONE
 
-        os.logout()
+        // When
+        val exception =
+            shouldThrowUnit<Exception> {
+                os.logout()
+            }
 
-        os.isInitialized shouldBe false
+        // Then
+        exception.message shouldBe "Must call 'initWithContext' before 'logout'"
+    }
+
+    test("waitForInit returns synchronously without dispatching when initState is SUCCESS") {
+        val os = OneSignalImp()
+        markInitialized(os)
+
+        val waitForInit = OneSignalImp::class.java.getDeclaredMethod("waitForInit", String::class.java)
+        waitForInit.isAccessible = true
+        waitForInit.invoke(os, null as String?)
+
+        os.isInitialized shouldBe true
     }
 
     test("blockingGet returns synchronously without dispatching when initState is SUCCESS") {
@@ -70,6 +116,40 @@ class OneSignalImpTests : FunSpec({
 
         val getter = { "value" }
         blockingGet.invoke(os, getter) shouldBe "value"
+    }
+
+    test("waitForInit at IN_PROGRESS awaits the completion signal on the caller's event loop") {
+        // The IN_PROGRESS wait uses a dispatcher-less runBlocking so it resumes on the caller's
+        // own event loop off the completion signal alone, rather than depending on a free worker
+        // in a (possibly saturated) IO pool (#1163).
+        val os = OneSignalImp()
+        setPrivateField(os, "initState", InitState.IN_PROGRESS)
+        val deferred = CompletableDeferred<Unit>()
+        setPrivateField(os, "suspendCompletion", deferred)
+
+        val waitForInit = OneSignalImp::class.java.getDeclaredMethod("waitForInit", String::class.java)
+        waitForInit.isAccessible = true
+
+        val failure = arrayOfNulls<Throwable>(1)
+        val finished = CountDownLatch(1)
+        Thread {
+            try {
+                waitForInit.invoke(os, null as String?)
+            } catch (t: InvocationTargetException) {
+                failure[0] = t.targetException
+            } finally {
+                finished.countDown()
+            }
+        }.start()
+
+        // Still parked on the not-yet-completed signal (pre-fix it would throw/finish immediately).
+        finished.await(300, TimeUnit.MILLISECONDS) shouldBe false
+
+        setPrivateField(os, "initState", InitState.SUCCESS)
+        deferred.complete(Unit)
+
+        finished.await(2, TimeUnit.SECONDS) shouldBe true
+        failure[0] shouldBe null
     }
 
     // Comprehensive tests for deprecated properties that should work before and after initialization
@@ -243,5 +323,47 @@ class OneSignalImpTests : FunSpec({
             os.consentGiven shouldBe false
             os.disableGMSMissingPrompt shouldBe true
         }
+    }
+
+    test("waitForInit timeout behavior - this test demonstrates the timeout mechanism") {
+        // This test documents that waitForInit() has timeout protection
+        // In a real scenario, if initWithContext was never called,
+        // waitForInit() would timeout after 30 seconds and log a warning (not throw)
+
+        // Given - a fresh OneSignalImp instance
+        val oneSignalImp = OneSignalImp()
+
+        // The timeout behavior is built into waitUntilInitInternal()
+        // which uses withTimeout() to wait for up to 30 seconds (or 4.8 seconds on main thread)
+        // before logging a warning and proceeding
+
+        // NOTE: We don't test waiting indefinitely here because:
+        // 1. It would make tests hang forever
+        // 2. This test documents the behavior for developers
+
+        oneSignalImp.isInitialized shouldBe false
+    }
+
+    test("waitForInit waits indefinitely until init completes") {
+        // This test verifies that waitUntilInitInternal waits indefinitely
+        // until initialization completes (per PR #2412)
+
+        // Given
+        val oneSignalImp = OneSignalImp()
+
+        // We can verify the wait behavior by checking:
+        // 1. The suspendCompletion (CompletableDeferred) is properly initialized
+        // 2. The initState is NOT_STARTED (which would throw immediately)
+        // 3. The isInitialized property correctly reflects the state
+
+        oneSignalImp.isInitialized shouldBe false
+
+        // In a real scenario where initWithContext is never called:
+        // - waitForInit() would call waitUntilInitInternal()
+        // - waitUntilInitInternal() would check initState == NOT_STARTED and throw immediately
+        // - If initState was IN_PROGRESS, it would wait indefinitely using suspendCompletion.await()
+        // - waitForInit() throws for NOT_STARTED/FAILED states, waits indefinitely for IN_PROGRESS
+
+        // This test documents this behavior without actually waiting indefinitely
     }
 })

@@ -5,7 +5,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.runBlocking
 
 /**
- * Init state for [OneSignalImp] and the waits on it. Never throws: callers that need the SDK
+ * Init state for [OneSignalImpV2] and the waits on it. Never throws: callers that need the SDK
  * get `false` and a log line when init has not started or has failed.
  */
 internal class InitGate {
@@ -122,7 +122,7 @@ internal class InitGate {
         signal.await()
         val elapsed = System.currentTimeMillis() - startTime
         val before = operation?.let { " before '$it'" } ?: ""
-        Logging.debug("OneSignalImp initialization completed$before (took ${elapsed}ms)")
+        Logging.debug("OneSignalImpV2 initialization completed$before (took ${elapsed}ms)")
     }
 }
 

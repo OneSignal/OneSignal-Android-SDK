@@ -44,7 +44,7 @@ class NeverCrashKillSwitchTests : FunSpec({
         NeverCrashKillSwitch.evaluate(getApplicationContext())
 
         NeverCrashKillSwitch.useLegacy shouldBe true
-        NeverCrashKillSwitch.create().shouldBeInstanceOf<LegacyOneSignalImp>()
+        NeverCrashKillSwitch.create().shouldBeInstanceOf<OneSignalImp>()
     }
 
     test("the cached kill switch matches regardless of wire casing") {
@@ -61,7 +61,7 @@ class NeverCrashKillSwitchTests : FunSpec({
         NeverCrashKillSwitch.evaluate(getApplicationContext())
 
         NeverCrashKillSwitch.useLegacy shouldBe false
-        NeverCrashKillSwitch.create().shouldBeInstanceOf<OneSignalImp>()
+        NeverCrashKillSwitch.create().shouldBeInstanceOf<OneSignalImpV2>()
     }
 
     test("a fresh install with nothing cached uses the never-crash implementation") {
@@ -94,6 +94,6 @@ class NeverCrashKillSwitchTests : FunSpec({
     }
 
     test("first use before the switch is evaluated uses the never-crash implementation") {
-        NeverCrashKillSwitch.create().shouldBeInstanceOf<OneSignalImp>()
+        NeverCrashKillSwitch.create().shouldBeInstanceOf<OneSignalImpV2>()
     }
 })

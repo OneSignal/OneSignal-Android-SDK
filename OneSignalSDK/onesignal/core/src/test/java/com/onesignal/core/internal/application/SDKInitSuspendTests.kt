@@ -3,11 +3,11 @@ package com.onesignal.core.internal.application
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider.getApplicationContext
 import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
-import com.onesignal.ErrorCode
 import com.onesignal.OneSignalUserProfile
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.internal.OneSignalImp
+import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.runBlocking
@@ -218,36 +218,62 @@ class SDKInitSuspendTests : FunSpec({
         }
     }
 
-    test("suspend login, logout and updateUserJwt are ignored without throwing when initWithContext is never called") {
+    test("login should throw exception when initWithContext is never called") {
+        // Given
         val oneSignalImp = OneSignalImp()
 
+        // When/Then - should throw exception immediately
+        val exception =
+            shouldThrow<IllegalStateException> {
+                oneSignalImp.login("testUser", null)
+            }
+
+        // Should throw immediately because isInitialized is false
+        exception.message shouldBe "Must call 'initWithContext' before 'login'"
+    }
+
+    test("loginSuspend should throw exception when initWithContext is never called") {
+        // Given
+        val oneSignalImp = OneSignalImp()
+
+        // When/Then - should throw exception immediately
         runBlocking {
-            oneSignalImp.loginSuspend("testUser", null)
-            oneSignalImp.logoutSuspend()
-            oneSignalImp.updateUserJwtSuspend("testUser", "token")
+            val exception =
+                shouldThrow<IllegalStateException> {
+                    oneSignalImp.loginSuspend("testUser", null)
+                }
+
+            // Should throw immediately because isInitialized is false
+            exception.message shouldBe "Must call 'initWithContext' before 'login'"
         }
-
-        oneSignalImp.isInitialized shouldBe false
     }
 
-    test("composite login returns NOT_INITIALIZED when initWithContext is never called") {
-        val oneSignalImp = OneSignalImp()
-
-        val result = runBlocking { oneSignalImp.login("testUser", OneSignalUserProfile()) }
-
-        result.data shouldBe null
-        result.error!!.first.code shouldBe ErrorCode.NOT_INITIALIZED
-    }
-
-    test("suspend consent accessors work before initWithContext") {
+    test("composite login should throw exception when initWithContext is never called") {
         val oneSignalImp = OneSignalImp()
 
         runBlocking {
-            oneSignalImp.setConsentRequired(true)
-            oneSignalImp.setConsentGiven(true)
-            oneSignalImp.getConsentRequired() shouldBe true
-            oneSignalImp.getConsentGiven() shouldBe true
-            oneSignalImp.getDisableGMSMissingPrompt() shouldBe false
+            val exception =
+                shouldThrow<IllegalStateException> {
+                    oneSignalImp.login("testUser", OneSignalUserProfile())
+                }
+
+            exception.message shouldBe "Must call 'initWithContext' before 'login'"
+        }
+    }
+
+    test("logoutSuspend should throw exception when initWithContext is never called") {
+        // Given
+        val oneSignalImp = OneSignalImp()
+
+        // When/Then - should throw exception immediately
+        runBlocking {
+            val exception =
+                shouldThrow<IllegalStateException> {
+                    oneSignalImp.logoutSuspend()
+                }
+
+            // Should throw immediately because isInitialized is false
+            exception.message shouldBe "Must call 'initWithContext' before 'logout'"
         }
     }
 })

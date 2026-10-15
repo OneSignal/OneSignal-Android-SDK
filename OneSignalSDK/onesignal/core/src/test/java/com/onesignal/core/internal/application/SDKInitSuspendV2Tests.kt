@@ -3,18 +3,18 @@ package com.onesignal.core.internal.application
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider.getApplicationContext
 import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
+import com.onesignal.ErrorCode
 import com.onesignal.OneSignalUserProfile
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
-import com.onesignal.internal.LegacyOneSignalImp
-import io.kotest.assertions.throwables.shouldThrow
+import com.onesignal.internal.OneSignalImpV2
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 
 @RobolectricTest
-class LegacySDKInitSuspendTests : FunSpec({
+class SDKInitSuspendV2Tests : FunSpec({
 
     beforeAny {
         Logging.logLevel = LogLevel.NONE
@@ -40,7 +40,7 @@ class LegacySDKInitSuspendTests : FunSpec({
     test("initWithContextSuspend with appId returns true") {
         // Given
         val context = getApplicationContext<Context>()
-        val os = LegacyOneSignalImp()
+        val os = OneSignalImpV2()
 
         runBlocking {
             // When
@@ -55,7 +55,7 @@ class LegacySDKInitSuspendTests : FunSpec({
     test("initWithContextSuspend with null appId fails when configModel has no appId") {
         // Fresh prefs files: other tests' background inits write the shared store, which made this flaky.
         val context = IsolatedPrefsContext(getApplicationContext())
-        val os = LegacyOneSignalImp()
+        val os = OneSignalImpV2()
 
         runBlocking {
             os.initWithContextSuspend(context, null) shouldBe false
@@ -66,7 +66,7 @@ class LegacySDKInitSuspendTests : FunSpec({
     test("initWithContextSuspend is idempotent") {
         // Given
         val context = getApplicationContext<Context>()
-        val os = LegacyOneSignalImp()
+        val os = OneSignalImpV2()
 
         runBlocking {
             // When
@@ -87,7 +87,7 @@ class LegacySDKInitSuspendTests : FunSpec({
     test("login suspend method works after initWithContextSuspend") {
         // Given
         val context = getApplicationContext<Context>()
-        val os = LegacyOneSignalImp()
+        val os = OneSignalImpV2()
         val testExternalId = "testUser123"
 
         runBlocking {
@@ -116,7 +116,7 @@ class LegacySDKInitSuspendTests : FunSpec({
     test("login suspend method with JWT token") {
         // Given
         val context = getApplicationContext<Context>()
-        val os = LegacyOneSignalImp()
+        val os = OneSignalImpV2()
         val testExternalId = "testUser789"
         val jwtToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
 
@@ -143,7 +143,7 @@ class LegacySDKInitSuspendTests : FunSpec({
     test("logout suspend method works after initWithContextSuspend") {
         // Given
         val context = getApplicationContext<Context>()
-        val os = LegacyOneSignalImp()
+        val os = OneSignalImpV2()
 
         runBlocking {
             // When
@@ -171,7 +171,7 @@ class LegacySDKInitSuspendTests : FunSpec({
     test("multiple login calls work correctly") {
         // Given
         val context = getApplicationContext<Context>()
-        val os = LegacyOneSignalImp()
+        val os = OneSignalImpV2()
 
         runBlocking {
             // When
@@ -196,7 +196,7 @@ class LegacySDKInitSuspendTests : FunSpec({
     test("login and logout sequence works correctly") {
         // Given
         val context = getApplicationContext<Context>()
-        val os = LegacyOneSignalImp()
+        val os = OneSignalImpV2()
 
         runBlocking {
             // When
@@ -218,62 +218,36 @@ class LegacySDKInitSuspendTests : FunSpec({
         }
     }
 
-    test("login should throw exception when initWithContext is never called") {
-        // Given
-        val oneSignalImp = LegacyOneSignalImp()
+    test("suspend login, logout and updateUserJwt are ignored without throwing when initWithContext is never called") {
+        val oneSignalImp = OneSignalImpV2()
 
-        // When/Then - should throw exception immediately
-        val exception =
-            shouldThrow<IllegalStateException> {
-                oneSignalImp.login("testUser", null)
-            }
-
-        // Should throw immediately because isInitialized is false
-        exception.message shouldBe "Must call 'initWithContext' before 'login'"
-    }
-
-    test("loginSuspend should throw exception when initWithContext is never called") {
-        // Given
-        val oneSignalImp = LegacyOneSignalImp()
-
-        // When/Then - should throw exception immediately
         runBlocking {
-            val exception =
-                shouldThrow<IllegalStateException> {
-                    oneSignalImp.loginSuspend("testUser", null)
-                }
-
-            // Should throw immediately because isInitialized is false
-            exception.message shouldBe "Must call 'initWithContext' before 'login'"
+            oneSignalImp.loginSuspend("testUser", null)
+            oneSignalImp.logoutSuspend()
+            oneSignalImp.updateUserJwtSuspend("testUser", "token")
         }
+
+        oneSignalImp.isInitialized shouldBe false
     }
 
-    test("composite login should throw exception when initWithContext is never called") {
-        val oneSignalImp = LegacyOneSignalImp()
+    test("composite login returns NOT_INITIALIZED when initWithContext is never called") {
+        val oneSignalImp = OneSignalImpV2()
 
-        runBlocking {
-            val exception =
-                shouldThrow<IllegalStateException> {
-                    oneSignalImp.login("testUser", OneSignalUserProfile())
-                }
+        val result = runBlocking { oneSignalImp.login("testUser", OneSignalUserProfile()) }
 
-            exception.message shouldBe "Must call 'initWithContext' before 'login'"
-        }
+        result.data shouldBe null
+        result.error!!.first.code shouldBe ErrorCode.NOT_INITIALIZED
     }
 
-    test("logoutSuspend should throw exception when initWithContext is never called") {
-        // Given
-        val oneSignalImp = LegacyOneSignalImp()
+    test("suspend consent accessors work before initWithContext") {
+        val oneSignalImp = OneSignalImpV2()
 
-        // When/Then - should throw exception immediately
         runBlocking {
-            val exception =
-                shouldThrow<IllegalStateException> {
-                    oneSignalImp.logoutSuspend()
-                }
-
-            // Should throw immediately because isInitialized is false
-            exception.message shouldBe "Must call 'initWithContext' before 'logout'"
+            oneSignalImp.setConsentRequired(true)
+            oneSignalImp.setConsentGiven(true)
+            oneSignalImp.getConsentRequired() shouldBe true
+            oneSignalImp.getConsentGiven() shouldBe true
+            oneSignalImp.getDisableGMSMissingPrompt() shouldBe false
         }
     }
 })

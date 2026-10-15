@@ -45,13 +45,13 @@ internal object NeverCrashKillSwitch {
         when {
             !evaluated -> {
                 Logging.debug("OneSignal: kill switch not evaluated before first use, keeping the default init behavior")
-                OneSignalImp()
+                OneSignalImpV2()
             }
             useLegacy -> {
                 Logging.warn("OneSignal: $FLAG_KEY is on, using the legacy init behavior")
-                LegacyOneSignalImp()
+                OneSignalImp()
             }
-            else -> OneSignalImp()
+            else -> OneSignalImpV2()
         }
 
     internal fun isDisabledByCachedFlags(context: Context): Boolean {

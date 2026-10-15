@@ -19,7 +19,7 @@ import io.mockk.verify
  * complementing the integration tests in SDKInitTests.kt which test
  * end-to-end SDK initialization behavior.
  */
-class LegacyAppIdHelperTests : FunSpec({
+class AppIdHelperV2Tests : FunSpec({
     // Test constants - using consistent naming with SDKInitTests
     val testAppId = "appId"
     val differentAppId = "different-app-id"
@@ -37,7 +37,7 @@ class LegacyAppIdHelperTests : FunSpec({
         val mockPreferencesService = mockk<IPreferencesService>(relaxed = true)
 
         // When
-        val result = resolveAppIdLegacy(testAppId, configModel, mockPreferencesService)
+        val result = resolveAppIdV2(testAppId, configModel, mockPreferencesService)
 
         // Then
         result.appId shouldBe testAppId
@@ -58,7 +58,7 @@ class LegacyAppIdHelperTests : FunSpec({
         val mockPreferencesService = mockk<IPreferencesService>(relaxed = true)
 
         // When
-        val result = resolveAppIdLegacy(differentAppId, configModel, mockPreferencesService)
+        val result = resolveAppIdV2(differentAppId, configModel, mockPreferencesService)
 
         // Then
         result.appId shouldBe differentAppId
@@ -74,7 +74,7 @@ class LegacyAppIdHelperTests : FunSpec({
         val mockPreferencesService = mockk<IPreferencesService>(relaxed = true)
 
         // When
-        val result = resolveAppIdLegacy(testAppId, configModel, mockPreferencesService)
+        val result = resolveAppIdV2(testAppId, configModel, mockPreferencesService)
 
         // Then
         result.appId shouldBe testAppId
@@ -90,7 +90,7 @@ class LegacyAppIdHelperTests : FunSpec({
         val mockPreferencesService = mockk<IPreferencesService>(relaxed = true)
 
         // When
-        val result = resolveAppIdLegacy(null, configModel, mockPreferencesService)
+        val result = resolveAppIdV2(null, configModel, mockPreferencesService)
 
         // Then
         result.appId shouldBe differentAppId // should return the existing appId from configModel
@@ -113,7 +113,7 @@ class LegacyAppIdHelperTests : FunSpec({
         } returns legacyAppId
 
         // When
-        val result = resolveAppIdLegacy(null, configModel, mockPreferencesService)
+        val result = resolveAppIdV2(null, configModel, mockPreferencesService)
 
         // Then
         result.appId shouldBe legacyAppId
@@ -136,7 +136,7 @@ class LegacyAppIdHelperTests : FunSpec({
         } returns null
 
         // When
-        val result = resolveAppIdLegacy(null, configModel, mockPreferencesService)
+        val result = resolveAppIdV2(null, configModel, mockPreferencesService)
 
         // Then
         result.appId shouldBe null
@@ -187,7 +187,7 @@ class LegacyAppIdHelperTests : FunSpec({
         val mockPreferencesService = mockk<IPreferencesService>(relaxed = true)
 
         // When
-        val result = resolveAppIdLegacy(testAppId, configModel, mockPreferencesService)
+        val result = resolveAppIdV2(testAppId, configModel, mockPreferencesService)
 
         // Then - should detect property exists and force user creation due to different appId
         result.appId shouldBe testAppId
@@ -203,7 +203,7 @@ class LegacyAppIdHelperTests : FunSpec({
             mockPreferencesService.getString(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.PREFS_LEGACY_APP_ID)
         } returns legacyAppId
 
-        val result = resolveAppIdLegacy("", configModel, mockPreferencesService)
+        val result = resolveAppIdV2("", configModel, mockPreferencesService)
 
         result.appId shouldBe legacyAppId
         result.forceCreateUser shouldBe true
@@ -216,7 +216,7 @@ class LegacyAppIdHelperTests : FunSpec({
 
         val mockPreferencesService = mockk<IPreferencesService>(relaxed = true)
 
-        val result = resolveAppIdLegacy("", configModel, mockPreferencesService)
+        val result = resolveAppIdV2("", configModel, mockPreferencesService)
 
         result.appId shouldBe differentAppId
         result.forceCreateUser shouldBe false
@@ -229,14 +229,14 @@ class LegacyAppIdHelperTests : FunSpec({
 
         val mockPreferencesService = mockk<IPreferencesService>(relaxed = true)
 
-        val result = resolveAppIdLegacy("app\u0000id", configModel, mockPreferencesService)
+        val result = resolveAppIdV2("app\u0000id", configModel, mockPreferencesService)
 
         result.appId shouldBe differentAppId
         result.forceCreateUser shouldBe false
         result.failed shouldBe false
     }
 
-    test("empty appId with nothing cached still resolves so init does not fail") {
+    test("empty appId with nothing cached fails resolution so init is skipped") {
         val configModel = ConfigModel()
 
         val mockPreferencesService = mockk<IPreferencesService>()
@@ -244,11 +244,10 @@ class LegacyAppIdHelperTests : FunSpec({
             mockPreferencesService.getString(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.PREFS_LEGACY_APP_ID)
         } returns null
 
-        val result = resolveAppIdLegacy("", configModel, mockPreferencesService)
+        val result = resolveAppIdV2("", configModel, mockPreferencesService)
 
-        result.appId shouldBe ""
-        result.forceCreateUser shouldBe true
-        result.failed shouldBe false
+        result.appId shouldBe null
+        result.failed shouldBe true
     }
 
     test("resolveAppId with existing appId property but same value") {
@@ -259,7 +258,7 @@ class LegacyAppIdHelperTests : FunSpec({
         val mockPreferencesService = mockk<IPreferencesService>(relaxed = true)
 
         // When
-        val result = resolveAppIdLegacy(differentAppId, configModel, mockPreferencesService)
+        val result = resolveAppIdV2(differentAppId, configModel, mockPreferencesService)
 
         // Then - should not force user creation when appId is unchanged
         result.appId shouldBe differentAppId
@@ -278,7 +277,7 @@ class LegacyAppIdHelperTests : FunSpec({
         } returns legacyAppId
 
         // When
-        val result = resolveAppIdLegacy(null, configModel, mockPreferencesService)
+        val result = resolveAppIdV2(null, configModel, mockPreferencesService)
 
         // Then
         result.appId shouldBe legacyAppId
@@ -288,5 +287,29 @@ class LegacyAppIdHelperTests : FunSpec({
         verify(exactly = 1) {
             mockPreferencesService.getString(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.PREFS_LEGACY_APP_ID)
         }
+    }
+
+    test("an invalid cached appId is not used") {
+        for (cached in listOf("", "app\u0000id")) {
+            val configModel = ConfigModel().apply { appId = cached }
+            val prefs = mockk<IPreferencesService>()
+            every { prefs.getString(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.PREFS_LEGACY_APP_ID) } returns cached
+
+            val result = resolveAppIdV2("", configModel, prefs)
+
+            result.failed shouldBe true
+            result.appId shouldBe null
+        }
+    }
+
+    test("an invalid cached config appId falls through to a valid legacy appId") {
+        val configModel = ConfigModel().apply { appId = "" }
+        val prefs = mockk<IPreferencesService>()
+        every { prefs.getString(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.PREFS_LEGACY_APP_ID) } returns legacyAppId
+
+        val result = resolveAppIdV2(null, configModel, prefs)
+
+        result.appId shouldBe legacyAppId
+        result.failed shouldBe false
     }
 })

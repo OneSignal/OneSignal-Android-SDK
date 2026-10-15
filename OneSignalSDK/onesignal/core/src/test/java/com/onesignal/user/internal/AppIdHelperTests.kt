@@ -236,7 +236,7 @@ class AppIdHelperTests : FunSpec({
         result.failed shouldBe false
     }
 
-    test("empty appId with nothing cached fails resolution so init is skipped") {
+    test("empty appId with nothing cached still resolves so init does not fail") {
         val configModel = ConfigModel()
 
         val mockPreferencesService = mockk<IPreferencesService>()
@@ -246,8 +246,9 @@ class AppIdHelperTests : FunSpec({
 
         val result = resolveAppId("", configModel, mockPreferencesService)
 
-        result.appId shouldBe null
-        result.failed shouldBe true
+        result.appId shouldBe ""
+        result.forceCreateUser shouldBe true
+        result.failed shouldBe false
     }
 
     test("resolveAppId with existing appId property but same value") {
@@ -287,29 +288,5 @@ class AppIdHelperTests : FunSpec({
         verify(exactly = 1) {
             mockPreferencesService.getString(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.PREFS_LEGACY_APP_ID)
         }
-    }
-
-    test("an invalid cached appId is not used") {
-        for (cached in listOf("", "app\u0000id")) {
-            val configModel = ConfigModel().apply { appId = cached }
-            val prefs = mockk<IPreferencesService>()
-            every { prefs.getString(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.PREFS_LEGACY_APP_ID) } returns cached
-
-            val result = resolveAppId("", configModel, prefs)
-
-            result.failed shouldBe true
-            result.appId shouldBe null
-        }
-    }
-
-    test("an invalid cached config appId falls through to a valid legacy appId") {
-        val configModel = ConfigModel().apply { appId = "" }
-        val prefs = mockk<IPreferencesService>()
-        every { prefs.getString(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.PREFS_LEGACY_APP_ID) } returns legacyAppId
-
-        val result = resolveAppId(null, configModel, prefs)
-
-        result.appId shouldBe legacyAppId
-        result.failed shouldBe false
     }
 })
