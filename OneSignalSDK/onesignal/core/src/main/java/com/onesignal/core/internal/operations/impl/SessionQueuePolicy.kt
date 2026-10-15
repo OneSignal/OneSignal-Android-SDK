@@ -20,16 +20,17 @@ internal class SessionQueuePolicy(
             override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, String>?) = size > MAX_RECENT_TRANSLATIONS
         }
 
-    // Sessions with an accepted end. The queue alone misses an end that is executing.
-    private val endedSessions =
+    // Sessions that take no more updates: ended, or their create was dropped. The queue alone
+    // misses an end that is executing.
+    private val closedSessions =
         object : LinkedHashMap<String, Unit>() {
-            override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Unit>?) = size > MAX_ENDED_SESSIONS
+            override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Unit>?) = size > MAX_CLOSED_SESSIONS
         }
 
     fun recordTranslations(idTranslations: Map<String, String>) {
         recentTranslations.putAll(idTranslations)
         idTranslations.forEach { (localId, backendId) ->
-            if (endedSessions.remove(localId) != null) endedSessions[backendId] = Unit
+            if (closedSessions.remove(localId) != null) closedSessions[backendId] = Unit
         }
     }
 
@@ -46,8 +47,8 @@ internal class SessionQueuePolicy(
         if (!op.isSessionOperation) return EnqueueResult(accept = true)
         op.translateIds(recentTranslations)
 
-        return if (op is UpdateSessionOperation && (op.sessionId in endedSessions || hasQueuedEnd(queue, op.sessionId))) {
-            Logging.debug("SessionQueuePolicy: session ${op.sessionId} already ended, dropping $op")
+        return if (op is UpdateSessionOperation && (op.sessionId in closedSessions || hasQueuedEnd(queue, op.sessionId))) {
+            Logging.debug("SessionQueuePolicy: session ${op.sessionId} is closed, dropping $op")
             EnqueueResult(accept = false)
         } else {
             admit(queue, incoming)
@@ -84,16 +85,17 @@ internal class SessionQueuePolicy(
             removed.addAll(dropped)
             if (op.sessionKey == oldestSession) accept = false
         }
-        if (accept && op is UpdateSessionOperation && op.isEnd) endedSessions[op.sessionId] = Unit
+        if (accept && op is UpdateSessionOperation && op.isEnd) closedSessions[op.sessionId] = Unit
         return EnqueueResult(accept, removed)
     }
 
-    /** Removes queued updates that can never send because [dropped] was their session's create. */
+    /** Removes and rejects updates that can never send because [dropped] was their session's create. */
     fun onDropped(
         queue: MutableList<OperationRepo.OperationQueueItem>,
         dropped: Operation,
     ): List<OperationRepo.OperationQueueItem> {
         if (dropped !is CreateSessionOperation) return emptyList()
+        closedSessions[dropped.localSessionId] = Unit
         val orphans = queue.filter { (it.operation as? UpdateSessionOperation)?.sessionId == dropped.localSessionId }
         if (orphans.isNotEmpty()) {
             Logging.debug("SessionQueuePolicy: create for session ${dropped.localSessionId} was dropped, dropping ${orphans.size} updates")
@@ -120,6 +122,6 @@ internal class SessionQueuePolicy(
     companion object {
         const val MAX_QUEUED_SESSION_OPERATIONS = 100
         private const val MAX_RECENT_TRANSLATIONS = 50
-        private const val MAX_ENDED_SESSIONS = 50
+        private const val MAX_CLOSED_SESSIONS = 50
     }
 }

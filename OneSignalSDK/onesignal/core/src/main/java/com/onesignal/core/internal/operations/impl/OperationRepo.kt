@@ -16,6 +16,7 @@ import com.onesignal.core.internal.startup.IStartableService
 import com.onesignal.core.internal.time.ITime
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
+import com.onesignal.session.internal.session.operations.CreateSessionOperation
 import com.onesignal.user.internal.jwt.JwtRequirement
 import com.onesignal.user.internal.jwt.JwtTokenStore
 import com.onesignal.user.internal.operations.LoginUserOperation
@@ -580,7 +581,14 @@ internal class OperationRepo(
             }
 
             if (response.idTranslations != null) {
-                delayForPostCreate(_configModelStore.model.opRepoPostCreateDelay)
+                val postCreateDelay = _configModelStore.model.opRepoPostCreateDelay
+                // A new session's only dependents are its updates, which NewRecordsState holds back,
+                // so only the wake is delayed.
+                if (ops.all { it.operation is CreateSessionOperation }) {
+                    scope.launch { delayForPostCreate(postCreateDelay) }
+                } else {
+                    delayForPostCreate(postCreateDelay)
+                }
             }
         } catch (e: Throwable) {
             Logging.log(LogLevel.ERROR, "Error attempting to execute operation: $ops", e)

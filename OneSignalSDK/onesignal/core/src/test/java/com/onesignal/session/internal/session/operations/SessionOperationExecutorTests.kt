@@ -5,6 +5,7 @@ import com.onesignal.core.internal.operations.ExecutionResult
 import com.onesignal.core.internal.operations.impl.OperationModelStore
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
+import com.onesignal.mocks.IOMockHelper
 import com.onesignal.mocks.MockHelper
 import com.onesignal.mocks.MockPreferencesService
 import com.onesignal.session.internal.session.SessionModel
@@ -40,6 +41,8 @@ private fun update(endTime: Long? = null) =
     UpdateSessionOperation("appId", "server-session", "onesignalId", "subscriptionId", activeDuration = 61_900L, endTime = endTime)
 
 class SessionOperationExecutorTests : FunSpec({
+    listener(IOMockHelper)
+
     beforeAny {
         Logging.logLevel = LogLevel.NONE
     }

@@ -1,6 +1,7 @@
 package com.onesignal.session.internal.session.operations.impl
 
 import com.onesignal.common.exceptions.BackendException
+import com.onesignal.common.threading.runOnSerialIO
 import com.onesignal.core.internal.device.IDeviceService
 import com.onesignal.core.internal.operations.ExecutionResponse
 import com.onesignal.core.internal.operations.ExecutionResult
@@ -56,9 +57,12 @@ internal class SessionOperationExecutor(
             Logging.warn("SessionOperationExecutor: create session response has no session_id, dropping $operation")
             ExecutionResponse(ExecutionResult.FAIL_NORETRY)
         } else {
-            // Updates enqueued from here on read the backend ID from the model; queued ones are translated.
-            val session = sessionModelStore.model
-            if (session.localSessionId == operation.localSessionId) session.serverSessionId = sessionId
+            // Updates enqueued later read the backend ID from the model; queued ones are translated.
+            // Serial IO is where SessionService starts new sessions, so a newer one can't get this ID.
+            runOnSerialIO {
+                val session = sessionModelStore.model
+                if (session.localSessionId == operation.localSessionId) session.serverSessionId = sessionId
+            }
             ExecutionResponse(ExecutionResult.SUCCESS, idTranslations = mapOf(operation.localSessionId to sessionId))
         }
     }

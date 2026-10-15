@@ -194,6 +194,32 @@ class SessionOperationQueueTests : FunSpec({
         policy.onEnqueue(mutableListOf(), item(update(sessionId = "server-s1"))).accept shouldBe false
     }
 
+    test("an update for a session whose create was dropped is rejected") {
+        val policy = SessionQueuePolicy()
+
+        policy.onDropped(mutableListOf(), create())
+
+        policy.onEnqueue(mutableListOf(), item(update())).accept shouldBe false
+    }
+
+    test("a session create does not stall other operations for the post-create delay") {
+        val mocks = SessionQueueMocks()
+        mocks.configModelStore.model.opRepoPostCreateDelay = 60_000L
+        mocks.respond = { op ->
+            if (op is CreateSessionOperation) {
+                ExecutionResponse(ExecutionResult.SUCCESS, idTranslations = mapOf(op.localSessionId to "server-s1"))
+            } else {
+                ExecutionResponse(ExecutionResult.SUCCESS)
+            }
+        }
+
+        mocks.enqueueAll(create(), update(sessionId = "server-other"))
+        mocks.operationRepo.start()
+        awaitExecuted(mocks, 2)
+
+        (mocks.executed[1] as UpdateSessionOperation).sessionId shouldBe "server-other"
+    }
+
     test("an update waits for its create and is sent with the backend session ID") {
         val mocks = SessionQueueMocks()
         mocks.respond = { op ->
