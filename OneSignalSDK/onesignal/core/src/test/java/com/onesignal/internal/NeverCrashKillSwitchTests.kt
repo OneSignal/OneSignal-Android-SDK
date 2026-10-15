@@ -10,7 +10,6 @@ import com.onesignal.core.internal.preferences.PreferenceOneSignalKeys
 import com.onesignal.core.internal.preferences.PreferenceStores
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
-import com.onesignal.features.FeatureFlag
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
@@ -40,12 +39,20 @@ class NeverCrashKillSwitchTests : FunSpec({
     afterEach { NeverCrashKillSwitch.resetForTest() }
 
     test("the cached kill switch selects the legacy implementation") {
-        cacheFlags("other_flag", FeatureFlag.SDK_NEVER_CRASH_DISABLED.key)
+        cacheFlags("other_flag", NeverCrashKillSwitch.FLAG_KEY)
 
         NeverCrashKillSwitch.evaluate(getApplicationContext())
 
         NeverCrashKillSwitch.useLegacy shouldBe true
         NeverCrashKillSwitch.create().shouldBeInstanceOf<LegacyOneSignalImp>()
+    }
+
+    test("the cached kill switch matches regardless of wire casing") {
+        cacheFlags(NeverCrashKillSwitch.FLAG_KEY.uppercase())
+
+        NeverCrashKillSwitch.evaluate(getApplicationContext())
+
+        NeverCrashKillSwitch.useLegacy shouldBe true
     }
 
     test("without the kill switch the never-crash implementation is used") {
@@ -73,7 +80,7 @@ class NeverCrashKillSwitchTests : FunSpec({
     }
 
     test("a locked device keeps the never-crash implementation") {
-        cacheFlags(FeatureFlag.SDK_NEVER_CRASH_DISABLED.key)
+        cacheFlags(NeverCrashKillSwitch.FLAG_KEY)
         mockkObject(AndroidUtils)
         try {
             every { AndroidUtils.isAndroidUserUnlocked(any()) } returns false
