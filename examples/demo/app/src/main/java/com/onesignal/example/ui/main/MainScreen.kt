@@ -64,6 +64,8 @@ fun MainScreen(viewModel: MainViewModel) {
     val externalUserId by viewModel.externalUserId.observeAsState()
     val language by viewModel.language.observeAsState("")
     val useIdentityVerification by viewModel.useIdentityVerification.observeAsState(false)
+    val userFetchStatus by viewModel.userFetchStatus.observeAsState()
+    val jwtAskExternalId by viewModel.jwtAskExternalId.observeAsState()
     val aliases by viewModel.aliases.observeAsState(emptyList())
     val emails by viewModel.emails.observeAsState(emptyList())
     val smsNumbers by viewModel.smsNumbers.observeAsState(emptyList())
@@ -142,6 +144,8 @@ fun MainScreen(viewModel: MainViewModel) {
                     externalUserId = externalUserId,
                     language = language,
                     useIdentityVerification = useIdentityVerification,
+                    userFetchStatus = userFetchStatus,
+                    jwtAskExternalId = jwtAskExternalId,
                     onUseIdentityVerificationChange = { viewModel.setUseIdentityVerification(it) },
                     onLanguageChange = { viewModel.setLanguage(it) },
                     onLogin = { userId, jwt -> viewModel.loginUser(userId, jwt) },

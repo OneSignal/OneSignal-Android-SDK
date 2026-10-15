@@ -20,6 +20,7 @@ import com.onesignal.notifications.INotificationWillDisplayEvent
 import com.onesignal.example.BuildConfig
 import com.onesignal.example.data.network.OneSignalService
 import com.onesignal.example.util.DemoLog
+import com.onesignal.example.util.JwtAskStore
 import com.onesignal.example.util.SharedPreferenceUtil
 import com.onesignal.example.util.TooltipHelper
 import com.onesignal.user.state.IUserStateObserver
@@ -135,6 +136,13 @@ class MainApplication : MultiDexApplication() {
                 DemoLog.i("User state changed: onesignalId=${state.current.onesignalId}, externalId=${state.current.externalId}")
             }
         })
+
+        // Here rather than in MainViewModel, which dies with MainActivity. The SDK doesn't
+        // replay this event, so a listener added later misses a 401 at launch.
+        OneSignal.addUserJwtInvalidatedListener { event ->
+            DemoLog.w("JWT invalidated for externalId: ${event.externalId}")
+            JwtAskStore.onInvalidated(event.externalId)
+        }
 
         // Restore cached states
         OneSignal.InAppMessages.paused = SharedPreferenceUtil.getCachedInAppMessagingPausedStatus(this)

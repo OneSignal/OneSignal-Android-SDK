@@ -562,6 +562,72 @@ fun CompositeLoginDialog(
 }
 
 /**
+ * Update User JWT dialog. Fields are stacked full width like [LoginDialog] because a JWT runs
+ * to several hundred characters. [initialExternalId] prefills the id and stays editable.
+ */
+@Composable
+fun UpdateJwtDialog(
+    initialExternalId: String,
+    onDismiss: () -> Unit,
+    onConfirm: (String, String) -> Unit
+) {
+    var externalId by remember { mutableStateOf(initialExternalId) }
+    var jwtToken by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = DemoLayout.pagePadding).exposeTestTagsAsResourceId(),
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+        title = {
+            DialogTitle("Update User JWT")
+        },
+        text = {
+            Column {
+                OutlinedTextField(
+                    value = externalId,
+                    onValueChange = { externalId = it },
+                    label = { Text("External User Id") },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("update_jwt_external_id_input"),
+                    singleLine = true,
+                    shape = TextFieldShape,
+                    colors = dialogTextFieldColors()
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = jwtToken,
+                    onValueChange = { jwtToken = it },
+                    label = { Text("JWT Token") },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("update_jwt_token_input"),
+                    singleLine = true,
+                    shape = TextFieldShape,
+                    colors = dialogTextFieldColors()
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { onConfirm(externalId, jwtToken) },
+                enabled = externalId.isNotBlank() && jwtToken.isNotBlank(),
+                modifier = Modifier.testTag("singlepair_confirm_button"),
+                colors = dialogTextButtonColors(),
+            ) {
+                DialogActionLabel("Update")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss, colors = dialogTextButtonColors()) {
+                DialogActionLabel("Cancel")
+            }
+        },
+        shape = DialogShape
+    )
+}
+
+/**
  * Dialog for outcome selection and input.
  */
 @Composable
