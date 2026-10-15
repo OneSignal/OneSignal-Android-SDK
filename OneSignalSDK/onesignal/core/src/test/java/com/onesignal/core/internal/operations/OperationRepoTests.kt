@@ -1068,6 +1068,8 @@ class OperationRepoTests : FunSpec({
 
         // Then
         response shouldBe true
+        // waiters wake before the delay starts
+        coVerify(timeout = 1_000) { mocks.operationRepo.delayForPostCreate(any()) }
         coVerifyOrder {
             // ensure the order: IDs are translated, operation removed from the store, then delay for postCreateDelay
             operation.translateIds(idTranslation)
@@ -1083,7 +1085,7 @@ class OperationRepoTests : FunSpec({
     test("ensure each time enqueue is called it restarts the delay time") {
         // Given
         val mocks = Mocks()
-        mocks.configModelStore.model.opRepoExecutionInterval = 100
+        mocks.configModelStore.model.opRepoExecutionInterval = 200
 
         // When
         mocks.operationRepo.start()
