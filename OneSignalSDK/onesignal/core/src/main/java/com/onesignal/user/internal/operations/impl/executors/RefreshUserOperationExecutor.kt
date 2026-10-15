@@ -112,7 +112,10 @@ internal class RefreshUserOperationExecutor(
                 val subscriptionModel = SubscriptionModel()
                 subscriptionModel.id = subscription.id!!
                 subscriptionModel.address = subscription.token ?: ""
-                subscriptionModel.status = SubscriptionStatus.fromInt(subscription.notificationTypes ?: SubscriptionStatus.SUBSCRIBED.value) ?: SubscriptionStatus.SUBSCRIBED
+                subscriptionModel.status =
+                    SubscriptionStatus.fromNotificationTypes(
+                        subscription.notificationTypes ?: SubscriptionStatus.SUBSCRIBED.value,
+                    )
                 subscriptionModel.type =
                     when (subscription.type!!) {
                         SubscriptionObjectType.EMAIL -> {

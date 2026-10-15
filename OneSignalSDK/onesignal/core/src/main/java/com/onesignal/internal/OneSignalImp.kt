@@ -53,6 +53,7 @@ import com.onesignal.user.internal.jwt.JwtTokenStore
 import com.onesignal.user.internal.properties.PropertiesModelStore
 import com.onesignal.user.internal.resolveAppId
 import com.onesignal.user.internal.subscriptions.SubscriptionModelStore
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.runBlocking
@@ -826,7 +827,7 @@ internal class OneSignalImp : IOneSignal,
     }
 
     override suspend fun login(
-        externalId: String,
+        externalId: String?,
         profile: OneSignalUserProfile,
         jwtBearerToken: String?,
     ): OneSignalResult<LoginData> =
@@ -834,12 +835,13 @@ internal class OneSignalImp : IOneSignal,
             Logging.log(LogLevel.DEBUG, "login(externalId: $externalId, profile: $profile, jwtBearerToken: ...${jwtBearerToken?.takeLast(8)})")
 
             profile.validationError()?.let {
+                Logging.error("login(externalId, profile) rejected: $it")
                 return@withContext OneSignalResult.failure(ErrorCode.INVALID_ARGUMENT, it)
             }
 
-            suspendUntilInit(operationName = "login")
+            awaitInitForLogin()?.let { return@withContext it }
 
-            if (isMissing(externalId, "login: externalId")) {
+            if (isMissing(externalId, "login: externalId") || externalId == null) {
                 return@withContext OneSignalResult.failure(
                     ErrorCode.INVALID_ARGUMENT,
                     "login: externalId is required",
@@ -867,6 +869,20 @@ internal class OneSignalImp : IOneSignal,
                 )
             }
             OneSignalResult.success(loginHelper.loginData(externalId, profile, fallbackOnesignalId = switched.onesignalId))
+        }
+
+    /** Waits for init; returns a NOT_INITIALIZED failure instead of throwing when it never started or failed. */
+    internal suspend fun awaitInitForLogin(): OneSignalResult<LoginData>? =
+        try {
+            suspendUntilInit(operationName = "login")
+            null
+        } catch (e: CancellationException) {
+            // A subclass of IllegalStateException, so it must be rethrown before the catch below.
+            throw e
+        } catch (e: IllegalStateException) {
+            // Callers can ignore the result, so the failure has to show up in the log.
+            Logging.error("login(externalId, profile) skipped: ${e.message}", e)
+            OneSignalResult.failure(ErrorCode.NOT_INITIALIZED, e.message, cause = e)
         }
 
     private fun loginFailureMessage(wait: OperationWaitResult): String =

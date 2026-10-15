@@ -82,6 +82,118 @@ class PushTokenManagerTests : FunSpec({
         pushTokenStatus shouldBe SubscriptionStatus.SUBSCRIBED
     }
 
+    test("sender mismatch replaces a previously successful token status") {
+        val mockPushRegistrator = mockk<IPushRegistrator>()
+        coEvery { mockPushRegistrator.registerForPush() } returns
+            IPushRegistrator.RegisterResult("host-fid", SubscriptionStatus.SUBSCRIBED) andThen
+            IPushRegistrator.RegisterResult(
+                null,
+                SubscriptionStatus.INVALID_FCM_SENDER_ID,
+                isExistingTokenInvalid = true,
+            )
+        val mockDeviceService = MockHelper.deviceService()
+        every { mockDeviceService.jetpackLibraryStatus } returns IDeviceService.JetpackLibraryStatus.OK
+        val pushTokenManager = PushTokenManager(mockPushRegistrator, mockDeviceService)
+
+        pushTokenManager.retrievePushToken()
+        val response = pushTokenManager.retrievePushToken()
+
+        response.token shouldBe null
+        response.status shouldBe SubscriptionStatus.INVALID_FCM_SENDER_ID
+        pushTokenManager.pushToken shouldBe null
+        pushTokenManager.pushTokenStatus shouldBe SubscriptionStatus.INVALID_FCM_SENDER_ID
+    }
+
+    test("missing sender id preserves a previously successful token") {
+        val mockPushRegistrator = mockk<IPushRegistrator>()
+        coEvery { mockPushRegistrator.registerForPush() } returns
+            IPushRegistrator.RegisterResult("push-token", SubscriptionStatus.SUBSCRIBED) andThen
+            IPushRegistrator.RegisterResult(null, SubscriptionStatus.INVALID_FCM_SENDER_ID)
+        val mockDeviceService = MockHelper.deviceService()
+        every { mockDeviceService.jetpackLibraryStatus } returns IDeviceService.JetpackLibraryStatus.OK
+        val pushTokenManager = PushTokenManager(mockPushRegistrator, mockDeviceService)
+
+        pushTokenManager.retrievePushToken()
+        val response = pushTokenManager.retrievePushToken()
+
+        response.token shouldBe "push-token"
+        response.status shouldBe SubscriptionStatus.SUBSCRIBED
+        pushTokenManager.pushToken shouldBe "push-token"
+        pushTokenManager.pushTokenStatus shouldBe SubscriptionStatus.SUBSCRIBED
+    }
+
+    test("unrelated permanent errors preserve a previously successful token") {
+        val mockPushRegistrator = mockk<IPushRegistrator>()
+        coEvery { mockPushRegistrator.registerForPush() } returns
+            IPushRegistrator.RegisterResult("push-token", SubscriptionStatus.SUBSCRIBED) andThen
+            IPushRegistrator.RegisterResult(null, SubscriptionStatus.MISSING_FIREBASE_FCM_LIBRARY)
+        val mockDeviceService = MockHelper.deviceService()
+        every { mockDeviceService.jetpackLibraryStatus } returns IDeviceService.JetpackLibraryStatus.OK
+        val pushTokenManager = PushTokenManager(mockPushRegistrator, mockDeviceService)
+
+        pushTokenManager.retrievePushToken()
+        val response = pushTokenManager.retrievePushToken()
+
+        response.token shouldBe "push-token"
+        response.status shouldBe SubscriptionStatus.SUBSCRIBED
+        pushTokenManager.pushToken shouldBe "push-token"
+        pushTokenManager.pushTokenStatus shouldBe SubscriptionStatus.SUBSCRIBED
+    }
+
+    test("retryable errors preserve a previously successful token") {
+        val retryableStatuses =
+            listOf(
+                SubscriptionStatus.FIREBASE_FCM_ERROR_MISC_EXCEPTION,
+                SubscriptionStatus.FIREBASE_FCM_FID_REGISTRATION_FAILED,
+            )
+
+        retryableStatuses.forEach { retryableStatus ->
+            val mockPushRegistrator = mockk<IPushRegistrator>()
+            coEvery { mockPushRegistrator.registerForPush() } returns
+                IPushRegistrator.RegisterResult("push-token", SubscriptionStatus.SUBSCRIBED) andThen
+                IPushRegistrator.RegisterResult(null, retryableStatus)
+            val mockDeviceService = MockHelper.deviceService()
+            every { mockDeviceService.jetpackLibraryStatus } returns IDeviceService.JetpackLibraryStatus.OK
+            val pushTokenManager = PushTokenManager(mockPushRegistrator, mockDeviceService)
+
+            pushTokenManager.retrievePushToken()
+            val response = pushTokenManager.retrievePushToken()
+
+            retryableStatus.isRetryableTokenError shouldBe true
+            response.token shouldBe "push-token"
+            response.status shouldBe SubscriptionStatus.SUBSCRIBED
+            pushTokenManager.pushToken shouldBe "push-token"
+            pushTokenManager.pushTokenStatus shouldBe SubscriptionStatus.SUBSCRIBED
+        }
+    }
+
+    test("FID errors preserve a previously successful token") {
+        val fidErrors =
+            listOf(
+                SubscriptionStatus.FIREBASE_FCM_FID_DEFAULT_APP_MISSING,
+                SubscriptionStatus.FIREBASE_FCM_FID_REGISTER_API_UNAVAILABLE,
+                SubscriptionStatus.FIREBASE_FCM_FID_REGISTRATION_FAILED,
+            )
+
+        fidErrors.forEach { fidError ->
+            val mockPushRegistrator = mockk<IPushRegistrator>()
+            coEvery { mockPushRegistrator.registerForPush() } returns
+                IPushRegistrator.RegisterResult("installation-id", SubscriptionStatus.SUBSCRIBED) andThen
+                IPushRegistrator.RegisterResult(null, fidError)
+            val mockDeviceService = MockHelper.deviceService()
+            every { mockDeviceService.jetpackLibraryStatus } returns IDeviceService.JetpackLibraryStatus.OK
+            val pushTokenManager = PushTokenManager(mockPushRegistrator, mockDeviceService)
+
+            pushTokenManager.retrievePushToken()
+            val response = pushTokenManager.retrievePushToken()
+
+            response.token shouldBe "installation-id"
+            response.status shouldBe SubscriptionStatus.SUBSCRIBED
+            pushTokenManager.pushToken shouldBe "installation-id"
+            pushTokenManager.pushTokenStatus shouldBe SubscriptionStatus.SUBSCRIBED
+        }
+    }
+
     test("retrievePushToken should fail with failure status from push registrator with config-type error") {
         // Given
         val mockPushRegistrator = mockk<IPushRegistrator>()

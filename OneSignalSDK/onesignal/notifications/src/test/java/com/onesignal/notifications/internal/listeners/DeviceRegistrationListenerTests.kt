@@ -1,5 +1,8 @@
 package com.onesignal.notifications.internal.listeners
 
+import com.onesignal.common.modeling.ModelChangeTags
+import com.onesignal.common.threading.suspendifyOnIO
+import com.onesignal.core.internal.config.ConfigModel
 import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
@@ -14,11 +17,16 @@ import com.onesignal.user.internal.subscriptions.SubscriptionModel
 import com.onesignal.user.internal.subscriptions.SubscriptionStatus
 import com.onesignal.user.internal.subscriptions.SubscriptionType
 import io.kotest.core.spec.style.FunSpec
+import io.kotest.matchers.shouldBe
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 
 private const val NEW_TOKEN = "new-token"
 
@@ -269,5 +277,50 @@ class DeviceRegistrationListenerTests : FunSpec({
                 SubscriptionStatus.NO_PERMISSION,
             )
         }
+    }
+
+    test("serializes overlapping startup and hydration token retrievals") {
+        val harness =
+            Harness(
+                permission = true,
+                pushModel = uninitializedPushModel(),
+            )
+        val blocks = mutableListOf<suspend () -> Unit>()
+        every { suspendifyOnIO(any<suspend () -> Unit>()) } answers {
+            blocks += firstArg<suspend () -> Unit>()
+        }
+        val firstStarted = CompletableDeferred<Unit>()
+        val finishFirst = CompletableDeferred<Unit>()
+        var requestCount = 0
+        coEvery { harness.pushTokenManager.retrievePushToken() } coAnswers {
+            if (requestCount++ == 0) {
+                firstStarted.complete(Unit)
+                finishFirst.await()
+                PushTokenResponse("startup-token", SubscriptionStatus.SUBSCRIBED)
+            } else {
+                PushTokenResponse("hydrated-token", SubscriptionStatus.SUBSCRIBED)
+            }
+        }
+        val updates = mutableListOf<String?>()
+        every {
+            harness.subscriptionManager.addOrUpdatePushSubscriptionToken(any(), any())
+        } answers {
+            updates += firstArg<String?>()
+        }
+
+        harness.listener.start()
+        harness.listener.onModelReplaced(mockk<ConfigModel>(relaxed = true), ModelChangeTags.HYDRATE)
+
+        val startup = async(Dispatchers.Default) { blocks[0]() }
+        firstStarted.await()
+        val hydration =
+            async(Dispatchers.Default, start = CoroutineStart.UNDISPATCHED) {
+                blocks[1]()
+            }
+        finishFirst.complete(Unit)
+        startup.await()
+        hydration.await()
+
+        updates shouldBe listOf("startup-token", "hydrated-token")
     }
 })
