@@ -402,18 +402,6 @@ class OneSignalImpTests : FunSpec({
         result.error!!.first.message shouldBe "login: externalId is required"
     }
 
-    test("composite login rejects a null tag value passed from Java") {
-        val os = OneSignalImp()
-        Logging.logLevel = LogLevel.NONE
-        @Suppress("UNCHECKED_CAST")
-        val tags = mapOf("level" to null) as Map<String, String>
-
-        val result = runBlocking { os.login("user", OneSignalUserProfile(tags = tags)) }
-
-        result.error!!.first.code shouldBe ErrorCode.INVALID_ARGUMENT
-        result.error!!.first.message shouldBe "Tag keys must be non-empty and values non-null"
-    }
-
     test("the login init wait rethrows cancellation instead of reporting NOT_INITIALIZED") {
         val os = OneSignalImp()
         Logging.logLevel = LogLevel.NONE

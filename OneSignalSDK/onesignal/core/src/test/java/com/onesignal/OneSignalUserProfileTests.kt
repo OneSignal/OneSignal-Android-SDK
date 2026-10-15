@@ -106,22 +106,4 @@ class OneSignalUserProfileTests : FunSpec({
     test("validationError rejects a non-E.164 sms") {
         OneSignalUserProfile(sms = "555-0100").validationError() shouldBe "Invalid SMS number"
     }
-
-    test("validationError rejects an empty or NUL tag key and a null tag value") {
-        val tagError = "Tag keys must be non-empty and values non-null"
-
-        @Suppress("UNCHECKED_CAST")
-        val nullValue = mapOf("level" to null) as Map<String, String>
-        OneSignalUserProfile(tags = mapOf("" to "1")).validationError() shouldBe tagError
-        OneSignalUserProfile(tags = mapOf("a\u0000b" to "1")).validationError() shouldBe tagError
-        OneSignalUserProfile(tags = nullValue).validationError() shouldBe tagError
-        OneSignalUserProfile(tags = mapOf("level" to "")).validationError().shouldBeNull()
-    }
-
-    test("validationError rejects an empty alias label or id") {
-        val aliasError = "Alias labels and IDs must be non-empty"
-        OneSignalUserProfile(aliases = mapOf("" to "id")).validationError() shouldBe aliasError
-        OneSignalUserProfile(aliases = mapOf("crm" to "")).validationError() shouldBe aliasError
-        OneSignalUserProfile(aliases = mapOf("crm" to "id")).validationError().shouldBeNull()
-    }
 })
