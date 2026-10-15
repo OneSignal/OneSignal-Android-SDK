@@ -426,4 +426,16 @@ class OneSignalImpTests : FunSpec({
         cancelled shouldBe true
         outcome shouldBe null
     }
+
+    test("composite login rejects a null tag value passed from Java") {
+        val os = OneSignalImp()
+        Logging.logLevel = LogLevel.NONE
+        @Suppress("UNCHECKED_CAST")
+        val tags = mapOf("level" to null) as Map<String, String>
+
+        val result = runBlocking { os.login("user", OneSignalUserProfile(tags = tags)) }
+
+        result.error!!.first.code shouldBe ErrorCode.INVALID_ARGUMENT
+        result.error!!.first.message shouldBe "Tag keys must be non-empty and values non-null"
+    }
 })

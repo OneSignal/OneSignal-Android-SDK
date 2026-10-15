@@ -1,6 +1,7 @@
 package com.onesignal
 
 import com.onesignal.common.OneSignalUtils
+import com.onesignal.common.hasNullByte
 import java.util.Collections
 
 /**
@@ -25,8 +26,13 @@ class OneSignalUserProfile private constructor(builder: Builder) {
         when {
             email != null && !OneSignalUtils.isValidEmail(email) -> "Invalid email address"
             sms != null && !OneSignalUtils.isValidPhoneNumber(sms) -> "Invalid SMS number"
+            // Java callers can put nulls in these maps despite the non-null types.
+            tags.any { (key, value) -> isBadKey(key) || (value as String?) == null } -> "Tag keys must be non-empty and values non-null"
+            aliases.any { (label, id) -> isBadKey(label) || isBadKey(id) } -> "Alias labels and IDs must be non-empty"
             else -> null
         }
+
+    private fun isBadKey(value: String?) = value.isNullOrEmpty() || hasNullByte(value)
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
