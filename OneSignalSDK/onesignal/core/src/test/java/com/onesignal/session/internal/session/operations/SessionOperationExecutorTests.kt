@@ -1,11 +1,11 @@
 package com.onesignal.session.internal.session.operations
 
 import com.onesignal.common.exceptions.BackendException
+import com.onesignal.common.threading.runOnSerialIO
 import com.onesignal.core.internal.operations.ExecutionResult
 import com.onesignal.core.internal.operations.impl.OperationModelStore
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
-import com.onesignal.mocks.IOMockHelper
 import com.onesignal.mocks.MockHelper
 import com.onesignal.mocks.MockPreferencesService
 import com.onesignal.session.internal.session.SessionModel
@@ -21,10 +21,16 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.withTimeout
 
 private class Mocks {
     val backend = mockk<ISessionsBackendService>()
-    val session = SessionModel().apply { localSessionId = "local-session" }
+    val session =
+        SessionModel().apply {
+            localSessionId = "local-session"
+            onesignalId = "local-user"
+        }
     val newRecordState = mockk<NewRecordsState>().also { every { it.isInMissingRetryWindow(any()) } returns false }
     val executor =
         SessionOperationExecutor(
@@ -35,14 +41,19 @@ private class Mocks {
         )
 }
 
-private fun create() = CreateSessionOperation("appId", "local-session", "onesignalId", "subscriptionId", startTime = 1_700_000_000_500L)
+private fun create() = CreateSessionOperation("appId", "local-session", "onesignalId", "subscriptionId", startTime = 1_700_000_000_500L, externalId = null)
 
 private fun update(endTime: Long? = null) =
     UpdateSessionOperation("appId", "server-session", "onesignalId", "subscriptionId", activeDuration = 61_900L, endTime = endTime)
 
-class SessionOperationExecutorTests : FunSpec({
-    listener(IOMockHelper)
+/** The executor writes the session on serial IO; this waits for work queued there before it. */
+private suspend fun awaitSerialIO() {
+    val done = CompletableDeferred<Unit>()
+    runOnSerialIO { done.complete(Unit) }
+    withTimeout(5_000) { done.await() }
+}
 
+class SessionOperationExecutorTests : FunSpec({
     beforeAny {
         Logging.logLevel = LogLevel.NONE
     }
@@ -55,11 +66,14 @@ class SessionOperationExecutorTests : FunSpec({
 
         // When
         val response = mocks.executor.execute(listOf(op))
+        awaitSerialIO()
 
         // Then
         response.result shouldBe ExecutionResult.SUCCESS
         response.idTranslations shouldBe mapOf("local-session" to "server-session")
         mocks.session.serverSessionId shouldBe "server-session"
+        mocks.session.onesignalId shouldBe "onesignalId"
+        mocks.session.subscriptionId shouldBe "subscriptionId"
         coVerify {
             mocks.backend.createSession(
                 "appId",
@@ -74,15 +88,20 @@ class SessionOperationExecutorTests : FunSpec({
         coEvery { mocks.backend.createSession(any(), any()) } returns "server-session"
 
         mocks.executor.execute(listOf(create()))
+        awaitSerialIO()
 
         mocks.session.serverSessionId shouldBe null
     }
 
-    test("create without a session_id in the response is dropped") {
+    test("create without a session_id in the response is retried, then dropped") {
         val mocks = Mocks()
+        val op = create()
         coEvery { mocks.backend.createSession(any(), any()) } returns null
 
-        mocks.executor.execute(listOf(create())).result shouldBe ExecutionResult.FAIL_NORETRY
+        val results = (1..SessionOperationExecutor.MAX_MISSING_SESSION_ID_ATTEMPTS).map { mocks.executor.execute(listOf(op)).result }
+
+        results shouldBe listOf(ExecutionResult.FAIL_RETRY, ExecutionResult.FAIL_RETRY, ExecutionResult.FAIL_NORETRY)
+        coVerify(exactly = 3) { mocks.backend.createSession(any(), match { it.idempotencyKey == op.idempotencyKey }) }
     }
 
     test("update sends the duration and end time in seconds") {
@@ -152,12 +171,17 @@ class SessionOperationExecutorTests : FunSpec({
         restoredCreate.shouldBeInstanceOf<CreateSessionOperation>()
         restoredCreate.idempotencyKey shouldBe create.idempotencyKey
         restoredCreate.startTime shouldBe create.startTime
+        restoredCreate.missingSessionIdAttempts shouldBe 0
         restoredUpdate.shouldBeInstanceOf<UpdateSessionOperation>()
         restoredUpdate.idempotencyKey shouldBe update.idempotencyKey
         restoredUpdate.endTime shouldBe 1L
     }
 
-    test("each operation gets its own idempotency key") {
-        (create().idempotencyKey == create().idempotencyKey) shouldBe false
+    test("a create is keyed by its local session ID") {
+        create().idempotencyKey shouldBe "local-session"
+    }
+
+    test("each update gets its own idempotency key") {
+        (update().idempotencyKey == update().idempotencyKey) shouldBe false
     }
 })

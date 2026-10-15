@@ -1,5 +1,6 @@
 package com.onesignal.core.internal.operations.impl
 
+import com.onesignal.common.IDManager
 import com.onesignal.core.internal.operations.Operation
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.session.internal.session.operations.CreateSessionOperation
@@ -12,6 +13,8 @@ import com.onesignal.session.internal.session.operations.UpdateSessionOperation
  */
 internal class SessionQueuePolicy(
     private val maxQueued: Int = MAX_QUEUED_SESSION_OPERATIONS,
+    // Without consent HttpClient fails every request, so these must not be stored or sent.
+    private val awaitingConsent: () -> Boolean = { false },
 ) {
     // Recent local -> backend ID translations, for updates built from a local ID just before the
     // create succeeded but enqueued after the queue was translated.
@@ -27,11 +30,24 @@ internal class SessionQueuePolicy(
             override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Unit>?) = size > MAX_CLOSED_SESSIONS
         }
 
+    // Creates by local session ID, and by backend session ID once sent. Kept after they leave the
+    // queue so updates enqueued while one executes, or after it succeeded, still find it.
+    private val creates =
+        object : LinkedHashMap<String, CreateSessionOperation>() {
+            override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, CreateSessionOperation>?) = size > maxQueued * 2
+        }
+
     fun recordTranslations(idTranslations: Map<String, String>) {
         recentTranslations.putAll(idTranslations)
         idTranslations.forEach { (localId, backendId) ->
             if (closedSessions.remove(localId) != null) closedSessions[backendId] = Unit
+            creates[localId]?.let { creates[backendId] = it }
         }
+    }
+
+    /** For operations loaded from the store, which skip [onEnqueue]. */
+    fun onLoaded(op: Operation) {
+        if (op is CreateSessionOperation) creates[op.localSessionId] = op
     }
 
     class EnqueueResult(
@@ -47,12 +63,28 @@ internal class SessionQueuePolicy(
         if (!op.isSessionOperation) return EnqueueResult(accept = true)
         op.translateIds(recentTranslations)
 
-        return if (op is UpdateSessionOperation && (op.sessionId in closedSessions || hasQueuedEnd(queue, op.sessionId))) {
-            Logging.debug("SessionQueuePolicy: session ${op.sessionId} is closed, dropping $op")
-            EnqueueResult(accept = false)
-        } else {
-            admit(queue, incoming)
-        }
+        val result =
+            when {
+                awaitingConsent() -> {
+                    Logging.debug("SessionQueuePolicy: privacy consent not given, dropping $op")
+                    EnqueueResult(accept = false)
+                }
+                op is UpdateSessionOperation && (op.sessionId in closedSessions || hasQueuedEnd(queue, op.sessionId)) -> {
+                    Logging.debug("SessionQueuePolicy: session ${op.sessionId} is closed, dropping $op")
+                    EnqueueResult(accept = false)
+                }
+                op is UpdateSessionOperation && IDManager.isLocalId(op.sessionId) && op.sessionId !in creates -> {
+                    Logging.debug("SessionQueuePolicy: session ${op.sessionId} has no create, dropping $op")
+                    EnqueueResult(accept = false)
+                }
+                else -> {
+                    if (op is UpdateSessionOperation) creates[op.sessionId]?.let { op.useIdsOf(it) }
+                    admit(queue, incoming)
+                }
+            }
+        // Its updates could never be sent.
+        if (!result.accept && op is CreateSessionOperation) closedSessions[op.localSessionId] = Unit
+        return result
     }
 
     private fun admit(
@@ -85,6 +117,7 @@ internal class SessionQueuePolicy(
             removed.addAll(dropped)
             if (op.sessionKey == oldestSession) accept = false
         }
+        if (accept && op is CreateSessionOperation) creates[op.localSessionId] = op
         if (accept && op is UpdateSessionOperation && op.isEnd) closedSessions[op.sessionId] = Unit
         return EnqueueResult(accept, removed)
     }

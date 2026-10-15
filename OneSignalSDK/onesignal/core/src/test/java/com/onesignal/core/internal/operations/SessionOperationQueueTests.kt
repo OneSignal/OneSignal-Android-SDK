@@ -81,13 +81,15 @@ private class SessionQueueMocks(
 private fun create(
     localSessionId: String = "local-s1",
     onesignalId: String = "onesignalId",
-) = CreateSessionOperation("appId", localSessionId, onesignalId, "subscriptionId", startTime = 1_000L)
+    externalId: String? = null,
+) = CreateSessionOperation("appId", localSessionId, onesignalId, "subscriptionId", startTime = 1_000L, externalId)
 
 private fun update(
-    sessionId: String = "local-s1",
+    sessionId: String = "server-s1",
     activeDuration: Long = 1_000L,
     endTime: Long? = null,
-) = UpdateSessionOperation("appId", sessionId, "onesignalId", "subscriptionId", activeDuration, endTime)
+    onesignalId: String = "onesignalId",
+) = UpdateSessionOperation("appId", sessionId, onesignalId, "subscriptionId", activeDuration, endTime)
 
 private fun item(op: Operation) = OperationRepo.OperationQueueItem(op, bucket = 0)
 
@@ -145,7 +147,7 @@ class SessionOperationQueueTests : FunSpec({
         val max = SessionQueuePolicy.MAX_QUEUED_SESSION_OPERATIONS
         val others = (1 until max).map { create(localSessionId = "local-other-$it") }
 
-        mocks.enqueueAll(create(), update(), *others.toTypedArray())
+        mocks.enqueueAll(create(), update(sessionId = "local-s1"), *others.toTypedArray())
 
         mocks.queued() shouldContainExactly others
         mocks.operationModelStore.list().size shouldBe others.size
@@ -187,7 +189,9 @@ class SessionOperationQueueTests : FunSpec({
 
     test("an end recorded under the local ID still drops updates after the create succeeds") {
         val policy = SessionQueuePolicy()
-        policy.onEnqueue(mutableListOf(), item(update(endTime = 9L)))
+        val queue = mutableListOf<OperationRepo.OperationQueueItem>()
+        policy.onEnqueue(queue, item(create()))
+        policy.onEnqueue(queue, item(update(sessionId = "local-s1", endTime = 9L))).accept shouldBe true
 
         policy.recordTranslations(mapOf("local-s1" to "server-s1"))
 
@@ -199,7 +203,63 @@ class SessionOperationQueueTests : FunSpec({
 
         policy.onDropped(mutableListOf(), create())
 
-        policy.onEnqueue(mutableListOf(), item(update())).accept shouldBe false
+        policy.onEnqueue(mutableListOf(), item(update(sessionId = "local-s1"))).accept shouldBe false
+    }
+
+    test("an update with a local session ID and no create is rejected") {
+        SessionQueuePolicy().onEnqueue(mutableListOf(), item(update(sessionId = "local-s1"))).accept shouldBe false
+    }
+
+    test("an update carries the IDs its create was sent with") {
+        val policy = SessionQueuePolicy()
+        val queue = mutableListOf<OperationRepo.OperationQueueItem>()
+        val create = create(onesignalId = "local-user")
+        policy.onEnqueue(queue, item(create))
+        val queued = update(sessionId = "local-s1", onesignalId = "user-b")
+
+        policy.onEnqueue(queue, item(queued))
+
+        queued.onesignalId shouldBe "local-user"
+    }
+
+    test("an update after its create succeeded carries the create's IDs") {
+        val policy = SessionQueuePolicy()
+        val create = create(onesignalId = "user-a")
+        policy.onEnqueue(mutableListOf(), item(create))
+        policy.recordTranslations(mapOf("local-s1" to "server-s1"))
+        val later = update(sessionId = "server-s1", onesignalId = "user-b")
+
+        policy.onEnqueue(mutableListOf(), item(later))
+
+        later.onesignalId shouldBe "user-a"
+    }
+
+    test("an update for a create loaded from the store is accepted") {
+        val policy = SessionQueuePolicy()
+        policy.onLoaded(create())
+
+        policy.onEnqueue(mutableListOf(), item(update(sessionId = "local-s1"))).accept shouldBe true
+    }
+
+    test("session operations are not stored before privacy consent") {
+        val mocks = SessionQueueMocks()
+        mocks.configModelStore.model.consentRequired = true
+        mocks.configModelStore.model.consentGiven = false
+
+        mocks.enqueueAll(create(), update())
+
+        mocks.queued() shouldBe emptyList()
+        mocks.operationModelStore.list() shouldBe emptyList()
+    }
+
+    test("an update for a session whose create was rejected is rejected") {
+        var awaitingConsent = true
+        val policy = SessionQueuePolicy(awaitingConsent = { awaitingConsent })
+        policy.onEnqueue(mutableListOf(), item(create())).accept shouldBe false
+
+        awaitingConsent = false
+
+        policy.onEnqueue(mutableListOf(), item(update(sessionId = "local-s1"))).accept shouldBe false
     }
 
     test("a session create does not stall other operations for the post-create delay") {
@@ -230,7 +290,7 @@ class SessionOperationQueueTests : FunSpec({
             }
         }
 
-        mocks.enqueueAll(create(), update())
+        mocks.enqueueAll(create(), update(sessionId = "local-s1"))
         mocks.operationRepo.start()
         awaitExecuted(mocks, 2)
 
@@ -254,7 +314,7 @@ class SessionOperationQueueTests : FunSpec({
         created.await()
         awaitExecuted(mocks, 1)
 
-        mocks.operationRepo.enqueue(update())
+        mocks.operationRepo.enqueue(update(sessionId = "local-s1"))
         awaitExecuted(mocks, 2)
 
         (mocks.executed[1] as UpdateSessionOperation).sessionId shouldBe "server-s1"
@@ -264,7 +324,7 @@ class SessionOperationQueueTests : FunSpec({
         val mocks = SessionQueueMocks()
         mocks.respond = { ExecutionResponse(ExecutionResult.FAIL_NORETRY) }
 
-        mocks.enqueueAll(create(), update(), update(sessionId = "server-other"))
+        mocks.enqueueAll(create(), update(sessionId = "local-s1"), update(sessionId = "server-other"))
         mocks.operationRepo.start()
         awaitExecuted(mocks, 2)
 
@@ -307,6 +367,19 @@ class SessionOperationQueueTests : FunSpec({
         mocks.operationRepo.removeOperationsWithoutExternalId()
 
         mocks.queued().size shouldBe 1
+    }
+
+    test("a create for an anonymous user that was never created is purged with its updates under identity verification") {
+        val mocks = SessionQueueMocks()
+        mocks.configModelStore.model.useIdentityVerification = JwtRequirement.REQUIRED
+        mocks.identityVerificationService = CoreInternalMocks.identityVerificationService(newCodePathsRun = true, ivBehaviorActive = true)
+        val kept = create(localSessionId = "local-s2", onesignalId = "local-user", externalId = "alice")
+
+        mocks.enqueueAll(create(onesignalId = "local-anon"), update(sessionId = "local-s1"), kept)
+        mocks.operationRepo.removeOperationsWithoutExternalId()
+
+        mocks.queued() shouldContainExactly listOf(kept)
+        mocks.operationModelStore.list() shouldContainExactly listOf(kept)
     }
 })
 

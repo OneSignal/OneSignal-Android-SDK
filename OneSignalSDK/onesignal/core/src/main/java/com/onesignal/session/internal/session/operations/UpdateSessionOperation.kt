@@ -87,6 +87,12 @@ internal class UpdateSessionOperation() : Operation(SessionOperationExecutor.UPD
         this.idempotencyKey = UUID.randomUUID().toString()
     }
 
+    /** The backend requires an update to repeat the user and subscription its create sent. */
+    fun useIdsOf(create: CreateSessionOperation) {
+        onesignalId = create.onesignalId
+        subscriptionId = create.subscriptionId
+    }
+
     override fun translateIds(map: Map<String, String>) {
         map[sessionId]?.let { sessionId = it }
         map[onesignalId]?.let { onesignalId = it }

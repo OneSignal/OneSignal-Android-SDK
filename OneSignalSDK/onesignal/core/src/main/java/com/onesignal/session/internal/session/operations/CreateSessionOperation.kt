@@ -4,7 +4,6 @@ import com.onesignal.common.IDManager
 import com.onesignal.core.internal.operations.GroupComparisonType
 import com.onesignal.core.internal.operations.Operation
 import com.onesignal.session.internal.session.operations.impl.SessionOperationExecutor
-import java.util.UUID
 
 /**
  * An [Operation] to create a session through the sessions API.
@@ -45,11 +44,14 @@ internal class CreateSessionOperation() : Operation(SessionOperationExecutor.CRE
             setLongProperty(::startTime.name, value)
         }
 
-    /** Persisted so a retry after a restart is recognized by the backend as the same request. */
-    var idempotencyKey: String
-        get() = getStringProperty(::idempotencyKey.name)
-        private set(value) {
-            setStringProperty(::idempotencyKey.name, value)
+    /** Stable across retries and restarts, so the backend recognizes a resent create. */
+    val idempotencyKey: String get() = localSessionId
+
+    /** Responses so far that had no session_id. */
+    var missingSessionIdAttempts: Int
+        get() = getOptIntProperty(::missingSessionIdAttempts.name) ?: 0
+        internal set(value) {
+            setIntProperty(::missingSessionIdAttempts.name, value)
         }
 
     override val requiresJwt: Boolean get() = false
@@ -66,13 +68,14 @@ internal class CreateSessionOperation() : Operation(SessionOperationExecutor.CRE
         onesignalId: String,
         subscriptionId: String,
         startTime: Long,
+        externalId: String?,
     ) : this() {
         this.appId = appId
         this.localSessionId = localSessionId
         this.onesignalId = onesignalId
         this.subscriptionId = subscriptionId
         this.startTime = startTime
-        this.idempotencyKey = UUID.randomUUID().toString()
+        this.externalId = externalId
     }
 
     override fun translateIds(map: Map<String, String>) {

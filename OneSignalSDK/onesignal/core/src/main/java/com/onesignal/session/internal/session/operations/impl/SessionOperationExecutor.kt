@@ -53,17 +53,35 @@ internal class SessionOperationExecutor(
                 return failure(ex, retryMissing)
             }
 
-        return if (sessionId == null) {
-            Logging.warn("SessionOperationExecutor: create session response has no session_id, dropping $operation")
-            ExecutionResponse(ExecutionResult.FAIL_NORETRY)
-        } else {
-            // Updates enqueued later read the backend ID from the model; queued ones are translated.
-            // Serial IO is where SessionService starts new sessions, so a newer one can't get this ID.
-            runOnSerialIO {
-                val session = sessionModelStore.model
-                if (session.localSessionId == operation.localSessionId) session.serverSessionId = sessionId
+        return if (sessionId == null) missingSessionId(operation) else created(operation, sessionId)
+    }
+
+    private suspend fun created(
+        operation: CreateSessionOperation,
+        sessionId: String,
+    ): ExecutionResponse {
+        // Updates enqueued later read these from the model; queued ones are translated.
+        // Serial IO is where SessionService starts new sessions, so a newer one can't get them.
+        runOnSerialIO {
+            val session = sessionModelStore.model
+            if (session.localSessionId == operation.localSessionId) {
+                session.serverSessionId = sessionId
+                session.onesignalId = operation.onesignalId
+                session.subscriptionId = operation.subscriptionId
             }
-            ExecutionResponse(ExecutionResult.SUCCESS, idTranslations = mapOf(operation.localSessionId to sessionId))
+        }
+        return ExecutionResponse(ExecutionResult.SUCCESS, idTranslations = mapOf(operation.localSessionId to sessionId))
+    }
+
+    /** A retry with the same idempotency key should return the session the backend already created. */
+    private fun missingSessionId(operation: CreateSessionOperation): ExecutionResponse {
+        operation.missingSessionIdAttempts++
+        return if (operation.missingSessionIdAttempts < MAX_MISSING_SESSION_ID_ATTEMPTS) {
+            Logging.warn("SessionOperationExecutor: create session response has no session_id, retrying $operation")
+            ExecutionResponse(ExecutionResult.FAIL_RETRY)
+        } else {
+            Logging.warn("SessionOperationExecutor: create session responses never had a session_id, dropping $operation")
+            ExecutionResponse(ExecutionResult.FAIL_NORETRY)
         }
     }
 
@@ -109,6 +127,7 @@ internal class SessionOperationExecutor(
     companion object {
         const val CREATE_SESSION = "create-session"
         const val UPDATE_SESSION = "update-session"
+        const val MAX_MISSING_SESSION_ID_ATTEMPTS = 3
 
         private const val HTTP_NOT_FOUND = 404
         private const val HTTP_REQUEST_TIMEOUT = 408
