@@ -13,6 +13,7 @@ import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.mocks.CoreInternalMocks
 import com.onesignal.mocks.MockHelper
 import com.onesignal.mocks.MockPreferencesService
+import com.onesignal.session.internal.session.operations.SessionStateModelStore
 import com.onesignal.user.internal.jwt.JwtRequirement
 import com.onesignal.user.internal.jwt.JwtTokenStore
 import com.onesignal.user.internal.operations.CreateSubscriptionOperation
@@ -94,6 +95,7 @@ private class Mocks {
                 getNewRecordState(configModelStore),
                 jwtTokenStore,
                 identityVerificationService,
+                SessionStateModelStore(MockPreferencesService()),
             ),
             recordPrivateCalls = true,
         )
@@ -121,6 +123,7 @@ class OperationRepoTests : FunSpec({
                     getNewRecordState(mocks.configModelStore),
                     JwtTokenStore(MockPreferencesService()),
                     CoreInternalMocks.identityVerificationService(),
+                    SessionStateModelStore(MockPreferencesService()),
                 ),
             )
 
@@ -1068,6 +1071,8 @@ class OperationRepoTests : FunSpec({
 
         // Then
         response shouldBe true
+        // waiters wake before the delay starts
+        coVerify(timeout = 1_000) { mocks.operationRepo.delayForPostCreate(any()) }
         coVerifyOrder {
             // ensure the order: IDs are translated, operation removed from the store, then delay for postCreateDelay
             operation.translateIds(idTranslation)
@@ -1083,7 +1088,7 @@ class OperationRepoTests : FunSpec({
     test("ensure each time enqueue is called it restarts the delay time") {
         // Given
         val mocks = Mocks()
-        mocks.configModelStore.model.opRepoExecutionInterval = 100
+        mocks.configModelStore.model.opRepoExecutionInterval = 200
 
         // When
         mocks.operationRepo.start()

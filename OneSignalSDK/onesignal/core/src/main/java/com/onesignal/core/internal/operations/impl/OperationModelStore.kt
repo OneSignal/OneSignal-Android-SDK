@@ -4,6 +4,9 @@ import com.onesignal.common.modeling.ModelStore
 import com.onesignal.core.internal.operations.Operation
 import com.onesignal.core.internal.preferences.IPreferencesService
 import com.onesignal.debug.internal.logging.Logging
+import com.onesignal.session.internal.session.operations.CreateSessionOperation
+import com.onesignal.session.internal.session.operations.UpdateSessionOperation
+import com.onesignal.session.internal.session.operations.impl.SessionOperationExecutor
 import com.onesignal.user.internal.operations.CreateSubscriptionOperation
 import com.onesignal.user.internal.operations.DeleteAliasOperation
 import com.onesignal.user.internal.operations.DeleteSubscriptionOperation
@@ -63,6 +66,8 @@ internal class OperationModelStore(prefs: IPreferencesService) : ModelStore<Oper
                 UpdateUserOperationExecutor.TRACK_SESSION_END -> TrackSessionEndOperation()
                 UpdateUserOperationExecutor.TRACK_PURCHASE -> TrackPurchaseOperation()
                 CustomEventOperationExecutor.CUSTOM_EVENT -> TrackCustomEventOperation()
+                SessionOperationExecutor.CREATE_SESSION -> CreateSessionOperation()
+                SessionOperationExecutor.UPDATE_SESSION -> UpdateSessionOperation()
                 else -> throw Exception("Unrecognized operation: $operationName")
             }
 

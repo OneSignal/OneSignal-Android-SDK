@@ -97,11 +97,11 @@ class SessionModel : Model() {
         }
 
     /**
-     * Null until the sessions API creates this session. Cleared when a new session starts.
+     * Identifies this session's sessions API requests. A new local ID for each session.
      */
-    var serverSessionId: String?
-        get() = getOptStringProperty(::serverSessionId.name)
+    var localSessionId: String
+        get() = getStringProperty(::localSessionId.name) { "" }
         set(value) {
-            setOptStringProperty(::serverSessionId.name, value)
+            setStringProperty(::localSessionId.name, value)
         }
 }

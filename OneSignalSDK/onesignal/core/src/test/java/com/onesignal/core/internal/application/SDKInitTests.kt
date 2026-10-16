@@ -83,11 +83,7 @@ class SDKInitTests : FunSpec({
         error.get() shouldBe null
     }
 
-    beforeAny {
-        Logging.logLevel = LogLevel.NONE
-    }
-
-    afterAny {
+    fun clearPrefs() {
         val context = getApplicationContext<Context>()
         val prefs = context.getSharedPreferences("OneSignal", Context.MODE_PRIVATE)
         prefs.edit()
@@ -99,6 +95,16 @@ class SDKInitTests : FunSpec({
         otherPrefs.edit()
             .clear()
             .commit()
+    }
+
+    // Earlier specs in the same JVM can leave an appId behind.
+    beforeAny {
+        Logging.logLevel = LogLevel.NONE
+        clearPrefs()
+    }
+
+    afterAny {
+        clearPrefs()
     }
 
     test("accessor instances after initWithContext without appID shows the failure reason") {
