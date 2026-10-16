@@ -9,13 +9,13 @@ package com.onesignal.internal
 internal enum class InitState {
     /**
      * SDK initialization has not yet started.
-     * Calling SDK-dependent methods in this state will throw an exception.
+     * SDK-dependent calls log and return a default; they never throw.
      */
     NOT_STARTED,
 
     /**
      * SDK initialization is currently in progress.
-     * Calls that require initialization will block (via a latch) until this completes.
+     * Calls that require initialization wait (block or suspend) until this completes.
      */
     IN_PROGRESS,
 
@@ -26,8 +26,8 @@ internal enum class InitState {
     SUCCESS,
 
     /**
-     * SDK initialization has failed due to an unrecoverable error (e.g., missing app ID).
-     * All dependent operations should fail fast or throw until re-initialized.
+     * SDK initialization has failed (e.g., no usable app ID, locked storage).
+     * SDK-dependent calls log and return a default until a retry of initWithContext succeeds.
      */
     FAILED,
 
