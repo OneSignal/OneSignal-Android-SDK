@@ -48,36 +48,24 @@ import com.onesignal.user.internal.LoginHelper
 import com.onesignal.user.internal.LogoutHelper
 import com.onesignal.user.internal.UserSwitcher
 import com.onesignal.user.internal.identity.IdentityModelStore
+import com.onesignal.user.internal.isUsableAppId
 import com.onesignal.user.internal.jwt.JwtTokenStore
 import com.onesignal.user.internal.properties.PropertiesModelStore
-import com.onesignal.user.internal.resolveAppId
+import com.onesignal.user.internal.resolveAppIdV2
 import com.onesignal.user.internal.subscriptions.SubscriptionModelStore
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 
 internal class OneSignalImpV2 : IOneSignal,
     IServiceProvider {
-    // Reset every time the synchronized(initLock) block flips state to IN_PROGRESS so that
-    // a retry-after-FAILED gets a fresh latch instead of an already-completed one. Mutated only
-    // under initLock; reads outside that lock must local-capture before suspending on it.
-    @Volatile
-    private var suspendCompletion = CompletableDeferred<Unit>()
-
-    @Volatile
-    private var initState: InitState = InitState.NOT_STARTED
-
-    // Save the exception pointing to the caller that triggered init, not the async worker thread.
-    private var initFailureException: Exception? = null
+    internal val gate = InitGate()
 
     private var observabilityManager: IObservabilityLifecycleManager? = null
 
     override val sdkVersion: String = OneSignalUtils.sdkVersion
 
     override val isInitialized: Boolean
-        get() = initState == InitState.SUCCESS
+        get() = gate.isSuccess
 
     override var consentRequired: Boolean
         get() =
@@ -87,9 +75,9 @@ internal class OneSignalImpV2 : IOneSignal,
                 _consentRequired == true
             }
         set(value) {
-            _consentRequired = value
-            if (isInitialized) {
-                configModel.consentRequired = value
+            synchronized(configLock) {
+                _consentRequired = value
+                if (configApplied) configModel.consentRequired = value
             }
         }
 
@@ -101,13 +89,15 @@ internal class OneSignalImpV2 : IOneSignal,
                 _consentGiven == true
             }
         set(value) {
-            val oldValue = _consentGiven
-            _consentGiven = value
-            if (isInitialized) {
-                configModel.consentGiven = value
-                if (oldValue != value && value) {
-                    operationRepo.forceExecuteOperations()
+            val grantedNow =
+                synchronized(configLock) {
+                    val oldValue = _consentGiven
+                    _consentGiven = value
+                    if (configApplied) configModel.consentGiven = value
+                    configApplied && oldValue != value && value
                 }
+            if (grantedNow) {
+                operationRepo.forceExecuteOperations()
             }
         }
 
@@ -119,34 +109,65 @@ internal class OneSignalImpV2 : IOneSignal,
                 _disableGMSMissingPrompt == true
             }
         set(value) {
-            _disableGMSMissingPrompt = value
-            if (isInitialized) {
-                configModel.disableGMSMissingPrompt = value
+            synchronized(configLock) {
+                _disableGMSMissingPrompt = value
+                if (configApplied) configModel.disableGMSMissingPrompt = value
             }
         }
 
     // we hardcode the DebugManager implementation so it can be used prior to calling `initWithContext`
     override val debug: IDebugManager = DebugManager()
 
+    private val sessionSource = GatedSource(SdkOperation.SESSION, ISessionManager::class.java)
+    private val notificationsSource = GatedSource(SdkOperation.NOTIFICATIONS, INotificationsManager::class.java)
+    private val locationSource = GatedSource(SdkOperation.LOCATION, ILocationManager::class.java)
+    private val inAppMessagesSource = GatedSource(SdkOperation.IN_APP_MESSAGES, IInAppMessagesManager::class.java)
+    private val userSource = GatedSource(SdkOperation.USER, IUserManager::class.java)
+
+    private val deferredSession = DeferredSessionManager(sessionSource)
+    private val deferredNotifications = DeferredNotificationsManager(notificationsSource)
+    private val deferredLocation = DeferredLocationManager(locationSource)
+    private val deferredInAppMessages = DeferredInAppMessagesManager(inAppMessagesSource)
+    private val deferredUser = DeferredUserManager(userSource)
+    private val deferredJwtListeners = DeferredJwtListeners(GatedSource(SdkOperation.JWT_LISTENERS, JwtTokenStore::class.java))
+
     override val session: ISessionManager
-        get() =
-            waitAndReturn { services.getService() }
+        get() = sessionSource.peek() ?: deferredSession
 
     override val notifications: INotificationsManager
-        get() =
-            waitAndReturn { services.getService() }
+        get() = notificationsSource.peek() ?: deferredNotifications
 
     override val location: ILocationManager
-        get() =
-            waitAndReturn { services.getService() }
+        get() = locationSource.peek() ?: deferredLocation
 
     override val inAppMessages: IInAppMessagesManager
-        get() =
-            waitAndReturn { services.getService() }
+        get() = inAppMessagesSource.peek() ?: deferredInAppMessages
 
     override val user: IUserManager
-        get() =
-            waitAndReturn { services.getService() }
+        get() = userSource.peek() ?: deferredUser
+
+    private inner class GatedSource<T : Any>(
+        private val operation: SdkOperation,
+        private val type: Class<T>,
+    ) : ManagerSource<T> {
+        override fun get(member: String): T? = if (gate.isReady(operation, member)) services.getService(type) else null
+
+        override fun peek(): T? = if (gate.isReady(operation, log = false)) services.getService(type) else null
+
+        override suspend fun await(member: String): T? = if (gate.awaitReady(operation, member)) services.getService(type) else null
+
+        override fun logQueued(member: String) = gate.logQueued(operation, member)
+
+        suspend fun awaitQuietly(): T? = if (gate.awaitReady(operation, log = false)) services.getService(type) else null
+    }
+
+    private fun replayDeferredCalls() {
+        deferredUser.replay(services.getService())
+        deferredNotifications.replay(services.getService())
+        deferredInAppMessages.replay(services.getService())
+        deferredLocation.replay(services.getService())
+        deferredJwtListeners.replay(services.getService())
+    }
 
     // Services required by this class
     // WARNING: OperationRepo depends on OperationModelStore which in-turn depends
@@ -185,14 +206,8 @@ internal class OneSignalImpV2 : IOneSignal,
                 }
             }.build()
 
-    // Off-main work routes through OneSignal's centralized dispatcher pool rather than ad-hoc
-    // threads / Dispatchers.IO.
-    //
-    // Resolved per-access (get()) rather than captured once: an eager `val` would construct the
-    // lazy `pools.IO` dispatcher during OneSignalImp construction on the main thread (before
-    // prewarm() runs), and would pin this instance to one pool generation -- so after
-    // resetForTest() swaps `pools` and shutdownNow()'s the old executor, a reused instance would
-    // dispatch onto a dead pool. The getter always reads the current generation's warm dispatcher.
+    // Read per access: an eager val would build the IO pool on main before prewarm() and keep
+    // pointing at a dead pool after resetForTest() swaps generations.
     private val ioDispatcher: CoroutineDispatcher get() = OneSignalDispatchers.IO
 
     // get the current config model, if there is one
@@ -200,7 +215,14 @@ internal class OneSignalImpV2 : IOneSignal,
     private var _consentRequired: Boolean? = null
     private var _consentGiven: Boolean? = null
     private var _disableGMSMissingPrompt: Boolean? = null
-    private val initLock: Any = Any()
+
+    // Guards the pre-init fields above and [configApplied], so a setter racing updateConfig is never lost.
+    private val configLock: Any = Any()
+    private var configApplied = false
+
+    // Set once services are bootstrapped; a retry after FAILED must not subscribe listeners twice.
+    private var startupService: StartupService? = null
+    private val bootstrapper = StartupService(services)
     private val loginLogoutLock: Any = Any()
     private val applicationServiceLock: Any = Any()
 
@@ -252,9 +274,11 @@ internal class OneSignalImpV2 : IOneSignal,
         // lazy supplier — `enabledFeatureFlags` is read per-event, so resolving the manager
         // can be deferred until services have bootstrapped.
         val featureManagerProvider = { services.getService<IFeatureManager>() }
-        observabilityManager =
-            LoggerLifecycleManager(context = context, featureManagerProvider = featureManagerProvider)
-                .also { it.initializeFromCachedConfig() }
+        if (observabilityManager == null) {
+            observabilityManager =
+                LoggerLifecycleManager(context = context, featureManagerProvider = featureManagerProvider)
+                    .also { it.initializeFromCachedConfig() }
+        }
         logStartupDiagnostics(context)
 
         PreferenceStoreFix.ensureNoObfuscatedPrefStore(context)
@@ -309,45 +333,53 @@ internal class OneSignalImpV2 : IOneSignal,
         }
     }
 
+    // Copies values set before init into the model; setters write through from here on.
     private fun updateConfig() {
-        // if requires privacy consent was set prior to init, set it in the model now
-        if (_consentRequired != null) {
-            configModel.consentRequired = _consentRequired!!
-        }
-
-        // if privacy consent was set prior to init, set it in the model now
-        if (_consentGiven != null) {
-            configModel.consentGiven = _consentGiven!!
-        }
-
-        if (_disableGMSMissingPrompt != null) {
-            configModel.disableGMSMissingPrompt = _disableGMSMissingPrompt!!
+        synchronized(configLock) {
+            _consentRequired?.let { configModel.consentRequired = it }
+            _consentGiven?.let { configModel.consentGiven = it }
+            _disableGMSMissingPrompt?.let { configModel.disableGMSMissingPrompt = it }
+            configApplied = true
         }
     }
 
-    private fun bootstrapServices(): StartupService {
-        val startupService = StartupService(services)
-        // bootstrap all services
-        startupService.bootstrap()
-        return startupService
+    private fun bootstrapOnce(context: Context): StartupService {
+        startupService?.let { return it }
+
+        initEssentials(context)
+        val started = bootstrapper.also { it.bootstrap() }
+        startupService = started
+
+        // Now that the IoC container is ready, subscribe the observability lifecycle
+        // manager to config store events so it reacts to fresh remote config.
+        observabilityManager?.subscribeToConfigStore(services.getService<ConfigModelStore>())
+        // The event recorder is a container service, so it can only be handed over now. The resolve
+        // cannot fail in practice (bootstrap already built the feature manager it needs), and the
+        // hand-over is fail-open inside the manager.
+        val eventRecorder = services.getServiceOrNull<IObservabilityEventRecorder>()
+        if (eventRecorder != null) {
+            observabilityManager?.attachEventRecorder(eventRecorder)
+        } else {
+            Logging.warn("OneSignal: event recorder unavailable, observability events will not ship")
+        }
+        return started
     }
 
     /**
-     * Fire-and-forget init. The actual work runs asynchronously on the IO pool, so this method
-     * cannot know the real outcome before it returns.
-     *
-     * Return value: always `true` once init has been kicked off (or is already in progress/done).
-     * It does NOT reflect init success — a failure surfaces later, either via a subsequent
-     * accessor throwing or by querying [isInitialized]. Callers (including wrapper SDKs) must not
-     * branch on this boolean to detect init failure; use the suspending [initWithContextSuspend],
-     * which returns an accurate result, when the outcome matters.
+     * Fire-and-forget: true once init is dispatched, running or done; false only for a null [context]
+     * or a synchronous start failure. Use [initWithContextSuspend] or [isInitialized] for the outcome.
      */
     @Suppress("ReturnCount", "TooGenericExceptionCaught")
     override fun initWithContext(
-        context: Context,
-        appId: String,
+        context: Context?,
+        appId: String?,
     ): Boolean {
         Logging.log(LogLevel.DEBUG, "Calling deprecated initWithContext(context: $context, appId: $appId)")
+
+        if (context == null) {
+            Logging.error(MISSING_CONTEXT_MESSAGE)
+            return false
+        }
 
         // Warm OneSignalDispatchers on a dedicated daemon thread so the first production caller
         // of suspendifyOnIO / launchOnSerialIO doesn't pay the ThreadPoolExecutor + dispatcher +
@@ -355,39 +387,25 @@ internal class OneSignalImpV2 : IOneSignal,
         // first foreground/background lifecycle event). prewarm() is idempotent and fire-and-forget.
         OneSignalDispatchers.prewarm()
 
-        synchronized(initLock) {
-            if (initState.isSDKAccessible()) {
-                Logging.log(LogLevel.DEBUG, "initWithContext: SDK already initialized or in progress")
-                return true
-            }
-
-            // Publish state and its associated metadata atomically.
-            initFailureException = IllegalStateException("OneSignal initWithContext failed.")
-            initState = InitState.IN_PROGRESS
-            // Fresh latch for this init attempt -- prevents retry-after-FAILED waiters from
-            // observing the prior init's already-completed deferred.
-            suspendCompletion = CompletableDeferred()
+        if (!gate.tryStart()) {
+            Logging.log(LogLevel.DEBUG, "initWithContext: SDK already initialized or in progress")
+            return true
         }
 
-        // Tight try/catch around the only step that can throw synchronously *before* the
-        // dispatch (or runBlocking). ApplicationService.start does
-        // `context.applicationContext as Application`, which can ClassCastException in
-        // restricted hosts (Robolectric custom application factories, instrumentation context
-        // wrappers, multi-process content provider init order). If we don't transition to
-        // FAILED here, IN_PROGRESS would never be retired — every subsequent
-        // [initWithContext] would short-circuit (IN_PROGRESS counts as "accessible") and every
-        // accessor would deadlock on suspendCompletion.await(). Failures *inside*
-        // [internalInit] are owned by its own try/catch.
+        // The only step that can throw before dispatch (the Application cast can fail in restricted
+        // hosts). It must end in FAILED, or IN_PROGRESS is never retired and every accessor blocks
+        // forever. Failures inside [internalInit] are caught there.
         try {
             ensureApplicationServiceStarted(context)
         } catch (e: Exception) {
-            initFailureException?.addSuppressed(e)
-            completeInit(InitState.FAILED)
-            throw e
+            gate.addFailureCause(e)
+            gate.complete(InitState.FAILED)
+            Logging.error("initWithContext failed to start the application service", e)
+            return false
         }
 
         // Dispatch init asynchronously so this method never blocks the caller. Callers that
-        // need to wait (accessors, login, logout) will block via suspendCompletion.
+        // need to wait (accessors, login, logout) block on the gate.
         suspendifyOnIO {
             internalInit(context, appId)
         }
@@ -402,11 +420,6 @@ internal class OneSignalImpV2 : IOneSignal,
         return initWithContextSuspend(context, null)
     }
 
-    // ReturnCount: 4 returns vs detekt's limit of 2. The function intentionally has
-    // multiple early-return failure paths (user-locked, missing appId, exception). The
-    // existing detekt baseline entry was for the unannotated signature; once we added
-    // @Suppress(TooGenericExceptionCaught) the baseline ID no longer matched, so we
-    // suppress ReturnCount inline rather than churning the baseline.
     @Suppress("ReturnCount", "TooGenericExceptionCaught")
     private fun internalInit(
         context: Context,
@@ -418,60 +431,41 @@ internal class OneSignalImpV2 : IOneSignal,
             // to device storage like SharedPreferences.
             if (!AndroidUtils.isAndroidUserUnlocked(context)) {
                 Logging.warn("initWithContext called when device storage is locked, no user data is accessible!")
-                completeInit(InitState.FAILED)
+                gate.complete(InitState.FAILED)
                 return false
             }
 
-            initEssentials(context)
+            val startupService = bootstrapOnce(context)
 
-            val startupService = bootstrapServices()
-
-            // Now that the IoC container is ready, subscribe the observability lifecycle
-            // manager to config store events so it reacts to fresh remote config.
-            observabilityManager?.subscribeToConfigStore(services.getService<ConfigModelStore>())
-            // The event recorder is a container service, so it can only be handed over now. The resolve
-            // cannot fail in practice (bootstrap already built the feature manager it needs), and the
-            // hand-over is fail-open inside the manager.
-            val eventRecorder = services.getServiceOrNull<IObservabilityEventRecorder>()
-            if (eventRecorder != null) {
-                observabilityManager?.attachEventRecorder(eventRecorder)
-            } else {
-                Logging.warn("OneSignal: event recorder unavailable, observability events will not ship")
-            }
-
-            val result = resolveAppId(appId, configModel, preferencesService)
+            val result = resolveAppIdV2(appId, configModel, preferencesService)
             if (result.failed) {
-                val message = "suspendInitInternal: no appId provided or found in local storage. Please pass a valid appId to initWithContext()."
-                val exception = IllegalStateException(message)
-                // attach the real crash cause to the init failure exception that will be throw shortly after
-                initFailureException?.addSuppressed(exception)
-                Logging.warn(message)
-                completeInit(InitState.FAILED)
+                val message = "initWithContext skipped: no valid appId was passed and none is cached. Pass your OneSignal app ID to initWithContext()."
+                gate.addFailureCause(IllegalStateException(message))
+                // Null is also how background entry points (e.g. SyncJobService) start init, so it is not an app error.
+                if (appId == null) Logging.warn(message) else Logging.error(message)
+                gate.complete(InitState.FAILED)
                 return false
+            }
+            if (appId != null && !isUsableAppId(appId)) {
+                Logging.warn("initWithContext: appId is empty or contains a null byte, using the cached app ID instead.")
             }
             configModel.appId = result.appId!! // safe because failed is false
             val forceCreateUser = result.forceCreateUser
 
             updateConfig()
             userSwitcher.initUser(forceCreateUser)
+            // Before start, so services never act on a setting the app already changed; before SUCCESS,
+            // so no direct call can overtake a queued one. Replayed calls must not go through the gate.
+            replayDeferredCalls()
             startupService.scheduleStart()
-            completeInit(InitState.SUCCESS)
+            gate.complete(InitState.SUCCESS)
             return true
         } catch (e: Exception) {
-            // Any unchecked throw from initEssentials / bootstrapServices / subscribeToConfigStore /
-            // attachEventRecorder / updateConfig / userSwitcher.initUser / startupService.scheduleStart would otherwise
-            // leave initState at IN_PROGRESS forever and `suspendCompletion` uncompleted —
-            // accessors and re-entrant suspend callers (e.g. SyncJobService) would deadlock on
-            // `await()`. Reach a terminal state via [completeInit] (atomic state+completion) and
-            // return `false`. The throw is captured on `initFailureException.addSuppressed(...)`
-            // so a subsequent accessor surfaces it to the caller. We deliberately don't rethrow
-            // here: the synchronous [initWithContext] dispatches this via `suspendifyOnIO { ... }`
-            // (which has no caller to rethrow to), so returning `false` on every path — including
-            // [initWithContextSuspend] — gives one consistent shape. Callers can query
-            // `initFailureException` (or just the returned `Boolean`) to react.
+            // Never rethrow: the sync initWithContext runs this via suspendifyOnIO, with no caller to
+            // catch it. Reaching FAILED unblocks every waiter; the cause is attached for the next log.
             Logging.error("OneSignal: internalInit threw unexpectedly; marking init FAILED", e)
-            initFailureException?.addSuppressed(e)
-            completeInit(InitState.FAILED)
+            gate.addFailureCause(e)
+            if (!gate.isSuccess) gate.complete(InitState.FAILED)
             return false
         }
     }
@@ -482,9 +476,7 @@ internal class OneSignalImpV2 : IOneSignal,
     ) {
         Logging.log(LogLevel.DEBUG, "Calling deprecated login(externalId: $externalId, jwtBearerToken: ...${jwtBearerToken?.takeLast(8)})")
 
-        waitForInit(operationName = "login")
-
-        if (isMissing(externalId, "login: externalId")) return
+        if (!gate.isReady(SdkOperation.LOGIN) || isMissing(externalId, SdkOperation.LOGIN, EXTERNAL_ID_PARAM)) return
 
         val context = loginHelper.switchUser(externalId, jwtBearerToken).context ?: return
 
@@ -494,7 +486,7 @@ internal class OneSignalImpV2 : IOneSignal,
     override fun logout() {
         Logging.log(LogLevel.DEBUG, "Calling deprecated logout()")
 
-        waitForInit(operationName = "logout")
+        if (!gate.isReady(SdkOperation.LOGOUT)) return
 
         val context = logoutHelper.switchUser() ?: return
 
@@ -507,24 +499,18 @@ internal class OneSignalImpV2 : IOneSignal,
     ) {
         Logging.log(LogLevel.DEBUG, "updateUserJwt(externalId: $externalId, token: ...${token.takeLast(8)})")
 
-        waitForInit(operationName = "updateUserJwt")
+        if (!gate.isReady(SdkOperation.UPDATE_USER_JWT)) return
 
-        if (isMissing(externalId, "updateUserJwt: externalId") || isMissing(token, "updateUserJwt: token")) return
+        if (isMissing(externalId, SdkOperation.UPDATE_USER_JWT, EXTERNAL_ID_PARAM) || isMissing(token, SdkOperation.UPDATE_USER_JWT, TOKEN_PARAM)) return
 
         jwtTokenStore.putJwt(externalId, token)
         // Wake the queue so any deferred ops can dispatch with the fresh token.
         operationRepo.forceExecuteOperations()
     }
 
-    override fun addUserJwtInvalidatedListener(listener: IUserJwtInvalidatedListener) {
-        waitForInit(operationName = "addUserJwtInvalidatedListener")
-        jwtTokenStore.addUserJwtInvalidatedListener(listener)
-    }
+    override fun addUserJwtInvalidatedListener(listener: IUserJwtInvalidatedListener) = deferredJwtListeners.add(listener)
 
-    override fun removeUserJwtInvalidatedListener(listener: IUserJwtInvalidatedListener) {
-        waitForInit(operationName = "removeUserJwtInvalidatedListener")
-        jwtTokenStore.removeUserJwtInvalidatedListener(listener)
-    }
+    override fun removeUserJwtInvalidatedListener(listener: IUserJwtInvalidatedListener) = deferredJwtListeners.remove(listener)
 
     override fun <T> hasService(c: Class<T>): Boolean = services.hasService(c)
 
@@ -534,138 +520,7 @@ internal class OneSignalImpV2 : IOneSignal,
 
     override fun <T> getAllServices(c: Class<T>): List<T> = services.getAllServices(c)
 
-    /**
-     * Blocking version that waits for initialization to complete.
-     * Uses runBlocking to bridge to the suspend implementation.
-     * Waits indefinitely until init completes and logs how long it took.
-     *
-     * @param operationName Optional operation name to include in error messages (e.g., "login", "logout")
-     */
-    private fun waitForInit(operationName: String? = null) {
-        if (initState == InitState.SUCCESS) {
-            return
-        }
-        // Intentionally dispatcher-less: wait on the calling thread's own event loop so resuming
-        // when init completes never depends on a free worker in a busy pool.
-        runBlocking {
-            waitUntilInitInternal(operationName)
-        }
-    }
-
-    /**
-     * Atomically transitions [initState] to a terminal state (SUCCESS or FAILED)
-     * and completes [suspendCompletion] so any waiters unblock.
-     *
-     * Both the state write and the completion run under [initLock]. This closes a
-     * race where another caller could observe the terminal state in between the two
-     * writes, call `initWithContext` to flip back to IN_PROGRESS, and replace
-     * [suspendCompletion] with a fresh deferred — at which point this thread's
-     * completion would prematurely unblock waiters of the *second* init.
-     */
-    private fun completeInit(terminalState: InitState) {
-        require(terminalState == InitState.SUCCESS || terminalState == InitState.FAILED) {
-            "completeInit requires a terminal state, got $terminalState"
-        }
-        synchronized(initLock) {
-            initState = terminalState
-            suspendCompletion.complete(Unit)
-        }
-    }
-
-    /**
-     * Suspend version that waits for initialization to complete.
-     * Waits indefinitely until init completes and logs how long it took.
-     *
-     * @param operationName Optional operation name to include in error messages (e.g., "login", "logout")
-     */
-    private suspend fun suspendUntilInit(operationName: String? = null) {
-        waitUntilInitInternal(operationName)
-    }
-
-    /**
-     * Common implementation for waiting until initialization completes.
-     * Waits indefinitely until init completes (SUCCESS or FAILED) to ensure consistent state.
-     * Logs how long initialization took when it completes.
-     *
-     * @param operationName Optional operation name to include in error messages (e.g., "login", "logout")
-     */
-    private suspend fun waitUntilInitInternal(operationName: String? = null) {
-        // Local-capture state + deferred under initLock so we await on the same generation
-        // we observed (a concurrent retry-after-FAILED can replace `suspendCompletion`).
-        val observedState: InitState
-        val completionToAwait: CompletableDeferred<Unit>
-        synchronized(initLock) {
-            observedState = initState
-            completionToAwait = suspendCompletion
-        }
-
-        when (observedState) {
-            InitState.NOT_STARTED -> throw IllegalStateException(notInitializedMessage(operationName))
-
-            InitState.IN_PROGRESS -> awaitInitCompletion(completionToAwait, operationName)
-
-            InitState.FAILED -> {
-                throw initFailureException ?: IllegalStateException("Initialization failed. Cannot proceed.")
-            }
-
-            else -> {
-                // SUCCESS - already initialized, no need to wait
-            }
-        }
-    }
-
-    private fun notInitializedMessage(operationName: String?): String =
-        if (operationName != null) {
-            "Must call 'initWithContext' before '$operationName'"
-        } else {
-            "Must call 'initWithContext' before use"
-        }
-
-    private suspend fun awaitInitCompletion(
-        completionToAwait: CompletableDeferred<Unit>,
-        operationName: String?,
-    ) {
-        Logging.debug("Waiting for init to complete...")
-
-        val startTime = System.currentTimeMillis()
-
-        // Wait indefinitely until init actually completes - ensures consistent state
-        // Function only returns when initState is SUCCESS or FAILED
-        // Non-blocking when called from coroutines. But if waitForInit() (which uses runBlocking)
-        // is called from the main thread, it blocks the main thread until init completes, which can
-        // ANR. This is intentional: an ANR is recoverable, an uncaught throw is not. To avoid it,
-        // call SDK methods from background threads or use the suspend API.
-        completionToAwait.await()
-
-        // Log how long initialization took
-        val elapsed = System.currentTimeMillis() - startTime
-        val message =
-            if (operationName != null) {
-                "OneSignalImp initialization completed before '$operationName' (took ${elapsed}ms)"
-            } else {
-                "OneSignalImp initialization completed (took ${elapsed}ms)"
-            }
-        Logging.debug(message)
-
-        // Re-check state after waiting - init might have failed during the wait
-        if (initState == InitState.FAILED) {
-            throw initFailureException ?: IllegalStateException("Initialization failed. Cannot proceed.")
-        }
-        // initState is guaranteed to be SUCCESS here - consistent state
-    }
-
-    private suspend fun <T> suspendAndReturn(getter: () -> T): T {
-        suspendUntilInit()
-        return getter()
-    }
-
-    // Blocks until init completes; [waitForInit] throws on NOT_STARTED / FAILED and
-    // returns once initState == SUCCESS.
-    private fun <T> waitAndReturn(getter: () -> T): T {
-        waitForInit()
-        return getter()
-    }
-
+    // Callers only reach this after checking [isInitialized], and SUCCESS is terminal.
     private fun <T> blockingGet(getter: () -> T): T {
         try {
             if (AndroidUtils.isRunningOnMainThread()) {
@@ -676,87 +531,59 @@ internal class OneSignalImpV2 : IOneSignal,
             // because Looper.getMainLooper() is not mocked. This is safe to ignore.
             Logging.debug("Could not check main thread status (likely in test environment): ${e.message}")
         }
-        if (initState == InitState.SUCCESS) {
-            return getter()
-        }
-
-        // Intentionally dispatcher-less (see waitForInit).
-        return runBlocking {
-            suspendAndReturn(getter)
-        }
+        return getter()
     }
 
     // ===============================
     // Suspend API Implementation
     // ===============================
 
-    override suspend fun getSession(): ISessionManager =
-        withContext(ioDispatcher) {
-            suspendAndReturn { services.getService() }
-        }
+    override suspend fun getSession(): ISessionManager = awaitManager(sessionSource) ?: deferredSession
 
-    override suspend fun getNotifications(): INotificationsManager =
-        withContext(ioDispatcher) {
-            suspendAndReturn { services.getService() }
-        }
+    override suspend fun getNotifications(): INotificationsManager = awaitManager(notificationsSource) ?: deferredNotifications
 
-    override suspend fun getLocation(): ILocationManager =
-        withContext(ioDispatcher) {
-            suspendAndReturn { services.getService() }
-        }
+    override suspend fun getLocation(): ILocationManager = awaitManager(locationSource) ?: deferredLocation
 
-    override suspend fun getInAppMessages(): IInAppMessagesManager =
-        withContext(ioDispatcher) {
-            suspendAndReturn { services.getService() }
-        }
+    override suspend fun getInAppMessages(): IInAppMessagesManager = awaitManager(inAppMessagesSource) ?: deferredInAppMessages
 
-    override suspend fun getUser(): IUserManager =
-        withContext(ioDispatcher) {
-            suspendAndReturn { services.getService() }
-        }
+    override suspend fun getUser(): IUserManager = awaitManager(userSource) ?: deferredUser
 
-    override suspend fun getConsentRequired(): Boolean =
-        withContext(ioDispatcher) {
-            configModel.consentRequired ?: (_consentRequired == true)
-        }
+    // Suspends, never blocks, through an in-progress init; the returned deferred manager logs on use.
+    private suspend fun <T : Any> awaitManager(source: GatedSource<T>): T? = withContext(ioDispatcher) { source.awaitQuietly() }
 
-    override suspend fun setConsentRequired(required: Boolean) =
-        withContext(ioDispatcher) {
-            _consentRequired = required
-            configModel.consentRequired = required
-        }
+    // The properties hold the value locally until init applies it, so these are safe before init.
+    override suspend fun getConsentRequired(): Boolean = afterInit(SdkOperation.GET_CONSENT_REQUIRED) { consentRequired }
 
-    override suspend fun getConsentGiven(): Boolean =
-        withContext(ioDispatcher) {
-            configModel.consentGiven ?: (_consentGiven == true)
-        }
+    override suspend fun setConsentRequired(required: Boolean) = afterInit(SdkOperation.SET_CONSENT_REQUIRED) { consentRequired = required }
 
-    override suspend fun setConsentGiven(value: Boolean) =
-        withContext(ioDispatcher) {
-            val oldValue = _consentGiven
-            _consentGiven = value
-            configModel.consentGiven = value
-            if (oldValue != value && value) {
-                operationRepo.forceExecuteOperations()
-            }
-        }
+    override suspend fun getConsentGiven(): Boolean = afterInit(SdkOperation.GET_CONSENT_GIVEN) { consentGiven }
 
-    override suspend fun getDisableGMSMissingPrompt(): Boolean =
-        withContext(ioDispatcher) {
-            configModel.disableGMSMissingPrompt
-        }
+    override suspend fun setConsentGiven(value: Boolean) = afterInit(SdkOperation.SET_CONSENT_GIVEN) { consentGiven = value }
 
-    override suspend fun setDisableGMSMissingPrompt(value: Boolean) =
+    override suspend fun getDisableGMSMissingPrompt(): Boolean = afterInit(SdkOperation.GET_DISABLE_GMS_MISSING_PROMPT) { disableGMSMissingPrompt }
+
+    override suspend fun setDisableGMSMissingPrompt(value: Boolean) = afterInit(SdkOperation.SET_DISABLE_GMS_MISSING_PROMPT) { disableGMSMissingPrompt = value }
+
+    // Waits out an in-progress init so a value set now is not lost between updateConfig and SUCCESS.
+    private suspend fun <T> afterInit(
+        operation: SdkOperation,
+        block: () -> T,
+    ): T =
         withContext(ioDispatcher) {
-            _disableGMSMissingPrompt = value
-            configModel.disableGMSMissingPrompt = value
+            gate.await(operation)
+            block()
         }
 
     override suspend fun initWithContextSuspend(
-        context: Context,
+        context: Context?,
         appId: String?,
     ): Boolean {
         Logging.log(LogLevel.DEBUG, "initWithContext(context: $context, appId: $appId)")
+
+        if (context == null) {
+            Logging.error(MISSING_CONTEXT_MESSAGE)
+            return false
+        }
 
         // Same warm-up as the synchronous variant. Reaching this entry point on the main thread
         // (e.g. SyncJobService.onStartJob -> suspendifyOnIO -> initWithContext(context)) pays the
@@ -764,48 +591,33 @@ internal class OneSignalImpV2 : IOneSignal,
         // OneSignalDispatchers on a background thread before we touch [ioDispatcher].
         OneSignalDispatchers.prewarm()
 
-        // Observing a terminal SUCCESS must never require an IO worker (see waitForInit).
-        if (initState == InitState.SUCCESS) {
+        // Observing a terminal SUCCESS must never require an IO worker (see InitGate.isReady).
+        if (gate.isSuccess) {
             return true
         }
 
-        // Local-capture under the lock so that even if a concurrent retry-after-FAILED
-        // resets `suspendCompletion`, we await on the same generation we observed.
-        // Null means this caller is the one that starts init.
-        val completionToAwait: CompletableDeferred<Unit>? =
-            synchronized(initLock) {
-                if (initState.isSDKAccessible()) {
-                    suspendCompletion
-                } else {
-                    initState = InitState.IN_PROGRESS
-                    // Fresh latch for this init attempt.
-                    suspendCompletion = CompletableDeferred()
-                    // Only the call that actually starts init owns the failure-attribution exception.
-                    // Re-entrant callers must not overwrite it -- otherwise the failure stack trace
-                    // would point at the SyncJobService coroutine instead of the original initiator.
-                    initFailureException = IllegalStateException("OneSignal initWithContext failed.")
-                    null
-                }
-            }
-
-        if (completionToAwait != null) {
-            // Another caller has already started (or completed) init. Honor this method's
-            // contract by suspending until initialization is *fully* completed -- not just
-            // kicked off. This closes a race where re-entrant suspend callers (e.g. the
-            // SyncJobService entry point) would otherwise
-            // proceed to use IBackgroundService implementations like SessionService whose
-            // bootstrap() had not yet run, NPE'ing on still-null model fields.
+        if (!gate.tryStart()) {
+            // Another caller started init. Suspend until it is fully done, not just kicked off, so
+            // re-entrant callers (e.g. SyncJobService) never use services whose bootstrap has not run.
+            // Awaited on the caller's own context so the wait never queues behind init's own work.
             Logging.log(LogLevel.DEBUG, "initWithContext: init already in progress or completed, awaiting completion")
-            // Awaited on the caller's own context: waiting for, and resuming from, another
-            // caller's init must not queue behind the work that init itself is doing.
-            completionToAwait.await()
-            return initState == InitState.SUCCESS
+            return gate.await(SdkOperation.INIT_WITH_CONTEXT)
         }
 
         // Only the caller that actually runs init needs the IO dispatcher, to keep its disk
         // and network work off the calling thread.
-        return withContext(ioDispatcher) {
-            internalInit(context, appId)
+        var started = false
+        try {
+            return withContext(ioDispatcher) {
+                started = true
+                internalInit(context, appId)
+            }
+        } finally {
+            // A caller cancelled before dispatch would otherwise leave this attempt IN_PROGRESS forever.
+            if (!started) {
+                gate.addFailureCause(IllegalStateException("initWithContext was cancelled before init ran"))
+                gate.complete(InitState.FAILED)
+            }
         }
     }
 
@@ -815,11 +627,9 @@ internal class OneSignalImpV2 : IOneSignal,
     ) = withContext(ioDispatcher) {
         Logging.log(LogLevel.DEBUG, "login(externalId: $externalId, jwtBearerToken: ...${jwtBearerToken?.takeLast(8)})")
 
-        // suspendUntilInit throws on NOT_STARTED / FAILED (preserving initFailureException as the
-        // cause), and only returns once initState == SUCCESS — so no post-check is needed here.
-        suspendUntilInit(operationName = "login")
+        if (!gate.awaitReady(SdkOperation.LOGIN)) return@withContext
 
-        if (isMissing(externalId, "login: externalId")) return@withContext
+        if (isMissing(externalId, SdkOperation.LOGIN, EXTERNAL_ID_PARAM)) return@withContext
 
         val context = loginHelper.switchUser(externalId, jwtBearerToken).context ?: return@withContext
         loginHelper.enqueueLogin(context)
@@ -838,9 +648,11 @@ internal class OneSignalImpV2 : IOneSignal,
                 return@withContext OneSignalResult.failure(ErrorCode.INVALID_ARGUMENT, it)
             }
 
-            awaitInitForLogin()?.let { return@withContext it }
+            if (!gate.awaitReady(SdkOperation.LOGIN)) {
+                return@withContext OneSignalResult.failure(ErrorCode.NOT_INITIALIZED, gate.notReadyMessage("login"))
+            }
 
-            if (isMissing(externalId, "login: externalId") || externalId == null) {
+            if (isMissing(externalId, SdkOperation.LOGIN, EXTERNAL_ID_PARAM) || externalId == null) {
                 return@withContext OneSignalResult.failure(
                     ErrorCode.INVALID_ARGUMENT,
                     "login: externalId is required",
@@ -870,20 +682,6 @@ internal class OneSignalImpV2 : IOneSignal,
             OneSignalResult.success(loginHelper.loginData(externalId, profile, fallbackOnesignalId = switched.onesignalId))
         }
 
-    /** Waits for init; returns a NOT_INITIALIZED failure instead of throwing when it never started or failed. */
-    internal suspend fun awaitInitForLogin(): OneSignalResult<LoginData>? =
-        try {
-            suspendUntilInit(operationName = "login")
-            null
-        } catch (e: CancellationException) {
-            // A subclass of IllegalStateException, so it must be rethrown before the catch below.
-            throw e
-        } catch (e: IllegalStateException) {
-            // Callers can ignore the result, so the failure has to show up in the log.
-            Logging.error("login(externalId, profile) skipped: ${e.message}", e)
-            OneSignalResult.failure(ErrorCode.NOT_INITIALIZED, e.message, cause = e)
-        }
-
     private fun loginFailureMessage(wait: OperationWaitResult): String =
         wait.httpStatusCode?.let { "Login did not complete (HTTP $it)." } ?: "Login did not complete."
 
@@ -893,13 +691,9 @@ internal class OneSignalImpV2 : IOneSignal,
     ) = withContext(ioDispatcher) {
         Logging.log(LogLevel.DEBUG, "updateUserJwtSuspend(externalId: $externalId, token: ...${token.takeLast(8)})")
 
-        suspendUntilInit(operationName = "updateUserJwt")
+        if (!gate.awaitReady(SdkOperation.UPDATE_USER_JWT)) return@withContext
 
-        if (!isInitialized) {
-            throw IllegalStateException("'initWithContext failed' before 'updateUserJwt'")
-        }
-
-        if (isMissing(externalId, "updateUserJwt: externalId") || isMissing(token, "updateUserJwt: token")) {
+        if (isMissing(externalId, SdkOperation.UPDATE_USER_JWT, EXTERNAL_ID_PARAM) || isMissing(token, SdkOperation.UPDATE_USER_JWT, TOKEN_PARAM)) {
             return@withContext
         }
 
@@ -911,9 +705,15 @@ internal class OneSignalImpV2 : IOneSignal,
         withContext(ioDispatcher) {
             Logging.log(LogLevel.DEBUG, "logoutSuspend()")
 
-            suspendUntilInit(operationName = "logout")
+            if (!gate.awaitReady(SdkOperation.LOGOUT)) return@withContext
 
             val context = logoutHelper.switchUser() ?: return@withContext
             logoutHelper.enqueueLogout(context)
         }
+
+    private companion object {
+        const val MISSING_CONTEXT_MESSAGE = "initWithContext skipped: context is required."
+        const val EXTERNAL_ID_PARAM = "externalId"
+        const val TOKEN_PARAM = "token"
+    }
 }
