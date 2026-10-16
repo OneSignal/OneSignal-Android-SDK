@@ -81,6 +81,20 @@ class StartupServiceTests : FunSpec({
         verify(exactly = 0) { mockBootstrapService2.bootstrap() }
     }
 
+    test("a bootstrap retried after a failure skips the services that already bootstrapped") {
+        val done = mockk<IBootstrapService>(relaxed = true)
+        val flaky = mockk<IBootstrapService>()
+        every { flaky.bootstrap() } throws Exception("first attempt") andThen Unit
+        val startupService = StartupService(setupServiceProvider(listOf(done, flaky), listOf()))
+
+        shouldThrowUnit<Exception> { startupService.bootstrap() }
+        startupService.bootstrap()
+        startupService.bootstrap()
+
+        verify(exactly = 1) { done.bootstrap() }
+        verify(exactly = 2) { flaky.bootstrap() }
+    }
+
     test("startup will call all IStartableService dependencies successfully after a short delay") {
         // Given
         val mockStartupService1 = mockk<IStartableService>(relaxed = true)
