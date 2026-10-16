@@ -39,10 +39,11 @@ class StartupDiagnosticsTest : FunSpec({
         Logging.logLevel = LogLevel.NONE
         oneSignal.logStartupDiagnostics(context)
 
-        events.size shouldBe 1
-        events.single().level shouldBe LogLevel.WARN
-        events.single().entry shouldContain "observabilityModule=logger"
-        events.single().entry shouldContain "app=com.example@1.2.3"
-        events.single().entry shouldContain "crashDir=${getCrashStoragePath(context)}"
+        // The listener is global, so background work left by other specs can log here too.
+        val diagnostics = events.single { it.entry.contains("observabilityModule=") }
+        diagnostics.level shouldBe LogLevel.WARN
+        diagnostics.entry shouldContain "observabilityModule=logger"
+        diagnostics.entry shouldContain "app=com.example@1.2.3"
+        diagnostics.entry shouldContain "crashDir=${getCrashStoragePath(context)}"
     }
 })
