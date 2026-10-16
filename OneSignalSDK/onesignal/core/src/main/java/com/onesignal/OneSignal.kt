@@ -4,7 +4,7 @@ import android.content.Context
 import com.onesignal.common.services.IServiceProvider
 import com.onesignal.debug.IDebugManager
 import com.onesignal.inAppMessages.IInAppMessagesManager
-import com.onesignal.internal.OneSignalImp
+import com.onesignal.internal.NeverCrashKillSwitch
 import com.onesignal.location.ILocationManager
 import com.onesignal.notifications.INotificationsManager
 import com.onesignal.session.ISessionManager
@@ -376,8 +376,9 @@ object OneSignal {
     fun removeUserJwtInvalidatedListener(listener: IUserJwtInvalidatedListener) =
         oneSignal.removeUserJwtInvalidatedListener(listener)
 
+    @Suppress("MemberNameEqualsClassName")
     private val oneSignal: IOneSignal by lazy {
-        OneSignalImp()
+        NeverCrashKillSwitch.create()
     }
 
     /**
