@@ -88,9 +88,12 @@ internal class UpdateSessionOperation() : Operation(SessionOperationExecutor.UPD
     }
 
     /** The backend requires an update to repeat the user and subscription its create sent. */
-    fun useIdsOf(create: CreateSessionOperation) {
-        onesignalId = create.onesignalId
-        subscriptionId = create.subscriptionId
+    fun useCreateIds(
+        onesignalId: String?,
+        subscriptionId: String?,
+    ) {
+        onesignalId?.let { this.onesignalId = it }
+        subscriptionId?.let { this.subscriptionId = it }
     }
 
     override fun translateIds(map: Map<String, String>) {

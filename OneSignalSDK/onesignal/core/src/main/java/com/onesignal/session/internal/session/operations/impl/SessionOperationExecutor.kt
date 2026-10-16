@@ -1,14 +1,12 @@
 package com.onesignal.session.internal.session.operations.impl
 
 import com.onesignal.common.exceptions.BackendException
-import com.onesignal.common.threading.runOnSerialIO
 import com.onesignal.core.internal.device.IDeviceService
 import com.onesignal.core.internal.operations.ExecutionResponse
 import com.onesignal.core.internal.operations.ExecutionResult
 import com.onesignal.core.internal.operations.IOperationExecutor
 import com.onesignal.core.internal.operations.Operation
 import com.onesignal.debug.internal.logging.Logging
-import com.onesignal.session.internal.session.SessionModelStore
 import com.onesignal.session.internal.session.backend.CreateSessionRequest
 import com.onesignal.session.internal.session.backend.ISessionsBackendService
 import com.onesignal.session.internal.session.backend.UpdateSessionRequest
@@ -20,7 +18,6 @@ import java.util.concurrent.TimeUnit
 internal class SessionOperationExecutor(
     private val sessionsBackend: ISessionsBackendService,
     private val deviceService: IDeviceService,
-    private val sessionModelStore: SessionModelStore,
     private val newRecordState: NewRecordsState,
 ) : IOperationExecutor {
     override val operations: List<String>
@@ -53,24 +50,11 @@ internal class SessionOperationExecutor(
                 return failure(ex, retryMissing)
             }
 
-        return if (sessionId == null) missingSessionId(operation) else created(operation, sessionId)
-    }
-
-    private suspend fun created(
-        operation: CreateSessionOperation,
-        sessionId: String,
-    ): ExecutionResponse {
-        // Updates enqueued later read these from the model; queued ones are translated.
-        // Serial IO is where SessionService starts new sessions, so a newer one can't get them.
-        runOnSerialIO {
-            val session = sessionModelStore.model
-            if (session.localSessionId == operation.localSessionId) {
-                session.serverSessionId = sessionId
-                session.onesignalId = operation.onesignalId
-                session.subscriptionId = operation.subscriptionId
-            }
+        return if (sessionId == null) {
+            missingSessionId(operation)
+        } else {
+            ExecutionResponse(ExecutionResult.SUCCESS, idTranslations = mapOf(operation.localSessionId to sessionId))
         }
-        return ExecutionResponse(ExecutionResult.SUCCESS, idTranslations = mapOf(operation.localSessionId to sessionId))
     }
 
     /** A retry with the same idempotency key should return the session the backend already created. */

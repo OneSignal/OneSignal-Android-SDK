@@ -1,9 +1,11 @@
 package com.onesignal.core.internal.operations.impl
 
 import com.onesignal.common.IDManager
+import com.onesignal.common.modeling.SimpleModelStore
 import com.onesignal.core.internal.operations.Operation
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.session.internal.session.operations.CreateSessionOperation
+import com.onesignal.session.internal.session.operations.SessionStateModel
 import com.onesignal.session.internal.session.operations.UpdateSessionOperation
 
 /**
@@ -15,40 +17,18 @@ internal class SessionQueuePolicy(
     private val maxQueued: Int = MAX_QUEUED_SESSION_OPERATIONS,
     // Without consent HttpClient fails every request, so these must not be stored or sent.
     private val awaitingConsent: () -> Boolean = { false },
+    private val sessions: SimpleModelStore<SessionStateModel> = SimpleModelStore({ SessionStateModel() }),
 ) {
-    // Recent local -> backend ID translations, for updates built from a local ID just before the
-    // create succeeded but enqueued after the queue was translated.
+    // Recent local -> backend ID translations, for an operation built from a local ID just before
+    // its record was created but enqueued after the queue was translated.
     private val recentTranslations =
         object : LinkedHashMap<String, String>() {
             override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, String>?) = size > MAX_RECENT_TRANSLATIONS
         }
 
-    // Sessions that take no more updates: ended, or their create was dropped. The queue alone
-    // misses an end that is executing.
-    private val closedSessions =
-        object : LinkedHashMap<String, Unit>() {
-            override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Unit>?) = size > MAX_CLOSED_SESSIONS
-        }
-
-    // Creates by local session ID, and by backend session ID once sent. Kept after they leave the
-    // queue so updates enqueued while one executes, or after it succeeded, still find it.
-    private val creates =
-        object : LinkedHashMap<String, CreateSessionOperation>() {
-            override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, CreateSessionOperation>?) = size > maxQueued * 2
-        }
-
     fun recordTranslations(idTranslations: Map<String, String>) {
         recentTranslations.putAll(idTranslations)
-        idTranslations.forEach { (localId, backendId) ->
-            if (closedSessions.remove(localId) != null) closedSessions[backendId] = Unit
-            creates[localId]?.let { creates[backendId] = it }
-        }
-    }
-
-    /** For operations loaded from the store, which skip [onEnqueue]. */
-    fun onLoaded(op: Operation) {
-        if (op is CreateSessionOperation) creates[op.localSessionId] = op
-        if (op is UpdateSessionOperation && op.isEnd) closedSessions[op.sessionId] = Unit
+        sessions.list().forEach { it.translateIds(idTranslations) }
     }
 
     class EnqueueResult(
@@ -70,22 +50,33 @@ internal class SessionQueuePolicy(
                     Logging.debug("SessionQueuePolicy: privacy consent not given, dropping $op")
                     EnqueueResult(accept = false)
                 }
-                op is UpdateSessionOperation && (op.sessionId in closedSessions || hasQueuedEnd(queue, op.sessionId)) -> {
-                    Logging.debug("SessionQueuePolicy: session ${op.sessionId} is closed, dropping $op")
-                    EnqueueResult(accept = false)
-                }
-                op is UpdateSessionOperation && IDManager.isLocalId(op.sessionId) && op.sessionId !in creates -> {
-                    Logging.debug("SessionQueuePolicy: session ${op.sessionId} has no create, dropping $op")
-                    EnqueueResult(accept = false)
-                }
-                else -> {
-                    if (op is UpdateSessionOperation) creates[op.sessionId]?.let { op.useIdsOf(it) }
-                    admit(queue, incoming)
-                }
+                op is UpdateSessionOperation -> admitUpdate(queue, incoming, op)
+                else -> admit(queue, incoming)
             }
         // Its updates could never be sent.
-        if (!result.accept && op is CreateSessionOperation) closedSessions[op.localSessionId] = Unit
+        if (!result.accept && op is CreateSessionOperation) updateState(op.localSessionId, queue) { it.isClosed = true }
         return result
+    }
+
+    private fun admitUpdate(
+        queue: MutableList<OperationRepo.OperationQueueItem>,
+        incoming: OperationRepo.OperationQueueItem,
+        op: UpdateSessionOperation,
+    ): EnqueueResult {
+        val state = stateFor(op.sessionId)
+        state?.serverSessionId?.let { op.translateIds(mapOf(op.sessionId to it)) }
+        val rejection =
+            when {
+                state?.isClosed == true || hasQueuedEnd(queue, op.sessionId) -> "is closed"
+                IDManager.isLocalId(op.sessionId) && state?.onesignalId == null -> "has no create"
+                else -> null
+            }
+        if (rejection != null) {
+            Logging.debug("SessionQueuePolicy: session ${op.sessionId} $rejection, dropping $op")
+            return EnqueueResult(accept = false)
+        }
+        state?.let { op.useCreateIds(it.onesignalId, it.subscriptionId) }
+        return admit(queue, incoming)
     }
 
     private fun admit(
@@ -118,8 +109,13 @@ internal class SessionQueuePolicy(
             removed.addAll(dropped)
             if (op.sessionKey == oldestSession) accept = false
         }
-        if (accept && op is CreateSessionOperation) creates[op.localSessionId] = op
-        if (accept && op is UpdateSessionOperation && op.isEnd) closedSessions[op.sessionId] = Unit
+        if (accept && op is CreateSessionOperation) {
+            updateState(op.localSessionId, queue) {
+                it.onesignalId = op.onesignalId
+                it.subscriptionId = op.subscriptionId
+            }
+        }
+        if (accept && op is UpdateSessionOperation && op.isEnd) updateState(op.sessionId, queue) { it.isClosed = true }
         return EnqueueResult(accept, removed)
     }
 
@@ -129,13 +125,44 @@ internal class SessionQueuePolicy(
         dropped: Operation,
     ): List<OperationRepo.OperationQueueItem> {
         if (dropped !is CreateSessionOperation) return emptyList()
-        closedSessions[dropped.localSessionId] = Unit
+        updateState(dropped.localSessionId, queue) { it.isClosed = true }
         val orphans = queue.filter { (it.operation as? UpdateSessionOperation)?.sessionId == dropped.localSessionId }
         if (orphans.isNotEmpty()) {
             Logging.debug("SessionQueuePolicy: create for session ${dropped.localSessionId} was dropped, dropping ${orphans.size} updates")
             queue.removeAll(orphans)
         }
         return orphans
+    }
+
+    private fun stateFor(sessionId: String) = sessions.list().firstOrNull { it.id == sessionId || it.serverSessionId == sessionId }
+
+    private fun updateState(
+        sessionKey: String,
+        queue: List<OperationRepo.OperationQueueItem>,
+        change: (SessionStateModel) -> Unit,
+    ) {
+        val existing = stateFor(sessionKey)
+        if (existing != null) {
+            change(existing)
+        } else {
+            sessions.add(SessionStateModel().also { it.id = sessionKey }.also(change))
+        }
+        trimSessions(queue, sessionKey)
+    }
+
+    /** Drops the oldest sessions past the cap, but never one with operations still queued, which need its state. */
+    private fun trimSessions(
+        queue: List<OperationRepo.OperationQueueItem>,
+        keep: String,
+    ) {
+        val all = sessions.list()
+        val excess = all.size - maxQueued
+        if (excess <= 0) return
+        val queuedSessions = queue.mapNotNull { it.operation.sessionKey }.toSet() + keep
+        all
+            .filter { it.id !in queuedSessions && it.serverSessionId !in queuedSessions }
+            .take(excess)
+            .forEach { sessions.remove(it.id) }
     }
 
     private fun hasQueuedEnd(
@@ -156,6 +183,5 @@ internal class SessionQueuePolicy(
     companion object {
         const val MAX_QUEUED_SESSION_OPERATIONS = 100
         private const val MAX_RECENT_TRANSLATIONS = 50
-        private const val MAX_CLOSED_SESSIONS = 50
     }
 }

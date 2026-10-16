@@ -17,6 +17,7 @@ import com.onesignal.core.internal.time.ITime
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.session.internal.session.operations.CreateSessionOperation
+import com.onesignal.session.internal.session.operations.SessionStateModelStore
 import com.onesignal.user.internal.jwt.JwtRequirement
 import com.onesignal.user.internal.jwt.JwtTokenStore
 import com.onesignal.user.internal.operations.LoginUserOperation
@@ -34,6 +35,7 @@ import kotlin.math.min
 import kotlin.random.Random
 import kotlin.reflect.KClass
 
+@Suppress("LongParameterList")
 internal class OperationRepo(
     executors: List<IOperationExecutor>,
     private val _operationModelStore: OperationModelStore,
@@ -42,6 +44,7 @@ internal class OperationRepo(
     private val _newRecordState: NewRecordsState,
     private val _jwtTokenStore: JwtTokenStore,
     private val _identityVerificationService: IdentityVerificationService,
+    sessionStateStore: SessionStateModelStore,
 ) : IOperationRepo, IStartableService {
 
     internal class OperationQueueItem(
@@ -111,6 +114,7 @@ internal class OperationRepo(
     private val sessionQueuePolicy =
         SessionQueuePolicy(
             awaitingConsent = { _configModelStore.model.let { it.consentRequired == true && it.consentGiven != true } },
+            sessions = sessionStateStore,
         )
 
     // Guarded by queue. Set by a force that lands while ops are out of the queue executing.
@@ -757,7 +761,6 @@ internal class OperationRepo(
     internal fun loadSavedOperations() {
         _operationModelStore.loadOperations()
         for (operation in _operationModelStore.list().reversed()) {
-            synchronized(queue) { sessionQueuePolicy.onLoaded(operation) }
             internalEnqueue(
                 OperationQueueItem(operation, bucket = enqueueIntoBucket),
                 flush = false,

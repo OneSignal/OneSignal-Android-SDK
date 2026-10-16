@@ -1,14 +1,12 @@
 package com.onesignal.session.internal.session.operations
 
 import com.onesignal.common.exceptions.BackendException
-import com.onesignal.common.threading.runOnSerialIO
 import com.onesignal.core.internal.operations.ExecutionResult
 import com.onesignal.core.internal.operations.impl.OperationModelStore
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.mocks.MockHelper
 import com.onesignal.mocks.MockPreferencesService
-import com.onesignal.session.internal.session.SessionModel
 import com.onesignal.session.internal.session.backend.CreateSessionRequest
 import com.onesignal.session.internal.session.backend.ISessionsBackendService
 import com.onesignal.session.internal.session.backend.UpdateSessionRequest
@@ -21,22 +19,14 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
-import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.withTimeout
 
 private class Mocks {
     val backend = mockk<ISessionsBackendService>()
-    val session =
-        SessionModel().apply {
-            localSessionId = "local-session"
-            onesignalId = "local-user"
-        }
     val newRecordState = mockk<NewRecordsState>().also { every { it.isInMissingRetryWindow(any()) } returns false }
     val executor =
         SessionOperationExecutor(
             backend,
             MockHelper.deviceService(),
-            MockHelper.sessionModelStore().also { every { it.model } returns session },
             newRecordState,
         )
 }
@@ -45,13 +35,6 @@ private fun create() = CreateSessionOperation("appId", "local-session", "onesign
 
 private fun update(endTime: Long? = null) =
     UpdateSessionOperation("appId", "server-session", "onesignalId", "subscriptionId", activeDuration = 61_900L, endTime = endTime)
-
-/** The executor writes the session on serial IO; this waits for work queued there before it. */
-private suspend fun awaitSerialIO() {
-    val done = CompletableDeferred<Unit>()
-    runOnSerialIO { done.complete(Unit) }
-    withTimeout(5_000) { done.await() }
-}
 
 class SessionOperationExecutorTests : FunSpec({
     beforeAny {
@@ -66,31 +49,16 @@ class SessionOperationExecutorTests : FunSpec({
 
         // When
         val response = mocks.executor.execute(listOf(op))
-        awaitSerialIO()
 
         // Then
         response.result shouldBe ExecutionResult.SUCCESS
         response.idTranslations shouldBe mapOf("local-session" to "server-session")
-        mocks.session.serverSessionId shouldBe "server-session"
-        mocks.session.onesignalId shouldBe "onesignalId"
-        mocks.session.subscriptionId shouldBe "subscriptionId"
         coVerify {
             mocks.backend.createSession(
                 "appId",
                 CreateSessionRequest("onesignalId", "subscriptionId", 1, 1_700_000_000L, op.idempotencyKey),
             )
         }
-    }
-
-    test("create for an earlier session does not overwrite the current session's server ID") {
-        val mocks = Mocks()
-        mocks.session.localSessionId = "local-newer"
-        coEvery { mocks.backend.createSession(any(), any()) } returns "server-session"
-
-        mocks.executor.execute(listOf(create()))
-        awaitSerialIO()
-
-        mocks.session.serverSessionId shouldBe null
     }
 
     test("create without a session_id in the response is retried, then dropped") {

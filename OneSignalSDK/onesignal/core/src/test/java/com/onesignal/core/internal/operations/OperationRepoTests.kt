@@ -13,6 +13,7 @@ import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.mocks.CoreInternalMocks
 import com.onesignal.mocks.MockHelper
 import com.onesignal.mocks.MockPreferencesService
+import com.onesignal.session.internal.session.operations.SessionStateModelStore
 import com.onesignal.user.internal.jwt.JwtRequirement
 import com.onesignal.user.internal.jwt.JwtTokenStore
 import com.onesignal.user.internal.operations.CreateSubscriptionOperation
@@ -94,6 +95,7 @@ private class Mocks {
                 getNewRecordState(configModelStore),
                 jwtTokenStore,
                 identityVerificationService,
+                SessionStateModelStore(MockPreferencesService()),
             ),
             recordPrivateCalls = true,
         )
@@ -121,6 +123,7 @@ class OperationRepoTests : FunSpec({
                     getNewRecordState(mocks.configModelStore),
                     JwtTokenStore(MockPreferencesService()),
                     CoreInternalMocks.identityVerificationService(),
+                    SessionStateModelStore(MockPreferencesService()),
                 ),
             )
 

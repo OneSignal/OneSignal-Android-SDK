@@ -55,6 +55,7 @@ import com.onesignal.logger.IObservabilityEventRecorder
 import com.onesignal.logger.LoggerFactory
 import com.onesignal.notifications.INotificationsManager
 import com.onesignal.notifications.internal.MisconfiguredNotificationsManager
+import com.onesignal.session.internal.session.operations.SessionStateModelStore
 import com.onesignal.user.internal.jwt.JwtTokenStore
 
 internal class CoreModule : IModule {
@@ -92,6 +93,7 @@ internal class CoreModule : IModule {
 
         // Operations
         builder.register<OperationModelStore>().provides<OperationModelStore>()
+        builder.register<SessionStateModelStore>().provides<SessionStateModelStore>()
         builder.register<OperationRepo>()
             .provides<IOperationRepo>()
             .provides<IStartableService>()

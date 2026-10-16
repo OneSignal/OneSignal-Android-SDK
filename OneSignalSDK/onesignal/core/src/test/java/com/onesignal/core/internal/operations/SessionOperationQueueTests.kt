@@ -9,6 +9,7 @@ import com.onesignal.mocks.CoreInternalMocks
 import com.onesignal.mocks.MockHelper
 import com.onesignal.mocks.MockPreferencesService
 import com.onesignal.session.internal.session.operations.CreateSessionOperation
+import com.onesignal.session.internal.session.operations.SessionStateModelStore
 import com.onesignal.session.internal.session.operations.UpdateSessionOperation
 import com.onesignal.session.internal.session.operations.impl.SessionOperationExecutor
 import com.onesignal.user.internal.jwt.JwtRequirement
@@ -37,6 +38,7 @@ private class SessionQueueMocks(
         }
 
     val operationModelStore = OperationModelStore(prefs)
+    val sessionStateStore = SessionStateModelStore(prefs)
 
     val executed = mutableListOf<Operation>()
     var respond: (Operation) -> ExecutionResponse = { ExecutionResponse(ExecutionResult.SUCCESS) }
@@ -63,6 +65,7 @@ private class SessionQueueMocks(
                 getNewRecordState(configModelStore),
                 JwtTokenStore(MockPreferencesService()),
                 identityVerificationService,
+                sessionStateStore,
             ),
             recordPrivateCalls = true,
         )
@@ -234,18 +237,49 @@ class SessionOperationQueueTests : FunSpec({
         later.onesignalId shouldBe "user-a"
     }
 
-    test("an update for a create loaded from the store is accepted") {
-        val policy = SessionQueuePolicy()
-        policy.onLoaded(create())
+    test("an update after a restart carries the IDs of a create from before it") {
+        val prefs = MockPreferencesService()
+        SessionQueuePolicy(sessions = SessionStateModelStore(prefs)).onEnqueue(mutableListOf(), item(create(onesignalId = "user-a")))
+        val later = update(sessionId = "local-s1", onesignalId = "user-b")
 
-        policy.onEnqueue(mutableListOf(), item(update(sessionId = "local-s1"))).accept shouldBe true
+        val accepted = SessionQueuePolicy(sessions = SessionStateModelStore(prefs)).onEnqueue(mutableListOf(), item(later)).accept
+
+        accepted shouldBe true
+        later.onesignalId shouldBe "user-a"
     }
 
-    test("an update for a session whose end was loaded from the store is rejected") {
-        val policy = SessionQueuePolicy()
-        policy.onLoaded(update(endTime = 2_000L))
+    test("an update after an end that already left the queue is rejected after a restart") {
+        val prefs = MockPreferencesService()
+        SessionQueuePolicy(sessions = SessionStateModelStore(prefs)).onEnqueue(mutableListOf(), item(update(endTime = 2_000L)))
 
-        policy.onEnqueue(mutableListOf(), item(update())).accept shouldBe false
+        SessionQueuePolicy(sessions = SessionStateModelStore(prefs)).onEnqueue(mutableListOf(), item(update())).accept shouldBe false
+    }
+
+    test("an update after a restart is sent with the backend session ID of a create from before it") {
+        val prefs = MockPreferencesService()
+        SessionQueuePolicy(sessions = SessionStateModelStore(prefs)).apply {
+            onEnqueue(mutableListOf(), item(create()))
+            recordTranslations(mapOf("local-s1" to "server-s1"))
+        }
+        val later = update(sessionId = "local-s1")
+
+        SessionQueuePolicy(sessions = SessionStateModelStore(prefs)).onEnqueue(mutableListOf(), item(later))
+
+        later.sessionId shouldBe "server-s1"
+    }
+
+    test("the session state cap never drops a session with operations still queued") {
+        val policy = SessionQueuePolicy(maxQueued = 2)
+        val queue = mutableListOf<OperationRepo.OperationQueueItem>()
+        val queued = item(create(localSessionId = "local-a"))
+        policy.onEnqueue(queue, queued)
+        queue.add(queued)
+
+        policy.onEnqueue(queue, item(create(localSessionId = "local-b")))
+        policy.onEnqueue(queue, item(create(localSessionId = "local-c")))
+
+        policy.onEnqueue(queue, item(update(sessionId = "local-a"))).accept shouldBe true
+        policy.onEnqueue(queue, item(update(sessionId = "local-b"))).accept shouldBe false
     }
 
     test("session operations are not stored before privacy consent") {
