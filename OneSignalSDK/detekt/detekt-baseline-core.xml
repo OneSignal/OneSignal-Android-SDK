@@ -253,6 +253,7 @@
     <ID>MagicNumber:OSDatabase.kt$OSDatabase$9</ID>
     <ID>MagicNumber:OneSignalDispatchers.kt$OneSignalDispatchers$1024</ID>
     <ID>MagicNumber:OneSignalImp.kt$OneSignalImp$8</ID>
+    <ID>MagicNumber:OneSignalImpV2.kt$OneSignalImpV2$8</ID>
     <ID>MagicNumber:OperationRepo.kt$OperationRepo$1_000</ID>
     <ID>MagicNumber:OutcomeEventsController.kt$OutcomeEventsController$1000</ID>
     <ID>MagicNumber:PermissionsActivity.kt$PermissionsActivity$23</ID>
@@ -418,6 +419,7 @@
     <ID>TooManyFunctions:OSDatabase.kt$OSDatabase : SQLiteOpenHelperIDatabase</ID>
     <ID>TooManyFunctions:OneSignal.kt$OneSignal$OneSignal</ID>
     <ID>TooManyFunctions:OneSignalImp.kt$OneSignalImp : IOneSignalIServiceProvider</ID>
+    <ID>TooManyFunctions:OneSignalImpV2.kt$OneSignalImpV2 : IOneSignalIServiceProvider</ID>
     <ID>TooManyFunctions:OperationRepo.kt$OperationRepo : IOperationRepoIStartableService</ID>
     <ID>TooManyFunctions:OutcomeEventsController.kt$OutcomeEventsController : IOutcomeEventsControllerIStartableServiceISessionLifecycleHandler</ID>
     <ID>TooManyFunctions:PreferencesService.kt$PreferencesService : IPreferencesServiceIStartableService</ID>
@@ -638,5 +640,7 @@
     <ID>UnusedPrivateMember:OperationRepo.kt$OperationRepo$private val _time: ITime</ID>
     <ID>UseCheckOrError:OneSignalImp.kt$OneSignalImp$throw IllegalStateException("'initWithContext failed' before 'updateUserJwt'")</ID>
     <ID>UseCheckOrError:OneSignalImp.kt$OneSignalImp$throw initFailureException ?: IllegalStateException("Initialization failed. Cannot proceed.")</ID>
+    <ID>UseCheckOrError:OneSignalImpV2.kt$OneSignalImpV2$throw IllegalStateException("'initWithContext failed' before 'updateUserJwt'")</ID>
+    <ID>UseCheckOrError:OneSignalImpV2.kt$OneSignalImpV2$throw initFailureException ?: IllegalStateException("Initialization failed. Cannot proceed.")</ID>
   </CurrentIssues>
 </SmellBaseline>
