@@ -17,7 +17,7 @@ private val createRequest =
     CreateSessionRequest(
         onesignalId = "onesignalId",
         subscriptionId = "subscriptionId",
-        deviceType = 1,
+        subscriptionType = "AndroidPush",
         startTime = 1_700_000_000L,
         idempotencyKey = "create-key",
     )
@@ -51,7 +51,7 @@ class SessionsBackendServiceTests : FunSpec({
                 withArg {
                     it.getString("onesignal_id") shouldBe "onesignalId"
                     it.getString("subscription_id") shouldBe "subscriptionId"
-                    it.getInt("device_type") shouldBe 1
+                    it.getString("subscription_type") shouldBe "AndroidPush"
                     it.getString("start_time") shouldBe "2023-11-14T22:13:20.000Z"
                     it.getString("idempotency_key") shouldBe "create-key"
                     it.has("direct_attribution_id") shouldBe false

@@ -14,6 +14,7 @@ import com.onesignal.session.internal.session.backend.ISessionsBackendService
 import com.onesignal.session.internal.session.backend.UpdateSessionRequest
 import com.onesignal.session.internal.session.operations.CreateSessionOperation
 import com.onesignal.session.internal.session.operations.UpdateSessionOperation
+import com.onesignal.user.internal.backend.SubscriptionObjectType
 import com.onesignal.user.internal.operations.impl.states.NewRecordsState
 import java.util.concurrent.TimeUnit
 
@@ -41,7 +42,7 @@ internal class SessionOperationExecutor(
                     CreateSessionRequest(
                         onesignalId = operation.onesignalId,
                         subscriptionId = operation.subscriptionId,
-                        deviceType = deviceService.deviceType.value,
+                        subscriptionType = SubscriptionObjectType.fromDeviceType(deviceService.deviceType).value,
                         startTime = TimeUnit.MILLISECONDS.toSeconds(operation.startTime),
                         idempotencyKey = operation.idempotencyKey,
                     ),
