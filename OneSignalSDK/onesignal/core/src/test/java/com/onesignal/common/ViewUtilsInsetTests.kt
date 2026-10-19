@@ -28,4 +28,35 @@ class ViewUtilsInsetTests : FunSpec({
         reported[2] shouldBe 0
         reported[3] shouldBe 0
     }
+
+    test("a hidden navigation bar does not keep a bottom or side inset") {
+        ViewUtils.pxInsetsHidingSystemBars(
+            top = 24,
+            bottom = 48,
+            right = 0,
+            left = 0,
+            statusHidden = false,
+            navigationHidden = true,
+        ) shouldBe intArrayOf(24, 0, 0, 0)
+
+        ViewUtils.pxInsetsHidingSystemBars(
+            top = 24,
+            bottom = 0,
+            right = 48,
+            left = 0,
+            statusHidden = false,
+            navigationHidden = true,
+        ) shouldBe intArrayOf(24, 0, 0, 0)
+    }
+
+    test("a hidden status bar does not keep a top inset") {
+        ViewUtils.pxInsetsHidingSystemBars(
+            top = 24,
+            bottom = 48,
+            right = 0,
+            left = 0,
+            statusHidden = true,
+            navigationHidden = false,
+        ) shouldBe intArrayOf(0, 48, 0, 0)
+    }
 })
