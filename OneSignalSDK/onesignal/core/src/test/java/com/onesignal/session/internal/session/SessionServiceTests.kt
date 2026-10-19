@@ -1,5 +1,6 @@
 package com.onesignal.session.internal.session
 
+import com.onesignal.common.IDManager
 import com.onesignal.common.modeling.ISingletonModelStoreChangeHandler
 import com.onesignal.common.modeling.ModelChangeTags
 import com.onesignal.common.modeling.ModelChangedArgs
@@ -17,6 +18,7 @@ import com.onesignal.user.internal.backend.IdentityConstants
 import com.onesignal.user.internal.identity.IdentityModel
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
@@ -300,7 +302,7 @@ class SessionServiceTests : FunSpec({
         sessionModelStore.model.usesSessionsApi shouldBe true
     }
 
-    test("new session pins onesignal and subscription IDs and clears the server session ID") {
+    test("new session pins onesignal and subscription IDs and a new local session ID") {
         // Given
         val mocks = Mocks()
         val sessionService = mocks.sessionService
@@ -309,7 +311,7 @@ class SessionServiceTests : FunSpec({
         val sessionModelStore =
             mocks.sessionModelStore {
                 it.isValid = false
-                it.serverSessionId = "previous-server-session"
+                it.localSessionId = "local-previous"
             }
 
         // When
@@ -318,7 +320,8 @@ class SessionServiceTests : FunSpec({
         // Then
         sessionModelStore.model.onesignalId shouldBe Mocks.ONESIGNAL_ID
         sessionModelStore.model.subscriptionId shouldBe Mocks.SUBSCRIPTION_ID
-        sessionModelStore.model.serverSessionId shouldBe null
+        sessionModelStore.model.localSessionId shouldNotBe "local-previous"
+        IDManager.isLocalId(sessionModelStore.model.localSessionId) shouldBe true
     }
 
     test("pinned IDs stay the same after login within a session") {
@@ -508,7 +511,6 @@ class SessionServiceTests : FunSpec({
         store.model.usesSessionsApi = true
         store.model.onesignalId = Mocks.ONESIGNAL_ID
         store.model.subscriptionId = Mocks.SUBSCRIPTION_ID
-        store.model.serverSessionId = "server-session-id"
 
         // When
         val reloaded = SessionModelStore(prefs).model
@@ -521,7 +523,6 @@ class SessionServiceTests : FunSpec({
         reloaded.usesSessionsApi shouldBe true
         reloaded.onesignalId shouldBe Mocks.ONESIGNAL_ID
         reloaded.subscriptionId shouldBe Mocks.SUBSCRIPTION_ID
-        reloaded.serverSessionId shouldBe "server-session-id"
     }
 
     test("onFocus dispatches the session-mutation body through runOnSerialIO (SDK-4508)") {
