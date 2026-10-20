@@ -312,18 +312,74 @@ class DeferredManagersTests : FunSpec({
         source.awaited shouldContainExactly listOf("requestPermission")
     }
 
-    test("a registration made after replay forwards instead of queueing") {
-        val real = mockk<IUserManager>(relaxed = true)
+    test("a registration or setting made after replay reaches the replayed manager even if the gate is not ready") {
+        val real = mockk<IInAppMessagesManager>(relaxed = true)
+        every { real.paused } returns true
         val source = FakeSource(real)
-        val deferred = DeferredUserManager(source)
-        val observer = mockk<IUserStateObserver>()
+        val deferred = DeferredInAppMessagesManager(source)
+        val listener = mockk<IInAppMessageClickListener>()
 
         deferred.replay(real)
-        deferred.addObserver(observer)
+        deferred.addClickListener(listener)
+        deferred.paused = true
 
         source.queued shouldBe emptyList()
-        verify(exactly = 0) { real.addObserver(observer) }
-        source.ignored shouldContainExactly listOf("addObserver")
+        source.ignored shouldBe emptyList()
+        verify(exactly = 1) { real.addClickListener(listener) }
+        verify(exactly = 1) { real.paused = true }
+        deferred.paused shouldBe true
+    }
+
+    test("a listener that registers another while it is replayed reaches the real manager without waiting") {
+        val real = mockk<IUserManager>(relaxed = true)
+        every { real.pushSubscription } returns mockk(relaxed = true)
+        val source = FakeSource(real)
+        val deferred = DeferredUserManager(source)
+        val first = mockk<IUserStateObserver>()
+        val second = mockk<IUserStateObserver>()
+        every { real.addObserver(first) } answers { deferred.addObserver(second) }
+
+        deferred.addObserver(first)
+        deferred.replay(real)
+
+        verifyOrder {
+            real.addObserver(first)
+            real.addObserver(second)
+        }
+        source.ignored shouldBe emptyList()
+    }
+
+    test("a full queue still applies removals and setting changes") {
+        val real = mockk<IInAppMessagesManager>(relaxed = true)
+        val source = FakeSource(real)
+        val deferred = DeferredInAppMessagesManager(source)
+        val removed = mockk<IInAppMessageClickListener>()
+
+        deferred.paused = true
+        deferred.addClickListener(removed)
+        repeat(DeferredManager.MAX_PENDING) { deferred.addClickListener(mockk()) }
+        deferred.removeClickListener(removed)
+        deferred.paused = false
+
+        deferred.paused shouldBe false
+        deferred.replay(real)
+        verify(exactly = 0) { real.addClickListener(removed) }
+        verify(exactly = 0) { real.removeClickListener(any()) }
+        verify(exactly = 1) { real.paused = false }
+        verify(exactly = 0) { real.paused = true }
+    }
+
+    test("the queue is bounded: registrations past the cap are logged as ignored, not queued") {
+        val real = mockk<INotificationsManager>(relaxed = true)
+        val source = FakeSource(real)
+        val deferred = DeferredNotificationsManager(source)
+
+        repeat(DeferredManager.MAX_PENDING + 5) { deferred.addClickListener(mockk()) }
+
+        source.queued.size shouldBe DeferredManager.MAX_PENDING
+        source.ignored shouldContainExactly List(5) { "addClickListener" }
+        deferred.replay(real)
+        verify(exactly = DeferredManager.MAX_PENDING) { real.addClickListener(any()) }
     }
 
     test("a replayed call that throws does not stop the rest") {
