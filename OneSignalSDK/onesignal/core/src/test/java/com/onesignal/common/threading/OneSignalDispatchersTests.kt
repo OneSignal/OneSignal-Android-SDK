@@ -509,6 +509,50 @@ class OneSignalDispatchersTests : FunSpec({
         createThreadId.get() shouldNotBe 0L
     }
 
+    test("flag off prewarm warms ingress before the other lanes") {
+        OneSignalDispatchers.bootstrapEnabledForTest = false
+        OneSignalDispatchers.resetForTest()
+        val order = Collections.synchronizedList(mutableListOf<String>())
+        val created = CountDownLatch(4)
+        OneSignalDispatchers.beforeLaneCreateForTest = { lane ->
+            order.add(lane)
+            created.countDown()
+        }
+        OneSignalDispatchers.prewarm()
+        created.await(2, TimeUnit.SECONDS) shouldBe true
+        order.first() shouldBe "INGRESS"
+    }
+
+    test("flag off prewarm does not build executors after reset") {
+        OneSignalDispatchers.bootstrapEnabledForTest = false
+        OneSignalDispatchers.resetForTest()
+        val entered = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        OneSignalDispatchers.beforeLazyWarmForTest = {
+            entered.countDown()
+            release.await(2, TimeUnit.SECONDS)
+        }
+        OneSignalDispatchers.prewarm()
+        entered.await(2, TimeUnit.SECONDS) shouldBe true
+        val workersBefore = dispatcherWorkerIds()
+        OneSignalDispatchers.resetForTest()
+        release.countDown()
+        Thread.sleep(400)
+        (dispatcherWorkerIds() - workersBefore) shouldBe emptySet()
+    }
+
+    test("flag off falls back when executor construction throws") {
+        OneSignalDispatchers.bootstrapEnabledForTest = false
+        OneSignalDispatchers.resetForTest()
+        val fallbacks = AtomicInteger()
+        OneSignalDispatchers.beforeLaneCreateForTest = { throw IllegalStateException("boom") }
+        OneSignalDispatchers.beforeFallbackCreateForTest = { fallbacks.incrementAndGet() }
+        val ran = CountDownLatch(1)
+        OneSignalDispatchers.launchOnIO { ran.countDown() }
+        ran.await(2, TimeUnit.SECONDS) shouldBe true
+        fallbacks.get() shouldBe 1
+    }
+
     test("prewarm is idempotent: a second call is a no-op and does not spawn a second prewarm thread") {
         OneSignalDispatchers.resetForTest()
         OneSignalDispatchers.prewarm()
@@ -518,3 +562,13 @@ class OneSignalDispatchersTests : FunSpec({
         OneSignalDispatchers.getStatus() shouldBe statusBefore
     }
 })
+
+private fun dispatcherWorkerIds(): Set<Long> =
+    Thread.getAllStackTraces().keys
+        .filter { thread ->
+            thread.name.startsWith("OneSignal-IO") ||
+                thread.name.startsWith("OneSignal-Default") ||
+                thread.name.startsWith("OneSignal-SerialIO") ||
+                thread.name.startsWith("OneSignal-Ingress")
+        }.map { it.id }
+        .toSet()

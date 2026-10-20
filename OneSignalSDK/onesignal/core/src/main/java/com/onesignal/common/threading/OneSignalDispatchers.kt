@@ -1,6 +1,9 @@
 package com.onesignal.common.threading
 
 import android.content.Context
+import android.util.Log
+import com.onesignal.core.internal.features.BootstrapCacheRead
+import com.onesignal.core.internal.features.DispatcherBootstrapCache
 import com.onesignal.debug.internal.logging.Logging
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
@@ -48,6 +51,7 @@ object OneSignalDispatchers {
     private const val TEST_READY_TIMEOUT_MS = 2_000L
     private const val TEST_READY_POLL_MS = 5L
     internal const val BASE_THREAD_NAME = "OneSignal" // Base thread name prefix
+    private const val RELEASE_LOG_TAG = "OneSignal"
     private const val IO_THREAD_NAME_PREFIX =
         "$BASE_THREAD_NAME-IO" // Thread name prefix for I/O operations
     private const val DEFAULT_THREAD_NAME_PREFIX =
@@ -64,6 +68,10 @@ object OneSignalDispatchers {
 
     @Volatile
     internal var beforeFallbackCreateForTest: ((String) -> Unit)? = null
+
+    /** Lazy prewarm, before the lane lazy runs. Blocking here must not deadlock shutdown. */
+    @Volatile
+    internal var beforeLazyWarmForTest: ((String) -> Unit)? = null
 
     private class OptimizedThreadFactory(
         private val namePrefix: String,
@@ -180,11 +188,11 @@ object OneSignalDispatchers {
             try {
                 createTarget(lane)
             } catch (t: Throwable) {
-                Logging.warn("OneSignalDispatchers: Using fallback for $lane lane: ${t.message}", t)
+                logRelease("$lane fell back", t)
                 try {
                     createFallbackTarget(lane)
                 } catch (fallbackError: Throwable) {
-                    Logging.warn("OneSignalDispatchers: Fallback failed for $lane lane: ${fallbackError.message}", fallbackError)
+                    logRelease("$lane fallback failed", fallbackError)
                     failPending("OneSignal $lane dispatcher fallback failed")
                     null
                 }
@@ -309,7 +317,7 @@ object OneSignalDispatchers {
                 }
             } catch (t: Throwable) {
                 running.set(false)
-                Logging.warn("OneSignalDispatchers: Failed to start bootstrap thread: ${t.message}", t)
+                logRelease("bootstrap thread failed to start", t)
                 while (true) {
                     val gate = queue.poll() ?: break
                     gate.bootstrapFailed()
@@ -325,7 +333,7 @@ object OneSignalDispatchers {
                     try {
                         gate.initialize()
                     } catch (t: Throwable) {
-                        Logging.warn("OneSignalDispatchers: Bootstrap failed for a lane: ${t.message}", t)
+                        logRelease("bootstrap lane failed", t)
                         gate.bootstrapFailed()
                     }
                 }
@@ -450,10 +458,6 @@ object OneSignalDispatchers {
     @Volatile
     internal var bootstrapEnabledForTest: Boolean? = null
 
-    /** Installed by process startup. Null means off, which is also the result before the first fetch. */
-    @Volatile
-    internal var readBootstrapEnabled: ((Context) -> Boolean)? = null
-
     // Pools latch on first use, so context has to be recorded before the first prewarm or launch.
     @Suppress("TooGenericExceptionCaught")
     internal fun noteApplicationContext(context: Context) {
@@ -469,32 +473,90 @@ object OneSignalDispatchers {
 
     internal fun resetBootstrapInputsForTest() {
         appContext = null
-        readBootstrapEnabled = null
         bootstrapEnabledForTest = null
     }
 
     private fun currentPools(): DispatcherPools {
         poolsRef?.let { return it }
-        return synchronized(poolsLock) {
-            poolsRef ?: newPools().also { poolsRef = it }
+        // Flag read does disk I/O. Keep it outside the lock so other launches are not stuck behind it.
+        val choice = choosePools()
+        val published =
+            synchronized(poolsLock) {
+                val existing = poolsRef
+                if (existing != null) {
+                    choice.pools.shutdown()
+                    existing
+                } else {
+                    poolsRef = choice.pools
+                    choice.pools
+                }
+            }
+        if (published === choice.pools && bootstrapEnabledForTest == null) {
+            val mode = if (choice.pools is LazyDispatcherPools) "lazy" else "bootstrap"
+            logRelease("${choice.detail}; pools=$mode", warn = choice.warn)
+        }
+        return published
+    }
+
+    private fun newPools(): DispatcherPools = choosePools().pools
+
+    private fun choosePools(): PoolChoice {
+        val override = bootstrapEnabledForTest
+        return if (override != null) {
+            PoolChoice(poolsFor(override), "test", false)
+        } else {
+            chooseFromCache()
         }
     }
 
-    private fun newPools(): DispatcherPools =
-        if (dispatcherBootstrapEnabled()) Pools() else LazyDispatcherPools()
+    private fun chooseFromCache(): PoolChoice {
+        val context = appContext ?: rememberApplicationContext()
+        val read = context?.let { DispatcherBootstrapCache.read(it) }
+        val detail =
+            when (read) {
+                BootstrapCacheRead.ENABLED -> "on"
+                BootstrapCacheRead.DISABLED -> "off, flag not in cache"
+                BootstrapCacheRead.UNREADABLE -> "off, cache unreadable"
+                null -> "off, no application"
+            }
+        return PoolChoice(poolsFor(read == BootstrapCacheRead.ENABLED), detail, warn = read == null)
+    }
 
-    private fun dispatcherBootstrapEnabled(): Boolean = bootstrapEnabledForTest ?: readCachedBootstrap()
+    private fun poolsFor(enabled: Boolean): DispatcherPools = if (enabled) Pools() else LazyDispatcherPools()
 
-    @Suppress("TooGenericExceptionCaught")
-    private fun readCachedBootstrap(): Boolean {
-        val context = appContext
-        val read = readBootstrapEnabled
-        if (context == null || read == null) return false
-        return try {
-            read(context)
-        } catch (t: Throwable) {
-            Logging.warn("OneSignalDispatchers: bootstrap flag unreadable, using lazy pools: ${t.message}", t)
-            false
+    private class PoolChoice(
+        val pools: DispatcherPools,
+        val detail: String,
+        val warn: Boolean,
+    )
+
+    @Suppress("TooGenericExceptionCaught", "SwallowedException")
+    private fun rememberApplicationContext(): Context? {
+        if (appContext != null) return appContext
+        // Receivers call prewarm() with no Context when the startup provider is disabled.
+        val resolved =
+            try {
+                val method = Class.forName("android.app.ActivityThread").getMethod("currentApplication")
+                method.invoke(null) as? Context
+            } catch (_: Throwable) {
+                null
+            }
+        if (resolved != null) appContext = resolved.applicationContext
+        return appContext
+    }
+
+    /** Logcat, not [Logging]: the SDK log level is often NONE in release, and Logging can dispatch. */
+    @Suppress("SwallowedException")
+    internal fun logRelease(
+        message: String,
+        error: Throwable? = null,
+        warn: Boolean = error != null,
+    ) {
+        val line = "sdk_dispatcher_bootstrap: $message"
+        try {
+            if (warn) Log.w(RELEASE_LOG_TAG, line, error) else Log.i(RELEASE_LOG_TAG, line)
+        } catch (_: RuntimeException) {
+            // JVM unit tests throw from android.util.Log. A log must not fail the latch.
         }
     }
 
@@ -528,8 +590,8 @@ object OneSignalDispatchers {
     private val prewarmLock = Any()
 
     /**
-     * Warms every lane away from the caller.
-     * sdk_dispatcher_bootstrap queues that work. Otherwise a faster dispatch can still construct on the caller.
+     * Warms every lane off the caller when it can.
+     * Bootstrap queues construction. Lazy construction runs on the caller, or blocks behind prewarm.
      */
     @Suppress("TooGenericExceptionCaught")
     fun prewarm() {
@@ -542,7 +604,7 @@ object OneSignalDispatchers {
             currentPools().prewarm()
         } catch (t: Throwable) {
             synchronized(prewarmLock) { prewarmStarted = false }
-            Logging.warn("OneSignalDispatchers.prewarm failed: ${t.message}", t)
+            logRelease("prewarm failed", t)
         }
     }
 
@@ -577,10 +639,11 @@ object OneSignalDispatchers {
      */
     @Suppress("TooGenericExceptionCaught")
     internal fun resetForTest() {
+        val created = newPools()
         val old: DispatcherPools?
         synchronized(poolsLock) {
             old = poolsRef
-            poolsRef = newPools()
+            poolsRef = created
         }
         try {
             old?.shutdown()
@@ -591,6 +654,7 @@ object OneSignalDispatchers {
         beforeLaneCreateForTest = null
         afterExecutorCreateForTest = null
         beforeFallbackCreateForTest = null
+        beforeLazyWarmForTest = null
     }
 
     @Suppress("ComplexMethod")
