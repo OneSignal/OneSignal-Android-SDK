@@ -19,6 +19,7 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import java.util.UUID
 
 private class Mocks {
     val backend = mockk<ISessionsBackendService>()
@@ -56,7 +57,7 @@ class SessionOperationExecutorTests : FunSpec({
         coVerify {
             mocks.backend.createSession(
                 "appId",
-                CreateSessionRequest("onesignalId", "subscriptionId", 1, 1_700_000_000L, op.idempotencyKey),
+                CreateSessionRequest("onesignalId", "subscriptionId", "AndroidPush", 1_700_000_000L, op.idempotencyKey),
             )
         }
     }
@@ -145,8 +146,11 @@ class SessionOperationExecutorTests : FunSpec({
         restoredUpdate.endTime shouldBe 1L
     }
 
-    test("a create is keyed by its local session ID") {
-        create().idempotencyKey shouldBe "local-session"
+    test("a create is keyed by the UUID of its local session ID") {
+        val uuid = UUID.randomUUID().toString()
+        val op = CreateSessionOperation("appId", "local-$uuid", "onesignalId", "subscriptionId", startTime = 1L, externalId = null)
+
+        op.idempotencyKey shouldBe uuid
     }
 
     test("each update gets its own idempotency key") {
