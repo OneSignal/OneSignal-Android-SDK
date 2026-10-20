@@ -11,7 +11,6 @@ import com.onesignal.internal.OneSignalImpV2
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withTimeout
 
 @RobolectricTest
 class SDKInitSuspendV2Tests : FunSpec({
@@ -84,137 +83,63 @@ class SDKInitSuspendV2Tests : FunSpec({
 
     // ===== LOGIN TESTS =====
 
-    test("login suspend method works after initWithContextSuspend") {
-        // Given
+    test("login after initWithContextSuspend switches to the external ID") {
         val context = getApplicationContext<Context>()
         val os = OneSignalImpV2()
-        val testExternalId = "testUser123"
 
         runBlocking {
-            // When
-            val initResult = os.initWithContextSuspend(context, "testAppId")
-            initResult shouldBe true
-
-            // Login with timeout - demonstrates suspend method works correctly
-            try {
-                withTimeout(2000) { // 2 second timeout
-                    os.login(testExternalId)
-                }
-                // If we get here, login completed successfully (unlikely in test env)
-                os.isInitialized shouldBe true
-            } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
-                // Expected timeout due to operation queue processing in test environment
-                // This proves the suspend method is working correctly
-                os.isInitialized shouldBe true
-                println("Login suspend method works correctly - timed out as expected due to operation queue")
-            }
+            os.initWithContextSuspend(context, "testAppId") shouldBe true
+            os.login("testUser123")
+            os.user.externalId shouldBe "testUser123"
         }
     }
 
-    // Note: Tests for null appId removed since appId is now non-nullable
-
-    test("login suspend method with JWT token") {
-        // Given
+    test("login with a JWT after initWithContextSuspend switches to the external ID") {
         val context = getApplicationContext<Context>()
         val os = OneSignalImpV2()
-        val testExternalId = "testUser789"
-        val jwtToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
 
         runBlocking {
-            // When
-            val initResult = os.initWithContextSuspend(context, "testAppId")
-            initResult shouldBe true
-
-            try {
-                withTimeout(2000) { // 2 second timeout
-                    os.login(testExternalId, jwtToken)
-                }
-                os.isInitialized shouldBe true
-            } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
-                // Expected timeout due to operation queue processing
-                os.isInitialized shouldBe true
-                println("Login with JWT suspend method works correctly - timed out as expected due to operation queue")
-            }
+            os.initWithContextSuspend(context, "testAppId") shouldBe true
+            os.login("testUser789", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...")
+            os.user.externalId shouldBe "testUser789"
         }
     }
 
-    // ===== LOGOUT TESTS =====
-
-    test("logout suspend method works after initWithContextSuspend") {
-        // Given
+    test("logout after login returns to a device-scoped user") {
         val context = getApplicationContext<Context>()
         val os = OneSignalImpV2()
 
         runBlocking {
-            // When
-            val initResult = os.initWithContextSuspend(context, "testAppId")
-            initResult shouldBe true
-
-            // Logout with timeout - demonstrates suspend method works correctly
-            try {
-                withTimeout(2000) { // 2 second timeout
-                    os.logout()
-                }
-                // If we get here, logout completed successfully (unlikely in test env)
-                os.isInitialized shouldBe true
-            } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
-                // Expected timeout due to operation queue processing in test environment
-                // This proves the suspend method is working correctly
-                os.isInitialized shouldBe true
-                println("Logout suspend method works correctly - timed out as expected due to operation queue")
-            }
+            os.initWithContextSuspend(context, "testAppId") shouldBe true
+            os.login("user1")
+            os.logout()
+            os.user.externalId shouldBe ""
         }
     }
 
-    // ===== INTEGRATION TESTS =====
-
-    test("multiple login calls work correctly") {
-        // Given
+    test("the last of several logins wins") {
         val context = getApplicationContext<Context>()
         val os = OneSignalImpV2()
 
         runBlocking {
-            // When
-            val initResult = os.initWithContextSuspend(context, "testAppId")
-            initResult shouldBe true
-
-            try {
-                withTimeout(3000) { // 3 second timeout for multiple operations
-                    os.login("user1")
-                    os.login("user2")
-                    os.login("user3")
-                }
-                os.isInitialized shouldBe true
-            } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
-                // Expected timeout due to operation queue processing
-                os.isInitialized shouldBe true
-                println("Multiple login calls suspend method works correctly - timed out as expected due to operation queue")
-            }
+            os.initWithContextSuspend(context, "testAppId") shouldBe true
+            os.login("user1")
+            os.login("user2")
+            os.login("user3")
+            os.user.externalId shouldBe "user3"
         }
     }
 
-    test("login and logout sequence works correctly") {
-        // Given
+    test("login, logout, login ends on the second user") {
         val context = getApplicationContext<Context>()
         val os = OneSignalImpV2()
 
         runBlocking {
-            // When
-            val initResult = os.initWithContextSuspend(context, "testAppId")
-            initResult shouldBe true
-
-            try {
-                withTimeout(3000) { // 3 second timeout for sequence
-                    os.login("user1")
-                    os.logout()
-                    os.login("user2")
-                }
-                os.isInitialized shouldBe true
-            } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
-                // Expected timeout due to operation queue processing
-                os.isInitialized shouldBe true
-                println("Login/logout sequence suspend methods work correctly - timed out as expected due to operation queue")
-            }
+            os.initWithContextSuspend(context, "testAppId") shouldBe true
+            os.login("user1")
+            os.logout()
+            os.login("user2")
+            os.user.externalId shouldBe "user2"
         }
     }
 

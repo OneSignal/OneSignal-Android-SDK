@@ -42,12 +42,7 @@ import java.util.concurrent.atomic.AtomicReference
 @RobolectricTest
 class SDKInitV2Tests : FunSpec({
 
-    /**
-     * Helper function to wait for OneSignal initialization to complete.
-     * @param oneSignalImp The OneSignalImpV2 instance to wait for
-     * @param maxAttempts Maximum number of attempts (default: 100)
-     * @param sleepMs Sleep duration between attempts in milliseconds (default: 20)
-     */
+    /** Polls until [oneSignalImp] is initialized, up to [maxAttempts] sleeps of [sleepMs]. */
     fun waitForInitialization(oneSignalImp: OneSignalImpV2, maxAttempts: Int = 100, sleepMs: Long = 20) {
         var attempts = 0
         while (!oneSignalImp.isInitialized && attempts < maxAttempts) {
@@ -208,6 +203,40 @@ class SDKInitV2Tests : FunSpec({
         os.isInitialized shouldBe true
     }
 
+    test("registrations queued before a failed init are kept and applied when a retry succeeds") {
+        val context = IsolatedPrefsContext(getApplicationContext())
+        val os = OneSignalImpV2()
+        os.user.addObserver(mockk(relaxed = true))
+
+        os.initWithContext(context, "")
+        os.user
+        os.isInitialized shouldBe false
+
+        os.initWithContext(context, "appId")
+        waitForInitialization(os)
+        (os.user as UserManager).changeHandlersNotifier.hasSubscribers shouldBe true
+    }
+
+    test("calls dropped before init are summarized in one error once init succeeds; queued registrations are not") {
+        val events = CopyOnWriteArrayList<OneSignalLogEvent>()
+        val listener = ILogListener { events += it }
+        Logging.addListener(listener)
+        try {
+            val os = OneSignalImpV2()
+            os.user.addTag("key", "value")
+            os.user.addObserver(mockk(relaxed = true))
+            os.initWithContext(IsolatedPrefsContext(getApplicationContext()), "appId")
+            waitForInitialization(os)
+        } finally {
+            Logging.removeListener(listener)
+        }
+
+        events.count {
+            it.level == LogLevel.ERROR &&
+                it.entry.contains("calls made before initWithContext were ignored: User.addTag. Call initWithContext first.")
+        } shouldBe 1
+    }
+
     test("pre-init registrations are replayed before init reports success") {
         val os = OneSignalImpV2()
         var stateAtReplay: InitState? = null
@@ -263,7 +292,7 @@ class SDKInitV2Tests : FunSpec({
         events.count { it.level == LogLevel.WARN && it.entry.contains("using the cached app ID") } shouldBe 1
     }
 
-    test("a call before init logs one error naming the call, with the failure trace once per attempt") {
+    test("an ignored call logs one error per attempt, with the failure trace, and repeats at debug") {
         val events = CopyOnWriteArrayList<OneSignalLogEvent>()
         val listener = ILogListener { events += it }
         Logging.addListener(listener)
@@ -279,9 +308,9 @@ class SDKInitV2Tests : FunSpec({
             os.user.addTag("key", "value")
             os.user.addTag("key", "value")
 
-            val errors = events.filter { it.level == LogLevel.ERROR && it.entry.contains("'User.addTag'") }
-            errors.size shouldBe 2
-            errors.count { it.entry.contains("OneSignal initWithContext failed.") } shouldBe 1
+            val logged = events.filter { it.entry.contains("'User.addTag'") }
+            logged.map { it.level } shouldBe listOf(LogLevel.ERROR, LogLevel.DEBUG)
+            logged[0].entry.contains("OneSignal initWithContext failed.") shouldBe true
         } finally {
             Logging.removeListener(listener)
         }
@@ -692,12 +721,8 @@ class SDKInitV2Tests : FunSpec({
     }
 
     test("initWithContext recovers when ensureApplicationServiceStarted throws synchronously") {
-        // Given: a context whose applicationContext is NOT an Application instance.
-        // ApplicationService.start does `context.applicationContext as Application`, which
-        // will throw ClassCastException — simulates restricted hosts (Robolectric custom
-        // application factories, instrumentation context wrappers, multi-process content
-        // provider init order). Without recovery, initState would be left at IN_PROGRESS
-        // forever and accessors would deadlock on suspendCompletion.await().
+        // applicationContext is not an Application, so ApplicationService.start throws ClassCastException,
+        // as in some restricted hosts. Init must still reach a terminal state.
         val baseContext = getApplicationContext<Context>()
         val brokenContext =
             object : ContextWrapper(baseContext) {
@@ -718,17 +743,8 @@ class SDKInitV2Tests : FunSpec({
         waitForInitialization(os)
     }
 
-    test("accessor returns once init is SUCCESS even when the IO dispatcher is saturated (OneSignal-Flutter-SDK#1163)") {
-        // Regression test for the Flutter main-thread ANR. getServiceWithFeatureGate used to
-        // ALWAYS route through waitAndReturn -> waitForInit -> runBlocking(OneSignalDispatchers.IO),
-        // even after init had already reached SUCCESS. On Flutter's main-thread lifecycleInit that
-        // parks the UI thread on a cold-start-contended IO pool (OneSignal-Flutter-SDK#1163). The
-        // fix adds a lock-free SUCCESS fast-path, centralized in waitForInit().
-        //
-        // We reproduce the contention faithfully: saturate OneSignalDispatchers.IO so that the
-        // pre-fix runBlocking(OneSignalDispatchers.IO) would park indefinitely behind the busy
-        // workers, then assert the accessor still returns. With the fix it answers synchronously;
-        // without it the accessor thread would still be parked when we check.
+    test("accessor returns once init is SUCCESS even when the IO dispatcher is saturated") {
+        // At SUCCESS an accessor must answer without an IO worker; a busy pool must not park the main thread.
         val context = getApplicationContext<Context>()
         val os = OneSignalImpV2()
 
@@ -740,18 +756,12 @@ class SDKInitV2Tests : FunSpec({
             val result = arrayOfNulls<Any>(1)
             runOnThreadAndWait { result[0] = os.user }
 
-            // Then: the fast-path answered synchronously and the thread finished. The pre-fix
-            // runBlocking(OneSignalDispatchers.IO) path would still be parked here.
             result[0] shouldNotBe null
         }
     }
 
-    test("login returns once init is SUCCESS even when the IO dispatcher is saturated (OneSignal-Flutter-SDK#1163)") {
-        // Companion regression test proving the SUCCESS fast-path is centralized in waitForInit(),
-        // so it covers the operation paths (login / logout / updateUserJwt / JWT listeners), not
-        // just the service accessors. login() used to route through
-        // waitForInit -> runBlocking(OneSignalDispatchers.IO) even after init reached SUCCESS, so a
-        // saturated IO pool would park the caller indefinitely.
+    test("login returns once init is SUCCESS even when the IO dispatcher is saturated") {
+        // Same as above for the operation paths (login, logout, updateUserJwt, JWT listeners).
         val context = getApplicationContext<Context>()
         val os = OneSignalImpV2()
 
@@ -763,9 +773,6 @@ class SDKInitV2Tests : FunSpec({
             // short-circuit (the subsequent enqueue is fire-and-forget via suspendifyOnIO and does
             // not block the caller).
             runOnThreadAndWait { os.login("externalId") }
-
-            // Then: the fast-path answered synchronously and the call returned. The pre-fix
-            // runBlocking(OneSignalDispatchers.IO) path would still be parked here.
         }
     }
 
@@ -880,17 +887,8 @@ class SDKInitV2Tests : FunSpec({
         oneSignalImp.isInitialized shouldBe false
     }
 
-    // Regression test for the SessionService NPE during in-flight background init.
-    //
-    // Background: when init is in flight, internalInit() has not yet called bootstrapServices(),
-    // which means IBootstrapService implementations like SessionService have null model fields.
-    // SyncJobService re-enters via initWithContextSuspend(context, null) and then immediately
-    // calls runBackgroundServices(); if initWithContextSuspend returns true while init is still
-    // in progress (the old behavior), the loop hits SessionService.endSession() → NPE.
-    //
-    // The fix: initWithContextSuspend must suspend until init is *fully* completed, not just
-    // kicked off. This test verifies that contract by checking that os.isInitialized is true
-    // at the moment the re-entrant suspend call returns.
+    // A re-entrant caller (e.g. SyncJobService) uses services right after this returns, so it must wait
+    // for init to finish, not just start; SessionService would otherwise hit null models.
     test("initWithContextSuspend with in-flight init waits for completion before returning") {
         val context = getApplicationContext<Context>()
         val trigger = CountDownLatch(1)
@@ -920,14 +918,7 @@ class SDKInitV2Tests : FunSpec({
             os.isInitialized shouldBe false
             firstInit.isCompleted shouldBe false
 
-            // Second caller: under the OLD behavior the synchronized(initLock) block sees
-            // state == IN_PROGRESS and returns `true` *while* internalInit() (running on the
-            // first caller) has not yet reached `initState = InitState.SUCCESS`. Under the
-            // fix, this call must suspend until the first caller fully completes init -- so
-            // that os.isInitialized is guaranteed `true` at the moment we return.
-            //
-            // We capture isInitialized at exactly the moment initWithContextSuspend returns
-            // for the second caller. Old code: false (bug). New code: true (fix).
+            // The second caller must see isInitialized == true at the moment its call returns.
             val secondInit = async(Dispatchers.IO) {
                 val result = os.initWithContextSuspend(context, "appId")
                 val initializedAtReturn = os.isInitialized
@@ -953,16 +944,7 @@ class SDKInitV2Tests : FunSpec({
         }
     }
 
-    // Regression test for review-flagged Defect 1 (stale latch on retry-after-FAILED).
-    //
-    // Background: `suspendCompletion` was a single-shot `val CompletableDeferred<Unit>`. Once
-    // any init terminates (even FAILED), the deferred stays permanently complete -- so a
-    // re-entrant suspend caller arriving DURING a subsequent retry would `await()` on the
-    // already-completed deferred, return instantly, and read transient state (likely
-    // IN_PROGRESS -> false), silently dropping JobService work.
-    //
-    // The fix resets `suspendCompletion` whenever the synchronized(initLock) block flips state
-    // into IN_PROGRESS, and await sites local-capture the deferred under the lock.
+    // A caller arriving during a retry after FAILED must wait on the retry's signal, not the finished one.
     test("initWithContextSuspend resets latch on retry-after-FAILED") {
         val context = getApplicationContext<Context>()
         val os = OneSignalImpV2()
@@ -975,7 +957,6 @@ class SDKInitV2Tests : FunSpec({
             val firstInit = os.initWithContextSuspend(context, "appId")
             firstInit shouldBe false
             os.isInitialized shouldBe false
-            // At this point the (pre-fix) single-shot `suspendCompletion` is permanently complete.
             unmockkObject(AndroidUtils)
 
             // 2. Stall a fresh retry via BlockingPrefsContext so initState sits at IN_PROGRESS.
@@ -996,9 +977,7 @@ class SDKInitV2Tests : FunSpec({
             os.isInitialized shouldBe false
             secondInit.isCompleted shouldBe false
 
-            // 3. Re-entrant caller. With Defect 1, it would wake immediately on the
-            //    FAILED-generation latch (still permanently complete) and return based on
-            //    transient state. With the fix, it waits on the *new* generation's latch.
+            // 3. Re-entrant caller: must wait on the retry's signal, not the finished FAILED one.
             val thirdInit = async(Dispatchers.IO) {
                 val r = os.initWithContextSuspend(context, "appId")
                 val initializedAtReturn = os.isInitialized
@@ -1019,32 +998,16 @@ class SDKInitV2Tests : FunSpec({
         }
     }
 
-    // Regression test for review-flagged Defect 2 (indefinite hang if internalInit throws).
-    //
-    // Background: `internalInit` had no try/catch wrapping its body. An unchecked throw from
-    // initEssentials/bootstrapServices/etc. would leave initState=IN_PROGRESS forever and
-    // `suspendCompletion` uncompleted -- causing every re-entrant suspend caller (e.g.
-    // SyncJobService) to hang on `await()` indefinitely, holding its budget slot until the
-    // OS killed the worker.
-    //
-    // The fix wraps internalInit's body in try/catch, ensuring a terminal state and
-    // `notifyInitComplete()` on any throw.
+    // A throw inside init must still end the attempt, or every waiter (e.g. SyncJobService) hangs.
     test("initWithContextSuspend reaches terminal state when internalInit throws") {
         val context = getApplicationContext<Context>()
         val os = OneSignalImpV2()
 
-        // Make the very first call inside internalInit throw (mirrors the user-locked test
-        // pattern, but with a throw instead of a `false` return). This is the cheapest way to
-        // simulate "any unchecked exception during bootstrap" without coupling to specific
-        // bootstrap internals.
+        // The first call inside internalInit, so no bootstrap internals are involved.
         mockkObject(AndroidUtils)
         every { AndroidUtils.isAndroidUserUnlocked(any()) } throws RuntimeException("simulated bootstrap failure")
 
         runBlocking {
-            // Without the fix: the throw propagates out of internalInit, escapes withContext,
-            // and either fails the test outright or leaves the SDK in a deadlocked
-            // IN_PROGRESS state with `suspendCompletion` never completed.
-            // With the fix: the catch block sets FAILED + notifyInitComplete + returns false.
             val firstResult = withTimeoutOrNull(5_000) {
                 os.initWithContextSuspend(context, "appId")
             }
@@ -1053,13 +1016,33 @@ class SDKInitV2Tests : FunSpec({
 
             unmockkObject(AndroidUtils)
 
-            // State is FAILED so a retry is allowed and (per Defect 1 fix) gets a fresh latch.
-            // This also doubles as a smoke test that we didn't leak IN_PROGRESS.
+            // FAILED, so a retry is allowed and gets a fresh signal.
             val retry = withTimeoutOrNull(5_000) {
                 os.initWithContextSuspend(context, "appId")
             }
             retry shouldBe true
             os.isInitialized shouldBe true
+        }
+    }
+
+    test("a LinkageError during init ends the attempt as FAILED instead of leaving it in progress") {
+        val context = getApplicationContext<Context>()
+        mockkObject(AndroidUtils)
+        try {
+            every { AndroidUtils.isAndroidUserUnlocked(any()) } throws NoClassDefFoundError("simulated missing class")
+
+            val suspendOs = OneSignalImpV2()
+            runBlocking { withTimeoutOrNull(5_000) { suspendOs.initWithContextSuspend(context, "appId") } } shouldBe false
+            suspendOs.gate.state shouldBe InitState.FAILED
+
+            val syncOs = OneSignalImpV2()
+            syncOs.initWithContext(context, "appId") shouldBe true
+            val deadline = System.currentTimeMillis() + 5_000
+            while (syncOs.gate.state == InitState.IN_PROGRESS && System.currentTimeMillis() < deadline) Thread.sleep(10)
+            syncOs.gate.state shouldBe InitState.FAILED
+            syncOs.user.onesignalId shouldBe ""
+        } finally {
+            unmockkObject(AndroidUtils)
         }
     }
 })
