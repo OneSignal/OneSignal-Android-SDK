@@ -689,7 +689,12 @@ internal class WebViewManager(
         content: InAppMessageContent,
         activity: Activity,
     ): String {
-        val html = content.contentHtml ?: ""
+        val html = content.contentHtml
+        if (html.isNullOrEmpty()) {
+            Logging.warn("In-app message HTML is empty.")
+            return ""
+        }
+        val base = html.substringBefore(SAFE_AREA_MARKER)
         var safeAreaInsetsScript = SET_SAFE_AREA_INSETS_SCRIPT
         val insets = ViewUtils.getCutoutAndStatusBarInsets(activity)
         val safeAreaJSObject =
@@ -701,7 +706,7 @@ internal class WebViewManager(
                 insets[3],
             )
         safeAreaInsetsScript = String.format(safeAreaInsetsScript, safeAreaJSObject)
-        val withInsets = html + safeAreaInsetsScript
+        val withInsets = base + safeAreaInsetsScript
         content.contentHtml = withInsets
         return withInsets
     }
@@ -732,8 +737,9 @@ internal class WebViewManager(
                 "   right: %d,\n" +
                 "   left: %d,\n" +
                 "}"
+        const val SAFE_AREA_MARKER = "<!-- onesignal-safe-area -->"
         const val SET_SAFE_AREA_INSETS_SCRIPT =
-            "\n\n" +
+            "\n\n$SAFE_AREA_MARKER\n" +
                 "<script>\n" +
                 "    if (typeof setSafeAreaInsets === 'function') { setSafeAreaInsets(%s); }\n" +
                 "</script>"

@@ -40,6 +40,28 @@ class HostSystemBarCopyTests : FunSpec({
         (plainPopup.systemUiVisibility and View.SYSTEM_UI_FLAG_HIDE_NAVIGATION) shouldBe 0
     }
 
+    test("pre-R copy keeps the popup layout flags and drops the host layout flags") {
+        val context = RuntimeEnvironment.getApplication()
+        val host = View(context)
+        val popup = View(context)
+        @Suppress("DEPRECATION")
+        host.systemUiVisibility =
+            View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+        @Suppress("DEPRECATION")
+        popup.systemUiVisibility = View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+
+        copyHostSystemBarVisibility(host, popup)
+
+        @Suppress("DEPRECATION")
+        (popup.systemUiVisibility and View.SYSTEM_UI_FLAG_HIDE_NAVIGATION) shouldBe
+            View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+        @Suppress("DEPRECATION")
+        (popup.systemUiVisibility and View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN) shouldBe
+            View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+        @Suppress("DEPRECATION")
+        (popup.systemUiVisibility and View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION) shouldBe 0
+    }
+
     test("copying onto the host decor itself does nothing") {
         val host = View(RuntimeEnvironment.getApplication())
         @Suppress("DEPRECATION")

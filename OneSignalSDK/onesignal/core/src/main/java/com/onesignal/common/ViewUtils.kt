@@ -10,6 +10,7 @@ import android.os.Build
 import android.view.View
 import android.view.Window
 import android.view.WindowInsets
+import android.view.WindowManager
 import kotlin.math.roundToInt
 
 object ViewUtils {
@@ -67,13 +68,34 @@ object ViewUtils {
     }
 
     fun getCutoutAndStatusBarInsets(activity: Activity): IntArray {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+            return legacyCutoutAndStatusBarInsets(activity)
+        }
         val decorView = activity.window.decorView
         val windowInsets = decorView.rootWindowInsets
         if (windowInsets != null) {
             @Suppress("DEPRECATION")
-            return cutoutAndStatusBarInsetsDp(windowInsets, decorView.systemUiVisibility)
+            return cutoutAndStatusBarInsetsDp(
+                windowInsets,
+                systemUiVisibilityForInsets(
+                    decorView.windowSystemUiVisibility,
+                    activity.window.attributes.flags,
+                ),
+            )
         }
         return legacyCutoutAndStatusBarInsets(activity)
+    }
+
+    // FLAG_FULLSCREEN hides the status bar without setting SYSTEM_UI_FLAG_FULLSCREEN.
+    @Suppress("DEPRECATION")
+    internal fun systemUiVisibilityForInsets(
+        systemUiVisibility: Int,
+        windowFlags: Int,
+    ): Int {
+        if (windowFlags and WindowManager.LayoutParams.FLAG_FULLSCREEN != 0) {
+            return systemUiVisibility or View.SYSTEM_UI_FLAG_FULLSCREEN
+        }
+        return systemUiVisibility
     }
 
     internal fun cutoutAndStatusBarInsetsDp(
