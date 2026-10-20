@@ -24,6 +24,15 @@ class OneSignalDispatchersTests : FunSpec({
         Logging.logLevel = LogLevel.NONE
     }
 
+    beforeTest {
+        OneSignalDispatchers.bootstrapEnabledForTest = true
+        OneSignalDispatchers.resetForTest()
+    }
+
+    afterTest {
+        OneSignalDispatchers.bootstrapEnabledForTest = null
+    }
+
     test("OneSignalDispatchers should be properly initialized") {
         // Access dispatchers to trigger initialization
         OneSignalDispatchers.IO shouldNotBe null
@@ -477,6 +486,27 @@ class OneSignalDispatchersTests : FunSpec({
         status shouldContain "IO Scope: Active"
         status shouldContain "Default Scope: Active"
         status shouldContain "SerialIO Scope: Active"
+    }
+
+    test("flag off constructs the IO executor on the calling thread") {
+        OneSignalDispatchers.bootstrapEnabledForTest = false
+        OneSignalDispatchers.resetForTest()
+        val callerThreadId = AtomicLong()
+        val createThreadId = AtomicLong()
+        val finished = CountDownLatch(1)
+        OneSignalDispatchers.beforeLaneCreateForTest = { lane ->
+            if (lane == "IO") createThreadId.set(Thread.currentThread().id)
+        }
+
+        Thread {
+            callerThreadId.set(Thread.currentThread().id)
+            OneSignalDispatchers.launchOnIO { }
+            finished.countDown()
+        }.start()
+
+        finished.await(2, TimeUnit.SECONDS) shouldBe true
+        createThreadId.get() shouldBe callerThreadId.get()
+        createThreadId.get() shouldNotBe 0L
     }
 
     test("prewarm is idempotent: a second call is a no-op and does not spawn a second prewarm thread") {

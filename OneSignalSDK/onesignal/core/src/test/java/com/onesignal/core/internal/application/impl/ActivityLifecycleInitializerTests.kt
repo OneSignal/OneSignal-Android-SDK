@@ -45,6 +45,7 @@ class ActivityLifecycleInitializerTests : FunSpec({
             application.registerActivityLifecycleCallbacks(any<Application.ActivityLifecycleCallbacks>())
         }
         verifyOrder {
+            OneSignalDispatchers.noteApplicationContext(application)
             OneSignalDispatchers.prewarm()
             application.registerActivityLifecycleCallbacks(any<Application.ActivityLifecycleCallbacks>())
         }

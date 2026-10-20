@@ -1,5 +1,6 @@
 package com.onesignal.common.threading
 
+import android.content.Context
 import com.onesignal.debug.internal.logging.Logging
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
@@ -118,7 +119,9 @@ object OneSignalDispatchers {
     private class GateDispatcher(
         private val lane: Lane,
         private val requestBootstrap: (GateDispatcher) -> Unit,
-    ) : CoroutineDispatcher() {
+    ) : CoroutineDispatcher(), DispatcherLane {
+        override val dispatcher: CoroutineDispatcher get() = this
+
         private val lock = Any()
         private val pending = ArrayDeque<Pair<CoroutineContext, Runnable>>()
         private var state = LaneState.COLD
@@ -234,7 +237,7 @@ object OneSignalDispatchers {
             failPending("OneSignal dispatcher bootstrap thread failed to start")
         }
 
-        fun status(): String =
+        override fun status(): String =
             synchronized(lock) {
                 when (state) {
                     LaneState.READY -> "Active"
@@ -243,7 +246,7 @@ object OneSignalDispatchers {
                 }
             }
 
-        fun executor(): ThreadPoolExecutor? = synchronized(lock) { target?.executor }
+        override fun executor(): ThreadPoolExecutor? = synchronized(lock) { target?.executor }
 
         private fun failPending(reason: String) {
             val queued =
@@ -333,26 +336,30 @@ object OneSignalDispatchers {
         }
     }
 
-    private class Pools {
+    private class Pools : DispatcherPools {
         private val coordinator = BootstrapCoordinator()
-        val IO = GateDispatcher(Lane.IO, coordinator::request)
-        val Default = GateDispatcher(Lane.DEFAULT, coordinator::request)
-        val SerialIO = GateDispatcher(Lane.SERIAL_IO, coordinator::request)
-        val Ingress = GateDispatcher(Lane.INGRESS, coordinator::request)
-        val IOScope = CoroutineScope(SupervisorJob() + IO)
-        val DefaultScope = CoroutineScope(SupervisorJob() + Default)
-        val SerialIOScope = CoroutineScope(SupervisorJob() + SerialIO)
-        val IngressScope = CoroutineScope(SupervisorJob() + Ingress)
+        private val ioGate = GateDispatcher(Lane.IO, coordinator::request)
+        private val defaultGate = GateDispatcher(Lane.DEFAULT, coordinator::request)
+        private val serialGate = GateDispatcher(Lane.SERIAL_IO, coordinator::request)
+        private val ingressGate = GateDispatcher(Lane.INGRESS, coordinator::request)
+        override val io: DispatcherLane = ioGate
+        override val defaultLane: DispatcherLane = defaultGate
+        override val serialIO: DispatcherLane = serialGate
+        override val ingress: DispatcherLane = ingressGate
+        override val ioScope = CoroutineScope(SupervisorJob() + ioGate)
+        override val defaultScope = CoroutineScope(SupervisorJob() + defaultGate)
+        override val serialIOScope = CoroutineScope(SupervisorJob() + serialGate)
+        override val ingressScope = CoroutineScope(SupervisorJob() + ingressGate)
 
         // Ingress bootstraps first because receivers have a ~10s broadcast budget.
-        private val gates = listOf(Ingress, IO, Default, SerialIO)
-        private val scopes = listOf(IngressScope, IOScope, DefaultScope, SerialIOScope)
+        private val gates = listOf(ingressGate, ioGate, defaultGate, serialGate)
+        private val scopes = listOf(ingressScope, ioScope, defaultScope, serialIOScope)
 
-        fun prewarm() {
+        override fun prewarm() {
             gates.forEach { it.requestWarmup() }
         }
 
-        fun shutdown() {
+        override fun shutdown() {
             scopes.forEach { it.cancel() }
             gates.forEach { it.close() }
         }
@@ -433,31 +440,87 @@ object OneSignalDispatchers {
     }
 
     @Volatile
-    private var pools = Pools()
+    private var poolsRef: DispatcherPools? = null
+    private val poolsLock = Any()
+
+    @Volatile
+    private var appContext: Context? = null
+
+    /** Test override. Null reads the cached flag, and no cache means off. */
+    @Volatile
+    internal var bootstrapEnabledForTest: Boolean? = null
+
+    /** Installed by process startup. Null means off, which is also the result before the first fetch. */
+    @Volatile
+    internal var readBootstrapEnabled: ((Context) -> Boolean)? = null
+
+    // Pools latch on first use, so context has to be recorded before the first prewarm or launch.
+    @Suppress("TooGenericExceptionCaught")
+    internal fun noteApplicationContext(context: Context) {
+        if (appContext != null) return
+        appContext =
+            try {
+                context.applicationContext
+            } catch (t: Throwable) {
+                Logging.warn("OneSignalDispatchers: application context unavailable: ${t.message}", t)
+                null
+            }
+    }
+
+    internal fun resetBootstrapInputsForTest() {
+        appContext = null
+        readBootstrapEnabled = null
+        bootstrapEnabledForTest = null
+    }
+
+    private fun currentPools(): DispatcherPools {
+        poolsRef?.let { return it }
+        return synchronized(poolsLock) {
+            poolsRef ?: newPools().also { poolsRef = it }
+        }
+    }
+
+    private fun newPools(): DispatcherPools =
+        if (dispatcherBootstrapEnabled()) Pools() else LazyDispatcherPools()
+
+    private fun dispatcherBootstrapEnabled(): Boolean = bootstrapEnabledForTest ?: readCachedBootstrap()
+
+    @Suppress("TooGenericExceptionCaught")
+    private fun readCachedBootstrap(): Boolean {
+        val context = appContext
+        val read = readBootstrapEnabled
+        if (context == null || read == null) return false
+        return try {
+            read(context)
+        } catch (t: Throwable) {
+            Logging.warn("OneSignalDispatchers: bootstrap flag unreadable, using lazy pools: ${t.message}", t)
+            false
+        }
+    }
 
     // Dispatchers and scopes delegate to the current generation so [resetForTest] can swap them.
-    val IO: CoroutineDispatcher get() = pools.IO
+    val IO: CoroutineDispatcher get() = currentPools().io.dispatcher
 
-    val Default: CoroutineDispatcher get() = pools.Default
+    val Default: CoroutineDispatcher get() = currentPools().defaultLane.dispatcher
 
-    val SerialIO: CoroutineDispatcher get() = pools.SerialIO
+    val SerialIO: CoroutineDispatcher get() = currentPools().serialIO.dispatcher
 
     fun launchOnIO(block: suspend () -> Unit): Job {
-        return pools.IOScope.launch { block() }
+        return currentPools().ioScope.launch { block() }
     }
 
     fun launchOnDefault(block: suspend () -> Unit): Job {
-        return pools.DefaultScope.launch { block() }
+        return currentPools().defaultScope.launch { block() }
     }
 
     /** Launches [block] on the single-thread serial IO dispatcher (FIFO across all callers). */
     fun launchOnSerialIO(block: suspend () -> Unit): Job {
-        return pools.SerialIOScope.launch { block() }
+        return currentPools().serialIOScope.launch { block() }
     }
 
     /** Launches short durable-ingress work on a lane isolated from general SDK I/O. */
     fun launchOnIngress(block: suspend () -> Unit): Job {
-        return pools.IngressScope.launch { block() }
+        return currentPools().ingressScope.launch { block() }
     }
 
     @Volatile
@@ -465,9 +528,8 @@ object OneSignalDispatchers {
     private val prewarmLock = Any()
 
     /**
-     * Requests asynchronous initialization and worker prestart for every lane. Dispatch correctness
-     * does not depend on this call: a cold first dispatch queues behind the same bootstrap gate and
-     * returns without constructing or waiting for a pool on its caller thread.
+     * Warms every lane away from the caller.
+     * sdk_dispatcher_bootstrap queues that work. Otherwise a faster dispatch can still construct on the caller.
      */
     @Suppress("TooGenericExceptionCaught")
     fun prewarm() {
@@ -477,7 +539,7 @@ object OneSignalDispatchers {
             prewarmStarted = true
         }
         try {
-            pools.prewarm()
+            currentPools().prewarm()
         } catch (t: Throwable) {
             synchronized(prewarmLock) { prewarmStarted = false }
             Logging.warn("OneSignalDispatchers.prewarm failed: ${t.message}", t)
@@ -515,10 +577,13 @@ object OneSignalDispatchers {
      */
     @Suppress("TooGenericExceptionCaught")
     internal fun resetForTest() {
-        val old = pools
-        pools = Pools()
+        val old: DispatcherPools?
+        synchronized(poolsLock) {
+            old = poolsRef
+            poolsRef = newPools()
+        }
         try {
-            old.shutdown()
+            old?.shutdown()
         } catch (e: Exception) {
             Logging.error("OneSignalDispatchers.resetForTest failed: ${e.message}", e)
         }
@@ -530,11 +595,11 @@ object OneSignalDispatchers {
 
     @Suppress("ComplexMethod")
     internal fun getPerformanceMetrics(): String {
-        val current = pools
-        val io = current.IO.executor()
-        val default = current.Default.executor()
-        val serial = current.SerialIO.executor()
-        val ingress = current.Ingress.executor()
+        val current = currentPools()
+        val io = current.io.executor()
+        val default = current.defaultLane.executor()
+        val serial = current.serialIO.executor()
+        val ingress = current.ingress.executor()
         return """
             OneSignalDispatchers Performance Metrics:
             - IO Pool: ${io?.let { "${it.activeCount}/${it.corePoolSize}" } ?: "n/a"} active/core threads
@@ -549,25 +614,25 @@ object OneSignalDispatchers {
     }
 
     internal fun getStatus(): String {
-        val current = pools
+        val current = currentPools()
         return """
             OneSignalDispatchers Status:
-            - IO Executor: ${current.IO.status()}
-            - Default Executor: ${current.Default.status()}
-            - SerialIO Executor: ${current.SerialIO.status()}
-            - Ingress Executor: ${current.Ingress.status()}
-            - IO Scope: ${scopeStatus("IOScope") { current.IOScope.isActive }}
-            - Default Scope: ${scopeStatus("DefaultScope") { current.DefaultScope.isActive }}
-            - SerialIO Scope: ${scopeStatus("SerialIOScope") { current.SerialIOScope.isActive }}
-            - Ingress Scope: ${scopeStatus("IngressScope") { current.IngressScope.isActive }}
+            - IO Executor: ${current.io.status()}
+            - Default Executor: ${current.defaultLane.status()}
+            - SerialIO Executor: ${current.serialIO.status()}
+            - Ingress Executor: ${current.ingress.status()}
+            - IO Scope: ${scopeStatus("IOScope") { current.ioScope.isActive }}
+            - Default Scope: ${scopeStatus("DefaultScope") { current.defaultScope.isActive }}
+            - SerialIO Scope: ${scopeStatus("SerialIOScope") { current.serialIOScope.isActive }}
+            - Ingress Scope: ${scopeStatus("IngressScope") { current.ingressScope.isActive }}
         """.trimIndent()
     }
 
     internal fun awaitReadyForTest(timeoutMs: Long = TEST_READY_TIMEOUT_MS): Boolean {
         val deadline = System.currentTimeMillis() + timeoutMs
         while (System.currentTimeMillis() < deadline) {
-            val current = pools
-            if (listOf(current.IO, current.Default, current.SerialIO, current.Ingress).all { it.status() == "Active" }) {
+            val current = currentPools()
+            if (listOf(current.io, current.defaultLane, current.serialIO, current.ingress).all { it.status() == "Active" }) {
                 return true
             }
             Thread.sleep(TEST_READY_POLL_MS)

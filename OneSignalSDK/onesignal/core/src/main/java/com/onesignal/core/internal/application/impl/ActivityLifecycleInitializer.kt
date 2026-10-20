@@ -5,6 +5,7 @@ import android.content.Context
 import androidx.startup.Initializer
 import com.onesignal.common.threading.OneSignalDispatchers
 import com.onesignal.core.internal.application.IApplicationService
+import com.onesignal.core.internal.features.DispatcherBootstrapCache
 
 /**
  * Registers activity lifecycle observation at process start via androidx.startup, before the host
@@ -21,6 +22,8 @@ import com.onesignal.core.internal.application.IApplicationService
  */
 class ActivityLifecycleInitializer : Initializer<IApplicationService> {
     override fun create(context: Context): IApplicationService {
+        OneSignalDispatchers.readBootstrapEnabled = DispatcherBootstrapCache::isEnabled
+        OneSignalDispatchers.noteApplicationContext(context)
         OneSignalDispatchers.prewarm()
         val applicationService = ApplicationService.getInstance()
         (context.applicationContext as? Application)?.let { application ->
