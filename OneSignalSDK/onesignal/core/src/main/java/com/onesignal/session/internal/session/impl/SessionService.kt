@@ -27,6 +27,8 @@ import com.onesignal.session.internal.session.operations.CreateSessionOperation
 import com.onesignal.session.internal.session.operations.UpdateSessionOperation
 import com.onesignal.user.internal.backend.IdentityConstants
 import com.onesignal.user.internal.identity.IdentityModelStore
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import java.util.UUID
 import kotlin.reflect.KMutableProperty1
@@ -138,7 +140,12 @@ internal class SessionService(
         // Android 15+ blocks network requests started after this job finishes, so send the end now
         // rather than after the queue's batching delay. Flushing is bounded to once per session.
         // On timeout the end stays queued and is sent on the next app open.
-        val sent = withTimeoutOrNull(END_SESSION_SEND_TIMEOUT_MS) { operationRepo.enqueueAndWait(end, flush = true) }
+        // BackgroundManager runs this on Dispatchers.Unconfined, so without the switch the rest of its
+        // loop would resume on the operation repo thread that wakes the wait.
+        val sent =
+            withTimeoutOrNull(END_SESSION_SEND_TIMEOUT_MS) {
+                withContext(Dispatchers.IO) { operationRepo.enqueueAndWait(end, flush = true) }
+            }
         Logging.debug("SessionService.backgroundRun: session end sent: $sent")
     }
 
@@ -205,6 +212,7 @@ internal class SessionService(
             session.startTime = focusTimeMs
             session.focusTime = session.startTime
             session.focusElapsedRealtime = focusElapsedMs
+            session.unfocusTime = null
             session.usesSessionsApi = featureManager.isEnabled(FeatureFlag.SDK_SESSIONS_V2_API_CUTOVER)
             session.onesignalId =
                 identityModelStore.model

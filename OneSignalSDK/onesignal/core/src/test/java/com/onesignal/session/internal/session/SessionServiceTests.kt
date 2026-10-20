@@ -322,6 +322,25 @@ class SessionServiceTests : FunSpec({
         sessionModelStore.model.usesSessionsApi shouldBe true
     }
 
+    test("new session clears the previous session's unfocus time") {
+        // Given
+        val mocks = Mocks(sessionsApiEnabled = true)
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        val sessionModelStore =
+            mocks.sessionModelStore {
+                it.isValid = false
+                it.unfocusTime = 900L
+            }
+
+        // When
+        sessionService.onFocus(false)
+
+        // Then
+        sessionModelStore.model.unfocusTime shouldBe null
+    }
+
     test("new session pins onesignal and subscription IDs and a new local session ID") {
         // Given
         val mocks = Mocks()
@@ -602,6 +621,29 @@ class SessionServiceTests : FunSpec({
         end.endTime shouldBe 2222L
         coVerify(exactly = 1) { mocks.operationRepo.enqueueAndWait(end, true) }
         sessionModelStore.model.isValid shouldBe false
+    }
+
+    test("background run waits for the end on an IO thread rather than the caller's") {
+        // Given
+        val mocks = Mocks(sessionsApiEnabled = true)
+        var waitThread: Thread? = null
+        coEvery { mocks.operationRepo.enqueueAndWait(any(), any()) } coAnswers {
+            waitThread = Thread.currentThread()
+            true
+        }
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        mocks.sessionModelStore { it.isValid = false }
+        sessionService.onFocus(false)
+        sessionService.onUnfocused()
+
+        // When
+        sessionService.backgroundRun()
+
+        // Then
+        waitThread shouldNotBe null
+        waitThread shouldNotBe Thread.currentThread()
     }
 
     test("background run returns when the end is not sent in time and leaves it queued") {
