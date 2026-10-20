@@ -678,9 +678,9 @@ internal class WebViewManager(
         content: InAppMessageContent,
         activity: Activity,
     ): String {
-        setContentSafeAreaInsets(content, activity)
+        val html = setContentSafeAreaInsets(content, activity)
         return Base64.encodeToString(
-            content.contentHtml!!.toByteArray(charset("UTF-8")),
+            html.toByteArray(charset("UTF-8")),
             Base64.NO_WRAP,
         )
     }
@@ -688,8 +688,8 @@ internal class WebViewManager(
     fun setContentSafeAreaInsets(
         content: InAppMessageContent,
         activity: Activity,
-    ) {
-        var html = content.contentHtml
+    ): String {
+        val html = content.contentHtml ?: ""
         var safeAreaInsetsScript = SET_SAFE_AREA_INSETS_SCRIPT
         val insets = ViewUtils.getCutoutAndStatusBarInsets(activity)
         val safeAreaJSObject =
@@ -701,8 +701,9 @@ internal class WebViewManager(
                 insets[3],
             )
         safeAreaInsetsScript = String.format(safeAreaInsetsScript, safeAreaJSObject)
-        html += safeAreaInsetsScript
-        content.contentHtml = html
+        val withInsets = html + safeAreaInsetsScript
+        content.contentHtml = withInsets
+        return withInsets
     }
 
     // Allow Chrome Remote Debugging if OneSignal.LOG_LEVEL.DEBUG or higher

@@ -146,7 +146,7 @@ class InAppDisplayerDismissCleanupTests : FunSpec({
         }
 
         content.isFullBleed shouldBe false
-        content.contentHtml!!.contains("setSafeAreaInsets") shouldBe true
+        content.contentHtml.shouldNotBeNull().contains("setSafeAreaInsets") shouldBe true
     }
 
     test("preview still displays when the previous instance was already cleared by dismissal") {
