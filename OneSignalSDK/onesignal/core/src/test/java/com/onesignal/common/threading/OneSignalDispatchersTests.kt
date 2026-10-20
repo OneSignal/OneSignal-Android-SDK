@@ -553,6 +553,19 @@ class OneSignalDispatchersTests : FunSpec({
         fallbacks.get() shouldBe 1
     }
 
+    test("flag off prewarm retries when the prewarm thread fails to start") {
+        OneSignalDispatchers.bootstrapEnabledForTest = false
+        OneSignalDispatchers.resetForTest()
+        OneSignalDispatchers.beforeLazyPrewarmStartForTest = { throw IllegalStateException("start failed") }
+        OneSignalDispatchers.prewarm()
+
+        OneSignalDispatchers.beforeLazyPrewarmStartForTest = null
+        val created = CountDownLatch(4)
+        OneSignalDispatchers.beforeLaneCreateForTest = { created.countDown() }
+        OneSignalDispatchers.prewarm()
+        created.await(2, TimeUnit.SECONDS) shouldBe true
+    }
+
     test("prewarm is idempotent: a second call is a no-op and does not spawn a second prewarm thread") {
         OneSignalDispatchers.resetForTest()
         OneSignalDispatchers.prewarm()

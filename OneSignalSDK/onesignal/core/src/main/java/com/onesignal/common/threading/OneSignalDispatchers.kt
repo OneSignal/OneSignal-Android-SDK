@@ -73,6 +73,10 @@ object OneSignalDispatchers {
     @Volatile
     internal var beforeLazyWarmForTest: ((String) -> Unit)? = null
 
+    /** After the lazy prewarm thread is published, before [Thread.start]. */
+    @Volatile
+    internal var beforeLazyPrewarmStartForTest: (() -> Unit)? = null
+
     private class OptimizedThreadFactory(
         private val namePrefix: String,
         private val priority: Int = Thread.NORM_PRIORITY,
@@ -655,6 +659,7 @@ object OneSignalDispatchers {
         afterExecutorCreateForTest = null
         beforeFallbackCreateForTest = null
         beforeLazyWarmForTest = null
+        beforeLazyPrewarmStartForTest = null
     }
 
     @Suppress("ComplexMethod")

@@ -73,8 +73,22 @@ internal class LazyDispatcherPools : DispatcherPools {
             )
         thread.isDaemon = true
         thread.priority = Thread.NORM_PRIORITY - 2
-        if (!prewarmThread.compareAndSet(null, thread) || closed.get()) return
-        thread.start()
+        if (prewarmThread.compareAndSet(null, thread)) startPrewarm(thread)
+    }
+
+    private fun startPrewarm(thread: Thread) {
+        if (closed.get()) {
+            prewarmThread.compareAndSet(thread, null)
+            return
+        }
+        try {
+            OneSignalDispatchers.beforeLazyPrewarmStartForTest?.invoke()
+            thread.start()
+        } catch (t: Throwable) {
+            // start() failed after the ref was published. Clear it or every retry hits a failed CAS.
+            prewarmThread.compareAndSet(thread, null)
+            throw t
+        }
     }
 
     override fun shutdown() {

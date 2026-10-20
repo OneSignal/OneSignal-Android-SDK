@@ -61,7 +61,8 @@ internal object DispatcherBootstrapCache {
             try {
                 JSONArray(raw)
             } catch (t: Throwable) {
-                Log.w(TAG, "sdk_dispatcher_bootstrap: config store unreadable, lazy pools", t)
+                // JSONException's message is the whole document. That store can hold fcmParams.apiKey.
+                Log.w(TAG, "sdk_dispatcher_bootstrap: config store unreadable, lazy pools (${t.javaClass.simpleName})")
                 null
             }
         }

@@ -12,7 +12,9 @@ import com.onesignal.features.FeatureFlag
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import io.kotest.matchers.string.shouldNotContain
 import org.json.JSONArray
+import org.robolectric.shadows.ShadowLog
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
@@ -37,6 +39,16 @@ class DispatcherBootstrapCacheTests : FunSpec({
             """[{"sdkRemoteFeatureFlags":["sdk_custom_logging"]}]""",
             key,
         ) shouldBe false
+    }
+
+    test("an unreadable config does not log the store") {
+        val secret = "fcm-api-key-sentinel"
+        val raw = """[{"fcmParams":{"apiKey":"$secret"}]"""
+        ShadowLog.clear()
+        DispatcherBootstrapCache.containsKey(raw, key) shouldBe false
+        ShadowLog.getLogs().joinToString("\n") { item ->
+            item.msg + (item.throwable?.toString() ?: "")
+        } shouldNotContain secret
     }
 
     test("the cached key enables bootstrap regardless of case") {
