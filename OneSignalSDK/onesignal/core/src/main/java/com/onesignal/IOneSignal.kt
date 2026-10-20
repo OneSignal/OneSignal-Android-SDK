@@ -20,11 +20,8 @@ interface IOneSignal {
     val isInitialized: Boolean
 
     /**
-     * The user manager for accessing user-scoped
-     * management.
-     *
-     * Before init succeeds this is a stand-in: listener and setting registrations are replayed once
-     * init succeeds, other calls are logged and ignored.
+     * The user manager. Waits while init is running. Before init succeeds this is a stand-in:
+     * observers are attached once init succeeds, other calls are logged and ignored.
      */
     val user: IUserManager
 
@@ -82,8 +79,8 @@ interface IOneSignal {
      * Initialize the OneSignal SDK.  This should be called during startup of the application.
      *
      * @param context The Android context the SDK should use.
-     * @param appId The application ID the OneSignal SDK is bound to. If null or invalid, the cached
-     * app ID is used; if none is cached, initialization is skipped and an error is logged.
+     * @param appId The application ID the OneSignal SDK is bound to. If null or invalid, the cached app ID is used.
+     * If none is cached, init fails (a warning for null, an error for invalid).
      *
      * @return true once initialization has started (or is already running or done), false for a
      * null [context] or an immediate startup failure. Check [isInitialized] for the outcome.
@@ -170,8 +167,8 @@ interface IOneSignal {
      * Initialize the OneSignal SDK, suspend until initialization is completed
      *
      * @param context The Android context the SDK should use.
-     * @param appId The application ID the OneSignal SDK is bound to. If null or invalid, the cached
-     * app ID is used; if none is cached, initialization is skipped and an error is logged.
+     * @param appId The application ID the OneSignal SDK is bound to. If null or invalid, the cached app ID is used.
+     * If none is cached, init fails (a warning for null, an error for invalid).
      *
      * @return true if the SDK could be successfully initialized, false otherwise.
      */
