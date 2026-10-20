@@ -41,11 +41,18 @@ internal open class DeferredManager<T : Any>(
     private val pending = mutableListOf<Pending<T>>()
     private var replayed = false
 
+    // Kept after replay: if init then fails, or a replayed listener calls back in, the gate is not ready
+    // but this manager already holds the replayed registrations, so later ones must reach it too.
+    private var replayedTo: T? = null
+
+    /** The real manager if the gate is ready, else the one already replayed into, else null. Silent. */
+    protected fun resolved(): T? = source.peek() ?: synchronized(pending) { replayedTo }
+
     protected fun registerOrQueue(
         member: String,
         target: Any,
         call: (T) -> Unit,
-    ) = forwardOrQueue(member, call) { pending.add(Pending(member, target, call)) }
+    ) = forwardOrQueue(member, call) { pending.size < MAX_PENDING && pending.add(Pending(member, target, call)) }
 
     // Before replay the real manager holds nothing, so a removal only has to cancel the queued add.
     protected fun unregisterOrCancel(
@@ -56,9 +63,11 @@ internal open class DeferredManager<T : Any>(
     ) = forwardOrQueue(member, call) {
         val index = pending.indexOfLast { it.member == addMember && it.target === target }
         if (index >= 0) pending.removeAt(index)
+        true
     }
 
     // [onQueued] runs under the queue lock, so a getter cache it sets always matches what replays.
+    // Not capped: a setting holds one slot and only replaces it.
     protected fun setOrQueue(
         member: String,
         onQueued: () -> Unit,
@@ -67,19 +76,28 @@ internal open class DeferredManager<T : Any>(
         pending.removeAll { it.member == member }
         pending.add(Pending(member, null, call))
         onQueued()
+        true
     }
 
+    // [enqueue] returns false when the queue is full; the call then takes the unqueued path and is logged as ignored.
     private fun forwardOrQueue(
         member: String,
         call: (T) -> Unit,
-        enqueue: () -> Unit,
+        enqueue: () -> Boolean,
     ) {
         source.peek()?.let {
             call(it)
             return
         }
-        val queued = synchronized(pending) { if (!replayed) true.also { enqueue() } else false }
-        if (queued) source.logQueued(member) else source.get(member)?.let(call)
+        val (queued, target) =
+            synchronized(pending) {
+                if (replayed) false to replayedTo else enqueue() to null
+            }
+        when {
+            queued -> source.logQueued(member)
+            target != null -> call(target)
+            else -> source.get(member)?.let(call)
+        }
     }
 
     @Suppress("TooGenericExceptionCaught")
@@ -87,15 +105,21 @@ internal open class DeferredManager<T : Any>(
         val calls =
             synchronized(pending) {
                 replayed = true
+                replayedTo = real
                 pending.toList().also { pending.clear() }
             }
         for (entry in calls) {
             try {
                 entry.call(real)
             } catch (e: Exception) {
-                Logging.error("Replaying '${entry.member}' after initWithContext failed", e)
+                Logging.error("Replaying '${entry.member}' threw; that queued call is lost", e)
             }
         }
+    }
+
+    internal companion object {
+        // Per manager. If init never succeeds the queue lives for the whole process, so it must stay bounded.
+        const val MAX_PENDING = 100
     }
 }
 
@@ -152,9 +176,14 @@ internal class DeferredUserManager(
         properties: Map<String, Any?>?,
     ) = source.get("trackEvent")?.trackEvent(name, properties) ?: Unit
 
+    @Suppress("TooGenericExceptionCaught")
     override fun replay(real: IUserManager) {
         super.replay(real)
-        deferredPush.replay(real.pushSubscription)
+        try {
+            deferredPush.replay(real.pushSubscription)
+        } catch (e: Exception) {
+            Logging.error("Replaying 'pushSubscription' threw; its queued observers are lost", e)
+        }
     }
 }
 
@@ -226,7 +255,7 @@ internal class DeferredInAppMessagesManager(
     private var queuedPaused: Boolean? = null
 
     override var paused: Boolean
-        get() = source.peek()?.paused ?: queuedPaused ?: source.get("paused")?.paused ?: false
+        get() = resolved()?.paused ?: queuedPaused ?: source.get("paused")?.paused ?: false
         set(value) {
             setOrQueue("paused", { queuedPaused = value }) { it.paused = value }
         }
@@ -276,7 +305,7 @@ internal class DeferredLocationManager(
     private var queuedIsShared: Boolean? = null
 
     override var isShared: Boolean
-        get() = source.peek()?.isShared ?: queuedIsShared ?: source.get("isShared")?.isShared ?: false
+        get() = resolved()?.isShared ?: queuedIsShared ?: source.get("isShared")?.isShared ?: false
         set(value) {
             setOrQueue("isShared", { queuedIsShared = value }) { it.isShared = value }
         }
