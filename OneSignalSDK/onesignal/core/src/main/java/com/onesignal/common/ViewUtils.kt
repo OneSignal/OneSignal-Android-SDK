@@ -17,6 +17,10 @@ object ViewUtils {
         return (dp * Resources.getSystem().displayMetrics.density).toInt()
     }
 
+    fun pxToDp(px: Int): Int {
+        return (px / Resources.getSystem().displayMetrics.density).roundToInt()
+    }
+
     // Due to differences in accounting for keyboard, navigation bar, and status bar between
     //   Android versions have different implementation here
     fun getWindowHeight(activity: Activity): Int {
@@ -151,31 +155,26 @@ object ViewUtils {
         return intArrayOf(topPx, bottomPx, rightPx, leftPx)
     }
 
-    private fun pxToDp(px: Int): Int {
-        return (px / Resources.getSystem().displayMetrics.density).roundToInt()
-    }
-
     private fun legacyCutoutAndStatusBarInsets(activity: Activity): IntArray {
         val frame = getWindowVisibleDisplayFrame(activity)
         val contentView = activity.window.findViewById<View>(Window.ID_ANDROID_CONTENT)
-        var rightInset = 0f
-        var leftInset = 0f
-        val topInset = (frame.top - contentView.top) / Resources.getSystem().displayMetrics.density
-        val bottomInset =
-            (contentView.bottom - frame.bottom) / Resources.getSystem().displayMetrics.density
+        var rightInset = 0
+        var leftInset = 0
+        val topInset = pxToDp(frame.top - contentView.top)
+        val bottomInset = pxToDp(contentView.bottom - frame.bottom)
         // This fallback only reads side cutouts on API 29.
         if (Build.VERSION.SDK_INT == Build.VERSION_CODES.Q) {
             val cutout = activity.windowManager.defaultDisplay.cutout
             if (cutout != null) {
-                rightInset = cutout.safeInsetRight / Resources.getSystem().displayMetrics.density
-                leftInset = cutout.safeInsetLeft / Resources.getSystem().displayMetrics.density
+                rightInset = pxToDp(cutout.safeInsetRight)
+                leftInset = pxToDp(cutout.safeInsetLeft)
             }
         }
         return intArrayOf(
-            topInset.roundToInt(),
-            bottomInset.roundToInt(),
-            rightInset.roundToInt(),
-            leftInset.roundToInt(),
+            topInset,
+            bottomInset,
+            rightInset,
+            leftInset,
         )
     }
 
