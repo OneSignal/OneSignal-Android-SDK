@@ -56,8 +56,20 @@ internal fun copyHostSystemBarVisibility(
         controller.setSystemBarsAppearance(hostController.systemBarsAppearance, appearanceMask)
         return
     }
+    // Layout flags stay on the popup. The host's would pull a banner under the nav bar.
     @Suppress("DEPRECATION")
-    popupDecor.systemUiVisibility = hostDecor.systemUiVisibility
+    val visibilityMask =
+        View.SYSTEM_UI_FLAG_LOW_PROFILE or
+            View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
+            View.SYSTEM_UI_FLAG_FULLSCREEN or
+            View.SYSTEM_UI_FLAG_IMMERSIVE or
+            View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY or
+            View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR or
+            View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
+    @Suppress("DEPRECATION")
+    popupDecor.systemUiVisibility =
+        (popupDecor.systemUiVisibility and visibilityMask.inv()) or
+            (hostDecor.systemUiVisibility and visibilityMask)
 }
 
 /**

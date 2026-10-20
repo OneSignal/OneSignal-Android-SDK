@@ -2,7 +2,9 @@ package com.onesignal.common
 
 import android.content.res.Resources
 import android.graphics.Insets
+import android.view.View
 import android.view.WindowInsets
+import android.view.WindowManager
 import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
@@ -47,6 +49,15 @@ class ViewUtilsInsetTests : FunSpec({
             statusHidden = false,
             navigationHidden = true,
         ) shouldBe intArrayOf(24, 0, 0, 0)
+    }
+
+    test("a fullscreen window flag counts as a hidden status bar") {
+        val flags =
+            ViewUtils.systemUiVisibilityForInsets(
+                0,
+                WindowManager.LayoutParams.FLAG_FULLSCREEN,
+            )
+        (flags and View.SYSTEM_UI_FLAG_FULLSCREEN) shouldBe View.SYSTEM_UI_FLAG_FULLSCREEN
     }
 
     test("a hidden status bar does not keep a top inset") {

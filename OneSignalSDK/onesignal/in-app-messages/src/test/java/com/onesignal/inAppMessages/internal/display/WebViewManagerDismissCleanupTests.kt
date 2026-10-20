@@ -363,6 +363,13 @@ class WebViewManagerDismissCleanupTests : FunSpec({
         (html.indexOf("page") < html.indexOf("setSafeAreaInsets")) shouldBe true
         html.contains("typeof setSafeAreaInsets") shouldBe true
         content.isFullBleed shouldBe false
+
+        val again =
+            String(
+                Base64.decode(manager.encodedPage(content, activity), Base64.NO_WRAP),
+                Charsets.UTF_8,
+            )
+        again.indexOf("typeof setSafeAreaInsets") shouldBe again.lastIndexOf("typeof setSafeAreaInsets")
     }
 
     test("full-bleed WebView lays out behind system bars without hiding navigation, then cleans up") {
