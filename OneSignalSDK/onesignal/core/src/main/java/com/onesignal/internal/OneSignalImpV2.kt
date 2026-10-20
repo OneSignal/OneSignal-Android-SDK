@@ -286,12 +286,7 @@ internal class OneSignalImpV2 : IOneSignal,
         ensureApplicationServiceStarted(context)
     }
 
-    /**
-     * One concise WARN line at init with the build/runtime facts most useful for
-     * release triage from a raw log capture: SDK version, the shared KMP module version,
-     * OS/API, device, host app + version, and the crash storage dir.
-     * Best-effort — never lets diagnostics interfere with init.
-     */
+    /** One WARN line of build and runtime facts for triage from a raw log. Best effort: never fails init. */
     @Suppress("TooGenericExceptionCaught", "SwallowedException")
     internal fun logStartupDiagnostics(context: Context) {
         try {
@@ -381,10 +376,7 @@ internal class OneSignalImpV2 : IOneSignal,
             return false
         }
 
-        // Warm OneSignalDispatchers on a dedicated daemon thread so the first production caller
-        // of suspendifyOnIO / launchOnSerialIO doesn't pay the ThreadPoolExecutor + dispatcher +
-        // scope construction cost on the main thread (observed as 5-20s main-thread blocks at the
-        // first foreground/background lifecycle event). prewarm() is idempotent and fire-and-forget.
+        // Builds the dispatchers off the main thread, so the first suspendifyOnIO caller doesn't pay for it there.
         OneSignalDispatchers.prewarm()
 
         if (!gate.tryStart()) {
@@ -407,7 +399,7 @@ internal class OneSignalImpV2 : IOneSignal,
         // Dispatch init asynchronously so this method never blocks the caller. Callers that
         // need to wait (accessors, login, logout) block on the gate.
         suspendifyOnIO {
-            internalInit(context, appId)
+            gate.runInit { internalInit(context, appId) }
         }
         return true
     }
@@ -610,7 +602,7 @@ internal class OneSignalImpV2 : IOneSignal,
         try {
             return withContext(ioDispatcher) {
                 started = true
-                internalInit(context, appId)
+                gate.runInit { internalInit(context, appId) }
             }
         } finally {
             // A caller cancelled before dispatch would otherwise leave this attempt IN_PROGRESS forever.

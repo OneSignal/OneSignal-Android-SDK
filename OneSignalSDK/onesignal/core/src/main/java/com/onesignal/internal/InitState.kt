@@ -14,8 +14,8 @@ internal enum class InitState {
     NOT_STARTED,
 
     /**
-     * SDK initialization is currently in progress.
-     * Calls that require initialization wait (block or suspend) until this completes.
+     * In progress. Calls that need init wait for it, except on the thread running init (or an interrupted
+     * one), where they return a default instead.
      */
     IN_PROGRESS,
 
