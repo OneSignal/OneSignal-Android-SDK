@@ -312,6 +312,7 @@ internal class InAppMessageView(
      * @param parentRelativeLayout root layout to attach to the pop up window
      */
     private fun createPopupWindow(parentRelativeLayout: RelativeLayout) {
+        val activity = currentActivity ?: return
         popupWindow =
             OSPopupWindow(
                 parentRelativeLayout,
@@ -346,13 +347,13 @@ internal class InAppMessageView(
             displayType,
         )
         popupWindow?.showAtLocation(
-            currentActivity!!.window.decorView.rootView,
+            activity.window.decorView.rootView,
             gravity,
             0,
             0,
         )
         copyHostSystemBarVisibility(
-            currentActivity!!.window.decorView,
+            activity.window.decorView,
             parentRelativeLayout.rootView,
         )
     }
