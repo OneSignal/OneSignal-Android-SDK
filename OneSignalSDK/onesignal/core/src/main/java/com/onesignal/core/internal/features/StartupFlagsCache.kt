@@ -2,79 +2,72 @@ package com.onesignal.core.internal.features
 
 import android.content.Context
 import android.util.Log
-import com.onesignal.features.FeatureActivationMode
-import com.onesignal.features.FeatureFlag
-
-/** APP_STARTUP flags as one process sees them. */
-internal class StartupFlags(
-    val source: Source,
-    private val enabledKeys: Set<String>,
-) {
-    enum class Source { FILE, UNREADABLE, NO_APPLICATION }
-
-    val keys: Set<String> get() = enabledKeys
-
-    fun isEnabled(flag: FeatureFlag): Boolean {
-        require(flag.activationMode == FeatureActivationMode.APP_STARTUP) { "${flag.key} is not APP_STARTUP" }
-        return flag.key in enabledKeys
-    }
-}
+import com.onesignal.features.IStartupFlagsStore
+import com.onesignal.features.StartupFlags
+import com.onesignal.features.StartupFlagsLatch
 
 /**
- * Small prefs file holding the cached APP_STARTUP flags, read once per process so pre-store
- * code (often on main) and [FeatureManager] latch the same values. See README.md in this package.
+ * Process-wide holder for the shared [StartupFlagsLatch], backed by a small prefs file so pre-init
+ * code (often on main) never loads the OneSignal store. See README.md in this package.
  */
-@Suppress("TooGenericExceptionCaught")
 internal object StartupFlagsCache {
     @Volatile
-    private var snapshot: StartupFlags? = null
-    private val lock = Any()
+    private var latch = StartupFlagsLatch()
 
     /** The first caller in the process reads the file; everyone after gets the same answer. */
-    fun snapshot(context: () -> Context?): StartupFlags {
-        snapshot?.let { return it }
-        synchronized(lock) {
-            snapshot?.let { return it }
-            return readFile(context()).also { snapshot = it }
-        }
-    }
-
-    internal fun readFile(context: Context?): StartupFlags {
-        if (context == null) return StartupFlags(StartupFlags.Source.NO_APPLICATION, emptySet())
-        return try {
-            StartupFlags(StartupFlags.Source.FILE, prefs(context).getStringSet(KEY_ENABLED, null).orEmpty().toSet())
-        } catch (t: Throwable) {
-            // android.util.Log, not Logging: Logging can dispatch, and this can run before SDK init.
-            Log.w(TAG, "startup flags unreadable, treating all as off", t)
-            StartupFlags(StartupFlags.Source.UNREADABLE, emptySet())
-        }
-    }
+    fun snapshot(context: () -> Context?): StartupFlags = latch.snapshot { context()?.let(::PrefsStartupFlagsStore) }
 
     /** Mirrors the APP_STARTUP subset of [remoteFlags] for the next process. Call off the main thread. */
     fun write(
         context: Context,
         remoteFlags: List<String>,
     ) {
-        val enabled =
-            FeatureFlag.entries
-                .filter { flag ->
-                    flag.activationMode == FeatureActivationMode.APP_STARTUP &&
-                        remoteFlags.any { it.equals(flag.key, ignoreCase = true) }
-                }.map { it.key }
-                .toSet()
-        val prefs = prefs(context)
-        if (prefs.getStringSet(KEY_ENABLED, emptySet()) == enabled) return
-        prefs.edit().putStringSet(KEY_ENABLED, enabled).apply()
+        latch.mirror(PrefsStartupFlagsStore(context), remoteFlags)
     }
+
+    /** Reads the file now, without touching this process's snapshot. */
+    internal fun readFile(context: Context?): StartupFlags = StartupFlagsLatch().snapshot { context?.let(::PrefsStartupFlagsStore) }
 
     /** Null forgets the snapshot, as a new process would. */
     internal fun setSnapshotForTest(flags: StartupFlags?) {
-        synchronized(lock) { snapshot = flags }
+        latch =
+            StartupFlagsLatch().also { fresh ->
+                if (flags != null) fresh.snapshot { FixedStore(flags.keys) }
+            }
     }
 
-    private fun prefs(context: Context) = context.applicationContext.getSharedPreferences(STORE, Context.MODE_PRIVATE)
+    private class FixedStore(
+        private val keys: Set<String>,
+    ) : IStartupFlagsStore {
+        override fun read(): Set<String> = keys
 
-    private const val STORE = "OneSignalStartupFlags"
-    private const val KEY_ENABLED = "enabled"
-    private const val TAG = "OneSignal"
+        override fun write(keys: Set<String>) = Unit
+    }
+}
+
+internal class PrefsStartupFlagsStore(
+    private val context: Context,
+) : IStartupFlagsStore {
+    @Suppress("TooGenericExceptionCaught")
+    override fun read(): Set<String>? =
+        try {
+            prefs().getStringSet(KEY_ENABLED, null)?.toSet()
+        } catch (t: Throwable) {
+            // android.util.Log, not Logging: Logging can dispatch, and this can run before SDK init.
+            Log.w(TAG, "startup flags unreadable, treating all as off", t)
+            throw t
+        }
+
+    // commit, not apply: the next process reads this at startup, so it must be on disk when we return.
+    override fun write(keys: Set<String>) {
+        check(prefs().edit().putStringSet(KEY_ENABLED, keys).commit()) { "startup flags commit failed" }
+    }
+
+    private fun prefs() = context.applicationContext.getSharedPreferences(STORE, Context.MODE_PRIVATE)
+
+    private companion object {
+        const val STORE = "OneSignalStartupFlags"
+        const val KEY_ENABLED = "enabled"
+        const val TAG = "OneSignal"
+    }
 }

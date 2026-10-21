@@ -8,6 +8,8 @@ import com.onesignal.debug.LogLevel
 import com.onesignal.debug.OneSignalLogEvent
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.features.FeatureFlag
+import com.onesignal.features.StartupFlags
+import com.onesignal.features.StartupFlagsSource
 import com.onesignal.user.internal.jwt.JwtRequirement
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
@@ -18,7 +20,7 @@ import io.mockk.runs
 
 class FeatureManagerTests : FunSpec({
     fun startupSnapshot(vararg flags: FeatureFlag) {
-        StartupFlagsCache.setSnapshotForTest(StartupFlags(StartupFlags.Source.FILE, flags.map { it.key }.toSet()))
+        StartupFlagsCache.setSnapshotForTest(StartupFlags(StartupFlagsSource.STORE, flags.map { it.key }.toSet()))
     }
 
     beforeTest { startupSnapshot() }
