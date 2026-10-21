@@ -127,7 +127,7 @@ internal class LazyDispatcherPools : DispatcherPools {
 
     private fun logWarmFailure(t: Throwable) {
         if (closed.get()) return
-        OneSignalDispatchers.logRelease("lazy prewarm failed", t)
+        OneSignalDispatchers.logFailure("lazy prewarm failed", t)
     }
 
     private inner class LazyExecutorLane(
@@ -146,7 +146,7 @@ internal class LazyDispatcherPools : DispatcherPools {
             return try {
                 buildExecutor()
             } catch (t: Throwable) {
-                OneSignalDispatchers.logRelease("lazy $lane fell back", t)
+                OneSignalDispatchers.logFailure("lazy $lane fell back", t)
                 OneSignalDispatchers.beforeFallbackCreateForTest?.invoke(lane)
                 null
             }
@@ -169,7 +169,7 @@ internal class LazyDispatcherPools : DispatcherPools {
                 try {
                     executor.asCoroutineDispatcher()
                 } catch (t: Throwable) {
-                    OneSignalDispatchers.logRelease("lazy $lane fell back", t)
+                    OneSignalDispatchers.logFailure("lazy $lane fell back", t)
                     fallback()
                 }
             }

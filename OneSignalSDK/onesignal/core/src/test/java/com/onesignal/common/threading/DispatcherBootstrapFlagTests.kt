@@ -64,6 +64,15 @@ class DispatcherBootstrapFlagTests : FunSpec({
         builtOnCaller() shouldBe true
     }
 
+    test("a pool choice failure falls back to lazy pools instead of throwing") {
+        val context = appContext()
+        StartupFlagsCache.write(context, listOf(key))
+        OneSignalDispatchers.beforePoolChoiceForTest = { throw IllegalStateException("choice failed") }
+        latchFrom(context)
+
+        builtOnCaller() shouldBe true
+    }
+
     test("prewarm latches from the process application when startup did not note a context") {
         StartupFlagsCache.write(appContext(), listOf(key))
         OneSignalDispatchers.resetBootstrapInputsForTest()

@@ -1,7 +1,6 @@
 package com.onesignal
 
 import com.onesignal.common.threading.OneSignalDispatchers
-import com.onesignal.core.internal.features.FeatureManager
 import io.kotest.core.config.AbstractProjectConfig
 import io.kotest.core.extensions.Extension
 import io.kotest.core.listeners.AfterSpecListener
@@ -31,12 +30,17 @@ class OneSignalTestProjectConfig : AbstractProjectConfig() {
 
 private object OneSignalDispatchersResetListener : BeforeSpecListener, AfterSpecListener {
     override suspend fun beforeSpec(spec: Spec) {
-        OneSignalDispatchers.resetForTest()
-        FeatureManager.resetStartupFlagsForTest()
+        resetDispatchers()
     }
 
     override suspend fun afterSpec(spec: Spec) {
-        OneSignalDispatchers.resetForTest()
-        FeatureManager.resetStartupFlagsForTest()
+        resetDispatchers()
     }
+}
+
+// Inputs first: the fresh generation latches its pools from them, and a spec's mock
+// Application must not decide the pools of the next spec.
+private fun resetDispatchers() {
+    OneSignalDispatchers.resetBootstrapInputsForTest()
+    OneSignalDispatchers.resetForTest()
 }
