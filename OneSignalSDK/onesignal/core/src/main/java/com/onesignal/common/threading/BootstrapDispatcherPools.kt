@@ -48,6 +48,9 @@ private class GateDispatcher(
     private var state = LaneState.COLD
     private var target: LaneTarget? = null
 
+    // Built once per READY transition: dispatch runs on every resume, so it must not allocate.
+    private var run: GateDecision.Run? = null
+
     override fun dispatch(
         context: CoroutineContext,
         block: Runnable,
@@ -64,7 +67,7 @@ private class GateDispatcher(
                         pending.addLast(context to block)
                         GateDecision.Queued
                     }
-                    LaneState.READY -> GateDecision.Run(target!!.dispatcher)
+                    LaneState.READY -> run!!
                     LaneState.CLOSED -> GateDecision.Rejected
                 }
             }
@@ -133,6 +136,7 @@ private class GateDispatcher(
                         pending.removeFirstOrNull().also {
                             if (it == null) {
                                 target = newTarget
+                                run = GateDecision.Run(newTarget.dispatcher)
                                 state = LaneState.READY
                             }
                         }
@@ -158,6 +162,7 @@ private class GateDispatcher(
             pending.clear()
             oldTarget = target
             target = null
+            run = null
         }
         queued.forEach {
             cancelAndComplete(it.first, it.second, "OneSignal dispatcher generation was reset")
