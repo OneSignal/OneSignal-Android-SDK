@@ -65,4 +65,32 @@ class DispatcherFailureLogTests : FunSpec({
             attempts.get() shouldBeLessThanOrEqual 2
         }
     }
+
+    test("a listener that launches on a pool choice failure reuses the published pools") {
+        usePools(bootstrap = false)
+        val choices = AtomicInteger()
+        DispatcherTestHooks.beforePoolChoice = {
+            choices.incrementAndGet()
+            throw IllegalStateException("choice failed")
+        }
+        val listener = ILogListener { if ("pool choice failed" in it.entry) OneSignalDispatchers.launchOnIO { } }
+        Logging.addListener(listener)
+        try {
+            unpublishPools()
+            val ran = CountDownLatch(1)
+            OneSignalDispatchers.launchOnIO { ran.countDown() }
+            ran.await(2, TimeUnit.SECONDS) shouldBe true
+        } finally {
+            Logging.removeListener(listener)
+        }
+
+        choices.get() shouldBe 1
+    }
 })
+
+/** Puts the dispatcher back in its first-use state, which [OneSignalDispatchers.resetForTest] never does. */
+private fun unpublishPools() {
+    val field = OneSignalDispatchers::class.java.getDeclaredField("poolsRef").apply { isAccessible = true }
+    (field.get(null) as DispatcherPools?)?.shutdown()
+    field.set(null, null)
+}

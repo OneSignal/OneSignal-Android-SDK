@@ -63,29 +63,29 @@ object OneSignalDispatchers {
         FeatureManager.resetStartupFlagsForTest()
     }
 
-    private fun currentPools(): DispatcherPools {
-        poolsRef?.let { return it }
-        // Flag read does disk I/O. Keep it outside the lock so other launches are not stuck behind it.
-        val choice = choosePoolsOrLazy()
-        val published =
+    private fun currentPools(): DispatcherPools = poolsRef ?: publishFirstPools()
+
+    // The choice must not launch work: a launch would re-enter here before poolsRef is set.
+    // Logging can launch, so a choice failure is logged only after publishing.
+    private fun publishFirstPools(): DispatcherPools {
+        val choice =
             synchronized(poolsLock) {
-                val existing = poolsRef
-                if (existing != null) {
-                    choice.pools.shutdown()
-                    existing
-                } else {
-                    poolsRef = choice.pools
-                    choice.pools
-                }
+                poolsRef?.let { return it }
+                choosePoolsOrLazy().also { poolsRef = it.pools }
             }
-        if (published === choice.pools && bootstrapEnabledForTest == null) {
+        choice.failure?.let(::logChoiceFailure)
+        if (bootstrapEnabledForTest == null) {
             val mode = if (choice.pools is LazyDispatcherPools) "lazy" else "bootstrap"
             logRelease("${choice.detail}; pools=$mode", warn = choice.warn)
         }
-        return published
+        return choice.pools
     }
 
-    private fun newPools(): DispatcherPools = choosePoolsOrLazy().pools
+    private fun newPools(): DispatcherPools {
+        val choice = choosePoolsOrLazy()
+        choice.failure?.let(::logChoiceFailure)
+        return choice.pools
+    }
 
     // Every launch in the process goes through this, so a failed choice must not throw.
     // Lazy pools need no flags, and they are what the flag being off already means.
@@ -94,9 +94,10 @@ object OneSignalDispatchers {
         try {
             choosePools()
         } catch (t: Throwable) {
-            logFailure("pool choice failed, using lazy pools", t)
-            PoolChoice(LazyDispatcherPools(), "off, choice failed", warn = true)
+            PoolChoice(LazyDispatcherPools(), "off, choice failed", warn = true, failure = t)
         }
+
+    private fun logChoiceFailure(error: Throwable) = logFailure("pool choice failed, using lazy pools", error)
 
     private fun choosePools(): PoolChoice {
         DispatcherTestHooks.beforePoolChoice?.invoke()
@@ -127,6 +128,7 @@ object OneSignalDispatchers {
         val pools: DispatcherPools,
         val detail: String,
         val warn: Boolean,
+        val failure: Throwable? = null,
     )
 
     @Suppress("TooGenericExceptionCaught", "SwallowedException")
