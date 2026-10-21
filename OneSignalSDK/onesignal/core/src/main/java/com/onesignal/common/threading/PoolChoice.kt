@@ -11,11 +11,13 @@ internal class PoolChoice(
     val warn: Boolean,
     val failure: Throwable? = null,
 ) {
-    val mode: String get() = if (pools is LazyDispatcherPools) "lazy" else "bootstrap"
+    val summary: String get() = "$detail; pools=${if (pools is LazyDispatcherPools) "lazy" else "bootstrap"}"
 }
 
 // Every launch in the process goes through this, so a failed choice must not throw.
 // Lazy pools need no flags, and they are what the flag being off already means.
+// A failure after an "on" snapshot leaves FeatureManager reporting the flag on over lazy
+// pools. The "choice failed" report is what tells those launches apart in telemetry.
 @Suppress("TooGenericExceptionCaught")
 internal fun choosePools(
     override: Boolean?,
@@ -38,7 +40,8 @@ private fun chooseFromCache(context: () -> Context?): PoolChoice {
             StartupFlagsSource.UNREADABLE -> "off, cache unreadable"
             StartupFlagsSource.NO_STORE -> "off, no application"
         }
-    return PoolChoice(poolsFor(enabled), detail, warn = flags.source == StartupFlagsSource.NO_STORE)
+    val degraded = flags.source == StartupFlagsSource.NO_STORE || flags.source == StartupFlagsSource.UNREADABLE
+    return PoolChoice(poolsFor(enabled), detail, warn = degraded)
 }
 
 private fun poolsFor(enabled: Boolean): DispatcherPools = if (enabled) BootstrapDispatcherPools() else LazyDispatcherPools()

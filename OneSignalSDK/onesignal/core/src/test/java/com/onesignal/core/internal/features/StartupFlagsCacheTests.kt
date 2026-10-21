@@ -23,6 +23,9 @@ import io.mockk.every
 import io.mockk.mockk
 import org.json.JSONArray
 import org.robolectric.annotation.Config
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.atomic.AtomicReference
+import kotlin.concurrent.thread
 
 @RobolectricTest
 @Config(sdk = [Build.VERSION_CODES.O])
@@ -82,6 +85,32 @@ class StartupFlagsCacheTests : FunSpec({
         StartupFlagsCache.write(context, listOf("SDK_Custom_Logging"))
         StartupFlagsCache.readFile(context).isEnabled(logging) shouldBe true
         StartupFlagsCache.write(context, listOf(FeatureFlag.SDK_IDENTITY_VERIFICATION.key))
+        StartupFlagsCache.readFile(context).isEnabled(logging) shouldBe false
+    }
+
+    test("racing writes leave the newest flags on disk") {
+        val context = appContext()
+        val current = AtomicReference(listOf(key))
+        val slowHasRead = CountDownLatch(1)
+        val releaseSlow = CountDownLatch(1)
+
+        val slow =
+            thread {
+                StartupFlagsCache.write(context) {
+                    val read = current.get()
+                    slowHasRead.countDown()
+                    releaseSlow.await()
+                    read
+                }
+            }
+        slowHasRead.await()
+        current.set(emptyList())
+        val fast = thread { StartupFlagsCache.write(context) { current.get() } }
+        fast.join(200)
+        releaseSlow.countDown()
+        slow.join()
+        fast.join()
+
         StartupFlagsCache.readFile(context).isEnabled(logging) shouldBe false
     }
 

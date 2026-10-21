@@ -43,13 +43,8 @@ interface IFeatureManager {
 }
 
 /**
- * Android host for the shared [SharedFeatureManager] latch.
- *
- * Persistence ([ConfigModel]), the startup flags file, and store subscriptions stay here.
- * Catalog, activation modes, startup snapshot, and latching live in KMP: this host calls
- * [SharedFeatureManager.refreshAtStartup] once, then [SharedFeatureManager.refresh] after fetches.
- *
- * Shared [SharedFeatureManager] is thread-safe; this host does not add an extra lock.
+ * Android host for the shared [SharedFeatureManager]: owns [ConfigModel] persistence, the startup
+ * flags file, and store subscriptions. Latching lives in KMP. See README.md in this package.
  */
 @Suppress("TooGenericExceptionCaught")
 internal class FeatureManager(
@@ -81,7 +76,7 @@ internal class FeatureManager(
 
     override fun start() {
         started = true
-        mirrorStartupFlags(configModelStore.model)
+        mirrorStartupFlags()
     }
 
     override fun isEnabled(feature: FeatureFlag): Boolean = latch.isEnabled(feature)
@@ -102,7 +97,7 @@ internal class FeatureManager(
         tag: String,
     ) {
         Logging.debug("OneSignal: FeatureManager.onModelReplaced(tag=$tag)")
-        if (started) mirrorStartupFlags(model)
+        if (started) mirrorStartupFlags()
         if (tag == ModelChangeTags.HYDRATE || tag == ModelChangeTags.NORMAL) {
             try {
                 refreshFrom(model)
@@ -122,7 +117,7 @@ internal class FeatureManager(
         ) {
             Logging.debug("OneSignal: FeatureManager.onModelUpdated(property=${args.property}, tag=$tag)")
             if (started && args.property == ConfigModel::sdkRemoteFeatureFlags.name) {
-                mirrorStartupFlags(configModelStore.model)
+                mirrorStartupFlags()
             }
             try {
                 refreshFrom(configModelStore.model)
@@ -145,9 +140,10 @@ internal class FeatureManager(
         }
     }
 
-    private fun mirrorStartupFlags(model: ConfigModel) {
+    // Reads the store's model inside the write lock: a list captured by the caller could be stale.
+    private fun mirrorStartupFlags() {
         try {
-            StartupFlagsCache.write(applicationService.appContext, model.sdkRemoteFeatureFlags)
+            StartupFlagsCache.write(applicationService.appContext) { configModelStore.model.sdkRemoteFeatureFlags }
         } catch (t: Throwable) {
             Logging.warn("OneSignal: failed to mirror startup flags: ${t.message}", t)
         }
