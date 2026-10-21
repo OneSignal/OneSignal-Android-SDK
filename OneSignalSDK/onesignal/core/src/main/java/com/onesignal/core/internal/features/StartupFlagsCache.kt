@@ -62,7 +62,7 @@ internal class PrefsStartupFlagsStore(
             prefs().getStringSet(KEY_ENABLED, null)?.toSet()
         } catch (t: Throwable) {
             // android.util.Log, not Logging: Logging can dispatch, and this can run before SDK init.
-            Log.w(TAG, "startup flags unreadable, treating all as off", t)
+            Log.w(TAG, "startup flags unreadable", t)
             throw t
         }
 

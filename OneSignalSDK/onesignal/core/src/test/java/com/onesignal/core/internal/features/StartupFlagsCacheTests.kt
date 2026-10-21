@@ -21,6 +21,7 @@ import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 import org.json.JSONArray
 import org.robolectric.annotation.Config
 import java.util.concurrent.CountDownLatch
@@ -169,6 +170,23 @@ class StartupFlagsCacheTests : FunSpec({
 
         flags.source shouldBe StartupFlagsSource.UNREADABLE
         flags.isEnabled(logging) shouldBe false
+    }
+
+    test("an unreadable file is rewritten") {
+        val context = mockk<Context>()
+        val prefs = mockk<SharedPreferences>()
+        val editor = mockk<SharedPreferences.Editor>()
+        every { context.applicationContext } returns context
+        every { context.createDeviceProtectedStorageContext() } returns context
+        every { context.getSharedPreferences(any(), any()) } returns prefs
+        every { prefs.getStringSet(any(), any()) } throws ClassCastException("not a string set")
+        every { prefs.edit() } returns editor
+        every { editor.putStringSet(any(), any()) } returns editor
+        every { editor.commit() } returns true
+
+        StartupFlagsCache.write(context, listOf(key))
+
+        verify { editor.putStringSet("enabled", setOf(key)) }
     }
 
     test("no application context is off") {
