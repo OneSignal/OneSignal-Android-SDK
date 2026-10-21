@@ -103,28 +103,27 @@ fun LogView(modifier: Modifier = Modifier) {
             )
         }
 
-        if (!collapsed) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(100.dp)
-                    .verticalScroll(scrollState)
-                    .padding(start = 16.dp, end = 16.dp, bottom = 6.dp),
-                verticalArrangement = Arrangement.Top,
-            ) {
-                if (logs.isEmpty()) {
-                    Text("No logs yet", style = entryStyle.copy(color = OsGrey600))
-                }
-                logs.forEachIndexed { index, entry ->
-                    Text(
-                        text = buildAnnotatedString {
-                            withStyle(SpanStyle(color = OsGrey600)) { append(entry.time) }
-                            append(" ${entry.message}")
-                        },
-                        modifier = Modifier.testTag("log_entry_$index"),
-                        style = entryStyle,
-                    )
-                }
+        // Collapsing only shrinks the pane so entries stay in the view hierarchy.
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(if (collapsed) 0.dp else 100.dp)
+                .verticalScroll(scrollState)
+                .padding(start = 16.dp, end = 16.dp, bottom = 6.dp),
+            verticalArrangement = Arrangement.Top,
+        ) {
+            if (logs.isEmpty()) {
+                Text("No logs yet", style = entryStyle.copy(color = OsGrey600))
+            }
+            logs.forEachIndexed { index, entry ->
+                Text(
+                    text = buildAnnotatedString {
+                        withStyle(SpanStyle(color = OsGrey600)) { append(entry.time) }
+                        append(" ${entry.message}")
+                    },
+                    modifier = Modifier.testTag("log_entry_$index"),
+                    style = entryStyle,
+                )
             }
         }
     }
