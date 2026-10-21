@@ -2,9 +2,10 @@ package com.onesignal.common.threading
 
 import android.content.Context
 import android.util.Log
-import com.onesignal.core.internal.features.BootstrapCacheRead
-import com.onesignal.core.internal.features.DispatcherBootstrapCache
+import com.onesignal.core.internal.features.FeatureManager
+import com.onesignal.core.internal.features.StartupFlags
 import com.onesignal.debug.internal.logging.Logging
+import com.onesignal.features.FeatureFlag
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -478,6 +479,7 @@ object OneSignalDispatchers {
     internal fun resetBootstrapInputsForTest() {
         appContext = null
         bootstrapEnabledForTest = null
+        FeatureManager.resetStartupFlagsForTest()
     }
 
     private fun currentPools(): DispatcherPools {
@@ -514,16 +516,15 @@ object OneSignalDispatchers {
     }
 
     private fun chooseFromCache(): PoolChoice {
-        val context = appContext ?: rememberApplicationContext()
-        val read = context?.let { DispatcherBootstrapCache.read(it) }
+        val flags = FeatureManager.startupFlags { appContext ?: rememberApplicationContext() }
+        val enabled = flags.isEnabled(FeatureFlag.SDK_DISPATCHER_BOOTSTRAP)
         val detail =
-            when (read) {
-                BootstrapCacheRead.ENABLED -> "on"
-                BootstrapCacheRead.DISABLED -> "off, flag not in cache"
-                BootstrapCacheRead.UNREADABLE -> "off, cache unreadable"
-                null -> "off, no application"
+            when (flags.source) {
+                StartupFlags.Source.FILE -> if (enabled) "on" else "off, flag not in cache"
+                StartupFlags.Source.UNREADABLE -> "off, cache unreadable"
+                StartupFlags.Source.NO_APPLICATION -> "off, no application"
             }
-        return PoolChoice(poolsFor(read == BootstrapCacheRead.ENABLED), detail, warn = read == null)
+        return PoolChoice(poolsFor(enabled), detail, warn = flags.source == StartupFlags.Source.NO_APPLICATION)
     }
 
     private fun poolsFor(enabled: Boolean): DispatcherPools = if (enabled) Pools() else LazyDispatcherPools()
@@ -643,6 +644,7 @@ object OneSignalDispatchers {
      */
     @Suppress("TooGenericExceptionCaught")
     internal fun resetForTest() {
+        FeatureManager.resetStartupFlagsForTest()
         val created = newPools()
         val old: DispatcherPools?
         synchronized(poolsLock) {

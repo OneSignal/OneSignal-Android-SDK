@@ -182,6 +182,7 @@ internal class LazyDispatcherPools : DispatcherPools {
             try {
                 val executor = if (executorLazy.isInitialized()) executorLazy.value else null
                 when {
+                    closed.get() -> "Shutdown"
                     executor == null && executorLazy.isInitialized() -> "Active"
                     executor == null -> "Cold"
                     executor.isShutdown -> "Shutdown"
