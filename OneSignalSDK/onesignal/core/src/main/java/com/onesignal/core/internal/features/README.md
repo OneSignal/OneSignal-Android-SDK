@@ -37,7 +37,7 @@ process-wide holder (`StartupFlagsCache`).
 ## Rules
 
 - **Only APP_STARTUP flags.** IMMEDIATE flags change mid-run and the file lags the store, so they are
-  never written and `StartupFlags.isEnabled` rejects them.
+  never written and `StartupFlags.isEnabled` returns false for them.
 - **The snapshot is the process value.** Telemetry tags and `isEnabled` must match what early code
   latched, so APP_STARTUP flags never come from the store at runtime.
 - **Missing or unreadable means off.** A missing file, a read that throws, or no application context
@@ -53,8 +53,9 @@ process-wide holder (`StartupFlagsCache`).
 - **One launch behind after an upgrade.** The file does not exist on the first launch of the version
   that introduces it, so APP_STARTUP flags are off for that launch even if the store already has them.
 - **Writes are serialized and read the latest flags.** `start()` and a flags fetch can mirror at the
-  same time. Each write reads `ConfigModel` inside the write lock, so the last write to finish always
-  holds the newest flags, never a list captured before another write landed.
+  same time. Each write reads `ConfigModel` inside the latch's mirror lock, so the last write to finish
+  always holds the newest flags, never a list captured before another write landed. A file that can't
+  be read is rewritten rather than skipped.
 - **No writes before `start()`.** `FeatureManager` can be constructed on main; the file is only written
   after start.
 - **Main thread cost.** The first reader opens one small XML file. Cheap, but StrictMode can still report
