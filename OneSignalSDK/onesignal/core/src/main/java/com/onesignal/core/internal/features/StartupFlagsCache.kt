@@ -19,12 +19,20 @@ internal object StartupFlagsCache {
     /** The first caller in the process reads the file; everyone after gets the same answer. */
     fun snapshot(context: () -> Context?): StartupFlags = latch.snapshot { context()?.let(::PrefsStartupFlagsStore) }
 
+    private val writeLock = Any()
+
     /** Mirrors the APP_STARTUP subset of [remoteFlags] for the next process. Call off the main thread. */
     fun write(
         context: Context,
         remoteFlags: List<String>,
+    ) = write(context) { remoteFlags }
+
+    /** [currentFlags] runs under the write lock, so racing writers always leave the latest flags on disk. */
+    fun write(
+        context: Context,
+        currentFlags: () -> List<String>,
     ) {
-        latch.mirror(PrefsStartupFlagsStore(context), remoteFlags)
+        synchronized(writeLock) { latch.mirror(PrefsStartupFlagsStore(context), currentFlags()) }
     }
 
     /** Reads the file now, without touching this process's snapshot. */
