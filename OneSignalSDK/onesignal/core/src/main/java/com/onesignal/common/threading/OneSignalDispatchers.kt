@@ -30,7 +30,6 @@ import java.util.concurrent.ThreadPoolExecutor
 object OneSignalDispatchers {
     private const val TEST_READY_TIMEOUT_MS = 2_000L
     private const val TEST_READY_POLL_MS = 5L
-    internal const val BASE_THREAD_NAME = "OneSignal" // Base thread name prefix
     private const val RELEASE_LOG_TAG = "OneSignal"
 
     @Volatile
