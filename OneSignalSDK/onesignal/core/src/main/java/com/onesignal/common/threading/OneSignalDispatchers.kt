@@ -13,17 +13,8 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 /**
- * Optimized threading manager for the OneSignal SDK.
- *
- * Performance optimizations:
- * - Lazy initialization to reduce startup overhead
- * - Custom thread pools for both IO and Default operations
- * - Optimized thread pool configuration (smaller pools)
- * - Small bounded queues (10 tasks) to prevent memory bloat
- * - Reduced context switching overhead
- * - Efficient thread management with controlled resource usage
- *
- * Made public to allow mocking in tests via IOMockHelper.
+ * The SDK's coroutine lanes. Pools are chosen once per process from the startup flags:
+ * bootstrap builds executors off the caller, lazy builds them on first use.
  */
 @Suppress("TooManyFunctions", "StringLiteralDuplication")
 object OneSignalDispatchers {
@@ -228,10 +219,6 @@ object OneSignalDispatchers {
         }
     }
 
-    /**
-     * Test-only hook to reset [prewarmStarted] so different specs can exercise the
-     * "first call wins" branch independently. Not part of any public contract.
-     */
     internal fun resetPrewarmForTest() {
         synchronized(prewarmLock) {
             prewarmStarted = false
@@ -239,23 +226,8 @@ object OneSignalDispatchers {
     }
 
     /**
-     * Test-only hook to clear all in-flight and queued work between specs.
-     *
-     * Every `suspendify*` / `launchOn*` now routes unconditionally through this single
-     * process-wide object (bounded pools: IO core=2/max=3, Default core=2/max=3, queue cap 200).
-     * In the full unit-test suite, background work launched by one spec can outlive it and
-     * accumulate, saturating the pools and `LinkedBlockingQueue`. Worse, a spec can leave a worker
-     * thread parked in a non-cancellable JVM wait (e.g. a `CountDownLatch.await()` that never gets
-     * released because the test asserted/failed first); a plain coroutine cancellation cannot free
-     * such a thread, so it permanently starves the small pool. Later specs that use the real pool
-     * (e.g. HttpClientTests' `launchOnIO {…}.join()`, OperationRepo, LoggerIdResolver) then see
-     * `launchOnIO` rejected/cancelled and observe null results.
-     *
-     * This atomically swaps in a fresh [Pools] generation and tears the old one down —
-     * cancelling its scopes and calling `shutdownNow()` to interrupt parked workers. Safe to call
-     * even when this object is `mockkObject`-mocked: the affected helpers stub only
-     * `prewarm`/`launchOn*`/`suspendify*`, so this real method still runs. Not part of any public
-     * contract.
+     * Swaps in a fresh pool generation and `shutdownNow()`s the old one, so a worker a spec left
+     * parked in a blocking wait cannot starve the small pools for later specs. Clears test hooks.
      */
     @Suppress("TooGenericExceptionCaught")
     internal fun resetForTest() {

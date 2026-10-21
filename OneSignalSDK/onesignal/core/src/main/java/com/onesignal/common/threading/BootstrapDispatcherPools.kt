@@ -33,9 +33,8 @@ private class LaneTarget(
 }
 
 /**
- * A stable dispatcher that queues work until its backing executor has been built and
- * prestarted on the bootstrap thread. CoroutineScope.launch can therefore return its real Job
- * without forcing executor construction or waiting on a lazy lock on the caller thread.
+ * Queues work until the bootstrap thread has built and prestarted the lane's executor,
+ * so `launch` returns its Job without building anything or blocking on the caller.
  */
 @Suppress("TooManyFunctions")
 private class GateDispatcher(
