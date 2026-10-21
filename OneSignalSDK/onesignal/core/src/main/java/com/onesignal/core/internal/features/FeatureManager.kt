@@ -1,11 +1,15 @@
 package com.onesignal.core.internal.features
 
+import android.content.Context
 import com.onesignal.common.modeling.ISingletonModelStoreChangeHandler
 import com.onesignal.common.modeling.ModelChangeTags
 import com.onesignal.common.modeling.ModelChangedArgs
+import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.config.ConfigModel
 import com.onesignal.core.internal.config.ConfigModelStore
+import com.onesignal.core.internal.startup.IStartableService
 import com.onesignal.debug.internal.logging.Logging
+import com.onesignal.features.FeatureActivationMode
 import com.onesignal.features.FeatureFlag
 import com.onesignal.features.FeatureFlagMetadata
 import com.onesignal.features.FeatureManager as SharedFeatureManager
@@ -50,8 +54,13 @@ interface IFeatureManager {
 @Suppress("TooGenericExceptionCaught")
 internal class FeatureManager(
     private val configModelStore: ConfigModelStore,
-) : IFeatureManager, ISingletonModelStoreChangeHandler<ConfigModel> {
+    private val applicationService: IApplicationService,
+) : IFeatureManager, IStartableService, ISingletonModelStoreChangeHandler<ConfigModel> {
     private val latch = SharedFeatureManager()
+
+    // Mirror writes wait for start(), which runs off main, so construction on main never writes.
+    @Volatile
+    private var started = false
 
     init {
         Logging.debug("OneSignal: FeatureManager initializing from cached config features")
@@ -61,6 +70,11 @@ internal class FeatureManager(
             Logging.error("OneSignal: Failed to initialize feature states from cached config", t)
         }
         configModelStore.subscribe(this)
+    }
+
+    override fun start() {
+        started = true
+        mirrorStartupFlags(configModelStore.model)
     }
 
     override fun isEnabled(feature: FeatureFlag): Boolean = latch.isEnabled(feature)
@@ -81,6 +95,7 @@ internal class FeatureManager(
         tag: String,
     ) {
         Logging.debug("OneSignal: FeatureManager.onModelReplaced(tag=$tag)")
+        if (started) mirrorStartupFlags(model)
         if (tag == ModelChangeTags.HYDRATE || tag == ModelChangeTags.NORMAL) {
             try {
                 refreshFrom(model, applyAppStartupFlags = false)
@@ -99,6 +114,9 @@ internal class FeatureManager(
             args.property == ConfigModel::sdkRemoteFeatureFlagMetadata.name
         ) {
             Logging.debug("OneSignal: FeatureManager.onModelUpdated(property=${args.property}, tag=$tag)")
+            if (started && args.property == ConfigModel::sdkRemoteFeatureFlags.name) {
+                mirrorStartupFlags(configModelStore.model)
+            }
             try {
                 refreshFrom(configModelStore.model, applyAppStartupFlags = false)
             } catch (t: Throwable) {
@@ -116,8 +134,8 @@ internal class FeatureManager(
                 "OneSignal: Local feature override enabled for testing only: $localFeatureOverrides",
             )
         }
-        val deferred =
-            latch.refresh(model.sdkRemoteFeatureFlags, applyAppStartupFlags, localFeatureOverrides)
+        val keys = if (applyAppStartupFlags) startupLatchKeys(model) else model.sdkRemoteFeatureFlags
+        val deferred = latch.refresh(keys, applyAppStartupFlags, localFeatureOverrides)
         for (change in deferred) {
             Logging.info(
                 "OneSignal: Feature ${change.key} changed remotely to ${change.desiredEnabled} " +
@@ -126,7 +144,40 @@ internal class FeatureManager(
         }
     }
 
+    // APP_STARTUP values come from the process snapshot pre-init code also latched from,
+    // so telemetry never reports a startup flag the running process is not using.
+    private fun startupLatchKeys(model: ConfigModel): List<String> {
+        val startup = StartupFlagsCache.snapshot { appContextOrNull() }
+        val immediate = model.sdkRemoteFeatureFlags.filterNot { it.lowercase() in APP_STARTUP_KEYS }
+        return immediate + startup.keys
+    }
+
+    private fun mirrorStartupFlags(model: ConfigModel) {
+        try {
+            StartupFlagsCache.write(applicationService.appContext, model.sdkRemoteFeatureFlags)
+        } catch (t: Throwable) {
+            Logging.warn("OneSignal: failed to mirror startup flags: ${t.message}", t)
+        }
+    }
+
+    @Suppress("SwallowedException")
+    private fun appContextOrNull(): Context? =
+        try {
+            applicationService.appContext
+        } catch (t: Throwable) {
+            null
+        }
+
     companion object {
+        /** APP_STARTUP flags for code that runs before SDK init. Same values [isEnabled] reports. */
+        fun startupFlags(context: () -> Context?): StartupFlags = StartupFlagsCache.snapshot(context)
+
+        /** Forgets this process's startup flags, as a new process would. */
+        internal fun resetStartupFlagsForTest() = StartupFlagsCache.setSnapshotForTest(null)
+
+        private val APP_STARTUP_KEYS =
+            FeatureFlag.entries.filter { it.activationMode == FeatureActivationMode.APP_STARTUP }.map { it.key }.toSet()
+
         /**
          * Local-only test hook for forcing features ON without backend config.
          * Add feature keys here while testing locally, e.g.

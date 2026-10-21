@@ -17,6 +17,13 @@ import io.mockk.mockk
 import io.mockk.runs
 
 class FeatureManagerTests : FunSpec({
+    fun startupSnapshot(vararg flags: FeatureFlag) {
+        StartupFlagsCache.setSnapshotForTest(StartupFlags(StartupFlags.Source.FILE, flags.map { it.key }.toSet()))
+    }
+
+    beforeTest { startupSnapshot() }
+    afterTest { StartupFlagsCache.setSnapshotForTest(null) }
+
     fun stubConfigModel(model: ConfigModel) {
         every { model.sdkRemoteFeatureFlags } returns emptyList()
         every { model.sdkRemoteFeatureFlagMetadata } returns null
@@ -30,7 +37,7 @@ class FeatureManagerTests : FunSpec({
         every { configModelStore.model } returns initialModel
         every { configModelStore.subscribe(any()) } just runs
 
-        val manager = FeatureManager(configModelStore)
+        val manager = FeatureManager(configModelStore, mockk(relaxed = true))
 
         manager.isEnabled(FeatureFlag.SDK_IDENTITY_VERIFICATION) shouldBe false
     }
@@ -43,7 +50,7 @@ class FeatureManagerTests : FunSpec({
         every { configModelStore.model } returns initialModel
         every { configModelStore.subscribe(any()) } just runs
 
-        val manager = FeatureManager(configModelStore)
+        val manager = FeatureManager(configModelStore, mockk(relaxed = true))
 
         manager.isEnabled(FeatureFlag.SDK_IDENTITY_VERIFICATION) shouldBe true
     }
@@ -56,7 +63,7 @@ class FeatureManagerTests : FunSpec({
         every { configModelStore.model } returns initialModel
         every { configModelStore.subscribe(any()) } just runs
 
-        val manager = FeatureManager(configModelStore)
+        val manager = FeatureManager(configModelStore, mockk(relaxed = true))
 
         manager.isEnabled(FeatureFlag.SDK_IDENTITY_VERIFICATION) shouldBe true
     }
@@ -69,7 +76,7 @@ class FeatureManagerTests : FunSpec({
         every { configModelStore.model } returns initialModel
         every { configModelStore.subscribe(any()) } just runs
 
-        val manager = FeatureManager(configModelStore)
+        val manager = FeatureManager(configModelStore, mockk(relaxed = true))
 
         val meta = requireNotNull(manager.remoteFeatureFlagMetadata())
         meta.getValue("X").contains("\"note\"") shouldBe true
@@ -84,7 +91,7 @@ class FeatureManagerTests : FunSpec({
         every { configModelStore.model } returns initialModel
         every { configModelStore.subscribe(any()) } just runs
 
-        FeatureManager(configModelStore).remoteFeatureFlagMetadata() shouldBe null
+        FeatureManager(configModelStore, mockk(relaxed = true)).remoteFeatureFlagMetadata() shouldBe null
     }
 
     test("enabledFeatureKeys is empty when no flags are enabled") {
@@ -94,7 +101,7 @@ class FeatureManagerTests : FunSpec({
         every { configModelStore.model } returns initialModel
         every { configModelStore.subscribe(any()) } just runs
 
-        val manager = FeatureManager(configModelStore)
+        val manager = FeatureManager(configModelStore, mockk(relaxed = true))
 
         manager.enabledFeatureKeys() shouldBe emptyList()
     }
@@ -107,7 +114,7 @@ class FeatureManagerTests : FunSpec({
         every { configModelStore.model } returns initialModel
         every { configModelStore.subscribe(any()) } just runs
 
-        val manager = FeatureManager(configModelStore)
+        val manager = FeatureManager(configModelStore, mockk(relaxed = true))
 
         manager.enabledFeatureKeys() shouldBe listOf(FeatureFlag.SDK_IDENTITY_VERIFICATION.key)
     }
@@ -118,7 +125,7 @@ class FeatureManagerTests : FunSpec({
         val configModelStore = mockk<ConfigModelStore>()
         every { configModelStore.model } returns initialModel
         every { configModelStore.subscribe(any()) } just runs
-        val manager = FeatureManager(configModelStore)
+        val manager = FeatureManager(configModelStore, mockk(relaxed = true))
 
         manager.isEnabled(FeatureFlag.SDK_IDENTITY_VERIFICATION) shouldBe false
 
@@ -138,6 +145,7 @@ class FeatureManagerTests : FunSpec({
         val initialModel = mockk<ConfigModel>()
         stubConfigModel(initialModel)
         every { initialModel.sdkRemoteFeatureFlags } returns listOf(FeatureFlag.SDK_CUSTOM_LOGGING.key)
+        startupSnapshot(FeatureFlag.SDK_CUSTOM_LOGGING)
         val configModelStore = mockk<ConfigModelStore>()
         every { configModelStore.model } returns initialModel
         every { configModelStore.subscribe(any()) } just runs
@@ -148,7 +156,7 @@ class FeatureManagerTests : FunSpec({
         val listener = ILogListener { event -> capturedLogs.add(event) }
         Logging.addListener(listener)
         try {
-            val manager = FeatureManager(configModelStore)
+            val manager = FeatureManager(configModelStore, mockk(relaxed = true))
             manager.isEnabled(FeatureFlag.SDK_CUSTOM_LOGGING) shouldBe true
 
             val updatedModel = mockk<ConfigModel>()
@@ -169,5 +177,34 @@ class FeatureManagerTests : FunSpec({
             Logging.removeListener(listener)
             Logging.logLevel = originalLogLevel
         }
+    }
+
+    test("APP_STARTUP flags latch from the startup snapshot, not the store") {
+        val model = mockk<ConfigModel>()
+        stubConfigModel(model)
+        every { model.sdkRemoteFeatureFlags } returns
+            listOf(FeatureFlag.SDK_CUSTOM_LOGGING.key, FeatureFlag.SDK_IDENTITY_VERIFICATION.key)
+        val configModelStore = mockk<ConfigModelStore>()
+        every { configModelStore.model } returns model
+        every { configModelStore.subscribe(any()) } just runs
+
+        val manager = FeatureManager(configModelStore, mockk(relaxed = true))
+
+        manager.isEnabled(FeatureFlag.SDK_CUSTOM_LOGGING) shouldBe false
+        manager.isEnabled(FeatureFlag.SDK_IDENTITY_VERIFICATION) shouldBe true
+        manager.enabledFeatureKeys() shouldBe listOf(FeatureFlag.SDK_IDENTITY_VERIFICATION.key)
+    }
+
+    test("an APP_STARTUP flag in the snapshot is on even before the store has it") {
+        startupSnapshot(FeatureFlag.SDK_CUSTOM_LOGGING)
+        val model = mockk<ConfigModel>()
+        stubConfigModel(model)
+        val configModelStore = mockk<ConfigModelStore>()
+        every { configModelStore.model } returns model
+        every { configModelStore.subscribe(any()) } just runs
+
+        val manager = FeatureManager(configModelStore, mockk(relaxed = true))
+
+        manager.isEnabled(FeatureFlag.SDK_CUSTOM_LOGGING) shouldBe true
     }
 })
