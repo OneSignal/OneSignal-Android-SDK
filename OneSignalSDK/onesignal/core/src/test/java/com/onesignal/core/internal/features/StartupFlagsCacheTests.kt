@@ -99,6 +99,24 @@ class StartupFlagsCacheTests : FunSpec({
         context.getSharedPreferences(PrefsStartupFlagsStore.STORE, Context.MODE_PRIVATE).getStringSet("enabled", null) shouldBe null
     }
 
+    test("a locked boot still reads the flags") {
+        val unlockedOnly = mockk<SharedPreferences>()
+        every { unlockedOnly.getStringSet(any(), any()) } throws IllegalStateException("credential storage locked")
+        val deviceProtected = mockk<SharedPreferences>()
+        every { deviceProtected.getStringSet(any(), any()) } returns setOf(key)
+        val dpContext = mockk<Context>()
+        every { dpContext.getSharedPreferences(any(), any()) } returns deviceProtected
+        val locked = mockk<Context>()
+        every { locked.applicationContext } returns locked
+        every { locked.getSharedPreferences(any(), any()) } returns unlockedOnly
+        every { locked.createDeviceProtectedStorageContext() } returns dpContext
+
+        val flags = StartupFlagsCache.readFile(locked)
+
+        flags.source shouldBe StartupFlagsSource.STORE
+        flags.isEnabled(logging) shouldBe true
+    }
+
     test("reading an IMMEDIATE flag is rejected") {
         shouldThrow<IllegalArgumentException> {
             StartupFlagsCache.readFile(appContext()).isEnabled(FeatureFlag.SDK_IDENTITY_VERIFICATION)
