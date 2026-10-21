@@ -5,12 +5,17 @@ import androidx.test.core.app.ApplicationProvider
 import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
 import com.onesignal.core.internal.features.FeatureManager
 import com.onesignal.core.internal.features.StartupFlagsCache
+import com.onesignal.debug.ILogListener
+import com.onesignal.debug.LogLevel
+import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.features.FeatureFlag
 import com.onesignal.mocks.MockHelper
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldContain
 import io.mockk.every
 import io.mockk.mockk
+import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
@@ -22,6 +27,8 @@ class DispatcherBootstrapFlagTests : FunSpec({
     val key = bootstrap.key
 
     afterTest {
+        reportListener?.let(Logging::removeListener)
+        reportListener = null
         StartupFlagsCache.write(appContext(), emptyList())
         OneSignalDispatchers.resetBootstrapInputsForTest()
         OneSignalDispatchers.resetForTest()
@@ -56,10 +63,7 @@ class DispatcherBootstrapFlagTests : FunSpec({
     }
 
     test("an unreadable file keeps construction on the caller") {
-        val broken = mockk<Context>()
-        every { broken.applicationContext } returns broken
-        every { broken.getSharedPreferences(any(), any()) } throws SecurityException("prefs unavailable")
-        latchFrom(broken)
+        latchFrom(unreadableContext())
 
         builtOnCaller() shouldBe true
     }
@@ -71,6 +75,53 @@ class DispatcherBootstrapFlagTests : FunSpec({
         latchFrom(context)
 
         builtOnCaller() shouldBe true
+    }
+
+    test("a choice failure after an on snapshot runs lazy pools while FeatureManager reports on") {
+        val context = appContext()
+        StartupFlagsCache.write(context, listOf(key))
+        OneSignalDispatchers.beforePoolChoiceForTest = {
+            FeatureManager.startupFlags { context }
+            throw IllegalStateException("choice failed")
+        }
+        val reports = captureChoiceReports()
+        latchFrom(context)
+
+        builtOnCaller() shouldBe true
+        FeatureManager(MockHelper.configModelStore(), applicationServiceFor(context)).isEnabled(bootstrap) shouldBe true
+        OneSignalDispatchers.reportChoiceToTelemetry()
+        reports.single() shouldContain "off, choice failed; pools=lazy"
+    }
+
+    test("an unreadable file reaches telemetry once init has installed it") {
+        val reports = captureChoiceReports()
+        latchFrom(unreadableContext())
+        reports shouldBe emptyList()
+
+        OneSignalDispatchers.reportChoiceToTelemetry()
+        reports.single() shouldContain "off, cache unreadable; pools=lazy"
+        OneSignalDispatchers.reportChoiceToTelemetry()
+        reports.size shouldBe 1
+    }
+
+    test("a degraded choice after telemetry is up is reported right away") {
+        val reports = captureChoiceReports()
+        OneSignalDispatchers.resetBootstrapInputsForTest()
+        OneSignalDispatchers.reportChoiceToTelemetry()
+        OneSignalDispatchers.noteApplicationContext(unreadableContext())
+        OneSignalDispatchers.resetForTest()
+
+        reports.single() shouldContain "off, cache unreadable"
+    }
+
+    test("a healthy choice is not reported") {
+        val context = appContext()
+        StartupFlagsCache.write(context, listOf(key))
+        val reports = captureChoiceReports()
+        latchFrom(context)
+        OneSignalDispatchers.reportChoiceToTelemetry()
+
+        reports shouldBe emptyList()
     }
 
     test("prewarm latches from the process application when startup did not note a context") {
@@ -98,6 +149,26 @@ class DispatcherBootstrapFlagTests : FunSpec({
 })
 
 private fun appContext(): Context = ApplicationProvider.getApplicationContext()
+
+private var reportListener: ILogListener? = null
+
+/** Warnings [OneSignalDispatchers] sends through [Logging] about its pool choice. */
+private fun captureChoiceReports(): List<String> {
+    val reports = CopyOnWriteArrayList<String>()
+    val listener = ILogListener { if (it.level == LogLevel.WARN && "sdk_dispatcher_bootstrap" in it.entry) reports.add(it.entry) }
+    reportListener = listener
+    Logging.addListener(listener)
+    return reports
+}
+
+private fun unreadableContext(): Context {
+    val broken = mockk<Context>()
+    every { broken.applicationContext } returns broken
+    every { broken.getSharedPreferences(any(), any()) } throws SecurityException("prefs unavailable")
+    return broken
+}
+
+private fun applicationServiceFor(context: Context) = MockHelper.applicationService().also { every { it.appContext } returns context }
 
 private fun latchFrom(context: Context) {
     OneSignalDispatchers.resetBootstrapInputsForTest()

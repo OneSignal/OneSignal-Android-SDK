@@ -62,6 +62,12 @@ object OneSignalDispatchers {
     @Volatile
     private var appContext: Context? = null
 
+    @Volatile
+    private var telemetryReady = false
+
+    @Volatile
+    private var pendingChoiceReport: PoolChoice? = null
+
     /** Test override. Null reads the cached flag, and no cache means off. */
     @Volatile
     internal var bootstrapEnabledForTest: Boolean? = null
@@ -82,6 +88,8 @@ object OneSignalDispatchers {
     internal fun resetBootstrapInputsForTest() {
         appContext = null
         bootstrapEnabledForTest = null
+        telemetryReady = false
+        pendingChoiceReport = null
         FeatureManager.resetStartupFlagsForTest()
     }
 
@@ -100,25 +108,45 @@ object OneSignalDispatchers {
                     choice.pools
                 }
             }
-        if (published === choice.pools && bootstrapEnabledForTest == null) {
-            val mode = if (choice.pools is LazyDispatcherPools) "lazy" else "bootstrap"
-            logRelease("${choice.detail}; pools=$mode", warn = choice.warn)
-        }
+        if (published === choice.pools) recordChoice(choice)
         return published
     }
 
-    private fun newPools(): DispatcherPools = choosePoolsOrLazy().pools
-
     // Every launch in the process goes through this, so a failed choice must not throw.
     // Lazy pools need no flags, and they are what the flag being off already means.
+    // A failure after an "on" snapshot leaves FeatureManager reporting the flag on over lazy
+    // pools. The "choice failed" report is what tells those launches apart in telemetry.
     @Suppress("TooGenericExceptionCaught")
     private fun choosePoolsOrLazy(): PoolChoice =
         try {
             choosePools()
         } catch (t: Throwable) {
-            logFailure("pool choice failed, using lazy pools", t)
-            PoolChoice(LazyDispatcherPools(), "off, choice failed", warn = true)
+            PoolChoice(LazyDispatcherPools(), "off, choice failed", warn = true, error = t)
         }
+
+    /** Call only after [choice] is published: reporting can log, and log listeners can launch. */
+    private fun recordChoice(choice: PoolChoice) {
+        if (bootstrapEnabledForTest != null) return
+        logRelease(choice.summary, choice.error, warn = choice.warn)
+        if (!choice.warn) return
+        if (telemetryReady) reportChoice(choice) else pendingChoiceReport = choice
+    }
+
+    /** Pools are usually chosen before init installs remote telemetry, so degraded choices wait for it. */
+    internal fun reportChoiceToTelemetry() {
+        telemetryReady = true
+        pendingChoiceReport?.let(::reportChoice)
+        pendingChoiceReport = null
+    }
+
+    @Suppress("SwallowedException")
+    private fun reportChoice(choice: PoolChoice) {
+        try {
+            Logging.warn("OneSignalDispatchers: sdk_dispatcher_bootstrap ${choice.summary}", choice.error)
+        } catch (_: RuntimeException) {
+            // A telemetry fault must not fail init or the launch that published the pools.
+        }
+    }
 
     private fun choosePools(): PoolChoice {
         beforePoolChoiceForTest?.invoke()
@@ -140,7 +168,8 @@ object OneSignalDispatchers {
                 StartupFlagsSource.UNREADABLE -> "off, cache unreadable"
                 StartupFlagsSource.NO_STORE -> "off, no application"
             }
-        return PoolChoice(poolsFor(enabled), detail, warn = flags.source == StartupFlagsSource.NO_STORE)
+        val degraded = flags.source == StartupFlagsSource.NO_STORE || flags.source == StartupFlagsSource.UNREADABLE
+        return PoolChoice(poolsFor(enabled), detail, warn = degraded)
     }
 
     private fun poolsFor(enabled: Boolean): DispatcherPools = if (enabled) BootstrapDispatcherPools() else LazyDispatcherPools()
@@ -149,7 +178,10 @@ object OneSignalDispatchers {
         val pools: DispatcherPools,
         val detail: String,
         val warn: Boolean,
-    )
+        val error: Throwable? = null,
+    ) {
+        val summary: String get() = "$detail; pools=${if (pools is LazyDispatcherPools) "lazy" else "bootstrap"}"
+    }
 
     @Suppress("TooGenericExceptionCaught", "SwallowedException")
     private fun rememberApplicationContext(): Context? {
@@ -280,12 +312,13 @@ object OneSignalDispatchers {
     @Suppress("TooGenericExceptionCaught")
     internal fun resetForTest() {
         FeatureManager.resetStartupFlagsForTest()
-        val created = newPools()
+        val choice = choosePoolsOrLazy()
         val old: DispatcherPools?
         synchronized(poolsLock) {
             old = poolsRef
-            poolsRef = created
+            poolsRef = choice.pools
         }
+        recordChoice(choice)
         try {
             old?.shutdown()
         } catch (e: Exception) {
