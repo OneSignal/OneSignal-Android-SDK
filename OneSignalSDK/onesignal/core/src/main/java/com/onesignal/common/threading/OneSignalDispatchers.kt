@@ -3,9 +3,9 @@ package com.onesignal.common.threading
 import android.content.Context
 import android.util.Log
 import com.onesignal.core.internal.features.FeatureManager
-import com.onesignal.core.internal.features.StartupFlags
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.features.FeatureFlag
+import com.onesignal.features.StartupFlagsSource
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -520,11 +520,12 @@ object OneSignalDispatchers {
         val enabled = flags.isEnabled(FeatureFlag.SDK_DISPATCHER_BOOTSTRAP)
         val detail =
             when (flags.source) {
-                StartupFlags.Source.FILE -> if (enabled) "on" else "off, flag not in cache"
-                StartupFlags.Source.UNREADABLE -> "off, cache unreadable"
-                StartupFlags.Source.NO_APPLICATION -> "off, no application"
+                StartupFlagsSource.STORE -> if (enabled) "on" else "off, flag not in cache"
+                StartupFlagsSource.MISSING -> "off, no cache yet"
+                StartupFlagsSource.UNREADABLE -> "off, cache unreadable"
+                StartupFlagsSource.NO_STORE -> "off, no application"
             }
-        return PoolChoice(poolsFor(enabled), detail, warn = flags.source == StartupFlags.Source.NO_APPLICATION)
+        return PoolChoice(poolsFor(enabled), detail, warn = flags.source == StartupFlagsSource.NO_STORE)
     }
 
     private fun poolsFor(enabled: Boolean): DispatcherPools = if (enabled) Pools() else LazyDispatcherPools()
