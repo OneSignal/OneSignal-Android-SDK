@@ -5,21 +5,16 @@ import android.util.Log
 import com.onesignal.core.internal.features.FeatureManager
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
-import com.onesignal.features.FeatureFlag
-import com.onesignal.features.StartupFlagsSource
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 /**
  * The SDK's coroutine lanes. Pools are chosen once per process from the startup flags:
  * bootstrap builds executors off the caller, lazy builds them on first use.
  */
-@Suppress("TooManyFunctions", "StringLiteralDuplication")
+@Suppress("TooManyFunctions")
 object OneSignalDispatchers {
-    private const val TEST_READY_TIMEOUT_MS = 2_000L
-    private const val TEST_READY_POLL_MS = 5L
     private const val RELEASE_LOG_TAG = "OneSignal"
 
     private val inFailureLog = ThreadLocal<Boolean>()
@@ -54,7 +49,7 @@ object OneSignalDispatchers {
         FeatureManager.resetStartupFlagsForTest()
     }
 
-    private fun currentPools(): DispatcherPools = poolsRef ?: publishFirstPools()
+    internal fun currentPools(): DispatcherPools = poolsRef ?: publishFirstPools()
 
     // The choice must not launch work: a launch would re-enter here before poolsRef is set.
     // Logging can launch, so a choice failure is logged only after publishing.
@@ -62,78 +57,23 @@ object OneSignalDispatchers {
         val choice =
             synchronized(poolsLock) {
                 poolsRef?.let { return it }
-                choosePoolsOrLazy().also { poolsRef = it.pools }
+                choosePools(bootstrapEnabledForTest, ::applicationContext).also { poolsRef = it.pools }
             }
         choice.failure?.let(::logChoiceFailure)
-        if (bootstrapEnabledForTest == null) {
-            val mode = if (choice.pools is LazyDispatcherPools) "lazy" else "bootstrap"
-            logRelease("${choice.detail}; pools=$mode", warn = choice.warn)
-        }
+        if (bootstrapEnabledForTest == null) logRelease("${choice.detail}; pools=${choice.mode}", warn = choice.warn)
         return choice.pools
     }
 
     private fun newPools(): DispatcherPools {
-        val choice = choosePoolsOrLazy()
+        val choice = choosePools(bootstrapEnabledForTest, ::applicationContext)
         choice.failure?.let(::logChoiceFailure)
         return choice.pools
     }
 
-    // Every launch in the process goes through this, so a failed choice must not throw.
-    // Lazy pools need no flags, and they are what the flag being off already means.
-    @Suppress("TooGenericExceptionCaught")
-    private fun choosePoolsOrLazy(): PoolChoice =
-        try {
-            choosePools()
-        } catch (t: Throwable) {
-            PoolChoice(LazyDispatcherPools(), "off, choice failed", warn = true, failure = t)
-        }
-
     private fun logChoiceFailure(error: Throwable) = logFailure("pool choice failed, using lazy pools", error)
 
-    private fun choosePools(): PoolChoice {
-        DispatcherTestHooks.beforePoolChoice?.invoke()
-        val override = bootstrapEnabledForTest
-        return if (override != null) {
-            PoolChoice(poolsFor(override), "test", false)
-        } else {
-            chooseFromCache()
-        }
-    }
-
-    private fun chooseFromCache(): PoolChoice {
-        val flags = FeatureManager.startupFlags { appContext ?: rememberApplicationContext() }
-        val enabled = flags.isEnabled(FeatureFlag.SDK_DISPATCHER_BOOTSTRAP)
-        val detail =
-            when (flags.source) {
-                StartupFlagsSource.STORE -> if (enabled) "on" else "off, flag not in cache"
-                StartupFlagsSource.MISSING -> "off, no cache yet"
-                StartupFlagsSource.UNREADABLE -> "off, cache unreadable"
-                StartupFlagsSource.NO_STORE -> "off, no application"
-            }
-        return PoolChoice(poolsFor(enabled), detail, warn = flags.source == StartupFlagsSource.NO_STORE)
-    }
-
-    private fun poolsFor(enabled: Boolean): DispatcherPools = if (enabled) BootstrapDispatcherPools() else LazyDispatcherPools()
-
-    private class PoolChoice(
-        val pools: DispatcherPools,
-        val detail: String,
-        val warn: Boolean,
-        val failure: Throwable? = null,
-    )
-
-    @Suppress("TooGenericExceptionCaught", "SwallowedException")
-    private fun rememberApplicationContext(): Context? {
-        if (appContext != null) return appContext
-        // Receivers call prewarm() with no Context when the startup provider is disabled.
-        val resolved =
-            try {
-                val method = Class.forName("android.app.ActivityThread").getMethod("currentApplication")
-                method.invoke(null) as? Context
-            } catch (_: Throwable) {
-                null
-            }
-        if (resolved != null) appContext = resolved.applicationContext
+    private fun applicationContext(): Context? {
+        if (appContext == null) currentApplication()?.let { appContext = it.applicationContext }
         return appContext
     }
 
@@ -246,76 +186,4 @@ object OneSignalDispatchers {
         resetPrewarmForTest()
         DispatcherTestHooks.reset()
     }
-
-    @Suppress("ComplexMethod")
-    internal fun getPerformanceMetrics(): String {
-        val current = currentPools()
-        val io = current.io.executor()
-        val default = current.defaultLane.executor()
-        val serial = current.serialIO.executor()
-        val ingress = current.ingress.executor()
-        return """
-            OneSignalDispatchers Performance Metrics:
-            - IO Pool: ${io?.let { "${it.activeCount}/${it.corePoolSize}" } ?: "n/a"} active/core threads
-            - IO Queue: ${io?.queue?.size ?: "n/a"} pending tasks
-            - Default Pool: ${default?.let { "${it.activeCount}/${it.corePoolSize}" } ?: "n/a"} active/core threads
-            - Default Queue: ${default?.queue?.size ?: "n/a"} pending tasks
-            - SerialIO Queue: ${serial?.queue?.size ?: "n/a"} pending tasks
-            - Ingress Queue: ${ingress?.queue?.size ?: "n/a"} pending tasks
-            - Total completed tasks: ${listOfNotNull(io, default, serial, ingress).sumOf { it.completedTaskCount }}
-            - Memory usage: ~${listOfNotNull(io, default, serial, ingress).sumOf { it.activeCount } * 1024}KB (thread stacks, ~1MB each)
-        """.trimIndent()
-    }
-
-    internal fun getStatus(): String {
-        val current = currentPools()
-        return """
-            OneSignalDispatchers Status:
-            - IO Executor: ${current.io.status()}
-            - Default Executor: ${current.defaultLane.status()}
-            - SerialIO Executor: ${current.serialIO.status()}
-            - Ingress Executor: ${current.ingress.status()}
-            - IO Scope: ${scopeStatus("IOScope") { current.ioScope.isActive }}
-            - Default Scope: ${scopeStatus("DefaultScope") { current.defaultScope.isActive }}
-            - SerialIO Scope: ${scopeStatus("SerialIOScope") { current.serialIOScope.isActive }}
-            - Ingress Scope: ${scopeStatus("IngressScope") { current.ingressScope.isActive }}
-        """.trimIndent()
-    }
-
-    internal fun awaitReadyForTest(timeoutMs: Long = TEST_READY_TIMEOUT_MS): Boolean {
-        val deadline = System.currentTimeMillis() + timeoutMs
-        while (System.currentTimeMillis() < deadline) {
-            val current = currentPools()
-            if (listOf(current.io, current.defaultLane, current.serialIO, current.ingress).all { it.status() == "Active" }) {
-                return true
-            }
-            Thread.sleep(TEST_READY_POLL_MS)
-        }
-        return false
-    }
-
-    // internal so tests can exercise the failure branch (when `isShutdown()` itself throws,
-    // which happens when the lazy initializer threw and re-throws on every access).
-    internal fun executorStatus(
-        name: String,
-        isShutdown: () -> Boolean,
-    ): String =
-        try {
-            if (isShutdown()) "Shutdown" else "Active"
-        } catch (e: Exception) {
-            "$name $NOT_INITIALIZED ${e.message ?: UNKNOWN_ERROR}"
-        }
-
-    internal fun scopeStatus(
-        name: String,
-        isActive: () -> Boolean,
-    ): String =
-        try {
-            if (isActive()) "Active" else "Cancelled"
-        } catch (e: Exception) {
-            "$name $NOT_INITIALIZED ${e.message ?: UNKNOWN_ERROR}"
-        }
-
-    private const val NOT_INITIALIZED = "Not initialized"
-    private const val UNKNOWN_ERROR = "Unknown error"
 }

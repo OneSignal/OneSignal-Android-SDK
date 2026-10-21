@@ -1,0 +1,54 @@
+package com.onesignal.common.threading
+
+import android.content.Context
+import com.onesignal.core.internal.features.FeatureManager
+import com.onesignal.features.FeatureFlag
+import com.onesignal.features.StartupFlagsSource
+
+internal class PoolChoice(
+    val pools: DispatcherPools,
+    val detail: String,
+    val warn: Boolean,
+    val failure: Throwable? = null,
+) {
+    val mode: String get() = if (pools is LazyDispatcherPools) "lazy" else "bootstrap"
+}
+
+// Every launch in the process goes through this, so a failed choice must not throw.
+// Lazy pools need no flags, and they are what the flag being off already means.
+@Suppress("TooGenericExceptionCaught")
+internal fun choosePools(
+    override: Boolean?,
+    context: () -> Context?,
+): PoolChoice =
+    try {
+        DispatcherTestHooks.beforePoolChoice?.invoke()
+        if (override != null) PoolChoice(poolsFor(override), "test", warn = false) else chooseFromCache(context)
+    } catch (t: Throwable) {
+        PoolChoice(LazyDispatcherPools(), "off, choice failed", warn = true, failure = t)
+    }
+
+private fun chooseFromCache(context: () -> Context?): PoolChoice {
+    val flags = FeatureManager.startupFlags(context)
+    val enabled = flags.isEnabled(FeatureFlag.SDK_DISPATCHER_BOOTSTRAP)
+    val detail =
+        when (flags.source) {
+            StartupFlagsSource.STORE -> if (enabled) "on" else "off, flag not in cache"
+            StartupFlagsSource.MISSING -> "off, no cache yet"
+            StartupFlagsSource.UNREADABLE -> "off, cache unreadable"
+            StartupFlagsSource.NO_STORE -> "off, no application"
+        }
+    return PoolChoice(poolsFor(enabled), detail, warn = flags.source == StartupFlagsSource.NO_STORE)
+}
+
+private fun poolsFor(enabled: Boolean): DispatcherPools = if (enabled) BootstrapDispatcherPools() else LazyDispatcherPools()
+
+/** The process Application, for receivers that call prewarm() with no Context when the startup provider is disabled. */
+@Suppress("TooGenericExceptionCaught", "SwallowedException")
+internal fun currentApplication(): Context? =
+    try {
+        val method = Class.forName("android.app.ActivityThread").getMethod("currentApplication")
+        method.invoke(null) as? Context
+    } catch (_: Throwable) {
+        null
+    }

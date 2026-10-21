@@ -180,23 +180,23 @@ class OneSignalDispatchersTests : FunSpec({
         // Executors.newSingleThreadExecutor refused to construct) and every isShutdown
         // access re-throws. Without this, the catch is unreachable from unit tests because
         // ThreadPoolExecutor.isShutdown does not normally throw.
-        OneSignalDispatchers.executorStatus("ioExecutor") { false } shouldBe "Active"
-        OneSignalDispatchers.executorStatus("ioExecutor") { true } shouldBe "Shutdown"
-        OneSignalDispatchers.executorStatus("ioExecutor") {
+        executorStatus("ioExecutor") { false } shouldBe "Active"
+        executorStatus("ioExecutor") { true } shouldBe "Shutdown"
+        executorStatus("ioExecutor") {
             throw RuntimeException("init failure")
         } shouldBe "ioExecutor Not initialized init failure"
-        OneSignalDispatchers.executorStatus("ioExecutor") {
+        executorStatus("ioExecutor") {
             throw RuntimeException()
         } shouldBe "ioExecutor Not initialized Unknown error"
     }
 
     test("scopeStatus returns 'Active' / 'Cancelled' on the happy path and the Not initialized message when the underlying check throws") {
-        OneSignalDispatchers.scopeStatus("IOScope") { true } shouldBe "Active"
-        OneSignalDispatchers.scopeStatus("IOScope") { false } shouldBe "Cancelled"
-        OneSignalDispatchers.scopeStatus("IOScope") {
+        scopeStatus("IOScope") { true } shouldBe "Active"
+        scopeStatus("IOScope") { false } shouldBe "Cancelled"
+        scopeStatus("IOScope") {
             throw RuntimeException("cancelled supervisor")
         } shouldBe "IOScope Not initialized cancelled supervisor"
-        OneSignalDispatchers.scopeStatus("IOScope") {
+        scopeStatus("IOScope") {
             throw RuntimeException()
         } shouldBe "IOScope Not initialized Unknown error"
     }
