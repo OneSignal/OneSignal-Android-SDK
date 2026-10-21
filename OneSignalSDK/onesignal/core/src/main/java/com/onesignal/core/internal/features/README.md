@@ -14,6 +14,13 @@ choice that lives for the whole process, such as which thread pools or logging p
 
 Nothing else. Both calls return the same value for the life of the process.
 
+## Where the logic lives
+
+The snapshot, key filtering, write skipping, and latching are in KMP (`StartupFlagsLatch`,
+`StartupFlags`, `FeatureManager.refreshAtStartup`), so iOS gets the same behavior by implementing
+`IStartupFlagsStore`. Android only provides that store (`PrefsStartupFlagsStore`) and the
+process-wide holder (`StartupFlagsCache`).
+
 ## How it works
 
 1. Process starts. The first reader, before or after init, triggers a single read of the file. That
@@ -22,8 +29,9 @@ Nothing else. Both calls return the same value for the life of the process.
    `ConfigModel`.
 3. `FeatureManager.start()` (an `IStartableService`, so off main) copies the APP_STARTUP subset of
    `ConfigModel.sdkRemoteFeatureFlags` into the file.
-4. A flags fetch updates `ConfigModel`. IMMEDIATE flags apply now. APP_STARTUP changes are logged as
-   deferred, and the file is rewritten for the next process.
+4. A flags fetch updates `ConfigModel`. IMMEDIATE flags apply now. APP_STARTUP changes, on or off,
+   are logged as deferred, and the file is rewritten for the next process. The write uses `commit()`,
+   so it is on disk before the process can die.
 
 ## Rules
 
@@ -32,7 +40,8 @@ Nothing else. Both calls return the same value for the life of the process.
 - **The snapshot is the process value.** Telemetry tags and `isEnabled` must match what early code
   latched, so APP_STARTUP flags never come from the store at runtime.
 - **Missing or unreadable means off.** A missing file, a read that throws, or no application context
-  all give an empty snapshot. The source (`FILE`, `UNREADABLE`, `NO_APPLICATION`) is kept for logging.
+  all give an empty snapshot. The source (`STORE`, `MISSING`, `UNREADABLE`, `NO_STORE`) is kept for
+  logging.
 - **One launch behind after an upgrade.** The file does not exist on the first launch of the version
   that introduces it, so APP_STARTUP flags are off for that launch even if the store already has them.
 - **No writes before `start()`.** `FeatureManager` can be constructed on main; the file is only written

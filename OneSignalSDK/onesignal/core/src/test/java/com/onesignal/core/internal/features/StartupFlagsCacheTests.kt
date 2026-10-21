@@ -1,16 +1,20 @@
 package com.onesignal.core.internal.features
 
 import android.content.Context
+import android.content.SharedPreferences
 import androidx.test.core.app.ApplicationProvider
 import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
 import com.onesignal.common.modeling.ModelChangeTags
 import com.onesignal.common.modeling.ModelChangedArgs
 import com.onesignal.core.internal.config.CONFIG_NAME_SPACE
 import com.onesignal.core.internal.config.ConfigModel
+import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.preferences.PreferenceOneSignalKeys
 import com.onesignal.core.internal.preferences.PreferenceStores
 import com.onesignal.features.FeatureFlag
+import com.onesignal.features.StartupFlagsSource
 import com.onesignal.mocks.MockHelper
+import com.onesignal.mocks.MockPreferencesService
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
@@ -29,7 +33,44 @@ class StartupFlagsCacheTests : FunSpec({
     }
 
     test("a missing file is off") {
-        StartupFlagsCache.readFile(appContext()).isEnabled(logging) shouldBe false
+        appContext().getSharedPreferences("OneSignalStartupFlags", Context.MODE_PRIVATE).edit().clear().commit()
+        val flags = StartupFlagsCache.readFile(appContext())
+
+        flags.source shouldBe StartupFlagsSource.MISSING
+        flags.isEnabled(logging) shouldBe false
+    }
+
+    test("a failed commit is reported, not silently dropped") {
+        val context = mockk<Context>()
+        val prefs = mockk<SharedPreferences>()
+        every { context.applicationContext } returns context
+        every { context.getSharedPreferences(any(), any()) } returns prefs
+        every { prefs.getStringSet(any(), any()) } returns null
+        every { prefs.edit().putStringSet(any(), any()).commit() } returns false
+
+        shouldThrow<IllegalStateException> { StartupFlagsCache.write(context, listOf(key)) }
+    }
+
+    test("turning a flag off remotely reaches the next process") {
+        val context = appContext()
+        val store = ConfigModelStore(MockPreferencesService())
+        store.model.sdkRemoteFeatureFlags = listOf(key)
+        val applicationService = MockHelper.applicationService()
+        every { applicationService.appContext } returns context
+
+        val first = FeatureManager(store, applicationService)
+        first.start()
+        FeatureManager.resetStartupFlagsForTest()
+        val second = FeatureManager(store, applicationService)
+        second.start()
+        second.isEnabled(logging) shouldBe true
+
+        store.model.setListProperty(ConfigModel::sdkRemoteFeatureFlags.name, emptyList<String>(), ModelChangeTags.NORMAL)
+        second.isEnabled(logging) shouldBe true
+
+        FeatureManager.resetStartupFlagsForTest()
+        FeatureManager.startupFlags { context }.isEnabled(logging) shouldBe false
+        FeatureManager(store, applicationService).isEnabled(logging) shouldBe false
     }
 
     test("the file follows the remote flags, regardless of case") {
@@ -67,12 +108,12 @@ class StartupFlagsCacheTests : FunSpec({
 
         val flags = StartupFlagsCache.readFile(broken)
 
-        flags.source shouldBe StartupFlags.Source.UNREADABLE
+        flags.source shouldBe StartupFlagsSource.UNREADABLE
         flags.isEnabled(logging) shouldBe false
     }
 
     test("no application context is off") {
-        StartupFlagsCache.readFile(null).source shouldBe StartupFlags.Source.NO_APPLICATION
+        StartupFlagsCache.readFile(null).source shouldBe StartupFlagsSource.NO_STORE
     }
 
     test("the snapshot is read once per process") {
