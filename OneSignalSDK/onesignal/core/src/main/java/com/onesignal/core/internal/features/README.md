@@ -43,6 +43,13 @@ process-wide holder (`StartupFlagsCache`).
 - **Missing or unreadable means off.** A missing file, a read that throws, or no application context
   all give an empty snapshot. The source (`STORE`, `MISSING`, `UNREADABLE`, `NO_STORE`) is kept for
   logging.
+- **One value per process, even when unreadable.** The first read wins, including an `UNREADABLE`
+  one. Later readers in the same process (sync jobs, FCM receivers, prewarm) never re-read and get a
+  different answer, so code that already latched "off" never disagrees with code that runs later.
+- **Device-protected storage.** On API 24+ the file lives in device-protected storage
+  (`createDeviceProtectedStorageContext()`), so receivers and jobs that start before first unlock
+  read real values instead of `UNREADABLE`. Below 24 there is no direct boot, so the normal context
+  is used. Never put anything secret in this file: it is readable while the device is locked.
 - **One launch behind after an upgrade.** The file does not exist on the first launch of the version
   that introduces it, so APP_STARTUP flags are off for that launch even if the store already has them.
 - **No writes before `start()`.** `FeatureManager` can be constructed on main; the file is only written

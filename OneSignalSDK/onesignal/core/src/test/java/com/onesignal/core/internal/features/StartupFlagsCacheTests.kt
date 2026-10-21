@@ -2,6 +2,7 @@ package com.onesignal.core.internal.features
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.os.Build
 import androidx.test.core.app.ApplicationProvider
 import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
 import com.onesignal.common.modeling.ModelChangeTags
@@ -21,8 +22,10 @@ import io.kotest.matchers.shouldBe
 import io.mockk.every
 import io.mockk.mockk
 import org.json.JSONArray
+import org.robolectric.annotation.Config
 
 @RobolectricTest
+@Config(sdk = [Build.VERSION_CODES.O])
 class StartupFlagsCacheTests : FunSpec({
     val logging = FeatureFlag.SDK_CUSTOM_LOGGING
     val key = logging.key
@@ -33,7 +36,7 @@ class StartupFlagsCacheTests : FunSpec({
     }
 
     test("a missing file is off") {
-        appContext().getSharedPreferences("OneSignalStartupFlags", Context.MODE_PRIVATE).edit().clear().commit()
+        startupPrefs().edit().clear().commit()
         val flags = StartupFlagsCache.readFile(appContext())
 
         flags.source shouldBe StartupFlagsSource.MISSING
@@ -44,6 +47,7 @@ class StartupFlagsCacheTests : FunSpec({
         val context = mockk<Context>()
         val prefs = mockk<SharedPreferences>()
         every { context.applicationContext } returns context
+        every { context.createDeviceProtectedStorageContext() } returns context
         every { context.getSharedPreferences(any(), any()) } returns prefs
         every { prefs.getStringSet(any(), any()) } returns null
         every { prefs.edit().putStringSet(any(), any()).commit() } returns false
@@ -84,9 +88,15 @@ class StartupFlagsCacheTests : FunSpec({
     test("only APP_STARTUP catalog keys reach the file") {
         val context = appContext()
         StartupFlagsCache.write(context, listOf(key, FeatureFlag.SDK_IDENTITY_VERIFICATION.key, "not_in_catalog"))
-        context
-            .getSharedPreferences("OneSignalStartupFlags", Context.MODE_PRIVATE)
-            .getStringSet("enabled", null) shouldBe setOf(key)
+        startupPrefs().getStringSet("enabled", null) shouldBe setOf(key)
+    }
+
+    test("the file lives in device-protected storage, so it is readable before first unlock") {
+        val context = appContext()
+        StartupFlagsCache.write(context, listOf(key))
+
+        startupPrefs().getStringSet("enabled", null) shouldBe setOf(key)
+        context.getSharedPreferences(PrefsStartupFlagsStore.STORE, Context.MODE_PRIVATE).getStringSet("enabled", null) shouldBe null
     }
 
     test("reading an IMMEDIATE flag is rejected") {
@@ -104,6 +114,7 @@ class StartupFlagsCacheTests : FunSpec({
     test("an unreadable file is off") {
         val broken = mockk<Context>()
         every { broken.applicationContext } returns broken
+        every { broken.createDeviceProtectedStorageContext() } returns broken
         every { broken.getSharedPreferences(any(), any()) } throws SecurityException("prefs unavailable")
 
         val flags = StartupFlagsCache.readFile(broken)
@@ -165,6 +176,9 @@ class StartupFlagsCacheTests : FunSpec({
 })
 
 private fun appContext(): Context = ApplicationProvider.getApplicationContext()
+
+private fun startupPrefs(): SharedPreferences =
+    appContext().createDeviceProtectedStorageContext().getSharedPreferences(PrefsStartupFlagsStore.STORE, Context.MODE_PRIVATE)
 
 private fun clearStores() {
     val context = appContext()

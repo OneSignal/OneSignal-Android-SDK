@@ -1,6 +1,8 @@
 package com.onesignal.core.internal.features
 
 import android.content.Context
+import android.content.SharedPreferences
+import android.os.Build
 import android.util.Log
 import com.onesignal.features.IStartupFlagsStore
 import com.onesignal.features.StartupFlags
@@ -63,11 +65,18 @@ internal class PrefsStartupFlagsStore(
         check(prefs().edit().putStringSet(KEY_ENABLED, keys).commit()) { "startup flags commit failed" }
     }
 
-    private fun prefs() = context.applicationContext.getSharedPreferences(STORE, Context.MODE_PRIVATE)
+    private fun prefs(): SharedPreferences = storageContext(context).getSharedPreferences(STORE, Context.MODE_PRIVATE)
 
-    private companion object {
+    internal companion object {
         const val STORE = "OneSignalStartupFlags"
-        const val KEY_ENABLED = "enabled"
-        const val TAG = "OneSignal"
+        private const val KEY_ENABLED = "enabled"
+        private const val TAG = "OneSignal"
+
+        // Device-protected so receivers and jobs that start before first unlock read the real values.
+        // Must hold nothing secret: this storage is readable while the device is still locked.
+        fun storageContext(context: Context): Context {
+            val app = context.applicationContext
+            return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) app.createDeviceProtectedStorageContext() else app
+        }
     }
 }
