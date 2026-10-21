@@ -241,7 +241,8 @@ private class BootstrapCoordinator {
                 "$BASE_THREAD_NAME-bootstrap",
             ).apply {
                 isDaemon = true
-                priority = Thread.NORM_PRIORITY - 2
+                // Not lowered: main can block waiting for init, which queues behind these builds.
+                priority = Thread.NORM_PRIORITY
                 start()
             }
         } catch (t: Throwable) {

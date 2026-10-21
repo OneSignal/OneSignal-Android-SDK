@@ -18,6 +18,7 @@ import io.mockk.mockk
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 
 /** How [OneSignalDispatchers] picks pools from the startup flags snapshot. */
@@ -122,6 +123,39 @@ class DispatcherBootstrapFlagTests : FunSpec({
         OneSignalDispatchers.reportChoiceToTelemetry()
 
         reports shouldBe emptyList()
+    }
+
+    test("the bootstrap thread runs at normal priority") {
+        OneSignalDispatchers.bootstrapEnabledForTest = true
+        OneSignalDispatchers.resetForTest()
+        val priority = AtomicInteger(-1)
+        val seen = CountDownLatch(1)
+        DispatcherTestHooks.beforeLaneCreate = { lane ->
+            if (lane == "IO") {
+                priority.set(Thread.currentThread().priority)
+                seen.countDown()
+            }
+        }
+
+        OneSignalDispatchers.launchOnIO { }
+
+        seen.await(2, TimeUnit.SECONDS) shouldBe true
+        priority.get() shouldBe Thread.NORM_PRIORITY
+    }
+
+    test("the lazy prewarm thread runs at normal priority") {
+        OneSignalDispatchers.bootstrapEnabledForTest = false
+        OneSignalDispatchers.resetForTest()
+        val priority = AtomicInteger(-1)
+        val seen = CountDownLatch(1)
+        DispatcherTestHooks.beforeLazyWarm = {
+            if (priority.compareAndSet(-1, Thread.currentThread().priority)) seen.countDown()
+        }
+
+        OneSignalDispatchers.prewarm()
+
+        seen.await(2, TimeUnit.SECONDS) shouldBe true
+        priority.get() shouldBe Thread.NORM_PRIORITY
     }
 
     test("prewarm latches from the process application when startup did not note a context") {
