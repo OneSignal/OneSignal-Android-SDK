@@ -146,10 +146,11 @@ class StartupFlagsCacheTests : FunSpec({
         flags.isEnabled(logging) shouldBe true
     }
 
-    test("reading an IMMEDIATE flag is rejected") {
-        shouldThrow<IllegalArgumentException> {
-            StartupFlagsCache.readFile(appContext()).isEnabled(FeatureFlag.SDK_IDENTITY_VERIFICATION)
-        }
+    test("an IMMEDIATE flag is off even if its key is in the file") {
+        val immediate = FeatureFlag.SDK_IDENTITY_VERIFICATION
+        startupPrefs().edit().putStringSet("enabled", setOf(immediate.key)).commit()
+
+        StartupFlagsCache.readFile(appContext()).isEnabled(immediate) shouldBe false
     }
 
     test("read ignores the OneSignal config store") {
