@@ -72,7 +72,8 @@ internal class LazyDispatcherPools : DispatcherPools {
                 "$BASE-prewarm",
             )
         thread.isDaemon = true
-        thread.priority = Thread.NORM_PRIORITY - 2
+        // Not lowered: a launch on main blocks behind this thread's lazy builds, so it must not be starved.
+        thread.priority = Thread.NORM_PRIORITY
         if (prewarmThread.compareAndSet(null, thread)) startPrewarm(thread)
     }
 
