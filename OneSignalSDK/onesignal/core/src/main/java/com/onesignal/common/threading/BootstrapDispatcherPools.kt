@@ -52,28 +52,39 @@ private class GateDispatcher(
         context: CoroutineContext,
         block: Runnable,
     ) {
-        var readyDispatcher: CoroutineDispatcher? = null
-        var shouldBootstrap = false
-        var rejected = false
-
-        synchronized(lock) {
-            when (state) {
-                LaneState.COLD -> {
-                    pending.addLast(context to block)
-                    state = LaneState.STARTING
-                    shouldBootstrap = true
+        val decision =
+            synchronized(lock) {
+                when (state) {
+                    LaneState.COLD -> {
+                        pending.addLast(context to block)
+                        state = LaneState.STARTING
+                        GateDecision.Start
+                    }
+                    LaneState.STARTING, LaneState.DRAINING -> {
+                        pending.addLast(context to block)
+                        GateDecision.Queued
+                    }
+                    LaneState.READY -> GateDecision.Run(target!!.dispatcher)
+                    LaneState.CLOSED -> GateDecision.Rejected
                 }
-                LaneState.STARTING, LaneState.DRAINING -> pending.addLast(context to block)
-                LaneState.READY -> readyDispatcher = target!!.dispatcher
-                LaneState.CLOSED -> rejected = true
             }
-        }
 
-        when {
-            shouldBootstrap -> requestBootstrap(this)
-            readyDispatcher != null -> dispatchSafely(readyDispatcher!!, context, block)
-            rejected -> cancelAndComplete(context, block, "OneSignal dispatcher generation is closed")
+        when (decision) {
+            GateDecision.Queued -> Unit
+            GateDecision.Start -> requestBootstrap(this)
+            is GateDecision.Run -> dispatchSafely(decision.dispatcher, context, block)
+            GateDecision.Rejected -> cancelAndComplete(context, block, "OneSignal dispatcher generation is closed")
         }
+    }
+
+    private sealed interface GateDecision {
+        object Queued : GateDecision
+
+        object Start : GateDecision
+
+        class Run(val dispatcher: CoroutineDispatcher) : GateDecision
+
+        object Rejected : GateDecision
     }
 
     fun requestWarmup() {
