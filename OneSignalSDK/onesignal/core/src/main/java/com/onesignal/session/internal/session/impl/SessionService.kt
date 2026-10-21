@@ -27,6 +27,7 @@ import com.onesignal.session.internal.session.operations.CreateSessionOperation
 import com.onesignal.session.internal.session.operations.UpdateSessionOperation
 import com.onesignal.user.internal.backend.IdentityConstants
 import com.onesignal.user.internal.identity.IdentityModelStore
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
@@ -53,6 +54,10 @@ internal class SessionService(
     private val identityModelStore: IdentityModelStore,
     private val operationRepo: IOperationRepo,
 ) : ISessionService, IBootstrapService, IStartableService, IBackgroundService, IApplicationLifecycleHandler {
+    // Not a constructor parameter, since the service container can only inject registered services.
+    // Tests replace it with a test dispatcher so the end send stays on the virtual clock.
+    internal var ioDispatcher: CoroutineDispatcher = Dispatchers.IO
+
     override val startTime: Long
         // Pre-bootstrap default returns "now" so call sites computing `_time.currentTimeMillis - startTime`
         // (e.g. IAM session-duration / SESSION_TIME triggers) see ~0ms elapsed instead of ~58 years
@@ -144,7 +149,7 @@ internal class SessionService(
         // loop would resume on the operation repo thread that wakes the wait.
         val sent =
             withTimeoutOrNull(END_SESSION_SEND_TIMEOUT_MS) {
-                withContext(Dispatchers.IO) { operationRepo.enqueueAndWait(end, flush = true) }
+                withContext(ioDispatcher) { operationRepo.enqueueAndWait(end, flush = true) }
             }
         Logging.debug("SessionService.backgroundRun: session end sent: $sent")
     }

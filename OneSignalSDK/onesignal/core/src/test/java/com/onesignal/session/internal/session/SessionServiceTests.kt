@@ -41,6 +41,7 @@ import io.mockk.verify
 import io.mockk.verifyOrder
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runTest
 
 // Mocks used by every test in this file
@@ -657,11 +658,17 @@ class SessionServiceTests : FunSpec({
         sessionService.onFocus(false)
         sessionService.onUnfocused()
 
-        // When
-        runTest { sessionService.backgroundRun() }
+        runTest {
+            sessionService.ioDispatcher = StandardTestDispatcher(testScheduler)
 
-        // Then
-        coVerify(exactly = 1) { mocks.operationRepo.enqueueAndWait(any<UpdateSessionOperation>(), true) }
+            // When
+            sessionService.backgroundRun()
+
+            // Then
+            testScheduler.currentTime shouldBe 30_000L
+        }
+        coVerify(exactly = 1) { mocks.operationRepo.enqueueAndWait(ofType<UpdateSessionOperation>(), true) }
+        coVerify(exactly = 0) { mocks.operationRepo.enqueue(ofType<UpdateSessionOperation>(), any()) }
         sessionModelStore.model.isValid shouldBe false
     }
 
