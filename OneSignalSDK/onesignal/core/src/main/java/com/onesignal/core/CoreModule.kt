@@ -79,7 +79,9 @@ internal class CoreModule : IModule {
 
         // Params (Config)
         builder.register<ConfigModelStore>().provides<ConfigModelStore>()
-        builder.register<FeatureManager>().provides<IFeatureManager>()
+        builder.register<FeatureManager>()
+            .provides<IFeatureManager>()
+            .provides<IStartableService>()
         builder.register<ParamsBackendService>().provides<IParamsBackendService>()
         builder.register<FeatureFlagsBackendService>().provides<IFeatureFlagsBackendService>()
         builder.register<ConfigModelStoreListener>().provides<IStartableService>()
