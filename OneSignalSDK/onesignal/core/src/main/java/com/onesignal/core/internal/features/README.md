@@ -12,7 +12,8 @@ choice that lives for the whole process, such as which thread pools or logging p
    - After init (anything with an injected `IFeatureManager`): `featureManager.isEnabled(flag)`.
    - Before init (no service container yet): `FeatureManager.startupFlags { context }.isEnabled(flag)`.
 
-Nothing else. Both calls return the same value for the life of the process.
+Nothing else. Both calls return the same value for the life of the process, unless
+`FeatureManager.localFeatureOverrides` is set: local overrides only reach `isEnabled` (see Tests).
 
 ## Where the logic lives
 
@@ -51,6 +52,9 @@ process-wide holder (`StartupFlagsCache`).
   is used. Never put anything secret in this file: it is readable while the device is locked.
 - **One launch behind after an upgrade.** The file does not exist on the first launch of the version
   that introduces it, so APP_STARTUP flags are off for that launch even if the store already has them.
+- **Writes are serialized and read the latest flags.** `start()` and a flags fetch can mirror at the
+  same time. Each write reads `ConfigModel` inside the write lock, so the last write to finish always
+  holds the newest flags, never a list captured before another write landed.
 - **No writes before `start()`.** `FeatureManager` can be constructed on main; the file is only written
   after start.
 - **Main thread cost.** The first reader opens one small XML file. Cheap, but StrictMode can still report
