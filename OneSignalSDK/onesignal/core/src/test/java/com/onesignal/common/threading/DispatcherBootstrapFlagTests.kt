@@ -67,7 +67,7 @@ class DispatcherBootstrapFlagTests : FunSpec({
     test("a pool choice failure falls back to lazy pools instead of throwing") {
         val context = appContext()
         StartupFlagsCache.write(context, listOf(key))
-        OneSignalDispatchers.beforePoolChoiceForTest = { throw IllegalStateException("choice failed") }
+        DispatcherTestHooks.beforePoolChoice = { throw IllegalStateException("choice failed") }
         latchFrom(context)
 
         builtOnCaller() shouldBe true
@@ -110,7 +110,7 @@ private fun builtOnCaller(): Boolean {
     val callerThreadId = AtomicLong()
     val createThreadId = AtomicLong()
     val created = CountDownLatch(1)
-    OneSignalDispatchers.beforeLaneCreateForTest = { lane ->
+    DispatcherTestHooks.beforeLaneCreate = { lane ->
         if (lane == "IO") {
             createThreadId.set(Thread.currentThread().id)
             created.countDown()

@@ -35,7 +35,7 @@ class DispatcherLaneBehaviorTests : FunSpec({
                 val callerThreadId = AtomicLong()
                 val createThreadId = AtomicLong()
                 val created = CountDownLatch(1)
-                OneSignalDispatchers.beforeLaneCreateForTest = { lane ->
+                DispatcherTestHooks.beforeLaneCreate = { lane ->
                     if (lane == "IO") {
                         createThreadId.set(Thread.currentThread().id)
                         created.countDown()

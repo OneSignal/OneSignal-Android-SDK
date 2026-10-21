@@ -31,7 +31,7 @@ class DispatcherFailureLogTests : FunSpec({
             usePools(bootstrap)
             val logged = CountDownLatch(1)
             val listener = ILogListener { if ("IO fell back" in it.entry) logged.countDown() }
-            OneSignalDispatchers.beforeLaneCreateForTest = { lane ->
+            DispatcherTestHooks.beforeLaneCreate = { lane ->
                 if (lane == "IO") throw IllegalStateException("no threads")
             }
             Logging.addListener(listener)
@@ -46,7 +46,7 @@ class DispatcherFailureLogTests : FunSpec({
         test("$mode pools: a listener that launches work does not re-enter lane creation") {
             usePools(bootstrap)
             val attempts = AtomicInteger()
-            OneSignalDispatchers.beforeLaneCreateForTest = { lane ->
+            DispatcherTestHooks.beforeLaneCreate = { lane ->
                 if (lane == "IO") {
                     attempts.incrementAndGet()
                     throw IllegalStateException("no threads")

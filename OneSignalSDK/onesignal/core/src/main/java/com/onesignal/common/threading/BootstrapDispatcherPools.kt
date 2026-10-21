@@ -289,10 +289,10 @@ internal class BootstrapDispatcherPools : DispatcherPools {
 
 @Suppress("TooGenericExceptionCaught")
 private fun createTarget(lane: Lane): LaneTarget {
-    OneSignalDispatchers.beforeLaneCreateForTest?.invoke(lane.name)
+    DispatcherTestHooks.beforeLaneCreate?.invoke(lane.name)
     val executor = newLaneExecutor(lane)
     try {
-        OneSignalDispatchers.afterExecutorCreateForTest?.invoke(lane.name, executor)
+        DispatcherTestHooks.afterExecutorCreate?.invoke(lane.name, executor)
         executor.prestartAllCoreThreads()
     } catch (t: Throwable) {
         executor.shutdownNow()
@@ -302,7 +302,7 @@ private fun createTarget(lane: Lane): LaneTarget {
 }
 
 private fun createFallbackTarget(lane: Lane): LaneTarget {
-    OneSignalDispatchers.beforeFallbackCreateForTest?.invoke(lane.name)
+    DispatcherTestHooks.beforeFallbackCreate?.invoke(lane.name)
     val dispatcher = lane.fallbackDispatcher()
     dispatcher.dispatch(EmptyCoroutineContext, Runnable {})
     return LaneTarget(dispatcher, null)

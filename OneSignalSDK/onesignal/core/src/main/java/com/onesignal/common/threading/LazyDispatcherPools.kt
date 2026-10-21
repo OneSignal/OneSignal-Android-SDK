@@ -63,7 +63,7 @@ internal class LazyDispatcherPools : DispatcherPools {
             return
         }
         try {
-            OneSignalDispatchers.beforeLazyPrewarmStartForTest?.invoke()
+            DispatcherTestHooks.beforeLazyPrewarmStart?.invoke()
             thread.start()
         } catch (t: Throwable) {
             // start() failed after the ref was published. Clear it or every retry hits a failed CAS.
@@ -88,7 +88,7 @@ internal class LazyDispatcherPools : DispatcherPools {
         lane: Lane,
         resolve: () -> CoroutineScope,
     ) {
-        OneSignalDispatchers.beforeLazyWarmForTest?.invoke(lane.name)
+        DispatcherTestHooks.beforeLazyWarm?.invoke(lane.name)
         if (closed.get()) return
         val scope = resolveScope(resolve) ?: return
         if (closed.get()) {
@@ -122,16 +122,16 @@ internal class LazyDispatcherPools : DispatcherPools {
                 buildExecutor()
             } catch (t: Throwable) {
                 OneSignalDispatchers.logFailure("lazy $lane fell back", t)
-                OneSignalDispatchers.beforeFallbackCreateForTest?.invoke(lane.name)
+                DispatcherTestHooks.beforeFallbackCreate?.invoke(lane.name)
                 null
             }
         }
 
         private fun buildExecutor(): ThreadPoolExecutor? {
-            OneSignalDispatchers.beforeLaneCreateForTest?.invoke(lane.name)
+            DispatcherTestHooks.beforeLaneCreate?.invoke(lane.name)
             if (closed.get()) return null
             val created = newLaneExecutor(lane)
-            OneSignalDispatchers.afterExecutorCreateForTest?.invoke(lane.name, created)
+            DispatcherTestHooks.afterExecutorCreate?.invoke(lane.name, created)
             if (closed.get()) created.shutdownNow()
             return created.takeUnless { it.isShutdown }
         }

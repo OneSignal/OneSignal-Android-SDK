@@ -11,7 +11,6 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import java.util.concurrent.ThreadPoolExecutor
 
 /**
  * Optimized threading manager for the OneSignal SDK.
@@ -31,26 +30,6 @@ object OneSignalDispatchers {
     private const val TEST_READY_TIMEOUT_MS = 2_000L
     private const val TEST_READY_POLL_MS = 5L
     private const val RELEASE_LOG_TAG = "OneSignal"
-
-    @Volatile
-    internal var beforeLaneCreateForTest: ((String) -> Unit)? = null
-
-    @Volatile
-    internal var afterExecutorCreateForTest: ((String, ThreadPoolExecutor) -> Unit)? = null
-
-    @Volatile
-    internal var beforeFallbackCreateForTest: ((String) -> Unit)? = null
-
-    /** Lazy prewarm, before the lane lazy runs. Blocking here must not deadlock shutdown. */
-    @Volatile
-    internal var beforeLazyWarmForTest: ((String) -> Unit)? = null
-
-    /** After the lazy prewarm thread is published, before [Thread.start]. */
-    @Volatile
-    internal var beforeLazyPrewarmStartForTest: (() -> Unit)? = null
-
-    @Volatile
-    internal var beforePoolChoiceForTest: (() -> Unit)? = null
 
     private val inFailureLog = ThreadLocal<Boolean>()
 
@@ -120,7 +99,7 @@ object OneSignalDispatchers {
         }
 
     private fun choosePools(): PoolChoice {
-        beforePoolChoiceForTest?.invoke()
+        DispatcherTestHooks.beforePoolChoice?.invoke()
         val override = bootstrapEnabledForTest
         return if (override != null) {
             PoolChoice(poolsFor(override), "test", false)
@@ -291,12 +270,7 @@ object OneSignalDispatchers {
             Logging.error("OneSignalDispatchers.resetForTest failed: ${e.message}", e)
         }
         resetPrewarmForTest()
-        beforeLaneCreateForTest = null
-        afterExecutorCreateForTest = null
-        beforeFallbackCreateForTest = null
-        beforeLazyWarmForTest = null
-        beforeLazyPrewarmStartForTest = null
-        beforePoolChoiceForTest = null
+        DispatcherTestHooks.reset()
     }
 
     @Suppress("ComplexMethod")
