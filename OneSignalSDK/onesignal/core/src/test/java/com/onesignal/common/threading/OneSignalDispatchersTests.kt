@@ -13,6 +13,7 @@ import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
+import java.util.concurrent.atomic.AtomicReference
 
 class OneSignalDispatchersTests : FunSpec({
 
@@ -255,6 +256,48 @@ class OneSignalDispatchersTests : FunSpec({
         release.countDown()
         Thread.sleep(400)
         builtAfterReset.get() shouldBe 0
+    }
+
+    test("flag off prewarm does not build an executor when reset lands mid-build") {
+        OneSignalDispatchers.bootstrapEnabledForTest = false
+        OneSignalDispatchers.resetForTest()
+        val entered = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        OneSignalDispatchers.beforeLaneCreateForTest = { lane ->
+            if (lane == "INGRESS") {
+                entered.countDown()
+                awaitIgnoringInterrupts(release)
+            }
+        }
+        OneSignalDispatchers.prewarm(null)
+        entered.await(2, TimeUnit.SECONDS) shouldBe true
+        OneSignalDispatchers.resetForTest()
+        val builtAfterReset = AtomicInteger()
+        OneSignalDispatchers.afterExecutorCreateForTest = { _, _ -> builtAfterReset.incrementAndGet() }
+        release.countDown()
+        Thread.sleep(400)
+        builtAfterReset.get() shouldBe 0
+    }
+
+    test("flag off prewarm shuts down an executor built after reset") {
+        OneSignalDispatchers.bootstrapEnabledForTest = false
+        OneSignalDispatchers.resetForTest()
+        val entered = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        val built = AtomicReference<ThreadPoolExecutor>()
+        OneSignalDispatchers.afterExecutorCreateForTest = { lane, executor ->
+            if (lane == "INGRESS") {
+                built.set(executor)
+                entered.countDown()
+                awaitIgnoringInterrupts(release)
+            }
+        }
+        OneSignalDispatchers.prewarm(null)
+        entered.await(2, TimeUnit.SECONDS) shouldBe true
+        OneSignalDispatchers.resetForTest()
+        release.countDown()
+        Thread.sleep(400)
+        built.get().isShutdown shouldBe true
     }
 
     test("flag off falls back when executor construction throws") {
