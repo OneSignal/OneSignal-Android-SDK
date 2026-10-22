@@ -20,16 +20,6 @@ import org.robolectric.annotation.Config
 @Config(sdk = [30])
 @RobolectricTest
 class InAppMessageViewShowFailureTests : FunSpec({
-    test("a missing activity is logged and the message is dismissed") {
-        val view = messageView(mockk(relaxed = true))
-        val controller = mockk<InAppMessageView.InAppMessageViewListener>(relaxed = true)
-        view.setMessageController(controller)
-
-        view.showInAppMessageView(null)
-
-        verify(exactly = 1) { controller.onMessageWasDismissed() }
-    }
-
     test("a failure while showing is logged and the message is dismissed") {
         val activity = Robolectric.buildActivity(Activity::class.java).setup().get()
         val view = messageView(mockk(relaxed = true))

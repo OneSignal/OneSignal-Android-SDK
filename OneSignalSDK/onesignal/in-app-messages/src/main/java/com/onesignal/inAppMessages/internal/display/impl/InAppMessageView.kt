@@ -212,16 +212,11 @@ internal class InAppMessageView(
         }
     }
 
-    suspend fun showInAppMessageView(currentActivity: Activity?) {
+    suspend fun showInAppMessageView(activity: Activity) {
         /* IMPORTANT
          * The only place where currentActivity should be assigned to InAppMessageView */
-        this.currentActivity = currentActivity
+        this.currentActivity = activity
         try {
-            if (currentActivity == null) {
-                Logging.warn("In-app message not shown, no current activity.")
-                cleanupViewsAfterDismiss()
-                return
-            }
             val webViewLayoutParams =
                 RelativeLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,
@@ -231,6 +226,7 @@ internal class InAppMessageView(
             val relativeLayoutParams = if (hasBackground) createParentRelativeLayoutParams() else null
             val shown =
                 showDraggableView(
+                    activity,
                     displayPosition,
                     webViewLayoutParams,
                     relativeLayoutParams,
@@ -315,6 +311,7 @@ internal class InAppMessageView(
     }
 
     private suspend fun showDraggableView(
+        activity: Activity,
         displayLocation: WebViewManager.Position,
         relativeLayoutParams: RelativeLayout.LayoutParams,
         draggableRelativeLayoutParams: RelativeLayout.LayoutParams?,
@@ -327,11 +324,6 @@ internal class InAppMessageView(
                     Logging.warn("In-app message not shown, WebView is missing.")
                     return@withMain false
                 }
-                val activity = currentActivity
-                if (activity == null) {
-                    Logging.warn("In-app message not shown, no current activity.")
-                    return@withMain false
-                }
 
                 page.layoutParams = relativeLayoutParams
                 setUpDraggableLayout(activity, draggableRelativeLayoutParams, webViewLayoutParams)
@@ -341,9 +333,7 @@ internal class InAppMessageView(
                     Logging.warn("In-app message not shown, parent layout is missing.")
                     return@withMain false
                 }
-                if (!createPopupWindow(parent)) {
-                    return@withMain false
-                }
+                createPopupWindow(activity, parent)
                 val draggable = draggableRelativeLayout
                 if (messageController != null && draggable != null) {
                     animateInAppMessage(displayLocation, draggable, parent)
@@ -362,12 +352,10 @@ internal class InAppMessageView(
      *
      * @param parentRelativeLayout root layout to attach to the pop up window
      */
-    private fun createPopupWindow(parentRelativeLayout: RelativeLayout): Boolean {
-        val activity = currentActivity
-        if (activity == null) {
-            Logging.warn("In-app message not shown, no current activity.")
-            return false
-        }
+    private fun createPopupWindow(
+        activity: Activity,
+        parentRelativeLayout: RelativeLayout,
+    ) {
         val window = newPopupWindow(parentRelativeLayout)
         popupWindow = window
         // Using panel for fullbleed IAMs and dialog for non-fullbleed. The attached dialog type
@@ -389,7 +377,6 @@ internal class InAppMessageView(
             activity.window.decorView,
             parentRelativeLayout.rootView,
         )
-        return true
     }
 
     private fun newPopupWindow(parent: RelativeLayout): OSPopupWindow {
