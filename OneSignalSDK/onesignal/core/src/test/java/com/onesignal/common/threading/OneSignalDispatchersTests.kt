@@ -26,7 +26,8 @@ class OneSignalDispatchersTests : FunSpec({
     }
 
     afterTest {
-        OneSignalDispatchers.bootstrapEnabledForTest = null
+        OneSignalDispatchers.resetBootstrapInputsForTest()
+        OneSignalDispatchers.resetForTest()
     }
 
     test("prewarm bootstraps the ingress lane before the other lanes") {
