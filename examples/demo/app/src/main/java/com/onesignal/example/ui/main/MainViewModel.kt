@@ -132,12 +132,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
 
     // IPermissionObserver
     override fun onNotificationPermissionChange(permission: Boolean) {
+        DemoLog.show("Permission changed: $permission")
         _hasNotificationPermission.postValue(permission)
     }
 
     // IUserStateObserver - called when user changes (login/logout)
     override fun onUserStateChange(state: UserChangedState) {
-        DemoLog.d("onUserStateChange fired: ${state.current.onesignalId}")
+        DemoLog.show("User changed: onesignalId=${state.current.onesignalId.orNullText()}, externalId=${state.current.externalId.orNullText()}")
         _oneSignalId.postValue(state.current.onesignalId)
         viewModelScope.launch(Dispatchers.Main) {
             loadExistingAliases()
@@ -742,11 +743,23 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
     private fun logDebug(message: String) = DemoLog.d(message)
 
     override fun onPushSubscriptionChange(state: PushSubscriptionChangedState) {
-        DemoLog.i("onPushSubscriptionChange: ${state.toJSONObject()}")
+        val previous = state.previous
+        val current = state.current
+        DemoLog.show(
+            "Push subscription changed: id=${previous.id.orNullText()} → ${current.id.orNullText()}, " +
+                "optedIn=${previous.optedIn} → ${current.optedIn}, " +
+                "token=${formatToken(previous.token)} → ${formatToken(current.token)}",
+        )
         _pushSubscriptionId.postValue(state.current.id)
         _pushSubscriptionToken.postValue(state.current.token)
         _pushEnabled.postValue(state.current.optedIn)
     }
+
+    private fun formatToken(token: String?): String =
+        if (token.isNullOrEmpty()) "null" else "${token.take(8)}…"
+
+    // The SDK reports missing ids as empty strings; the Log View format uses "null".
+    private fun String?.orNullText(): String = if (isNullOrEmpty()) "null" else this
 
     override fun onUserJwtInvalidated(event: UserJwtInvalidatedEvent) {
         DemoLog.w("JWT invalidated for externalId: ${event.externalId}")
