@@ -23,7 +23,7 @@ class ViewUtilsInsetTests : FunSpec({
                 .build()
 
         val density = Resources.getSystem().displayMetrics.density
-        val reported = ViewUtils.cutoutAndStatusBarInsetsDp(insets)
+        val reported = SystemBarInsets.cutoutAndStatusBarInsetsDp(insets)
 
         reported[0] shouldBe (24 / density).roundToInt()
         reported[1] shouldBe (48 / density).roundToInt()
@@ -32,36 +32,27 @@ class ViewUtilsInsetTests : FunSpec({
     }
 
     test("a hidden navigation bar does not keep a bottom or side inset") {
-        ViewUtils.pxInsetsHidingSystemBars(
-            top = 24,
-            bottom = 48,
-            right = 0,
-            left = 0,
+        SystemBarInsets.pxInsetsHidingSystemBars(
+            intArrayOf(24, 48, 0, 0),
             statusHidden = false,
             navigationHidden = true,
         ) shouldBe intArrayOf(24, 0, 0, 0)
 
-        ViewUtils.pxInsetsHidingSystemBars(
-            top = 24,
-            bottom = 0,
-            right = 48,
-            left = 0,
+        SystemBarInsets.pxInsetsHidingSystemBars(
+            intArrayOf(24, 0, 48, 0),
             statusHidden = false,
             navigationHidden = true,
         ) shouldBe intArrayOf(24, 0, 0, 0)
     }
 
     test("window flags without fullscreen leave the visibility unchanged") {
-        ViewUtils.systemUiVisibilityForInsets(View.SYSTEM_UI_FLAG_HIDE_NAVIGATION, 0) shouldBe
+        SystemBarInsets.systemUiVisibilityForInsets(View.SYSTEM_UI_FLAG_HIDE_NAVIGATION, 0) shouldBe
             View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
     }
 
     test("a nav bar on the left drops the left inset") {
-        ViewUtils.pxInsetsHidingSystemBars(
-            top = 10,
-            bottom = 20,
-            right = 5,
-            left = 40,
+        SystemBarInsets.pxInsetsHidingSystemBars(
+            intArrayOf(10, 20, 5, 40),
             statusHidden = false,
             navigationHidden = true,
         ) shouldBe intArrayOf(10, 0, 5, 0)
@@ -69,7 +60,7 @@ class ViewUtilsInsetTests : FunSpec({
 
     test("a fullscreen window flag counts as a hidden status bar") {
         val flags =
-            ViewUtils.systemUiVisibilityForInsets(
+            SystemBarInsets.systemUiVisibilityForInsets(
                 0,
                 WindowManager.LayoutParams.FLAG_FULLSCREEN,
             )
@@ -77,11 +68,8 @@ class ViewUtilsInsetTests : FunSpec({
     }
 
     test("a hidden status bar does not keep a top inset") {
-        ViewUtils.pxInsetsHidingSystemBars(
-            top = 24,
-            bottom = 48,
-            right = 0,
-            left = 0,
+        SystemBarInsets.pxInsetsHidingSystemBars(
+            intArrayOf(24, 48, 0, 0),
             statusHidden = true,
             navigationHidden = false,
         ) shouldBe intArrayOf(0, 48, 0, 0)

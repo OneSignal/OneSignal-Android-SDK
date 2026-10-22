@@ -41,7 +41,7 @@ class ViewUtilsApi29InsetTests : FunSpec({
 
         val density = Resources.getSystem().displayMetrics.density
         val reported =
-            ViewUtils.cutoutAndStatusBarInsetsDp(
+            SystemBarInsets.cutoutAndStatusBarInsetsDp(
                 insets,
                 View.SYSTEM_UI_FLAG_FULLSCREEN,
             )

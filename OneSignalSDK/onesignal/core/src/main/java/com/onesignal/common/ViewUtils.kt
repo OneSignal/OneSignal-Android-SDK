@@ -7,10 +7,6 @@ import android.content.res.Resources
 import android.graphics.Point
 import android.graphics.Rect
 import android.os.Build
-import android.view.View
-import android.view.Window
-import android.view.WindowInsets
-import android.view.WindowManager
 import kotlin.math.roundToInt
 
 object ViewUtils {
@@ -18,6 +14,7 @@ object ViewUtils {
         return (dp * Resources.getSystem().displayMetrics.density).toInt()
     }
 
+    /** Converts [px] to dp, rounding to the nearest whole dp. */
     fun pxToDp(px: Int): Int {
         return (px / Resources.getSystem().displayMetrics.density).roundToInt()
     }
@@ -68,135 +65,19 @@ object ViewUtils {
     }
 
     fun getCutoutAndStatusBarInsets(activity: Activity): IntArray {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
-            return legacyCutoutAndStatusBarInsets(activity)
-        }
         val decorView = activity.window.decorView
-        val windowInsets = decorView.rootWindowInsets
-        if (windowInsets != null) {
-            @Suppress("DEPRECATION")
-            return cutoutAndStatusBarInsetsDp(
-                windowInsets,
-                systemUiVisibilityForInsets(
-                    decorView.windowSystemUiVisibility,
-                    activity.window.attributes.flags,
-                ),
-            )
+        val windowInsets =
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) decorView.rootWindowInsets else null
+        if (windowInsets == null) {
+            return SystemBarInsets.legacyCutoutAndStatusBarInsets(activity)
         }
-        return legacyCutoutAndStatusBarInsets(activity)
-    }
-
-    // FLAG_FULLSCREEN hides the status bar without setting SYSTEM_UI_FLAG_FULLSCREEN.
-    @Suppress("DEPRECATION")
-    internal fun systemUiVisibilityForInsets(
-        systemUiVisibility: Int,
-        windowFlags: Int,
-    ): Int {
-        if (windowFlags and WindowManager.LayoutParams.FLAG_FULLSCREEN != 0) {
-            return systemUiVisibility or View.SYSTEM_UI_FLAG_FULLSCREEN
-        }
-        return systemUiVisibility
-    }
-
-    internal fun cutoutAndStatusBarInsetsDp(
-        windowInsets: WindowInsets,
-        systemUiVisibility: Int = 0,
-    ): IntArray {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            val insets =
-                windowInsets.getInsets(
-                    WindowInsets.Type.systemBars() or WindowInsets.Type.displayCutout(),
-                )
-            return intArrayOf(
-                pxToDp(insets.top),
-                pxToDp(insets.bottom),
-                pxToDp(insets.right),
-                pxToDp(insets.left),
-            )
-        }
-        return stableInsetsToDp(windowInsets, systemUiVisibility)
-    }
-
-    // stableInset stops at the nav bar. systemWindowInsetBottom also includes the keyboard.
-    @Suppress("DEPRECATION")
-    private fun stableInsetsToDp(
-        windowInsets: WindowInsets,
-        systemUiVisibility: Int,
-    ): IntArray {
-        val visibleBars =
-            pxInsetsHidingSystemBars(
-                windowInsets.stableInsetTop,
-                windowInsets.stableInsetBottom,
-                windowInsets.stableInsetRight,
-                windowInsets.stableInsetLeft,
-                systemUiVisibility and View.SYSTEM_UI_FLAG_FULLSCREEN != 0,
-                systemUiVisibility and View.SYSTEM_UI_FLAG_HIDE_NAVIGATION != 0,
-            )
-        var top = visibleBars[0]
-        var bottom = visibleBars[1]
-        var right = visibleBars[2]
-        var left = visibleBars[3]
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            windowInsets.displayCutout?.let { cutout ->
-                top = maxOf(top, cutout.safeInsetTop)
-                bottom = maxOf(bottom, cutout.safeInsetBottom)
-                right = maxOf(right, cutout.safeInsetRight)
-                left = maxOf(left, cutout.safeInsetLeft)
-            }
-        }
-        return intArrayOf(pxToDp(top), pxToDp(bottom), pxToDp(right), pxToDp(left))
-    }
-
-    // A hidden bar is not on screen, so it must not pad the message.
-    internal fun pxInsetsHidingSystemBars(
-        top: Int,
-        bottom: Int,
-        right: Int,
-        left: Int,
-        statusHidden: Boolean,
-        navigationHidden: Boolean,
-    ): IntArray {
-        var topPx = top
-        var bottomPx = bottom
-        var rightPx = right
-        var leftPx = left
-        if (statusHidden) {
-            topPx = 0
-        }
-        if (navigationHidden) {
-            val navOnLeft = leftPx > rightPx
-            val navOnRight = rightPx > leftPx
-            bottomPx = 0
-            if (navOnLeft) {
-                leftPx = 0
-            }
-            if (navOnRight) {
-                rightPx = 0
-            }
-        }
-        return intArrayOf(topPx, bottomPx, rightPx, leftPx)
-    }
-
-    private fun legacyCutoutAndStatusBarInsets(activity: Activity): IntArray {
-        val frame = getWindowVisibleDisplayFrame(activity)
-        val contentView = activity.window.findViewById<View>(Window.ID_ANDROID_CONTENT)
-        var rightInset = 0
-        var leftInset = 0
-        val topInset = pxToDp(frame.top - contentView.top)
-        val bottomInset = pxToDp(contentView.bottom - frame.bottom)
-        // This fallback only reads side cutouts on API 29.
-        if (Build.VERSION.SDK_INT == Build.VERSION_CODES.Q) {
-            val cutout = activity.windowManager.defaultDisplay.cutout
-            if (cutout != null) {
-                rightInset = pxToDp(cutout.safeInsetRight)
-                leftInset = pxToDp(cutout.safeInsetLeft)
-            }
-        }
-        return intArrayOf(
-            topInset,
-            bottomInset,
-            rightInset,
-            leftInset,
+        @Suppress("DEPRECATION")
+        return SystemBarInsets.cutoutAndStatusBarInsetsDp(
+            windowInsets,
+            SystemBarInsets.systemUiVisibilityForInsets(
+                decorView.windowSystemUiVisibility,
+                activity.window.attributes.flags,
+            ),
         )
     }
 
