@@ -2,6 +2,7 @@ package com.onesignal
 
 import com.onesignal.common.threading.DispatcherTestHooks
 import com.onesignal.common.threading.OneSignalDispatchers
+import com.onesignal.common.threading.StartupTimeline
 import io.kotest.core.config.AbstractProjectConfig
 import io.kotest.core.extensions.Extension
 import io.kotest.core.listeners.AfterSpecListener
@@ -45,4 +46,5 @@ private fun resetDispatchers() {
     DispatcherTestHooks.reset()
     OneSignalDispatchers.resetBootstrapInputsForTest()
     OneSignalDispatchers.resetForTest()
+    StartupTimeline.resetForTest()
 }

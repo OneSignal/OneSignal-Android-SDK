@@ -55,7 +55,13 @@ object OneSignalDispatchers {
                 poolsRef?.let { return it }
                 choosePools(bootstrapEnabledForTest, AppContext::get).also { choice ->
                     published = poolsRef
-                    if (published == null) poolsRef = choice.pools else choice.pools.shutdown()
+                    if (published != null) {
+                        choice.pools.shutdown()
+                    } else {
+                        // Before publishing: below API 24 this mark is the origin every other mark is measured from.
+                        StartupTimeline.poolsChosen(choice.mode, choice.detail)
+                        poolsRef = choice.pools
+                    }
                 }
             }
         if (!Thread.holdsLock(poolsLock)) recordChoice(choice)

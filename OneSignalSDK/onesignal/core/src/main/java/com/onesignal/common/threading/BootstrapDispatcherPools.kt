@@ -145,7 +145,7 @@ private class GateDispatcher(
 
             if (next == null) {
                 val closed = synchronized(lock) { state == LaneState.CLOSED }
-                if (closed) newTarget.close()
+                if (closed) newTarget.close() else StartupTimeline.laneReady(lane)
                 return
             }
             dispatchSafely(newTarget.dispatcher, next.first, next.second)

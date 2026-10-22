@@ -32,10 +32,13 @@ internal class LazyDispatcherPools : DispatcherPools {
     private val serialScopeLazy = lazy { CoroutineScope(SupervisorJob() + serialLane.dispatcher) }
     private val ingressScopeLazy = lazy { CoroutineScope(SupervisorJob() + ingressLane.dispatcher) }
 
-    override val ioScope: CoroutineScope get() = ioScopeLazy.value
-    override val defaultScope: CoroutineScope get() = defaultScopeLazy.value
-    override val serialIOScope: CoroutineScope get() = serialScopeLazy.value
-    override val ingressScope: CoroutineScope get() = ingressScopeLazy.value
+    override val ioScope: CoroutineScope get() = built(ioScopeLazy)
+    override val defaultScope: CoroutineScope get() = built(defaultScopeLazy)
+    override val serialIOScope: CoroutineScope get() = built(serialScopeLazy)
+    override val ingressScope: CoroutineScope get() = built(ingressScopeLazy)
+
+    // Timed only until built: main can build a lane itself, or wait on prewarm building it.
+    private fun <T> built(lazy: Lazy<T>): T = if (lazy.isInitialized()) lazy.value else StartupTimeline.mainBuildingLane { lazy.value }
 
     private val prewarmThread = AtomicReference<Thread?>(null)
 
@@ -137,19 +140,24 @@ internal class LazyDispatcherPools : DispatcherPools {
             return created.takeUnless { it.isShutdown }
         }
 
-        override val dispatcher: CoroutineDispatcher by lazy {
-            val executor = executorLazy.value
-            if (executor == null) {
-                lane.fallbackDispatcher()
-            } else {
-                try {
-                    executor.asCoroutineDispatcher()
-                } catch (t: Throwable) {
-                    OneSignalDispatchers.logFailure("lazy $lane fell back", t)
-                    lane.fallbackDispatcher()
-                }
+        private val dispatcherLazy =
+            lazy {
+                val executor = executorLazy.value
+                val built =
+                    if (executor == null) {
+                        lane.fallbackDispatcher()
+                    } else {
+                        try {
+                            executor.asCoroutineDispatcher()
+                        } catch (t: Throwable) {
+                            OneSignalDispatchers.logFailure("lazy $lane fell back", t)
+                            lane.fallbackDispatcher()
+                        }
+                    }
+                built.also { StartupTimeline.laneReady(lane) }
             }
-        }
+
+        override val dispatcher: CoroutineDispatcher get() = built(dispatcherLazy)
 
         override fun executor(): ThreadPoolExecutor? =
             if (executorLazy.isInitialized()) executorLazy.value else null
