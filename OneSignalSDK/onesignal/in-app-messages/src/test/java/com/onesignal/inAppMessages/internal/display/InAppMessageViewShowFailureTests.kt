@@ -1,6 +1,8 @@
 package com.onesignal.inAppMessages.internal.display
 
 import android.app.Activity
+import android.graphics.Insets
+import android.view.WindowInsets
 import android.webkit.WebView
 import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
 import com.onesignal.common.ViewUtils
@@ -22,6 +24,9 @@ import org.robolectric.annotation.Config
 class InAppMessageViewShowFailureTests : FunSpec({
     test("a failure while showing is logged and the message is dismissed") {
         val activity = Robolectric.buildActivity(Activity::class.java).setup().get()
+        activity.window.decorView.dispatchApplyWindowInsets(
+            WindowInsets.Builder().setInsets(WindowInsets.Type.statusBars(), Insets.of(0, 1, 0, 0)).build(),
+        )
         val view = messageView(mockk(relaxed = true))
         val controller = mockk<InAppMessageView.InAppMessageViewListener>(relaxed = true)
         view.setMessageController(controller)
@@ -29,7 +34,7 @@ class InAppMessageViewShowFailureTests : FunSpec({
         every { ViewUtils.getWindowHeight(any()) } throws IllegalStateException("boom")
 
         try {
-            view.showInAppMessageView(activity)
+            view.showView(activity)
         } finally {
             unmockkObject(ViewUtils)
         }

@@ -212,7 +212,7 @@ internal class InAppMessageView(
         }
     }
 
-    suspend fun showInAppMessageView(activity: Activity) {
+    private suspend fun showInAppMessageView(activity: Activity) {
         /* IMPORTANT
          * The only place where currentActivity should be assigned to InAppMessageView */
         this.currentActivity = activity
