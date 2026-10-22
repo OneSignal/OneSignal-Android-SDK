@@ -15,6 +15,7 @@ import io.kotest.matchers.string.shouldEndWith
 import io.kotest.matchers.string.shouldNotContain
 import kotlinx.coroutines.CompletableDeferred
 import org.robolectric.shadows.ShadowSystemClock
+import java.io.IOException
 import java.time.Duration
 import java.util.concurrent.CopyOnWriteArrayList
 import kotlin.concurrent.thread
@@ -161,7 +162,7 @@ class StartupTimelineTests : FunSpec({
         val os = OneSignalImp()
         os.setField("initState", InitState.IN_PROGRESS)
         os.setField("suspendCompletion", CompletableDeferred<Unit>())
-        val listener = ILogListener { if (it.entry.contains("startup_timeline")) throw IllegalStateException("customer") }
+        val listener = ILogListener { if (it.entry.contains("startup_timeline")) throw IOException("customer") }
         Logging.addListener(listener)
         try {
             os.method("completeInit", InitState::class.java).invoke(os, InitState.SUCCESS)

@@ -589,7 +589,7 @@ internal class OneSignalImp : IOneSignal,
     private fun reportStartupTimeline() {
         try {
             if (StartupTimeline.claimReport()) Logging.info("OneSignal: ${StartupTimeline.summary()}")
-        } catch (_: RuntimeException) {
+        } catch (_: Throwable) {
         }
     }
 
