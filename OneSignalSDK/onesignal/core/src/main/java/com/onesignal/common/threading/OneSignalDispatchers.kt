@@ -24,10 +24,9 @@ object OneSignalDispatchers {
     private var poolsRef: DispatcherPools? = null
     private val poolsLock = Any()
 
-    @Volatile
+    // Guards only the two fields below. Never report while holding it: reporting can launch.
+    private val choiceReportLock = Any()
     private var telemetryReady = false
-
-    @Volatile
     private var pendingChoiceReport: PoolChoice? = null
 
     /** Test override. Null reads the cached flag, and no cache means off. */
@@ -37,8 +36,10 @@ object OneSignalDispatchers {
     internal fun resetBootstrapInputsForTest() {
         AppContext.resetForTest()
         bootstrapEnabledForTest = null
-        telemetryReady = false
-        pendingChoiceReport = null
+        synchronized(choiceReportLock) {
+            telemetryReady = false
+            pendingChoiceReport = null
+        }
         FeatureManager.resetStartupFlagsForTest()
     }
 
@@ -67,14 +68,24 @@ object OneSignalDispatchers {
         if (bootstrapEnabledForTest != null) return
         logRelease(choice.summary, choice.failure, warn = choice.warn)
         if (!choice.warn) return
-        if (telemetryReady) reportChoice(choice) else pendingChoiceReport = choice
+        val reportNow =
+            synchronized(choiceReportLock) {
+                val ready = telemetryReady
+                DispatcherTestHooks.duringChoiceHandoff?.invoke()
+                if (!ready) pendingChoiceReport = choice
+                ready
+            }
+        if (reportNow) reportChoice(choice)
     }
 
     /** Pools are usually chosen before init installs remote telemetry, so degraded choices wait for it. */
     internal fun reportChoiceToTelemetry() {
-        telemetryReady = true
-        pendingChoiceReport?.let(::reportChoice)
-        pendingChoiceReport = null
+        val pending =
+            synchronized(choiceReportLock) {
+                telemetryReady = true
+                pendingChoiceReport.also { pendingChoiceReport = null }
+            }
+        pending?.let(::reportChoice)
     }
 
     @Suppress("SwallowedException")

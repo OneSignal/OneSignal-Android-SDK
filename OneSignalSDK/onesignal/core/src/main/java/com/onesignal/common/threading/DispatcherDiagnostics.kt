@@ -8,6 +8,7 @@ private const val NOT_INITIALIZED = "Not initialized"
 private const val UNKNOWN_ERROR = "Unknown error"
 private const val NOT_AVAILABLE = "n/a"
 private const val STACK_KB_PER_THREAD = 1024
+private val READY_STATUSES = setOf("Active", "Fallback")
 
 internal fun OneSignalDispatchers.getPerformanceMetrics(): String {
     val current = currentPools()
@@ -48,7 +49,7 @@ internal fun OneSignalDispatchers.awaitReadyForTest(timeoutMs: Long = TEST_READY
     val deadline = System.currentTimeMillis() + timeoutMs
     while (System.currentTimeMillis() < deadline) {
         val current = currentPools()
-        if (listOf(current.io, current.defaultLane, current.serialIO, current.ingress).all { it.status() == "Active" }) {
+        if (listOf(current.io, current.defaultLane, current.serialIO, current.ingress).all { it.status() in READY_STATUSES }) {
             return true
         }
         Thread.sleep(TEST_READY_POLL_MS)

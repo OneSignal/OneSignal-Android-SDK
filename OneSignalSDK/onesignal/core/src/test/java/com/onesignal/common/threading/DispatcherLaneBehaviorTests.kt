@@ -28,7 +28,8 @@ class DispatcherLaneBehaviorTests : FunSpec({
             }
 
             afterEach {
-                OneSignalDispatchers.bootstrapEnabledForTest = null
+                OneSignalDispatchers.resetBootstrapInputsForTest()
+                OneSignalDispatchers.resetForTest()
             }
 
             test("builds lanes on the thread this mode promises") {

@@ -24,6 +24,10 @@ internal object DispatcherTestHooks {
     @Volatile
     var beforePoolChoice: (() -> Unit)? = null
 
+    /** Inside the choice report handoff, between reading readiness and parking the report. */
+    @Volatile
+    var duringChoiceHandoff: (() -> Unit)? = null
+
     fun reset() {
         beforeLaneCreate = null
         afterExecutorCreate = null
@@ -31,5 +35,6 @@ internal object DispatcherTestHooks {
         beforeLazyWarm = null
         beforeLazyPrewarmStart = null
         beforePoolChoice = null
+        duringChoiceHandoff = null
     }
 }

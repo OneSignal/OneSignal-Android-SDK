@@ -116,6 +116,27 @@ class DispatcherBootstrapFlagTests : FunSpec({
         reports.single() shouldContain "off, cache unreadable"
     }
 
+    test("a degraded choice racing telemetry readiness is still reported") {
+        val reports = captureChoiceReports()
+        OneSignalDispatchers.resetBootstrapInputsForTest()
+        val inHandoff = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        DispatcherTestHooks.duringChoiceHandoff = {
+            inHandoff.countDown()
+            release.await(2, TimeUnit.SECONDS)
+        }
+        val chooser = Thread { OneSignalDispatchers.resetForTest() }.apply { start() }
+        inHandoff.await(2, TimeUnit.SECONDS) shouldBe true
+
+        val reporter = Thread { OneSignalDispatchers.reportChoiceToTelemetry() }.apply { start() }
+        awaitBlockedOrDone(reporter)
+        release.countDown()
+        chooser.join(2_000)
+        reporter.join(2_000)
+
+        reports.single() shouldContain "off, no application; pools=lazy"
+    }
+
     test("a healthy choice is not reported") {
         val context = appContext()
         StartupFlagsCache.write(context) { listOf(key) }
@@ -214,6 +235,14 @@ private fun unreadableContext(): Context {
 }
 
 private fun applicationServiceFor(context: Context) = MockHelper.applicationService().also { every { it.appContext } returns context }
+
+private fun awaitBlockedOrDone(thread: Thread) {
+    val deadline = System.currentTimeMillis() + 2_000
+    while (thread.state != Thread.State.BLOCKED && thread.state != Thread.State.TERMINATED) {
+        if (System.currentTimeMillis() > deadline) return
+        Thread.sleep(5)
+    }
+}
 
 private fun latchFrom(context: Context) {
     OneSignalDispatchers.resetBootstrapInputsForTest()
