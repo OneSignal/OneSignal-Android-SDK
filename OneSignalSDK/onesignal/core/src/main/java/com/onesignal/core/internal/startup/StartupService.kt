@@ -7,8 +7,16 @@ import com.onesignal.debug.internal.logging.Logging
 internal class StartupService(
     private val services: ServiceProvider,
 ) {
+    private val bootstrapped = mutableSetOf<IBootstrapService>()
+
+    // Retryable after a failure: services that already bootstrapped are skipped, so none subscribes twice.
     fun bootstrap() {
-        services.getAllServices<IBootstrapService>().forEach { it.bootstrap() }
+        services.getAllServices<IBootstrapService>().forEach {
+            if (it !in bootstrapped) {
+                it.bootstrap()
+                bootstrapped += it
+            }
+        }
     }
 
     // schedule to start all startable services using OneSignal dispatcher

@@ -253,6 +253,7 @@
     <ID>MagicNumber:OSDatabase.kt$OSDatabase$9</ID>
     <ID>MagicNumber:OneSignalDispatchers.kt$OneSignalDispatchers$1024</ID>
     <ID>MagicNumber:OneSignalImp.kt$OneSignalImp$8</ID>
+    <ID>MagicNumber:OneSignalImpV2.kt$OneSignalImpV2$8</ID>
     <ID>MagicNumber:OperationRepo.kt$OperationRepo$1_000</ID>
     <ID>MagicNumber:OutcomeEventsController.kt$OutcomeEventsController$1000</ID>
     <ID>MagicNumber:PermissionsActivity.kt$PermissionsActivity$23</ID>
@@ -309,6 +310,7 @@
     <ID>PrintStackTrace:TrackGooglePurchase.kt$TrackGooglePurchase.&lt;no name provided>$t</ID>
     <ID>RethrowCaughtException:OSDatabase.kt$OSDatabase$throw e</ID>
     <ID>ReturnCount:AppIdResolution.kt$fun resolveAppId( inputAppId: String?, configModel: ConfigModel, preferencesService: IPreferencesService, ): AppIdResolution</ID>
+    <ID>ReturnCount:AppIdResolutionV2.kt$internal fun resolveAppIdV2( inputAppId: String?, configModel: ConfigModel, preferencesService: IPreferencesService, ): AppIdResolution</ID>
     <ID>ReturnCount:BackgroundManager.kt$BackgroundManager$override fun cancelRunBackgroundServices(): Boolean</ID>
     <ID>ReturnCount:ConfigModel.kt$ConfigModel$override fun createModelForProperty( property: String, jsonObject: JSONObject, ): Model?</ID>
     <ID>ReturnCount:ExecutorsIvExtensions.kt$internal fun resolveIvBackendParams( op: Operation, onesignalId: String, jwtTokenStore: JwtTokenStore, ivBehaviorActive: Boolean, ): IvBackendParams</ID>
@@ -326,6 +328,8 @@
     <ID>ReturnCount:Model.kt$Model$protected fun getOptIntProperty( name: String, create: (() -> Int?)? = null, ): Int?</ID>
     <ID>ReturnCount:Model.kt$Model$protected fun getOptLongProperty( name: String, create: (() -> Long?)? = null, ): Long?</ID>
     <ID>ReturnCount:Model.kt$Model$protected inline fun &lt;reified T : Enum&lt;T>> getOptEnumProperty(name: String): T?</ID>
+    <ID>ReturnCount:OneSignalImp.kt$OneSignalImp$override suspend fun initWithContextSuspend( context: Context?, appId: String?, ): Boolean</ID>
+    <ID>ReturnCount:OneSignalImpV2.kt$OneSignalImpV2$override suspend fun initWithContextSuspend( context: Context?, appId: String?, ): Boolean</ID>
     <ID>ReturnCount:OperationModelStore.kt$OperationModelStore$override fun create(jsonObject: JSONObject?): Operation?</ID>
     <ID>ReturnCount:OperationModelStore.kt$OperationModelStore$private fun isValidOperation(jsonObject: JSONObject): Boolean</ID>
     <ID>ReturnCount:OperationRepo.kt$OperationRepo$private fun shouldSuppressAnonymousOp(op: Operation): Boolean</ID>
@@ -418,6 +422,7 @@
     <ID>TooManyFunctions:OSDatabase.kt$OSDatabase : SQLiteOpenHelperIDatabase</ID>
     <ID>TooManyFunctions:OneSignal.kt$OneSignal$OneSignal</ID>
     <ID>TooManyFunctions:OneSignalImp.kt$OneSignalImp : IOneSignalIServiceProvider</ID>
+    <ID>TooManyFunctions:OneSignalImpV2.kt$OneSignalImpV2 : IOneSignalIServiceProvider</ID>
     <ID>TooManyFunctions:OperationRepo.kt$OperationRepo : IOperationRepoIStartableService</ID>
     <ID>TooManyFunctions:OutcomeEventsController.kt$OutcomeEventsController : IOutcomeEventsControllerIStartableServiceISessionLifecycleHandler</ID>
     <ID>TooManyFunctions:PreferencesService.kt$PreferencesService : IPreferencesServiceIStartableService</ID>

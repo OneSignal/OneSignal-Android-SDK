@@ -344,10 +344,11 @@ internal class OneSignalImp : IOneSignal,
      */
     @Suppress("ReturnCount", "TooGenericExceptionCaught")
     override fun initWithContext(
-        context: Context,
-        appId: String,
+        context: Context?,
+        appId: String?,
     ): Boolean {
         Logging.log(LogLevel.DEBUG, "Calling deprecated initWithContext(context: $context, appId: $appId)")
+        requireNotNull(context) { "initWithContext: context is required" }
 
         // Warm OneSignalDispatchers on a dedicated daemon thread so the first production caller
         // of suspendifyOnIO / launchOnSerialIO doesn't pay the ThreadPoolExecutor + dispatcher +
@@ -753,10 +754,11 @@ internal class OneSignalImp : IOneSignal,
         }
 
     override suspend fun initWithContextSuspend(
-        context: Context,
+        context: Context?,
         appId: String?,
     ): Boolean {
         Logging.log(LogLevel.DEBUG, "initWithContext(context: $context, appId: $appId)")
+        requireNotNull(context) { "initWithContext: context is required" }
 
         // Same warm-up as the synchronous variant. Reaching this entry point on the main thread
         // (e.g. SyncJobService.onStartJob -> suspendifyOnIO -> initWithContext(context)) pays the
