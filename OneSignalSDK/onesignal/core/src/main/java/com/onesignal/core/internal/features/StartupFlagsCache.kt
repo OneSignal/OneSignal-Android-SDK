@@ -93,7 +93,8 @@ internal class PrefsStartupFlagsStore(
         // Device-protected so receivers and jobs that start before first unlock read the real values.
         // Must hold nothing secret: this storage is readable while the device is still locked.
         fun storageContext(context: Context): Context {
-            val app = context.applicationContext
+            // Null during attachBaseContext and some direct-boot paths.
+            val app: Context = context.applicationContext ?: context
             return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) app.createDeviceProtectedStorageContext() else app
         }
     }

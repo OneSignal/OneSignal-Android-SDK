@@ -1,6 +1,7 @@
 package com.onesignal.core.internal.features
 
 import com.onesignal.common.modeling.ModelChangeTags
+import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.config.ConfigModel
 import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.debug.ILogListener
@@ -16,7 +17,10 @@ import io.kotest.matchers.shouldBe
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
+import io.mockk.mockkStatic
 import io.mockk.runs
+import io.mockk.unmockkStatic
+import io.mockk.verify
 
 class FeatureManagerTests : FunSpec({
     fun startupSnapshot(vararg flags: FeatureFlag) {
@@ -208,5 +212,25 @@ class FeatureManagerTests : FunSpec({
         val manager = FeatureManager(configModelStore, mockk(relaxed = true))
 
         manager.isEnabled(FeatureFlag.SDK_CUSTOM_LOGGING) shouldBe true
+    }
+
+    test("a failed startup flag mirror logs at ERROR") {
+        val model = mockk<ConfigModel>()
+        stubConfigModel(model)
+        val configModelStore = mockk<ConfigModelStore>()
+        every { configModelStore.model } returns model
+        every { configModelStore.subscribe(any()) } just runs
+        val applicationService = mockk<IApplicationService>()
+        val failure = IllegalStateException("no context")
+        every { applicationService.appContext } throws failure
+        mockkStatic(Logging::class)
+        every { Logging.error(any(), any()) } just runs
+        try {
+            FeatureManager(configModelStore, applicationService).start()
+
+            verify(exactly = 1) { Logging.error("OneSignal: failed to mirror startup flags: no context", failure) }
+        } finally {
+            unmockkStatic(Logging::class)
+        }
     }
 })
