@@ -6,10 +6,15 @@ import android.view.WindowInsets
 import android.webkit.WebView
 import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
 import com.onesignal.common.ViewUtils
+import com.onesignal.debug.ILogListener
+import com.onesignal.debug.LogLevel
+import com.onesignal.debug.OneSignalLogEvent
+import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.inAppMessages.internal.InAppMessageContent
 import com.onesignal.inAppMessages.internal.display.impl.InAppMessageView
 import com.onesignal.inAppMessages.internal.display.impl.WebViewManager
 import io.kotest.core.spec.style.FunSpec
+import io.kotest.matchers.shouldBe
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkObject
@@ -30,6 +35,9 @@ class InAppMessageViewShowFailureTests : FunSpec({
         val view = messageView(mockk(relaxed = true))
         val controller = mockk<InAppMessageView.InAppMessageViewListener>(relaxed = true)
         view.setMessageController(controller)
+        val errors = mutableListOf<OneSignalLogEvent>()
+        val listener = ILogListener { if (it.level == LogLevel.ERROR) errors.add(it) }
+        Logging.addListener(listener)
         mockkObject(ViewUtils)
         every { ViewUtils.getWindowHeight(any()) } throws IllegalStateException("boom")
 
@@ -37,9 +45,13 @@ class InAppMessageViewShowFailureTests : FunSpec({
             view.showView(activity)
         } finally {
             unmockkObject(ViewUtils)
+            Logging.removeListener(listener)
         }
 
         verify(exactly = 1) { controller.onMessageWasDismissed() }
+        errors.size shouldBe 1
+        errors[0].entry.contains("Could not show the in app message") shouldBe true
+        errors[0].entry.contains("boom") shouldBe true
     }
 })
 
