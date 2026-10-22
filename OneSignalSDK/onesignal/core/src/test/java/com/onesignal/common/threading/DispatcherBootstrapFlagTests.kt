@@ -31,6 +31,7 @@ class DispatcherBootstrapFlagTests : FunSpec({
     afterTest {
         reportListener?.let(Logging::removeListener)
         reportListener = null
+        DispatcherTestHooks.reset()
         StartupFlagsCache.write(appContext()) { emptyList() }
         OneSignalDispatchers.resetBootstrapInputsForTest()
         OneSignalDispatchers.resetForTest()
@@ -73,7 +74,7 @@ class DispatcherBootstrapFlagTests : FunSpec({
     test("a pool choice failure falls back to lazy pools instead of throwing") {
         val context = appContext()
         StartupFlagsCache.write(context) { listOf(key) }
-        OneSignalDispatchers.beforePoolChoiceForTest = { throw IllegalStateException("choice failed") }
+        DispatcherTestHooks.beforePoolChoice = { throw IllegalStateException("choice failed") }
         latchFrom(context)
 
         builtOnCaller() shouldBe true
@@ -82,7 +83,7 @@ class DispatcherBootstrapFlagTests : FunSpec({
     test("a choice failure after an on snapshot runs lazy pools while FeatureManager reports on") {
         val context = appContext()
         StartupFlagsCache.write(context) { listOf(key) }
-        OneSignalDispatchers.beforePoolChoiceForTest = {
+        DispatcherTestHooks.beforePoolChoice = {
             FeatureManager.startupFlags { context }
             throw IllegalStateException("choice failed")
         }
@@ -121,7 +122,7 @@ class DispatcherBootstrapFlagTests : FunSpec({
         OneSignalDispatchers.resetBootstrapInputsForTest()
         val inHandoff = CountDownLatch(1)
         val release = CountDownLatch(1)
-        OneSignalDispatchers.duringChoiceHandoffForTest = {
+        DispatcherTestHooks.duringChoiceHandoff = {
             inHandoff.countDown()
             release.await(2, TimeUnit.SECONDS)
         }
@@ -152,7 +153,7 @@ class DispatcherBootstrapFlagTests : FunSpec({
         OneSignalDispatchers.resetForTest()
         val priority = AtomicInteger(-1)
         val seen = CountDownLatch(1)
-        OneSignalDispatchers.beforeLaneCreateForTest = { lane ->
+        DispatcherTestHooks.beforeLaneCreate = { lane ->
             if (lane == "IO") {
                 priority.set(Thread.currentThread().priority)
                 seen.countDown()
@@ -170,7 +171,7 @@ class DispatcherBootstrapFlagTests : FunSpec({
         OneSignalDispatchers.resetForTest()
         val priority = AtomicInteger(-1)
         val seen = CountDownLatch(1)
-        OneSignalDispatchers.beforeLazyWarmForTest = {
+        DispatcherTestHooks.beforeLazyWarm = {
             if (priority.compareAndSet(-1, Thread.currentThread().priority)) seen.countDown()
         }
 
@@ -255,7 +256,7 @@ private fun builtOnCaller(): Boolean {
     val callerThreadId = AtomicLong()
     val createThreadId = AtomicLong()
     val created = CountDownLatch(1)
-    OneSignalDispatchers.beforeLaneCreateForTest = { lane ->
+    DispatcherTestHooks.beforeLaneCreate = { lane ->
         if (lane == "IO") {
             createThreadId.set(Thread.currentThread().id)
             created.countDown()

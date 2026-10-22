@@ -10,53 +10,10 @@ import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.cancel
 import java.util.concurrent.CancellationException
 import java.util.concurrent.ConcurrentLinkedQueue
-import java.util.concurrent.LinkedBlockingQueue
-import java.util.concurrent.ThreadFactory
 import java.util.concurrent.ThreadPoolExecutor
-import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.atomic.AtomicInteger
 import kotlin.coroutines.CoroutineContext
-
-private const val BASE = OneSignalDispatchers.BASE_THREAD_NAME
-
-// Optimized pool sizes based on CPU cores and workload analysis
-private const val IO_CORE_POOL_SIZE = 2 // Increased for better concurrency
-private const val IO_MAX_POOL_SIZE = 3 // Increased for better concurrency
-private const val DEFAULT_CORE_POOL_SIZE = 2 // Optimal for CPU operations
-private const val DEFAULT_MAX_POOL_SIZE = 3 // Slightly larger for CPU operations
-private const val KEEP_ALIVE_TIME_SECONDS =
-    30L // Keep threads alive longer to reduce recreation
-private const val QUEUE_CAPACITY =
-    200 // Increased to handle more queued operations during init, while still preventing memory bloat
-private const val IO_THREAD_NAME_PREFIX =
-    "$BASE-IO" // Thread name prefix for I/O operations
-private const val DEFAULT_THREAD_NAME_PREFIX =
-    "$BASE-Default" // Thread name prefix for CPU operations
-private const val SERIAL_IO_THREAD_NAME =
-    "$BASE-SerialIO" // Single, named thread for order-sensitive work
-private const val INGRESS_THREAD_NAME = "$BASE-Ingress"
-
-private class OptimizedThreadFactory(
-    private val namePrefix: String,
-    private val priority: Int = Thread.NORM_PRIORITY,
-) : ThreadFactory {
-    private val threadNumber = AtomicInteger(1)
-
-    override fun newThread(r: Runnable): Thread {
-        val thread = Thread(r, "$namePrefix-${threadNumber.getAndIncrement()}")
-        thread.isDaemon = true
-        thread.priority = priority
-        return thread
-    }
-}
-
-private enum class Lane {
-    IO,
-    DEFAULT,
-    SERIAL_IO,
-    INGRESS,
-}
+import kotlin.coroutines.EmptyCoroutineContext
 
 private enum class LaneState {
     COLD,
@@ -75,18 +32,9 @@ private class LaneTarget(
     }
 }
 
-private data class LaneConfig(
-    val corePoolSize: Int,
-    val maxPoolSize: Int,
-    val threadName: String,
-    val priority: Int = Thread.NORM_PRIORITY,
-    val queueCapacity: Int = QUEUE_CAPACITY,
-)
-
 /**
- * A stable dispatcher that queues work until its backing executor has been built and
- * prestarted on the bootstrap thread. CoroutineScope.launch can therefore return its real Job
- * without forcing executor construction or waiting on a lazy lock on the caller thread.
+ * Queues work until the bootstrap thread has built and prestarted the lane's executor,
+ * so `launch` returns its Job without building anything or blocking on the caller.
  */
 @Suppress("TooManyFunctions")
 private class GateDispatcher(
@@ -100,32 +48,46 @@ private class GateDispatcher(
     private var state = LaneState.COLD
     private var target: LaneTarget? = null
 
+    // Built once per READY transition: dispatch runs on every resume, so it must not allocate.
+    private var run: GateDecision.Run? = null
+
     override fun dispatch(
         context: CoroutineContext,
         block: Runnable,
     ) {
-        var readyDispatcher: CoroutineDispatcher? = null
-        var shouldBootstrap = false
-        var rejected = false
-
-        synchronized(lock) {
-            when (state) {
-                LaneState.COLD -> {
-                    pending.addLast(context to block)
-                    state = LaneState.STARTING
-                    shouldBootstrap = true
+        val decision =
+            synchronized(lock) {
+                when (state) {
+                    LaneState.COLD -> {
+                        pending.addLast(context to block)
+                        state = LaneState.STARTING
+                        GateDecision.Start
+                    }
+                    LaneState.STARTING, LaneState.DRAINING -> {
+                        pending.addLast(context to block)
+                        GateDecision.Queued
+                    }
+                    LaneState.READY -> run!!
+                    LaneState.CLOSED -> GateDecision.Rejected
                 }
-                LaneState.STARTING, LaneState.DRAINING -> pending.addLast(context to block)
-                LaneState.READY -> readyDispatcher = target!!.dispatcher
-                LaneState.CLOSED -> rejected = true
             }
-        }
 
-        when {
-            shouldBootstrap -> requestBootstrap(this)
-            readyDispatcher != null -> dispatchSafely(readyDispatcher!!, context, block)
-            rejected -> cancelAndComplete(context, block, "OneSignal dispatcher generation is closed")
+        when (decision) {
+            GateDecision.Queued -> Unit
+            GateDecision.Start -> requestBootstrap(this)
+            is GateDecision.Run -> dispatchSafely(decision.dispatcher, context, block)
+            GateDecision.Rejected -> cancelAndComplete(context, block, "OneSignal dispatcher generation is closed")
         }
+    }
+
+    private sealed interface GateDecision {
+        object Queued : GateDecision
+
+        object Start : GateDecision
+
+        class Run(val dispatcher: CoroutineDispatcher) : GateDecision
+
+        object Rejected : GateDecision
     }
 
     fun requestWarmup() {
@@ -174,6 +136,7 @@ private class GateDispatcher(
                         pending.removeFirstOrNull().also {
                             if (it == null) {
                                 target = newTarget
+                                run = GateDecision.Run(newTarget.dispatcher)
                                 state = LaneState.READY
                             }
                         }
@@ -199,6 +162,7 @@ private class GateDispatcher(
             pending.clear()
             oldTarget = target
             target = null
+            run = null
         }
         queued.forEach {
             cancelAndComplete(it.first, it.second, "OneSignal dispatcher generation was reset")
@@ -274,7 +238,7 @@ private class BootstrapCoordinator {
         try {
             Thread(
                 ::runLoop,
-                "$BASE-bootstrap",
+                "$BASE_THREAD_NAME-bootstrap",
             ).apply {
                 isDaemon = true
                 // Not lowered: main can block waiting for init, which queues behind these builds.
@@ -341,20 +305,10 @@ internal class BootstrapDispatcherPools : DispatcherPools {
 
 @Suppress("TooGenericExceptionCaught")
 private fun createTarget(lane: Lane): LaneTarget {
-    OneSignalDispatchers.beforeLaneCreateForTest?.invoke(lane.name)
-    val config = lane.config()
-    val executor =
-        ThreadPoolExecutor(
-            config.corePoolSize,
-            config.maxPoolSize,
-            KEEP_ALIVE_TIME_SECONDS,
-            TimeUnit.SECONDS,
-            LinkedBlockingQueue(config.queueCapacity),
-            OptimizedThreadFactory(config.threadName, config.priority),
-        )
+    DispatcherTestHooks.beforeLaneCreate?.invoke(lane.name)
+    val executor = newLaneExecutor(lane)
     try {
-        executor.allowCoreThreadTimeOut(false)
-        OneSignalDispatchers.afterExecutorCreateForTest?.invoke(lane.name, executor)
+        DispatcherTestHooks.afterExecutorCreate?.invoke(lane.name, executor)
         executor.prestartAllCoreThreads()
     } catch (t: Throwable) {
         executor.shutdownNow()
@@ -363,52 +317,9 @@ private fun createTarget(lane: Lane): LaneTarget {
     return LaneTarget(executor.asCoroutineDispatcher(), executor)
 }
 
-private fun Lane.config(): LaneConfig =
-    when (this) {
-        Lane.IO ->
-            LaneConfig(
-                IO_CORE_POOL_SIZE,
-                IO_MAX_POOL_SIZE,
-                IO_THREAD_NAME_PREFIX,
-                Thread.NORM_PRIORITY - 1,
-            )
-        Lane.DEFAULT ->
-            LaneConfig(
-                DEFAULT_CORE_POOL_SIZE,
-                DEFAULT_MAX_POOL_SIZE,
-                DEFAULT_THREAD_NAME_PREFIX,
-            )
-        Lane.SERIAL_IO ->
-            LaneConfig(
-                1,
-                1,
-                SERIAL_IO_THREAD_NAME,
-                Thread.NORM_PRIORITY - 1,
-                // Unbounded like Executors.newSingleThreadExecutor; rejecting would drop ordered lifecycle work.
-                Int.MAX_VALUE,
-            )
-        // Kept separate from IO so receiver handoffs never queue behind SDK HTTP.
-        Lane.INGRESS ->
-            LaneConfig(
-                1,
-                1,
-                INGRESS_THREAD_NAME,
-                Thread.NORM_PRIORITY - 1,
-                Int.MAX_VALUE,
-            )
-    }
-
 private fun createFallbackTarget(lane: Lane): LaneTarget {
-    OneSignalDispatchers.beforeFallbackCreateForTest?.invoke(lane.name)
-    val dispatcher =
-        when (lane) {
-            Lane.IO -> Dispatchers.IO
-            Lane.DEFAULT -> Dispatchers.Default
-            Lane.SERIAL_IO, Lane.INGRESS -> {
-                @Suppress("OPT_IN_USAGE")
-                Dispatchers.IO.limitedParallelism(1)
-            }
-        }
-    dispatcher.dispatch(kotlin.coroutines.EmptyCoroutineContext, Runnable {})
+    DispatcherTestHooks.beforeFallbackCreate?.invoke(lane.name)
+    val dispatcher = lane.fallbackDispatcher()
+    dispatcher.dispatch(EmptyCoroutineContext, Runnable {})
     return LaneTarget(dispatcher, null)
 }

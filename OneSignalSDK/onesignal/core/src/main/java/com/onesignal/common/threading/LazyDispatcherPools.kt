@@ -2,17 +2,12 @@ package com.onesignal.common.threading
 
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
-import java.util.concurrent.LinkedBlockingQueue
-import java.util.concurrent.ThreadFactory
 import java.util.concurrent.ThreadPoolExecutor
-import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
 
 /**
@@ -22,24 +17,10 @@ import java.util.concurrent.atomic.AtomicReference
 @Suppress("TooGenericExceptionCaught")
 internal class LazyDispatcherPools : DispatcherPools {
     private val closed = AtomicBoolean(false)
-    private val ioLane =
-        LazyExecutorLane("IO", IO_CORE, IO_MAX, QUEUE_CAPACITY, "$BASE-IO", Thread.NORM_PRIORITY - 1) {
-            Dispatchers.IO
-        }
-    private val defaultExecutorLane =
-        LazyExecutorLane("DEFAULT", DEFAULT_CORE, DEFAULT_MAX, QUEUE_CAPACITY, "$BASE-Default", Thread.NORM_PRIORITY) {
-            Dispatchers.Default
-        }
-    private val serialLane =
-        LazyExecutorLane("SERIAL_IO", 1, 1, Int.MAX_VALUE, "$BASE-SerialIO", Thread.NORM_PRIORITY - 1) {
-            @Suppress("OPT_IN_USAGE")
-            Dispatchers.IO.limitedParallelism(1)
-        }
-    private val ingressLane =
-        LazyExecutorLane("INGRESS", 1, 1, Int.MAX_VALUE, "$BASE-Ingress", Thread.NORM_PRIORITY - 1) {
-            @Suppress("OPT_IN_USAGE")
-            Dispatchers.IO.limitedParallelism(1)
-        }
+    private val ioLane = LazyExecutorLane(Lane.IO)
+    private val defaultExecutorLane = LazyExecutorLane(Lane.DEFAULT)
+    private val serialLane = LazyExecutorLane(Lane.SERIAL_IO)
+    private val ingressLane = LazyExecutorLane(Lane.INGRESS)
 
     override val io: DispatcherLane = ioLane
     override val defaultLane: DispatcherLane = defaultExecutorLane
@@ -64,12 +45,12 @@ internal class LazyDispatcherPools : DispatcherPools {
             Thread(
                 {
                     // Ingress first: receivers have a ~10s broadcast budget.
-                    warm("INGRESS") { ingressScope }
-                    warm("IO") { ioScope }
-                    warm("DEFAULT") { defaultScope }
-                    warm("SERIAL_IO") { serialIOScope }
+                    warm(Lane.INGRESS) { ingressScope }
+                    warm(Lane.IO) { ioScope }
+                    warm(Lane.DEFAULT) { defaultScope }
+                    warm(Lane.SERIAL_IO) { serialIOScope }
                 },
-                "$BASE-prewarm",
+                "$BASE_THREAD_NAME-prewarm",
             )
         thread.isDaemon = true
         // Not lowered: a launch on main blocks behind this thread's lazy builds, so it must not be starved.
@@ -83,7 +64,7 @@ internal class LazyDispatcherPools : DispatcherPools {
             return
         }
         try {
-            OneSignalDispatchers.beforeLazyPrewarmStartForTest?.invoke()
+            DispatcherTestHooks.beforeLazyPrewarmStart?.invoke()
             thread.start()
         } catch (t: Throwable) {
             // start() failed after the ref was published. Clear it or every retry hits a failed CAS.
@@ -105,10 +86,10 @@ internal class LazyDispatcherPools : DispatcherPools {
     }
 
     private fun warm(
-        lane: String,
+        lane: Lane,
         resolve: () -> CoroutineScope,
     ) {
-        OneSignalDispatchers.beforeLazyWarmForTest?.invoke(lane)
+        DispatcherTestHooks.beforeLazyWarm?.invoke(lane.name)
         if (closed.get()) return
         val scope = resolveScope(resolve) ?: return
         if (closed.get()) {
@@ -132,13 +113,7 @@ internal class LazyDispatcherPools : DispatcherPools {
     }
 
     private inner class LazyExecutorLane(
-        private val lane: String,
-        private val core: Int,
-        private val max: Int,
-        private val queueCapacity: Int,
-        private val threadName: String,
-        private val priority: Int,
-        private val fallback: () -> CoroutineDispatcher,
+        private val lane: Lane,
     ) : DispatcherLane {
         private val executorLazy: Lazy<ThreadPoolExecutor?> = lazy { createExecutor() }
 
@@ -148,16 +123,16 @@ internal class LazyDispatcherPools : DispatcherPools {
                 buildExecutor()
             } catch (t: Throwable) {
                 OneSignalDispatchers.logFailure("lazy $lane fell back", t)
-                OneSignalDispatchers.beforeFallbackCreateForTest?.invoke(lane)
+                DispatcherTestHooks.beforeFallbackCreate?.invoke(lane.name)
                 null
             }
         }
 
         private fun buildExecutor(): ThreadPoolExecutor? {
-            OneSignalDispatchers.beforeLaneCreateForTest?.invoke(lane)
+            DispatcherTestHooks.beforeLaneCreate?.invoke(lane.name)
             if (closed.get()) return null
-            val created = newExecutor()
-            OneSignalDispatchers.afterExecutorCreateForTest?.invoke(lane, created)
+            val created = newLaneExecutor(lane)
+            DispatcherTestHooks.afterExecutorCreate?.invoke(lane.name, created)
             if (closed.get()) created.shutdownNow()
             return created.takeUnless { it.isShutdown }
         }
@@ -165,13 +140,13 @@ internal class LazyDispatcherPools : DispatcherPools {
         override val dispatcher: CoroutineDispatcher by lazy {
             val executor = executorLazy.value
             if (executor == null) {
-                fallback()
+                lane.fallbackDispatcher()
             } else {
                 try {
                     executor.asCoroutineDispatcher()
                 } catch (t: Throwable) {
                     OneSignalDispatchers.logFailure("lazy $lane fell back", t)
-                    fallback()
+                    lane.fallbackDispatcher()
                 }
             }
         }
@@ -197,42 +172,9 @@ internal class LazyDispatcherPools : DispatcherPools {
             if (!executorLazy.isInitialized()) return
             runCatching { executorLazy.value?.shutdownNow() }
         }
-
-        private fun newExecutor(): ThreadPoolExecutor =
-            ThreadPoolExecutor(
-                core,
-                max,
-                KEEP_ALIVE_SECONDS,
-                TimeUnit.SECONDS,
-                LinkedBlockingQueue(queueCapacity),
-                NamedThreadFactory(threadName, priority),
-            ).apply {
-                allowCoreThreadTimeOut(false)
-            }
-    }
-
-    private class NamedThreadFactory(
-        private val namePrefix: String,
-        private val priority: Int,
-    ) : ThreadFactory {
-        private val threadNumber = AtomicInteger(1)
-
-        override fun newThread(r: Runnable): Thread {
-            val thread = Thread(r, "$namePrefix-${threadNumber.getAndIncrement()}")
-            thread.isDaemon = true
-            thread.priority = priority
-            return thread
-        }
     }
 
     private companion object {
-        private const val BASE = OneSignalDispatchers.BASE_THREAD_NAME
-        private const val IO_CORE = 2
-        private const val IO_MAX = 3
-        private const val DEFAULT_CORE = 2
-        private const val DEFAULT_MAX = 3
-        private const val QUEUE_CAPACITY = 200
-        private const val KEEP_ALIVE_SECONDS = 30L
         private const val PREWARM_JOIN_MS = 250L
     }
 }

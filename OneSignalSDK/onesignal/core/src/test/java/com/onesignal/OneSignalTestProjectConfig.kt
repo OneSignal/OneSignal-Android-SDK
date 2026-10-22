@@ -1,5 +1,6 @@
 package com.onesignal
 
+import com.onesignal.common.threading.DispatcherTestHooks
 import com.onesignal.common.threading.OneSignalDispatchers
 import io.kotest.core.config.AbstractProjectConfig
 import io.kotest.core.extensions.Extension
@@ -41,6 +42,7 @@ private object OneSignalDispatchersResetListener : BeforeSpecListener, AfterSpec
 // Inputs first: the fresh generation latches its pools from them, and a spec's mock
 // Application must not decide the pools of the next spec.
 private fun resetDispatchers() {
+    DispatcherTestHooks.reset()
     OneSignalDispatchers.resetBootstrapInputsForTest()
     OneSignalDispatchers.resetForTest()
 }

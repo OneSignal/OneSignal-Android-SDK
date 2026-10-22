@@ -27,6 +27,7 @@ class OneSignalDispatchersTests : FunSpec({
     }
 
     afterTest {
+        DispatcherTestHooks.reset()
         OneSignalDispatchers.resetBootstrapInputsForTest()
         OneSignalDispatchers.resetForTest()
     }
@@ -34,7 +35,7 @@ class OneSignalDispatchersTests : FunSpec({
     test("prewarm bootstraps the ingress lane before the other lanes") {
         OneSignalDispatchers.resetForTest()
         val created = Collections.synchronizedList(mutableListOf<String>())
-        OneSignalDispatchers.beforeLaneCreateForTest = { created += it }
+        DispatcherTestHooks.beforeLaneCreate = { created += it }
 
         try {
             OneSignalDispatchers.prewarm(null)
@@ -54,7 +55,7 @@ class OneSignalDispatchersTests : FunSpec({
         val createThreadId = AtomicLong()
         val callerThreadId = AtomicLong()
 
-        OneSignalDispatchers.beforeLaneCreateForTest = { lane ->
+        DispatcherTestHooks.beforeLaneCreate = { lane ->
             if (lane == "IO") {
                 createThreadId.set(Thread.currentThread().id)
                 createStarted.countDown()
@@ -75,7 +76,7 @@ class OneSignalDispatchersTests : FunSpec({
         createThreadId.get() shouldNotBe callerThreadId.get()
         allowCreate.countDown()
         workRan.await(1, TimeUnit.SECONDS) shouldBe true
-        OneSignalDispatchers.beforeLaneCreateForTest = null
+        DispatcherTestHooks.beforeLaneCreate = null
     }
 
     test("cold queued launch completes when its generation is reset") {
@@ -83,7 +84,7 @@ class OneSignalDispatchersTests : FunSpec({
         val createStarted = CountDownLatch(1)
         val allowCreate = CountDownLatch(1)
         val completed = CountDownLatch(1)
-        OneSignalDispatchers.beforeLaneCreateForTest = { lane ->
+        DispatcherTestHooks.beforeLaneCreate = { lane ->
             if (lane == "IO") {
                 createStarted.countDown()
                 allowCreate.await()
@@ -102,18 +103,18 @@ class OneSignalDispatchersTests : FunSpec({
         OneSignalDispatchers.resetForTest()
         val failedJobCompleted = CountDownLatch(1)
         val defaultWorkRan = CountDownLatch(1)
-        OneSignalDispatchers.beforeLaneCreateForTest = { lane ->
+        DispatcherTestHooks.beforeLaneCreate = { lane ->
             if (lane == "IO") throw IllegalStateException("primary failed")
         }
-        OneSignalDispatchers.beforeFallbackCreateForTest = { lane ->
+        DispatcherTestHooks.beforeFallbackCreate = { lane ->
             if (lane == "IO") throw AssertionError("fallback failed")
         }
 
         OneSignalDispatchers.launchOnIO {}.invokeOnCompletion { failedJobCompleted.countDown() }
         failedJobCompleted.await(1, TimeUnit.SECONDS) shouldBe true
 
-        OneSignalDispatchers.beforeLaneCreateForTest = null
-        OneSignalDispatchers.beforeFallbackCreateForTest = null
+        DispatcherTestHooks.beforeLaneCreate = null
+        DispatcherTestHooks.beforeFallbackCreate = null
         OneSignalDispatchers.launchOnDefault { defaultWorkRan.countDown() }
         defaultWorkRan.await(1, TimeUnit.SECONDS) shouldBe true
     }
@@ -122,7 +123,7 @@ class OneSignalDispatchersTests : FunSpec({
         OneSignalDispatchers.resetForTest()
         val workRan = CountDownLatch(1)
         var partial: ThreadPoolExecutor? = null
-        OneSignalDispatchers.afterExecutorCreateForTest = { lane, executor ->
+        DispatcherTestHooks.afterExecutorCreate = { lane, executor ->
             if (lane == "IO") {
                 partial = executor
                 executor.prestartCoreThread()
@@ -143,7 +144,7 @@ class OneSignalDispatchersTests : FunSpec({
         val allowCreate = CountDownLatch(1)
         val bootstrapFinished = CountDownLatch(1)
         val ioCreateCount = AtomicInteger()
-        OneSignalDispatchers.beforeLaneCreateForTest = { lane ->
+        DispatcherTestHooks.beforeLaneCreate = { lane ->
             if (lane == "IO") {
                 ioCreateCount.incrementAndGet()
                 createStarted.countDown()
@@ -151,7 +152,7 @@ class OneSignalDispatchersTests : FunSpec({
                 throw IllegalStateException("primary failed")
             }
         }
-        OneSignalDispatchers.beforeFallbackCreateForTest = { lane ->
+        DispatcherTestHooks.beforeFallbackCreate = { lane ->
             if (lane == "IO") {
                 bootstrapFinished.countDown()
                 throw AssertionError("fallback failed")
@@ -161,10 +162,10 @@ class OneSignalDispatchersTests : FunSpec({
 
         OneSignalDispatchers.launchOnIO {}
         createStarted.await(1, TimeUnit.SECONDS) shouldBe true
-        val hooks = OneSignalDispatchers.beforeLaneCreateForTest to OneSignalDispatchers.beforeFallbackCreateForTest
+        val hooks = DispatcherTestHooks.beforeLaneCreate to DispatcherTestHooks.beforeFallbackCreate
         OneSignalDispatchers.resetForTest()
-        OneSignalDispatchers.beforeLaneCreateForTest = hooks.first
-        OneSignalDispatchers.beforeFallbackCreateForTest = hooks.second
+        DispatcherTestHooks.beforeLaneCreate = hooks.first
+        DispatcherTestHooks.beforeFallbackCreate = hooks.second
         allowCreate.countDown()
         bootstrapFinished.await(1, TimeUnit.SECONDS) shouldBe true
 
@@ -182,23 +183,23 @@ class OneSignalDispatchersTests : FunSpec({
         // Executors.newSingleThreadExecutor refused to construct) and every isShutdown
         // access re-throws. Without this, the catch is unreachable from unit tests because
         // ThreadPoolExecutor.isShutdown does not normally throw.
-        OneSignalDispatchers.executorStatus("ioExecutor") { false } shouldBe "Active"
-        OneSignalDispatchers.executorStatus("ioExecutor") { true } shouldBe "Shutdown"
-        OneSignalDispatchers.executorStatus("ioExecutor") {
+        executorStatus("ioExecutor") { false } shouldBe "Active"
+        executorStatus("ioExecutor") { true } shouldBe "Shutdown"
+        executorStatus("ioExecutor") {
             throw RuntimeException("init failure")
         } shouldBe "ioExecutor Not initialized init failure"
-        OneSignalDispatchers.executorStatus("ioExecutor") {
+        executorStatus("ioExecutor") {
             throw RuntimeException()
         } shouldBe "ioExecutor Not initialized Unknown error"
     }
 
     test("scopeStatus returns 'Active' / 'Cancelled' on the happy path and the Not initialized message when the underlying check throws") {
-        OneSignalDispatchers.scopeStatus("IOScope") { true } shouldBe "Active"
-        OneSignalDispatchers.scopeStatus("IOScope") { false } shouldBe "Cancelled"
-        OneSignalDispatchers.scopeStatus("IOScope") {
+        scopeStatus("IOScope") { true } shouldBe "Active"
+        scopeStatus("IOScope") { false } shouldBe "Cancelled"
+        scopeStatus("IOScope") {
             throw RuntimeException("cancelled supervisor")
         } shouldBe "IOScope Not initialized cancelled supervisor"
-        OneSignalDispatchers.scopeStatus("IOScope") {
+        scopeStatus("IOScope") {
             throw RuntimeException()
         } shouldBe "IOScope Not initialized Unknown error"
     }
@@ -209,7 +210,7 @@ class OneSignalDispatchersTests : FunSpec({
         val callerThreadId = AtomicLong()
         val createThreadId = AtomicLong()
         val finished = CountDownLatch(1)
-        OneSignalDispatchers.beforeLaneCreateForTest = { lane ->
+        DispatcherTestHooks.beforeLaneCreate = { lane ->
             if (lane == "IO") createThreadId.set(Thread.currentThread().id)
         }
 
@@ -229,7 +230,7 @@ class OneSignalDispatchersTests : FunSpec({
         OneSignalDispatchers.resetForTest()
         val order = Collections.synchronizedList(mutableListOf<String>())
         val created = CountDownLatch(4)
-        OneSignalDispatchers.beforeLaneCreateForTest = { lane ->
+        DispatcherTestHooks.beforeLaneCreate = { lane ->
             order.add(lane)
             created.countDown()
         }
@@ -244,7 +245,7 @@ class OneSignalDispatchersTests : FunSpec({
         val entered = CountDownLatch(1)
         val release = CountDownLatch(1)
         // Shutdown interrupts prewarm. Ignore it so the closed checks, not a dead thread, stop the build.
-        OneSignalDispatchers.beforeLazyWarmForTest = {
+        DispatcherTestHooks.beforeLazyWarm = {
             entered.countDown()
             awaitIgnoringInterrupts(release)
         }
@@ -252,7 +253,7 @@ class OneSignalDispatchersTests : FunSpec({
         entered.await(2, TimeUnit.SECONDS) shouldBe true
         OneSignalDispatchers.resetForTest()
         val builtAfterReset = AtomicInteger()
-        OneSignalDispatchers.afterExecutorCreateForTest = { _, _ -> builtAfterReset.incrementAndGet() }
+        DispatcherTestHooks.afterExecutorCreate = { _, _ -> builtAfterReset.incrementAndGet() }
         release.countDown()
         Thread.sleep(400)
         builtAfterReset.get() shouldBe 0
@@ -263,7 +264,7 @@ class OneSignalDispatchersTests : FunSpec({
         OneSignalDispatchers.resetForTest()
         val entered = CountDownLatch(1)
         val release = CountDownLatch(1)
-        OneSignalDispatchers.beforeLaneCreateForTest = { lane ->
+        DispatcherTestHooks.beforeLaneCreate = { lane ->
             if (lane == "INGRESS") {
                 entered.countDown()
                 awaitIgnoringInterrupts(release)
@@ -273,7 +274,7 @@ class OneSignalDispatchersTests : FunSpec({
         entered.await(2, TimeUnit.SECONDS) shouldBe true
         OneSignalDispatchers.resetForTest()
         val builtAfterReset = AtomicInteger()
-        OneSignalDispatchers.afterExecutorCreateForTest = { _, _ -> builtAfterReset.incrementAndGet() }
+        DispatcherTestHooks.afterExecutorCreate = { _, _ -> builtAfterReset.incrementAndGet() }
         release.countDown()
         Thread.sleep(400)
         builtAfterReset.get() shouldBe 0
@@ -285,7 +286,7 @@ class OneSignalDispatchersTests : FunSpec({
         val entered = CountDownLatch(1)
         val release = CountDownLatch(1)
         val built = AtomicReference<ThreadPoolExecutor>()
-        OneSignalDispatchers.afterExecutorCreateForTest = { lane, executor ->
+        DispatcherTestHooks.afterExecutorCreate = { lane, executor ->
             if (lane == "INGRESS") {
                 built.set(executor)
                 entered.countDown()
@@ -303,7 +304,7 @@ class OneSignalDispatchersTests : FunSpec({
     test("flag off reports Fallback for a lane that fell back") {
         OneSignalDispatchers.bootstrapEnabledForTest = false
         OneSignalDispatchers.resetForTest()
-        OneSignalDispatchers.beforeLaneCreateForTest = { lane ->
+        DispatcherTestHooks.beforeLaneCreate = { lane ->
             if (lane == "IO") throw IllegalStateException("boom")
         }
         val ran = CountDownLatch(1)
@@ -314,7 +315,7 @@ class OneSignalDispatchersTests : FunSpec({
     }
 
     test("bootstrap reports Fallback for a lane that fell back") {
-        OneSignalDispatchers.beforeLaneCreateForTest = { lane ->
+        DispatcherTestHooks.beforeLaneCreate = { lane ->
             if (lane == "IO") throw IllegalStateException("boom")
         }
         val ran = CountDownLatch(1)
@@ -328,8 +329,8 @@ class OneSignalDispatchersTests : FunSpec({
         OneSignalDispatchers.bootstrapEnabledForTest = false
         OneSignalDispatchers.resetForTest()
         val fallbacks = AtomicInteger()
-        OneSignalDispatchers.beforeLaneCreateForTest = { throw IllegalStateException("boom") }
-        OneSignalDispatchers.beforeFallbackCreateForTest = { fallbacks.incrementAndGet() }
+        DispatcherTestHooks.beforeLaneCreate = { throw IllegalStateException("boom") }
+        DispatcherTestHooks.beforeFallbackCreate = { fallbacks.incrementAndGet() }
         val ran = CountDownLatch(1)
         OneSignalDispatchers.launchOnIO { ran.countDown() }
         ran.await(2, TimeUnit.SECONDS) shouldBe true
@@ -339,12 +340,12 @@ class OneSignalDispatchersTests : FunSpec({
     test("flag off prewarm retries when the prewarm thread fails to start") {
         OneSignalDispatchers.bootstrapEnabledForTest = false
         OneSignalDispatchers.resetForTest()
-        OneSignalDispatchers.beforeLazyPrewarmStartForTest = { throw IllegalStateException("start failed") }
+        DispatcherTestHooks.beforeLazyPrewarmStart = { throw IllegalStateException("start failed") }
         OneSignalDispatchers.prewarm(null)
 
-        OneSignalDispatchers.beforeLazyPrewarmStartForTest = null
+        DispatcherTestHooks.beforeLazyPrewarmStart = null
         val created = CountDownLatch(4)
-        OneSignalDispatchers.beforeLaneCreateForTest = { created.countDown() }
+        DispatcherTestHooks.beforeLaneCreate = { created.countDown() }
         OneSignalDispatchers.prewarm(null)
         created.await(2, TimeUnit.SECONDS) shouldBe true
     }
