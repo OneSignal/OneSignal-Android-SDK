@@ -56,7 +56,7 @@ class StartupFlagsCacheTests : FunSpec({
         every { prefs.getStringSet(any(), any()) } returns null
         every { prefs.edit().putStringSet(any(), any()).commit() } returns false
 
-        shouldThrow<IllegalStateException> { StartupFlagsCache.write(context, listOf(key)) }
+        shouldThrow<IllegalStateException> { StartupFlagsCache.write(context) { listOf(key) } }
     }
 
     test("turning a flag off remotely reaches the next process") {
@@ -83,9 +83,9 @@ class StartupFlagsCacheTests : FunSpec({
 
     test("the file follows the remote flags, regardless of case") {
         val context = appContext()
-        StartupFlagsCache.write(context, listOf("SDK_Custom_Logging"))
+        StartupFlagsCache.write(context) { listOf("SDK_Custom_Logging") }
         StartupFlagsCache.readFile(context).isEnabled(logging) shouldBe true
-        StartupFlagsCache.write(context, listOf(FeatureFlag.SDK_IDENTITY_VERIFICATION.key))
+        StartupFlagsCache.write(context) { listOf(FeatureFlag.SDK_IDENTITY_VERIFICATION.key) }
         StartupFlagsCache.readFile(context).isEnabled(logging) shouldBe false
     }
 
@@ -117,13 +117,13 @@ class StartupFlagsCacheTests : FunSpec({
 
     test("only APP_STARTUP catalog keys reach the file") {
         val context = appContext()
-        StartupFlagsCache.write(context, listOf(key, FeatureFlag.SDK_IDENTITY_VERIFICATION.key, "not_in_catalog"))
+        StartupFlagsCache.write(context) { listOf(key, FeatureFlag.SDK_IDENTITY_VERIFICATION.key, "not_in_catalog") }
         startupPrefs().getStringSet("enabled", null) shouldBe setOf(key)
     }
 
     test("the file lives in device-protected storage, so it is readable before first unlock") {
         val context = appContext()
-        StartupFlagsCache.write(context, listOf(key))
+        StartupFlagsCache.write(context) { listOf(key) }
 
         startupPrefs().getStringSet("enabled", null) shouldBe setOf(key)
         context.getSharedPreferences(PrefsStartupFlagsStore.STORE, Context.MODE_PRIVATE).getStringSet("enabled", null) shouldBe null
@@ -184,7 +184,7 @@ class StartupFlagsCacheTests : FunSpec({
         every { editor.putStringSet(any(), any()) } returns editor
         every { editor.commit() } returns true
 
-        StartupFlagsCache.write(context, listOf(key))
+        StartupFlagsCache.write(context) { listOf(key) }
 
         verify { editor.putStringSet("enabled", setOf(key)) }
     }
@@ -195,11 +195,11 @@ class StartupFlagsCacheTests : FunSpec({
 
     test("the snapshot is read once per process") {
         val context = appContext()
-        StartupFlagsCache.write(context, listOf(key))
+        StartupFlagsCache.write(context) { listOf(key) }
         FeatureManager.resetStartupFlagsForTest()
         FeatureManager.startupFlags { context }.isEnabled(logging) shouldBe true
 
-        StartupFlagsCache.write(context, emptyList())
+        StartupFlagsCache.write(context) { emptyList() }
         FeatureManager.startupFlags { context }.isEnabled(logging) shouldBe true
 
         FeatureManager.resetStartupFlagsForTest()
@@ -208,7 +208,7 @@ class StartupFlagsCacheTests : FunSpec({
 
     test("FeatureManager reports the snapshot, not the store, when they disagree") {
         val context = appContext()
-        StartupFlagsCache.write(context, emptyList())
+        StartupFlagsCache.write(context) { emptyList() }
         FeatureManager.startupFlags { context }.isEnabled(logging) shouldBe false
 
         val store = MockHelper.configModelStore { it.sdkRemoteFeatureFlags = listOf(key) }
@@ -218,6 +218,40 @@ class StartupFlagsCacheTests : FunSpec({
 
         manager.isEnabled(logging) shouldBe false
         manager.enabledFeatureKeys() shouldBe emptyList()
+    }
+
+    test("FeatureManager built before the app context is set still reads the file") {
+        StartupFlagsCache.write(appContext()) { listOf(key) }
+        FeatureManager.resetStartupFlagsForTest()
+        val applicationService = MockHelper.applicationService()
+        every { applicationService.appContext } throws NullPointerException("not started")
+
+        val manager = FeatureManager(MockHelper.configModelStore { it.sdkRemoteFeatureFlags = listOf(key) }, applicationService)
+
+        manager.isEnabled(logging) shouldBe true
+        FeatureManager.startupFlags { null }.source shouldBe StartupFlagsSource.STORE
+    }
+
+    test("after a failed commit the next write retries, even with the same flags") {
+        val context = mockk<Context>()
+        val prefs = mockk<SharedPreferences>()
+        val editor = mockk<SharedPreferences.Editor>()
+        var inMemory: Set<String>? = null
+        var pending: Set<String>? = null
+        val commits = ArrayDeque(listOf(false, true))
+        every { context.applicationContext } returns context
+        every { context.createDeviceProtectedStorageContext() } returns context
+        every { context.getSharedPreferences(any(), any()) } returns prefs
+        every { prefs.getStringSet(any(), any()) } answers { inMemory }
+        every { prefs.edit() } returns editor
+        every { editor.putStringSet(any(), any()) } answers { pending = secondArg(); editor }
+        // Like SharedPreferences, a failed commit still updates the in-memory copy.
+        every { editor.commit() } answers { inMemory = pending; commits.removeFirst() }
+
+        shouldThrow<IllegalStateException> { StartupFlagsCache.write(context) { listOf(key) } }
+        StartupFlagsCache.write(context) { listOf(key) }
+
+        verify(exactly = 2) { editor.commit() }
     }
 
     test("FeatureManager mirrors the cached flags on start and on later updates, never before start") {
@@ -248,7 +282,7 @@ private fun startupPrefs(): SharedPreferences =
 
 private fun clearStores() {
     val context = appContext()
-    StartupFlagsCache.write(context, emptyList())
+    StartupFlagsCache.write(context) { emptyList() }
     context
         .getSharedPreferences(PreferenceStores.ONESIGNAL, Context.MODE_PRIVATE)
         .edit()

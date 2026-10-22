@@ -17,15 +17,18 @@ internal object StartupFlagsCache {
     private var latch = StartupFlagsLatch()
 
     /** The first caller in the process reads the file; everyone after gets the same answer. */
-    fun snapshot(context: () -> Context?): StartupFlags = latch.snapshot { context()?.let(::PrefsStartupFlagsStore) }
+    fun snapshot(context: () -> Context?): StartupFlags = latch.snapshot { storeFor(context() ?: currentApplication()) }
 
-    /** Mirrors the APP_STARTUP subset of [remoteFlags] for the next process. Call off the main thread. */
-    fun write(
-        context: Context,
-        remoteFlags: List<String>,
-    ) = write(context) { remoteFlags }
+    // The answer is latched for the whole process, so a missing context must be visible in logcat.
+    private fun storeFor(context: Context?): IStartupFlagsStore? {
+        if (context == null) Log.w(PrefsStartupFlagsStore.TAG, "startup flags: no application context, all off for this process")
+        return context?.let(::PrefsStartupFlagsStore)
+    }
 
-    /** [currentFlags] runs under the latch's mirror lock, so racing writers always leave the latest flags on disk. */
+    /**
+     * Mirrors the APP_STARTUP subset of [currentFlags] for the next process. Call off the main thread.
+     * [currentFlags] runs under the latch's mirror lock, so racing writers always leave the latest flags on disk.
+     */
     fun write(
         context: Context,
         currentFlags: () -> List<String>,
@@ -38,6 +41,7 @@ internal object StartupFlagsCache {
 
     /** Null forgets the snapshot, as a new process would. */
     internal fun setSnapshotForTest(flags: StartupFlags?) {
+        PrefsStartupFlagsStore.commitFailed = false
         latch =
             StartupFlagsLatch().also { fresh ->
                 if (flags != null) fresh.snapshot { FixedStore(flags.keys) }
@@ -59,6 +63,7 @@ internal class PrefsStartupFlagsStore(
     @Suppress("TooGenericExceptionCaught")
     override fun read(): Set<String>? =
         try {
+            check(!commitFailed) { "last startup flags commit failed" }
             prefs().getStringSet(KEY_ENABLED, null)?.toSet()
         } catch (t: Throwable) {
             // android.util.Log, not Logging: Logging can dispatch, and this can run before SDK init.
@@ -68,7 +73,9 @@ internal class PrefsStartupFlagsStore(
 
     // commit, not apply: the next process reads this at startup, so it must be on disk when we return.
     override fun write(keys: Set<String>) {
-        check(prefs().edit().putStringSet(KEY_ENABLED, keys).commit()) { "startup flags commit failed" }
+        val committed = prefs().edit().putStringSet(KEY_ENABLED, keys).commit()
+        commitFailed = !committed
+        check(committed) { "startup flags commit failed" }
     }
 
     private fun prefs(): SharedPreferences = storageContext(context).getSharedPreferences(STORE, Context.MODE_PRIVATE)
@@ -76,7 +83,11 @@ internal class PrefsStartupFlagsStore(
     internal companion object {
         const val STORE = "OneSignalStartupFlags"
         private const val KEY_ENABLED = "enabled"
-        private const val TAG = "OneSignal"
+        const val TAG = "OneSignal"
+
+        // A failed commit still updates the in-memory prefs, so reads can't be trusted until a commit lands.
+        @Volatile
+        var commitFailed = false
 
         // Device-protected so receivers and jobs that start before first unlock read the real values.
         // Must hold nothing secret: this storage is readable while the device is still locked.
@@ -86,3 +97,13 @@ internal class PrefsStartupFlagsStore(
         }
     }
 }
+
+/** The process Application, for when the startup provider is disabled or this is not the default process. */
+@Suppress("TooGenericExceptionCaught", "SwallowedException")
+internal fun currentApplication(): Context? =
+    try {
+        val method = Class.forName("android.app.ActivityThread").getMethod("currentApplication")
+        method.invoke(null) as? Context
+    } catch (_: Throwable) {
+        null
+    }

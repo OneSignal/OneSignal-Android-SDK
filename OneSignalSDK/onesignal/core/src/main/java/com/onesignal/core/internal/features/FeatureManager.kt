@@ -53,7 +53,7 @@ internal class FeatureManager(
 ) : IFeatureManager, IStartableService, ISingletonModelStoreChangeHandler<ConfigModel> {
     private val latch = SharedFeatureManager()
 
-    // Mirror writes wait for start(), which runs off main, so construction on main never writes.
+    // Construction can run on main, so mirror writes wait for start(), which OneSignalImp calls off main.
     @Volatile
     private var started = false
 
@@ -65,6 +65,7 @@ internal class FeatureManager(
         // APP_STARTUP flags come from the snapshot pre-init code also latched from, so telemetry
         // never reports a startup flag the running process is not using.
         val startup = StartupFlagsCache.snapshot { appContextOrNull() }
+        Logging.debug("OneSignal: startup flags source=${startup.source} enabled=${startup.keys}")
         try {
             logDeferred(latch.refreshAtStartup(configModelStore.model.sdkRemoteFeatureFlags, startup, localFeatureOverrides))
         } catch (t: Throwable) {
