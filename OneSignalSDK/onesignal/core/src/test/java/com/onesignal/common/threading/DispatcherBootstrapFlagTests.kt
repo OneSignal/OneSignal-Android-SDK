@@ -31,6 +31,7 @@ class DispatcherBootstrapFlagTests : FunSpec({
     afterTest {
         reportListener?.let(Logging::removeListener)
         reportListener = null
+        DispatcherTestHooks.reset()
         StartupFlagsCache.write(appContext()) { emptyList() }
         OneSignalDispatchers.resetBootstrapInputsForTest()
         OneSignalDispatchers.resetForTest()

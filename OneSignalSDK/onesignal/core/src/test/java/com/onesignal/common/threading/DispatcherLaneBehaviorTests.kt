@@ -28,6 +28,7 @@ class DispatcherLaneBehaviorTests : FunSpec({
             }
 
             afterEach {
+                DispatcherTestHooks.reset()
                 OneSignalDispatchers.resetBootstrapInputsForTest()
                 OneSignalDispatchers.resetForTest()
             }

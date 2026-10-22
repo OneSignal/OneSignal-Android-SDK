@@ -27,6 +27,7 @@ class OneSignalDispatchersTests : FunSpec({
     }
 
     afterTest {
+        DispatcherTestHooks.reset()
         OneSignalDispatchers.resetBootstrapInputsForTest()
         OneSignalDispatchers.resetForTest()
     }

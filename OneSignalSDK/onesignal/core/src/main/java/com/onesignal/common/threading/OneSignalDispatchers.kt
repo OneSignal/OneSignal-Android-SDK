@@ -43,25 +43,32 @@ object OneSignalDispatchers {
         FeatureManager.resetStartupFlagsForTest()
     }
 
-    internal fun currentPools(): DispatcherPools = poolsRef ?: publishFirstPools()
+    private fun currentPools(): DispatcherPools = poolsRef ?: publishFirstPools()
 
     // A launch from the choice re-enters here (poolsLock is reentrant) and publishes first; keep those pools.
-    // Logging can launch, so a choice failure is logged only after publishing.
-    @Suppress("ReturnCount")
+    // Only test hooks re-enter today: the production choice reads a prefs file and builds pools without launching.
+    // Logging can launch, so only the outermost call records, after publishing and outside poolsLock.
     private fun publishFirstPools(): DispatcherPools {
+        var published: DispatcherPools? = null
         val choice =
             synchronized(poolsLock) {
                 poolsRef?.let { return it }
-                val choice = choosePools(bootstrapEnabledForTest, AppContext::get)
-                poolsRef?.let { published ->
-                    choice.pools.shutdown()
-                    return published
+                choosePools(bootstrapEnabledForTest, AppContext::get).also { choice ->
+                    published = poolsRef
+                    if (published == null) poolsRef = choice.pools else choice.pools.shutdown()
                 }
-                choice.also { poolsRef = it.pools }
             }
-        recordChoice(choice)
-        return choice.pools
+        if (!Thread.holdsLock(poolsLock)) recordChoice(choice)
+        return published ?: choice.pools
     }
+
+    internal fun holdsPoolsLockForTest(): Boolean = Thread.holdsLock(poolsLock)
+
+    internal fun getPerformanceMetrics(): String = performanceMetrics(currentPools())
+
+    internal fun getStatus(): String = dispatcherStatus(currentPools())
+
+    internal fun awaitReadyForTest(): Boolean = awaitPoolsReady(::currentPools)
 
     /** Call only after [choice] is published: reporting can log, and log listeners can launch. */
     private fun recordChoice(choice: PoolChoice) {

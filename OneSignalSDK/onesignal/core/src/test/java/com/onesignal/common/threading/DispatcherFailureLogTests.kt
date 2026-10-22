@@ -8,6 +8,7 @@ import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.ints.shouldBeLessThanOrEqual
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeSameInstanceAs
+import kotlinx.coroutines.CoroutineDispatcher
 import org.robolectric.shadows.ShadowLog
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
@@ -24,6 +25,7 @@ class DispatcherFailureLogTests : FunSpec({
     }
 
     afterEach {
+        DispatcherTestHooks.reset()
         OneSignalDispatchers.bootstrapEnabledForTest = null
         OneSignalDispatchers.resetForTest()
     }
@@ -118,18 +120,42 @@ class DispatcherFailureLogTests : FunSpec({
 
     test("a choice that re-enters keeps the pools the inner call published") {
         OneSignalDispatchers.bootstrapEnabledForTest = false
-        var inner: DispatcherPools? = null
+        var inner: CoroutineDispatcher? = null
         DispatcherTestHooks.beforePoolChoice = {
             if (inner == null) {
                 DispatcherTestHooks.beforePoolChoice = null
-                inner = OneSignalDispatchers.currentPools()
+                inner = OneSignalDispatchers.IO
             }
         }
         OneSignalDispatchers.unpublishPoolsForTest()
 
-        val outer = OneSignalDispatchers.currentPools()
+        val outer = OneSignalDispatchers.IO
 
         outer shouldBeSameInstanceAs inner
-        OneSignalDispatchers.currentPools() shouldBeSameInstanceAs inner
+        OneSignalDispatchers.IO shouldBeSameInstanceAs inner
+    }
+
+    test("a re-entrant choice is recorded once, after the outer call releases the pool lock") {
+        Logging.logLevel = LogLevel.NONE
+        OneSignalDispatchers.resetBootstrapInputsForTest()
+        val lockHeldWhileRecording = mutableListOf<Boolean>()
+        DispatcherTestHooks.duringChoiceHandoff = {
+            lockHeldWhileRecording += OneSignalDispatchers.holdsPoolsLockForTest()
+        }
+        var reentered = false
+        DispatcherTestHooks.beforePoolChoice = {
+            if (!reentered) {
+                reentered = true
+                OneSignalDispatchers.IO
+            }
+        }
+        try {
+            OneSignalDispatchers.unpublishPoolsForTest()
+            OneSignalDispatchers.IO
+        } finally {
+            OneSignalDispatchers.resetBootstrapInputsForTest()
+        }
+
+        lockHeldWhileRecording shouldBe listOf(false)
     }
 })

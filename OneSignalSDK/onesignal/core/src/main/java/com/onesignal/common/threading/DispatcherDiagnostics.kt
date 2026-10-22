@@ -10,8 +10,7 @@ private const val NOT_AVAILABLE = "n/a"
 private const val STACK_KB_PER_THREAD = 1024
 private val READY_STATUSES = setOf("Active", "Fallback")
 
-internal fun OneSignalDispatchers.getPerformanceMetrics(): String {
-    val current = currentPools()
+internal fun performanceMetrics(current: DispatcherPools): String {
     val io = current.io.executor()
     val default = current.defaultLane.executor()
     val serial = current.serialIO.executor()
@@ -30,8 +29,7 @@ internal fun OneSignalDispatchers.getPerformanceMetrics(): String {
     """.trimIndent()
 }
 
-internal fun OneSignalDispatchers.getStatus(): String {
-    val current = currentPools()
+internal fun dispatcherStatus(current: DispatcherPools): String {
     return """
         OneSignalDispatchers Status:
         - IO Executor: ${current.io.status()}
@@ -45,10 +43,13 @@ internal fun OneSignalDispatchers.getStatus(): String {
     """.trimIndent()
 }
 
-internal fun OneSignalDispatchers.awaitReadyForTest(timeoutMs: Long = TEST_READY_TIMEOUT_MS): Boolean {
+internal fun awaitPoolsReady(
+    pools: () -> DispatcherPools,
+    timeoutMs: Long = TEST_READY_TIMEOUT_MS,
+): Boolean {
     val deadline = System.currentTimeMillis() + timeoutMs
     while (System.currentTimeMillis() < deadline) {
-        val current = currentPools()
+        val current = pools()
         if (listOf(current.io, current.defaultLane, current.serialIO, current.ingress).all { it.status() in READY_STATUSES }) {
             return true
         }
