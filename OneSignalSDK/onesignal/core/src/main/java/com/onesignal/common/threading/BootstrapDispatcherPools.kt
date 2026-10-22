@@ -213,7 +213,7 @@ private class GateDispatcher(
     override fun status(): String =
         synchronized(lock) {
             when (state) {
-                LaneState.READY -> "Active"
+                LaneState.READY -> if (target?.executor == null) "Fallback" else "Active"
                 LaneState.CLOSED -> "Shutdown"
                 else -> state.name.lowercase().replaceFirstChar { it.uppercase() }
             }

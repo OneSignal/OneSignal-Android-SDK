@@ -359,7 +359,7 @@ object OneSignalDispatchers {
         val deadline = System.currentTimeMillis() + timeoutMs
         while (System.currentTimeMillis() < deadline) {
             val current = currentPools()
-            if (listOf(current.io, current.defaultLane, current.serialIO, current.ingress).all { it.status() == "Active" }) {
+            if (listOf(current.io, current.defaultLane, current.serialIO, current.ingress).all { it.status() in READY_STATUSES }) {
                 return true
             }
             Thread.sleep(TEST_READY_POLL_MS)
@@ -389,6 +389,7 @@ object OneSignalDispatchers {
             "$name $NOT_INITIALIZED ${e.message ?: UNKNOWN_ERROR}"
         }
 
+    private val READY_STATUSES = setOf("Active", "Fallback")
     private const val NOT_INITIALIZED = "Not initialized"
     private const val UNKNOWN_ERROR = "Unknown error"
 }

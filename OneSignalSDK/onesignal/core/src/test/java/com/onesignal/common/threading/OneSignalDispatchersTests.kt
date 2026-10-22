@@ -300,6 +300,30 @@ class OneSignalDispatchersTests : FunSpec({
         built.get().isShutdown shouldBe true
     }
 
+    test("flag off reports Fallback for a lane that fell back") {
+        OneSignalDispatchers.bootstrapEnabledForTest = false
+        OneSignalDispatchers.resetForTest()
+        OneSignalDispatchers.beforeLaneCreateForTest = { lane ->
+            if (lane == "IO") throw IllegalStateException("boom")
+        }
+        val ran = CountDownLatch(1)
+        OneSignalDispatchers.launchOnIO { ran.countDown() }
+        ran.await(2, TimeUnit.SECONDS) shouldBe true
+
+        awaitStatus("IO Executor: Fallback") shouldBe true
+    }
+
+    test("bootstrap reports Fallback for a lane that fell back") {
+        OneSignalDispatchers.beforeLaneCreateForTest = { lane ->
+            if (lane == "IO") throw IllegalStateException("boom")
+        }
+        val ran = CountDownLatch(1)
+        OneSignalDispatchers.launchOnIO { ran.countDown() }
+        ran.await(2, TimeUnit.SECONDS) shouldBe true
+
+        awaitStatus("IO Executor: Fallback") shouldBe true
+    }
+
     test("flag off falls back when executor construction throws") {
         OneSignalDispatchers.bootstrapEnabledForTest = false
         OneSignalDispatchers.resetForTest()
@@ -334,6 +358,15 @@ class OneSignalDispatchersTests : FunSpec({
         OneSignalDispatchers.getStatus() shouldBe statusBefore
     }
 })
+
+private fun awaitStatus(line: String): Boolean {
+    val deadline = System.currentTimeMillis() + 2_000
+    while (System.currentTimeMillis() < deadline) {
+        if (line in OneSignalDispatchers.getStatus()) return true
+        Thread.sleep(5)
+    }
+    return false
+}
 
 private fun awaitIgnoringInterrupts(latch: CountDownLatch) {
     val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(2)
