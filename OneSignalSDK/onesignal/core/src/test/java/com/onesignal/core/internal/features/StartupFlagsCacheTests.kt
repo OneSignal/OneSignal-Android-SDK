@@ -149,6 +149,21 @@ class StartupFlagsCacheTests : FunSpec({
         flags.isEnabled(logging) shouldBe true
     }
 
+    test("a context with no application context yet still reads device-protected flags") {
+        val deviceProtected = mockk<SharedPreferences>()
+        every { deviceProtected.getStringSet(any(), any()) } returns setOf(key)
+        val dpContext = mockk<Context>()
+        every { dpContext.getSharedPreferences(any(), any()) } returns deviceProtected
+        val attaching = mockk<Context>()
+        every { attaching.applicationContext } returns null
+        every { attaching.createDeviceProtectedStorageContext() } returns dpContext
+
+        val flags = StartupFlagsCache.readFile(attaching)
+
+        flags.source shouldBe StartupFlagsSource.STORE
+        flags.isEnabled(logging) shouldBe true
+    }
+
     test("an IMMEDIATE flag is off even if its key is in the file") {
         val immediate = FeatureFlag.SDK_IDENTITY_VERIFICATION
         startupPrefs().edit().putStringSet("enabled", setOf(immediate.key)).commit()

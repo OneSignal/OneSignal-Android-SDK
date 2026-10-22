@@ -147,7 +147,7 @@ internal class FeatureManager(
         try {
             StartupFlagsCache.write(applicationService.appContext) { configModelStore.model.sdkRemoteFeatureFlags }
         } catch (t: Throwable) {
-            Logging.warn("OneSignal: failed to mirror startup flags: ${t.message}", t)
+            Logging.error("OneSignal: failed to mirror startup flags: ${t.message}", t)
         }
     }
 
