@@ -10,6 +10,7 @@ import com.onesignal.OneSignalError
 import com.onesignal.OneSignalResult
 import com.onesignal.OneSignalUserProfile
 import com.onesignal.common.AndroidUtils
+import com.onesignal.common.AppContext
 import com.onesignal.common.DeviceUtils
 import com.onesignal.common.OneSignalUtils
 import com.onesignal.common.isMissing
@@ -247,6 +248,8 @@ internal class OneSignalImp : IOneSignal,
     }
 
     private fun initEssentials(context: Context) {
+        // Before the logger: its first log can build FeatureManager, whose startup flags need a context.
+        AppContext.note(context)
         // LoggerLifecycleManager comes up early so crash handling and remote logging can capture
         // anything that happens during the rest of init. FeatureManager is wired in via a
         // lazy supplier — `enabledFeatureFlags` is read per-event, so resolving the manager

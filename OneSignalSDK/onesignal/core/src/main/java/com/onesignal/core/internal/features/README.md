@@ -43,10 +43,10 @@ process-wide holder (`StartupFlagsCache`).
 - **Missing or unreadable means off.** A missing file, a read that throws, or no application context
   all give an empty snapshot. The source (`STORE`, `MISSING`, `UNREADABLE`, `NO_STORE`) is logged at
   debug when `FeatureManager` is built.
-- **The process Application is the fallback context.** When the caller has no context yet (the
-  startup provider is disabled, or this is not the default process), the snapshot uses
-  `ActivityThread.currentApplication()`. `NO_STORE` only happens when that is missing too, and logs a
-  warning.
+- **SDK entry points note the context.** When the caller has no context yet (for example, init's
+  first log builds `FeatureManager` before `ApplicationService` starts), the snapshot uses the one in
+  `AppContext`, noted by the startup initializer and at the start of init. No reflection: if nothing
+  noted one, the snapshot is `NO_STORE` and logs a warning.
 - **One value per process, even when unreadable.** The first read wins, including an `UNREADABLE`
   one. Later readers in the same process (sync jobs, FCM receivers, prewarm) never re-read and get a
   different answer, so code that already latched "off" never disagrees with code that runs later.

@@ -2,8 +2,10 @@ package com.onesignal.core.internal.application.impl
 
 import android.app.Application
 import android.content.Context
+import com.onesignal.common.AppContext
 import com.onesignal.common.threading.OneSignalDispatchers
 import io.kotest.core.spec.style.FunSpec
+import io.kotest.matchers.shouldBe
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkObject
@@ -27,11 +29,13 @@ class ActivityLifecycleInitializerTests : FunSpec({
         mockkObject(OneSignalDispatchers)
         every { OneSignalDispatchers.prewarm() } returns Unit
         resetSharedApplicationService()
+        AppContext.resetForTest()
     }
 
     afterTest {
         unmockkObject(OneSignalDispatchers)
         resetSharedApplicationService()
+        AppContext.resetForTest()
     }
 
     test("create prewarms before registering activity lifecycle callbacks") {
@@ -48,6 +52,15 @@ class ActivityLifecycleInitializerTests : FunSpec({
             OneSignalDispatchers.prewarm()
             application.registerActivityLifecycleCallbacks(any<Application.ActivityLifecycleCallbacks>())
         }
+    }
+
+    test("create notes the application context for code that runs before init") {
+        val application = mockk<Application>(relaxed = true)
+        every { application.applicationContext } returns application
+
+        ActivityLifecycleInitializer().create(application)
+
+        AppContext.get() shouldBe application
     }
 
     test("create prewarms even when application context is unavailable") {
