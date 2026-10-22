@@ -372,6 +372,27 @@ class WebViewManagerDismissCleanupTests : FunSpec({
         again.indexOf("typeof setSafeAreaInsets") shouldBe again.lastIndexOf("typeof setSafeAreaInsets")
     }
 
+    test("empty html is not given a safe area script") {
+        val activity = Robolectric.buildActivity(Activity::class.java).setup().get()
+        val content =
+            InAppMessageContent(
+                JSONObject().put("display_duration", 0),
+            )
+        content.contentHtml = ""
+        val manager =
+            WebViewManager(
+                InAppMessage("test-iam", MockHelper.time(1)),
+                activity,
+                content,
+                mockk(relaxed = true),
+                mockApplicationService(activity),
+                mockk(relaxed = true),
+            )
+
+        manager.setContentSafeAreaInsets(content, activity) shouldBe ""
+        content.contentHtml shouldBe ""
+    }
+
     test("full-bleed WebView lays out behind system bars without hiding navigation, then cleans up") {
         val activity = Robolectric.buildActivity(Activity::class.java).setup().get()
         val applicationService = mockApplicationService(activity)
