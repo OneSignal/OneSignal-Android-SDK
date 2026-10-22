@@ -7,6 +7,7 @@ import com.onesignal.debug.internal.logging.Logging
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.ints.shouldBeLessThanOrEqual
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.types.shouldBeSameInstanceAs
 import org.robolectric.shadows.ShadowLog
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
@@ -115,4 +116,20 @@ class DispatcherFailureLogTests : FunSpec({
         choices.get() shouldBe 1
     }
 
+    test("a choice that re-enters keeps the pools the inner call published") {
+        OneSignalDispatchers.bootstrapEnabledForTest = false
+        var inner: DispatcherPools? = null
+        DispatcherTestHooks.beforePoolChoice = {
+            if (inner == null) {
+                DispatcherTestHooks.beforePoolChoice = null
+                inner = OneSignalDispatchers.currentPools()
+            }
+        }
+        OneSignalDispatchers.unpublishPoolsForTest()
+
+        val outer = OneSignalDispatchers.currentPools()
+
+        outer shouldBeSameInstanceAs inner
+        OneSignalDispatchers.currentPools() shouldBeSameInstanceAs inner
+    }
 })

@@ -60,13 +60,19 @@ object OneSignalDispatchers {
 
     internal fun currentPools(): DispatcherPools = poolsRef ?: publishFirstPools()
 
-    // The choice must not launch work: a launch would re-enter here before poolsRef is set.
+    // A launch from the choice re-enters here (poolsLock is reentrant) and publishes first; keep those pools.
     // Logging can launch, so a choice failure is logged only after publishing.
+    @Suppress("ReturnCount")
     private fun publishFirstPools(): DispatcherPools {
         val choice =
             synchronized(poolsLock) {
                 poolsRef?.let { return it }
-                choosePools(bootstrapEnabledForTest, ::applicationContext).also { poolsRef = it.pools }
+                val choice = choosePools(bootstrapEnabledForTest, ::applicationContext)
+                poolsRef?.let { published ->
+                    choice.pools.shutdown()
+                    return published
+                }
+                choice.also { poolsRef = it.pools }
             }
         recordChoice(choice)
         return choice.pools
