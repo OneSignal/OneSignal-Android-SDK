@@ -4,6 +4,7 @@
 `OneSignalStartupFlags`, so code that runs before SDK init can read them without loading the whole
 OneSignal prefs file (operations queue included) on the main thread. Typical pre-init readers make a
 choice that lives for the whole process, such as which thread pools or logging pipeline to build.
+`OneSignalDispatchers` is one: it picks its pools from `sdk_dispatcher_bootstrap`.
 
 ## Adding a startup flag
 
@@ -69,8 +70,9 @@ process-wide holder (`StartupFlagsCache`).
 ## Tests
 
 - `FeatureManager.resetStartupFlagsForTest()` forgets the snapshot, as a new process would.
-  `OneSignalTestProjectConfig` calls it around every spec.
+  `OneSignalTestProjectConfig` calls it around every spec, and `OneSignalDispatchers.resetForTest()`
+  calls it before building a new pool generation.
 - `StartupFlagsCache.setSnapshotForTest(...)` installs a fixed snapshot; `readFile` reads the file
   without touching the snapshot.
 - `FeatureManager.localFeatureOverrides` does not reach the snapshot. Pre-init readers need their own
-  test hooks.
+  test hooks (for example `OneSignalDispatchers.bootstrapEnabledForTest`).

@@ -356,7 +356,7 @@ internal class OneSignalImp : IOneSignal,
         // of suspendifyOnIO / launchOnSerialIO doesn't pay the ThreadPoolExecutor + dispatcher +
         // scope construction cost on the main thread (observed as 5-20s main-thread blocks at the
         // first foreground/background lifecycle event). prewarm() is idempotent and fire-and-forget.
-        OneSignalDispatchers.prewarm()
+        OneSignalDispatchers.prewarm(context)
 
         synchronized(initLock) {
             if (initState.isSDKAccessible()) {
@@ -765,7 +765,7 @@ internal class OneSignalImp : IOneSignal,
         // (e.g. SyncJobService.onStartJob -> suspendifyOnIO -> initWithContext(context)) pays the
         // cold-init cost on the dispatcher used to enter [withContext] below, so warm
         // OneSignalDispatchers on a background thread before we touch [ioDispatcher].
-        OneSignalDispatchers.prewarm()
+        OneSignalDispatchers.prewarm(context)
 
         // Observing a terminal SUCCESS must never require an IO worker (see waitForInit).
         if (initState == InitState.SUCCESS) {

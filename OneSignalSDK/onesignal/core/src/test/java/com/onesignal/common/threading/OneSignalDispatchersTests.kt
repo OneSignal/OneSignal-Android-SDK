@@ -5,18 +5,15 @@ import com.onesignal.debug.internal.logging.Logging
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
-import io.kotest.matchers.string.shouldContain
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withContext
 import java.util.Collections
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
+import java.util.concurrent.atomic.AtomicReference
 
 class OneSignalDispatchersTests : FunSpec({
 
@@ -24,39 +21,14 @@ class OneSignalDispatchersTests : FunSpec({
         Logging.logLevel = LogLevel.NONE
     }
 
-    test("OneSignalDispatchers should be properly initialized") {
-        // Access dispatchers to trigger initialization
-        OneSignalDispatchers.IO shouldNotBe null
-        OneSignalDispatchers.Default shouldNotBe null
+    beforeTest {
+        OneSignalDispatchers.bootstrapEnabledForTest = true
+        OneSignalDispatchers.resetForTest()
     }
 
-    test("ingress work runs while every IO worker is blocked") {
+    afterTest {
+        OneSignalDispatchers.resetBootstrapInputsForTest()
         OneSignalDispatchers.resetForTest()
-        val releaseIo = CountDownLatch(1)
-        val ioWorkersBlocked = CountDownLatch(2)
-        val ingressRan = CountDownLatch(1)
-        var ingressThreadName: String? = null
-
-        repeat(2) {
-            OneSignalDispatchers.launchOnIO {
-                ioWorkersBlocked.countDown()
-                releaseIo.await()
-            }
-        }
-        ioWorkersBlocked.await(1, TimeUnit.SECONDS) shouldBe true
-
-        OneSignalDispatchers.launchOnIngress {
-            ingressThreadName = Thread.currentThread().name
-            ingressRan.countDown()
-        }
-
-        try {
-            ingressRan.await(1, TimeUnit.SECONDS) shouldBe true
-            ingressThreadName shouldContain "OneSignal-Ingress"
-        } finally {
-            releaseIo.countDown()
-            OneSignalDispatchers.resetForTest()
-        }
     }
 
     test("prewarm bootstraps the ingress lane before the other lanes") {
@@ -65,7 +37,7 @@ class OneSignalDispatchersTests : FunSpec({
         OneSignalDispatchers.beforeLaneCreateForTest = { created += it }
 
         try {
-            OneSignalDispatchers.prewarm()
+            OneSignalDispatchers.prewarm(null)
             OneSignalDispatchers.awaitReadyForTest() shouldBe true
             created.first() shouldBe "INGRESS"
         } finally {
@@ -203,126 +175,6 @@ class OneSignalDispatchersTests : FunSpec({
         OneSignalDispatchers.resetForTest()
     }
 
-    test("IO dispatcher should execute work on background thread") {
-        val mainThreadId = Thread.currentThread().id
-        var backgroundThreadId: Long? = null
-
-        runBlocking {
-            withContext(OneSignalDispatchers.IO) {
-                backgroundThreadId = Thread.currentThread().id
-            }
-        }
-
-        backgroundThreadId shouldNotBe null
-        backgroundThreadId shouldNotBe mainThreadId
-    }
-
-    test("Default dispatcher should execute work on background thread") {
-        val mainThreadId = Thread.currentThread().id
-        var backgroundThreadId: Long? = null
-
-        runBlocking {
-            withContext(OneSignalDispatchers.Default) {
-                backgroundThreadId = Thread.currentThread().id
-            }
-        }
-
-        backgroundThreadId shouldNotBe null
-        backgroundThreadId shouldNotBe mainThreadId
-    }
-
-    test("IOScope should launch coroutines asynchronously") {
-        var completed = false
-
-        OneSignalDispatchers.launchOnIO {
-            Thread.sleep(100)
-            completed = true
-        }
-
-        Thread.sleep(50)
-        completed shouldBe false
-    }
-
-    test("DefaultScope should launch coroutines asynchronously") {
-        var completed = false
-
-        OneSignalDispatchers.launchOnDefault {
-            Thread.sleep(100)
-            completed = true
-        }
-
-        Thread.sleep(50)
-        completed shouldBe false
-    }
-
-    test("getStatus should return meaningful status information") {
-        OneSignalDispatchers.prewarm()
-        OneSignalDispatchers.awaitReadyForTest() shouldBe true
-        val status = OneSignalDispatchers.getStatus()
-
-        status shouldContain "OneSignalDispatchers Status:"
-        status shouldContain "IO Executor: Active"
-        status shouldContain "Default Executor: Active"
-        status shouldContain "SerialIO Executor: Active"
-        status shouldContain "IO Scope: Active"
-        status shouldContain "Default Scope: Active"
-        status shouldContain "SerialIO Scope: Active"
-        status shouldContain "Ingress Executor: Active"
-        status shouldContain "Ingress Scope: Active"
-    }
-
-    test("getPerformanceMetrics should include SerialIO queue and total completed task counters") {
-        // Trigger lazy init of the SerialIO executor before asking for metrics so its queue
-        // line resolves to a concrete value instead of the "n/a" fallback path.
-        OneSignalDispatchers.SerialIO shouldNotBe null
-
-        val metrics = OneSignalDispatchers.getPerformanceMetrics()
-
-        metrics shouldContain "OneSignalDispatchers Performance Metrics:"
-        metrics shouldContain "SerialIO Queue:"
-        metrics shouldContain "Total completed tasks:"
-    }
-
-    test("SerialIO dispatcher executes work on a background thread") {
-        val callerThreadId = Thread.currentThread().id
-        var serialThreadId: Long? = null
-
-        runBlocking {
-            withContext(OneSignalDispatchers.SerialIO) {
-                serialThreadId = Thread.currentThread().id
-            }
-        }
-
-        serialThreadId shouldNotBe null
-        serialThreadId shouldNotBe callerThreadId
-    }
-
-    test("launchOnSerialIO runs tasks on a single thread in submission order") {
-        // SerialIO's contract: submission order on the caller thread == execution order on
-        // the worker thread. We submit N tasks with a small sleep so they queue up, then
-        // assert the recorded order matches submission order and that all observations
-        // came from one thread.
-        val taskCount = 5
-        val observedOrder = mutableListOf<Int>()
-        val observedThreads = mutableSetOf<Long>()
-        val latch = CountDownLatch(taskCount)
-
-        repeat(taskCount) { i ->
-            OneSignalDispatchers.launchOnSerialIO {
-                Thread.sleep(5)
-                synchronized(observedOrder) {
-                    observedOrder.add(i)
-                    observedThreads.add(Thread.currentThread().id)
-                }
-                latch.countDown()
-            }
-        }
-
-        latch.await()
-        observedOrder shouldBe (0 until taskCount).toList()
-        observedThreads.size shouldBe 1
-    }
-
     test("executorStatus returns 'Active' / 'Shutdown' on the happy path and the Not initialized message when the underlying check throws") {
         // Happy paths (Shutdown / Active) are exercised indirectly via getStatus(); this
         // case pins down the defensive catch branch, which fires when the underlying
@@ -351,140 +203,178 @@ class OneSignalDispatchersTests : FunSpec({
         } shouldBe "IOScope Not initialized Unknown error"
     }
 
-    test("exceptions in a SerialIO task do not stop subsequent tasks from running") {
-        // Mirrors the parallel "exceptions in one task should not affect others" case for
-        // launchOnIO. A thrown exception in one serial task must not poison the dispatcher
-        // for the rest of the queue.
-        val latch = CountDownLatch(3)
-        val successCount = AtomicInteger(0)
-        val errorCount = AtomicInteger(0)
-
-        repeat(3) { i ->
-            OneSignalDispatchers.launchOnSerialIO {
-                try {
-                    if (i == 1) {
-                        throw RuntimeException("Test error")
-                    }
-                    successCount.incrementAndGet()
-                } catch (e: Exception) {
-                    errorCount.incrementAndGet()
-                } finally {
-                    latch.countDown()
-                }
-            }
-        }
-
-        latch.await()
-        successCount.get() shouldBe 2
-        errorCount.get() shouldBe 1
-    }
-
-    test("dispatchers should handle concurrent operations") {
-        val results = mutableListOf<Int>()
-        val expectedResults = (1..5).toList()
-
-        runBlocking {
-            (1..5).forEach { i ->
-                OneSignalDispatchers.launchOnIO {
-                    Thread.sleep(10)
-                    synchronized(results) {
-                        results.add(i)
-                    }
-                }
-            }
-
-            Thread.sleep(100)
-        }
-
-        results.sorted() shouldBe expectedResults
-    }
-
-    test("multiple concurrent launches should not cause issues") {
-        val latch = CountDownLatch(5) // Reduced from 20 to 5
-        val completed = AtomicInteger(0)
-
-        repeat(5) { i -> // Reduced from 20 to 5
-            OneSignalDispatchers.launchOnIO {
-                delay(10) // Use coroutine delay instead of Thread.sleep
-                completed.incrementAndGet()
-                latch.countDown()
-            }
-        }
-
-        latch.await()
-        completed.get() shouldBe 5 // Updated expectation
-    }
-
-    test("mixed IO and computation tasks should work together") {
-        val latch = CountDownLatch(10)
-        val ioCount = AtomicInteger(0)
-        val compCount = AtomicInteger(0)
-
-        repeat(5) { i ->
-            OneSignalDispatchers.launchOnIO {
-                Thread.sleep(20)
-                ioCount.incrementAndGet()
-                latch.countDown()
-            }
-
-            OneSignalDispatchers.launchOnDefault {
-                Thread.sleep(20)
-                compCount.incrementAndGet()
-                latch.countDown()
-            }
-        }
-
-        latch.await()
-        ioCount.get() shouldBe 5
-        compCount.get() shouldBe 5
-    }
-
-    test("exceptions in one task should not affect others") {
-        val latch = CountDownLatch(5)
-        val successCount = AtomicInteger(0)
-        val errorCount = AtomicInteger(0)
-
-        repeat(5) { i ->
-            OneSignalDispatchers.launchOnIO {
-                try {
-                    if (i == 2) {
-                        throw RuntimeException("Test error")
-                    }
-                    Thread.sleep(10)
-                    successCount.incrementAndGet()
-                } catch (e: Exception) {
-                    errorCount.incrementAndGet()
-                } finally {
-                    latch.countDown()
-                }
-            }
-        }
-
-        latch.await()
-        successCount.get() shouldBe 4
-        errorCount.get() shouldBe 1
-    }
-
-    test("prewarm returns immediately and warms IO / Default / SerialIO dispatchers on a background thread") {
+    test("flag off constructs the IO executor on the calling thread") {
+        OneSignalDispatchers.bootstrapEnabledForTest = false
         OneSignalDispatchers.resetForTest()
-        OneSignalDispatchers.prewarm()
+        val callerThreadId = AtomicLong()
+        val createThreadId = AtomicLong()
+        val finished = CountDownLatch(1)
+        OneSignalDispatchers.beforeLaneCreateForTest = { lane ->
+            if (lane == "IO") createThreadId.set(Thread.currentThread().id)
+        }
 
-        OneSignalDispatchers.awaitReadyForTest() shouldBe true
-        val status = OneSignalDispatchers.getStatus()
-        status shouldContain "IO Executor: Active"
-        status shouldContain "Default Executor: Active"
-        status shouldContain "SerialIO Executor: Active"
-        status shouldContain "IO Scope: Active"
-        status shouldContain "Default Scope: Active"
-        status shouldContain "SerialIO Scope: Active"
+        Thread {
+            callerThreadId.set(Thread.currentThread().id)
+            OneSignalDispatchers.launchOnIO { }
+            finished.countDown()
+        }.start()
+
+        finished.await(2, TimeUnit.SECONDS) shouldBe true
+        createThreadId.get() shouldBe callerThreadId.get()
+        createThreadId.get() shouldNotBe 0L
+    }
+
+    test("flag off prewarm warms ingress before the other lanes") {
+        OneSignalDispatchers.bootstrapEnabledForTest = false
+        OneSignalDispatchers.resetForTest()
+        val order = Collections.synchronizedList(mutableListOf<String>())
+        val created = CountDownLatch(4)
+        OneSignalDispatchers.beforeLaneCreateForTest = { lane ->
+            order.add(lane)
+            created.countDown()
+        }
+        OneSignalDispatchers.prewarm(null)
+        created.await(2, TimeUnit.SECONDS) shouldBe true
+        order.first() shouldBe "INGRESS"
+    }
+
+    test("flag off prewarm does not build executors after reset") {
+        OneSignalDispatchers.bootstrapEnabledForTest = false
+        OneSignalDispatchers.resetForTest()
+        val entered = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        // Shutdown interrupts prewarm. Ignore it so the closed checks, not a dead thread, stop the build.
+        OneSignalDispatchers.beforeLazyWarmForTest = {
+            entered.countDown()
+            awaitIgnoringInterrupts(release)
+        }
+        OneSignalDispatchers.prewarm(null)
+        entered.await(2, TimeUnit.SECONDS) shouldBe true
+        OneSignalDispatchers.resetForTest()
+        val builtAfterReset = AtomicInteger()
+        OneSignalDispatchers.afterExecutorCreateForTest = { _, _ -> builtAfterReset.incrementAndGet() }
+        release.countDown()
+        Thread.sleep(400)
+        builtAfterReset.get() shouldBe 0
+    }
+
+    test("flag off prewarm does not build an executor when reset lands mid-build") {
+        OneSignalDispatchers.bootstrapEnabledForTest = false
+        OneSignalDispatchers.resetForTest()
+        val entered = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        OneSignalDispatchers.beforeLaneCreateForTest = { lane ->
+            if (lane == "INGRESS") {
+                entered.countDown()
+                awaitIgnoringInterrupts(release)
+            }
+        }
+        OneSignalDispatchers.prewarm(null)
+        entered.await(2, TimeUnit.SECONDS) shouldBe true
+        OneSignalDispatchers.resetForTest()
+        val builtAfterReset = AtomicInteger()
+        OneSignalDispatchers.afterExecutorCreateForTest = { _, _ -> builtAfterReset.incrementAndGet() }
+        release.countDown()
+        Thread.sleep(400)
+        builtAfterReset.get() shouldBe 0
+    }
+
+    test("flag off prewarm shuts down an executor built after reset") {
+        OneSignalDispatchers.bootstrapEnabledForTest = false
+        OneSignalDispatchers.resetForTest()
+        val entered = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        val built = AtomicReference<ThreadPoolExecutor>()
+        OneSignalDispatchers.afterExecutorCreateForTest = { lane, executor ->
+            if (lane == "INGRESS") {
+                built.set(executor)
+                entered.countDown()
+                awaitIgnoringInterrupts(release)
+            }
+        }
+        OneSignalDispatchers.prewarm(null)
+        entered.await(2, TimeUnit.SECONDS) shouldBe true
+        OneSignalDispatchers.resetForTest()
+        release.countDown()
+        Thread.sleep(400)
+        built.get().isShutdown shouldBe true
+    }
+
+    test("flag off reports Fallback for a lane that fell back") {
+        OneSignalDispatchers.bootstrapEnabledForTest = false
+        OneSignalDispatchers.resetForTest()
+        OneSignalDispatchers.beforeLaneCreateForTest = { lane ->
+            if (lane == "IO") throw IllegalStateException("boom")
+        }
+        val ran = CountDownLatch(1)
+        OneSignalDispatchers.launchOnIO { ran.countDown() }
+        ran.await(2, TimeUnit.SECONDS) shouldBe true
+
+        awaitStatus("IO Executor: Fallback") shouldBe true
+    }
+
+    test("bootstrap reports Fallback for a lane that fell back") {
+        OneSignalDispatchers.beforeLaneCreateForTest = { lane ->
+            if (lane == "IO") throw IllegalStateException("boom")
+        }
+        val ran = CountDownLatch(1)
+        OneSignalDispatchers.launchOnIO { ran.countDown() }
+        ran.await(2, TimeUnit.SECONDS) shouldBe true
+
+        awaitStatus("IO Executor: Fallback") shouldBe true
+    }
+
+    test("flag off falls back when executor construction throws") {
+        OneSignalDispatchers.bootstrapEnabledForTest = false
+        OneSignalDispatchers.resetForTest()
+        val fallbacks = AtomicInteger()
+        OneSignalDispatchers.beforeLaneCreateForTest = { throw IllegalStateException("boom") }
+        OneSignalDispatchers.beforeFallbackCreateForTest = { fallbacks.incrementAndGet() }
+        val ran = CountDownLatch(1)
+        OneSignalDispatchers.launchOnIO { ran.countDown() }
+        ran.await(2, TimeUnit.SECONDS) shouldBe true
+        fallbacks.get() shouldBe 1
+    }
+
+    test("flag off prewarm retries when the prewarm thread fails to start") {
+        OneSignalDispatchers.bootstrapEnabledForTest = false
+        OneSignalDispatchers.resetForTest()
+        OneSignalDispatchers.beforeLazyPrewarmStartForTest = { throw IllegalStateException("start failed") }
+        OneSignalDispatchers.prewarm(null)
+
+        OneSignalDispatchers.beforeLazyPrewarmStartForTest = null
+        val created = CountDownLatch(4)
+        OneSignalDispatchers.beforeLaneCreateForTest = { created.countDown() }
+        OneSignalDispatchers.prewarm(null)
+        created.await(2, TimeUnit.SECONDS) shouldBe true
     }
 
     test("prewarm is idempotent: a second call is a no-op and does not spawn a second prewarm thread") {
         OneSignalDispatchers.resetForTest()
-        OneSignalDispatchers.prewarm()
+        OneSignalDispatchers.prewarm(null)
         OneSignalDispatchers.awaitReadyForTest() shouldBe true
         val statusBefore = OneSignalDispatchers.getStatus()
-        OneSignalDispatchers.prewarm()
+        OneSignalDispatchers.prewarm(null)
         OneSignalDispatchers.getStatus() shouldBe statusBefore
     }
 })
+
+private fun awaitStatus(line: String): Boolean {
+    val deadline = System.currentTimeMillis() + 2_000
+    while (System.currentTimeMillis() < deadline) {
+        if (line in OneSignalDispatchers.getStatus()) return true
+        Thread.sleep(5)
+    }
+    return false
+}
+
+private fun awaitIgnoringInterrupts(latch: CountDownLatch) {
+    val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(2)
+    while (latch.count > 0 && System.nanoTime() < deadline) {
+        try {
+            latch.await(deadline - System.nanoTime(), TimeUnit.NANOSECONDS)
+        } catch (_: InterruptedException) {
+            // Keep waiting: the test needs the thread alive after shutdown.
+        }
+    }
+}

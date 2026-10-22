@@ -2,10 +2,8 @@ package com.onesignal.core.internal.application.impl
 
 import android.app.Application
 import android.content.Context
-import com.onesignal.common.AppContext
 import com.onesignal.common.threading.OneSignalDispatchers
 import io.kotest.core.spec.style.FunSpec
-import io.kotest.matchers.shouldBe
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkObject
@@ -27,15 +25,13 @@ import io.mockk.verifyOrder
 class ActivityLifecycleInitializerTests : FunSpec({
     beforeTest {
         mockkObject(OneSignalDispatchers)
-        every { OneSignalDispatchers.prewarm() } returns Unit
+        every { OneSignalDispatchers.prewarm(any()) } returns Unit
         resetSharedApplicationService()
-        AppContext.resetForTest()
     }
 
     afterTest {
         unmockkObject(OneSignalDispatchers)
         resetSharedApplicationService()
-        AppContext.resetForTest()
     }
 
     test("create prewarms before registering activity lifecycle callbacks") {
@@ -44,23 +40,14 @@ class ActivityLifecycleInitializerTests : FunSpec({
 
         ActivityLifecycleInitializer().create(application)
 
-        verify(exactly = 1) { OneSignalDispatchers.prewarm() }
+        verify(exactly = 1) { OneSignalDispatchers.prewarm(application) }
         verify(exactly = 1) {
             application.registerActivityLifecycleCallbacks(any<Application.ActivityLifecycleCallbacks>())
         }
         verifyOrder {
-            OneSignalDispatchers.prewarm()
+            OneSignalDispatchers.prewarm(application)
             application.registerActivityLifecycleCallbacks(any<Application.ActivityLifecycleCallbacks>())
         }
-    }
-
-    test("create notes the application context for code that runs before init") {
-        val application = mockk<Application>(relaxed = true)
-        every { application.applicationContext } returns application
-
-        ActivityLifecycleInitializer().create(application)
-
-        AppContext.get() shouldBe application
     }
 
     test("create prewarms even when application context is unavailable") {
@@ -69,7 +56,7 @@ class ActivityLifecycleInitializerTests : FunSpec({
 
         ActivityLifecycleInitializer().create(context)
 
-        verify(exactly = 1) { OneSignalDispatchers.prewarm() }
+        verify(exactly = 1) { OneSignalDispatchers.prewarm(context) }
     }
 })
 
