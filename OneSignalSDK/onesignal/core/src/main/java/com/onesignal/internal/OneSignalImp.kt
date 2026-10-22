@@ -19,6 +19,7 @@ import com.onesignal.common.services.IServiceProvider
 import com.onesignal.common.services.ServiceBuilder
 import com.onesignal.common.services.ServiceProvider
 import com.onesignal.common.threading.OneSignalDispatchers
+import com.onesignal.common.threading.StartupTimeline
 import com.onesignal.common.threading.suspendifyOnIO
 import com.onesignal.core.CoreModule
 import com.onesignal.core.internal.application.IApplicationService
@@ -391,7 +392,9 @@ internal class OneSignalImp : IOneSignal,
 
         // Dispatch init asynchronously so this method never blocks the caller. Callers that
         // need to wait (accessors, login, logout) will block via suspendCompletion.
+        StartupTimeline.initQueued()
         suspendifyOnIO {
+            StartupTimeline.initStarted()
             internalInit(context, appId)
         }
         return true
@@ -550,8 +553,10 @@ internal class OneSignalImp : IOneSignal,
         }
         // Intentionally dispatcher-less: wait on the calling thread's own event loop so resuming
         // when init completes never depends on a free worker in a busy pool.
-        runBlocking {
-            waitUntilInitInternal(operationName)
+        StartupTimeline.mainWaitingForInit {
+            runBlocking {
+                waitUntilInitInternal(operationName)
+            }
         }
     }
 
@@ -569,10 +574,13 @@ internal class OneSignalImp : IOneSignal,
         require(terminalState == InitState.SUCCESS || terminalState == InitState.FAILED) {
             "completeInit requires a terminal state, got $terminalState"
         }
+        StartupTimeline.initEnded(terminalState.name.lowercase())
         synchronized(initLock) {
             initState = terminalState
             suspendCompletion.complete(Unit)
         }
+        // After completing, so a main thread still blocked in waitForInit is counted up to now.
+        if (StartupTimeline.claimReport()) Logging.info("OneSignal: ${StartupTimeline.summary()}")
     }
 
     /**
@@ -807,7 +815,9 @@ internal class OneSignalImp : IOneSignal,
 
         // Only the caller that actually runs init needs the IO dispatcher, to keep its disk
         // and network work off the calling thread.
+        StartupTimeline.initQueued()
         return withContext(ioDispatcher) {
+            StartupTimeline.initStarted()
             internalInit(context, appId)
         }
     }

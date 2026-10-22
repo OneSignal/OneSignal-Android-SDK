@@ -11,7 +11,8 @@ internal class PoolChoice(
     val warn: Boolean,
     val failure: Throwable? = null,
 ) {
-    val summary: String get() = "$detail; pools=${if (pools is LazyDispatcherPools) "lazy" else "bootstrap"}"
+    val mode: String get() = if (pools is LazyDispatcherPools) "lazy" else "bootstrap"
+    val summary: String get() = "$detail; pools=$mode"
 }
 
 // Every launch in the process goes through this, so a failed choice must not throw.

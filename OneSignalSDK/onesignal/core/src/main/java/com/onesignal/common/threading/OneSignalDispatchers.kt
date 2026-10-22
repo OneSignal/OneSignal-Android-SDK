@@ -58,6 +58,7 @@ object OneSignalDispatchers {
                     if (published == null) poolsRef = choice.pools else choice.pools.shutdown()
                 }
             }
+        if (published == null) StartupTimeline.poolsChosen(choice.mode, choice.detail)
         if (!Thread.holdsLock(poolsLock)) recordChoice(choice)
         return published ?: choice.pools
     }
