@@ -7,6 +7,7 @@ import com.onesignal.debug.internal.logging.Logging
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.ints.shouldBeLessThanOrEqual
 import io.kotest.matchers.shouldBe
+import org.robolectric.shadows.ShadowLog
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
@@ -24,6 +25,22 @@ class DispatcherFailureLogTests : FunSpec({
     afterEach {
         OneSignalDispatchers.bootstrapEnabledForTest = null
         OneSignalDispatchers.resetForTest()
+    }
+
+    test("logcat lines follow the customer's SDK log level") {
+        ShadowLog.clear()
+        try {
+            Logging.logLevel = LogLevel.NONE
+            OneSignalDispatchers.logRelease("probe at none", IllegalStateException("x"))
+            Logging.logLevel = LogLevel.INFO
+            OneSignalDispatchers.logRelease("probe at info")
+        } finally {
+            Logging.logLevel = LogLevel.WARN
+        }
+
+        val lines = ShadowLog.getLogsForTag("OneSignal").map { it.msg }
+        lines.any { "probe at none" in it } shouldBe false
+        lines.any { "probe at info" in it } shouldBe true
     }
 
     listOf(true to "bootstrap", false to "lazy").forEach { (bootstrap, mode) ->

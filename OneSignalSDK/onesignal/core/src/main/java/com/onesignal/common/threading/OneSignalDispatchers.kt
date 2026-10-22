@@ -3,6 +3,7 @@ package com.onesignal.common.threading
 import android.content.Context
 import android.util.Log
 import com.onesignal.core.internal.features.FeatureManager
+import com.onesignal.core.internal.features.currentApplication
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.features.FeatureFlag
@@ -183,22 +184,14 @@ object OneSignalDispatchers {
         val summary: String get() = "$detail; pools=${if (pools is LazyDispatcherPools) "lazy" else "bootstrap"}"
     }
 
-    @Suppress("TooGenericExceptionCaught", "SwallowedException")
     private fun rememberApplicationContext(): Context? {
         if (appContext != null) return appContext
         // Receivers call prewarm() with no Context when the startup provider is disabled.
-        val resolved =
-            try {
-                val method = Class.forName("android.app.ActivityThread").getMethod("currentApplication")
-                method.invoke(null) as? Context
-            } catch (_: Throwable) {
-                null
-            }
-        if (resolved != null) appContext = resolved.applicationContext
+        currentApplication()?.let { appContext = it.applicationContext }
         return appContext
     }
 
-    /** Logcat, not [Logging]: the SDK log level is often NONE in release, and Logging can dispatch. */
+    /** Logcat at the customer's SDK log level, not through [Logging]: Logging can dispatch. */
     @Suppress("SwallowedException")
     internal fun logRelease(
         message: String,
@@ -207,6 +200,7 @@ object OneSignalDispatchers {
     ) {
         val line = "sdk_dispatcher_bootstrap: $message"
         try {
+            if (!Logging.atLogLevel(if (warn) LogLevel.WARN else LogLevel.INFO)) return
             if (warn) Log.w(RELEASE_LOG_TAG, line, error) else Log.i(RELEASE_LOG_TAG, line)
         } catch (_: RuntimeException) {
             // JVM unit tests throw from android.util.Log. A log must not fail the latch.
@@ -223,7 +217,6 @@ object OneSignalDispatchers {
         if (inFailureLog.get() == true) return logRelease(message, error)
         inFailureLog.set(true)
         try {
-            if (LogLevel.WARN > Logging.logLevel) logRelease(message, error)
             Logging.warn("OneSignalDispatchers: $message", error)
         } catch (_: RuntimeException) {
             logRelease(message, error)
