@@ -37,12 +37,8 @@ internal object StartupTimeline {
     @Volatile private var initResult = "pending"
     private val reported = AtomicBoolean(false)
 
-    // Total and in-progress wait change together, so a summary never drops or double counts a wait.
-    private val mainWaitLock = Any()
-    private var mainWaitTotal = 0L
-    private var mainWaits = 0
-    private var mainWaitSince = UNSET
-    private val mainLaneBuild = AtomicLong(0)
+    private val mainWait = MainTimer()
+    private val mainLaneBuild = MainTimer()
 
     // Touched only on main: a scope build reads the dispatcher, and that must not count twice.
     private var mainTimingLane = false
@@ -98,31 +94,16 @@ internal object StartupTimeline {
     /** Runs [block], counting its duration as main blocked on init when called on main. */
     fun <T> mainWaitingForInit(block: () -> T): T {
         if (!isMainThread()) return block()
-        val start = now()
-        synchronized(mainWaitLock) {
-            mainWaitSince = start
-            mainWaits++
-        }
-        try {
-            return block()
-        } finally {
-            val end = now()
-            synchronized(mainWaitLock) {
-                mainWaitSince = UNSET
-                mainWaitTotal += end - start
-            }
-        }
+        return mainWait.time(block)
     }
 
     /** Runs [block], counting its duration as main building (or waiting on) a lane when called on main. */
     fun <T> mainBuildingLane(block: () -> T): T {
         if (!isMainThread() || mainTimingLane) return block()
         mainTimingLane = true
-        val start = now()
         try {
-            return block()
+            return mainLaneBuild.time(block)
         } finally {
-            mainLaneBuild.addAndGet(now() - start)
             mainTimingLane = false
         }
     }
@@ -137,14 +118,14 @@ internal object StartupTimeline {
     fun summary(): String {
         val origin = origin()
         fun at(value: Long) = if (value == UNSET || origin == UNSET) "-" else (value - origin).toString()
-        val (waitMs, waits, ongoing) = mainWait()
-        val ongoingField = if (ongoing) " main_wait_ongoing=true" else ""
+        val wait = mainWait.read()
+        val build = mainLaneBuild.read()
         return "startup_timeline pools=$pools choice=\"$choice\" pools_chosen_ms=${at(poolsChosen.get())} " +
             "io_ready_ms=${at(ioReady.get())} lanes_ready_ms=${at(lanesReady.get())} " +
             "init_attempts=${initAttempts.get()} init_queued_ms=${at(initQueued.get())} " +
             "init_started_ms=${at(initStarted.get())} init_ended_ms=${at(initEnded.get())} init_result=$initResult " +
-            "main_wait_ms=$waitMs main_waits=$waits$ongoingField main_lane_build_ms=${mainLaneBuild.get()} " +
-            "origin=${originName()}"
+            "main_wait_ms=${wait.ms} main_waits=${wait.count}${wait.ongoing("main_wait")} " +
+            "main_lane_build_ms=${build.ms}${build.ongoing("main_lane_build")} origin=${originName()}"
     }
 
     /** [summary] for an ANR record, or null when the ANR is long past startup. */
@@ -155,14 +136,10 @@ internal object StartupTimeline {
     }
 
     internal fun resetForTest() {
-        processStart.set(if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) Process.getStartUptimeMillis() else UNSET)
+        processStart.set(processStartUptime())
         listOf(poolsChosen, ioReady, lanesReady, initQueued, initStarted, initEnded).forEach { it.set(UNSET) }
-        synchronized(mainWaitLock) {
-            mainWaitTotal = 0
-            mainWaits = 0
-            mainWaitSince = UNSET
-        }
-        mainLaneBuild.set(0)
+        mainWait.reset()
+        mainLaneBuild.reset()
         readyLaneBits.set(0)
         initAttempts.set(0)
         pools = "unknown"
@@ -176,10 +153,13 @@ internal object StartupTimeline {
     // Below API 24 there is no process start time, so steps are relative to the pool choice.
     private fun originName(): String = if (processStart.get() != UNSET) "process" else "pools"
 
-    private fun mainWait(): Triple<Long, Int, Boolean> =
-        synchronized(mainWaitLock) {
-            val ongoing = mainWaitSince != UNSET
-            Triple(mainWaitTotal + if (ongoing) now() - mainWaitSince else 0, mainWaits, ongoing)
+    // Runs in the object's initializer, where a throw would make the class unloadable.
+    @Suppress("SwallowedException")
+    private fun processStartUptime(): Long =
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) Process.getStartUptimeMillis() else UNSET
+        } catch (_: RuntimeException) {
+            UNSET
         }
 
     // Marks run inside lane builds and init, so a missing Android runtime (plain JVM tests) must not throw.
@@ -198,4 +178,46 @@ internal object StartupTimeline {
         } catch (_: RuntimeException) {
             false
         }
+
+    private class Timing(
+        val ms: Long,
+        val count: Int,
+        private val running: Boolean,
+    ) {
+        fun ongoing(name: String) = if (running) " ${name}_ongoing=true" else ""
+    }
+
+    // Total and in-progress time change together, so a reading never drops or double counts a span.
+    private class MainTimer {
+        private var total = 0L
+        private var count = 0
+        private var since = UNSET
+
+        fun <T> time(block: () -> T): T {
+            val start = now()
+            synchronized(this) {
+                since = start
+                count++
+            }
+            try {
+                return block()
+            } finally {
+                val end = now()
+                synchronized(this) {
+                    since = UNSET
+                    total += end - start
+                }
+            }
+        }
+
+        @Synchronized
+        fun read() = Timing(total + if (since != UNSET) now() - since else 0, count, since != UNSET)
+
+        @Synchronized
+        fun reset() {
+            total = 0
+            count = 0
+            since = UNSET
+        }
+    }
 }

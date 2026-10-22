@@ -93,6 +93,16 @@ class StartupTimelineTests : FunSpec({
         field(StartupTimeline.summary(), "main_lane_build_ms") shouldBe 150
     }
 
+    test("a lane build still going on main is counted, so an ANR during it shows the build") {
+        StartupTimeline.mainBuildingLane {
+            advance(100)
+            val summary = StartupTimeline.summary()
+            summary shouldContain "main_lane_build_ongoing=true"
+            field(summary, "main_lane_build_ms") shouldBe 100
+        }
+        StartupTimeline.summary() shouldNotContain "main_lane_build_ongoing"
+    }
+
     test("with lazy pools, main building the first lane is counted and every lane reports ready") {
         OneSignalDispatchers.bootstrapEnabledForTest = false
         OneSignalDispatchers.unpublishPoolsForTest()
