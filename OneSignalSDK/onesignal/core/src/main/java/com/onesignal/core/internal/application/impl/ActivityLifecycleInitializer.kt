@@ -3,6 +3,7 @@ package com.onesignal.core.internal.application.impl
 import android.app.Application
 import android.content.Context
 import androidx.startup.Initializer
+import com.onesignal.common.AppContext
 import com.onesignal.common.threading.OneSignalDispatchers
 import com.onesignal.core.internal.application.IApplicationService
 
@@ -21,6 +22,7 @@ import com.onesignal.core.internal.application.IApplicationService
  */
 class ActivityLifecycleInitializer : Initializer<IApplicationService> {
     override fun create(context: Context): IApplicationService {
+        AppContext.note(context)
         OneSignalDispatchers.prewarm()
         val applicationService = ApplicationService.getInstance()
         (context.applicationContext as? Application)?.let { application ->
