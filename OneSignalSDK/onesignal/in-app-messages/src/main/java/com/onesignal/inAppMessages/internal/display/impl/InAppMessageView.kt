@@ -17,6 +17,7 @@ import android.view.WindowManager
 import android.view.animation.Animation
 import android.webkit.WebView
 import android.widget.RelativeLayout
+import androidx.annotation.RequiresApi
 import androidx.cardview.widget.CardView
 import androidx.core.widget.PopupWindowCompat
 import com.onesignal.common.AndroidUtils
@@ -34,28 +35,39 @@ internal fun copyHostSystemBarVisibility(
 ) {
     if (popupDecor === hostDecor) return
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-        val controller = popupDecor.windowInsetsController ?: return
-        val hostInsets = hostDecor.rootWindowInsets ?: return
-        val statusBars = WindowInsets.Type.statusBars()
-        val navigationBars = WindowInsets.Type.navigationBars()
-        if (hostInsets.isVisible(statusBars)) {
-            controller.show(statusBars)
-        } else {
-            controller.hide(statusBars)
-        }
-        if (hostInsets.isVisible(navigationBars)) {
-            controller.show(navigationBars)
-        } else {
-            controller.hide(navigationBars)
-        }
-        val hostController = hostDecor.windowInsetsController ?: return
-        controller.systemBarsBehavior = hostController.systemBarsBehavior
-        val appearanceMask =
-            WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS or
-                WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS
-        controller.setSystemBarsAppearance(hostController.systemBarsAppearance, appearanceMask)
-        return
+        copyHostInsetsControllerState(hostDecor, popupDecor)
+    } else {
+        copyHostSystemUiVisibility(hostDecor, popupDecor)
     }
+}
+
+@RequiresApi(Build.VERSION_CODES.R)
+private fun copyHostInsetsControllerState(
+    hostDecor: View,
+    popupDecor: View,
+) {
+    val controller = popupDecor.windowInsetsController
+    val hostInsets = hostDecor.rootWindowInsets
+    if (controller == null || hostInsets == null) return
+    for (bars in intArrayOf(WindowInsets.Type.statusBars(), WindowInsets.Type.navigationBars())) {
+        if (hostInsets.isVisible(bars)) {
+            controller.show(bars)
+        } else {
+            controller.hide(bars)
+        }
+    }
+    val hostController = hostDecor.windowInsetsController ?: return
+    controller.systemBarsBehavior = hostController.systemBarsBehavior
+    val appearanceMask =
+        WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS or
+            WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS
+    controller.setSystemBarsAppearance(hostController.systemBarsAppearance, appearanceMask)
+}
+
+private fun copyHostSystemUiVisibility(
+    hostDecor: View,
+    popupDecor: View,
+) {
     // Layout flags stay on the popup. The host's would pull a banner under the nav bar.
     @Suppress("DEPRECATION")
     val visibilityMask =
