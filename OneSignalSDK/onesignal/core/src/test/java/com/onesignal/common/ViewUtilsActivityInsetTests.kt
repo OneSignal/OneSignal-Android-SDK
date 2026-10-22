@@ -31,6 +31,7 @@ class ViewUtilsApi29InsetTests : FunSpec({
     test("a hidden status bar keeps a taller cutout") {
         @Suppress("DEPRECATION")
         val cutout = DisplayCutout(Rect(0, 30, 0, 0), emptyList())
+
         @Suppress("DEPRECATION")
         val insets =
             WindowInsets.Builder()
