@@ -53,7 +53,8 @@ internal class FeatureManager(
 ) : IFeatureManager, IStartableService, ISingletonModelStoreChangeHandler<ConfigModel> {
     private val latch = SharedFeatureManager()
 
-    // Construction can run on main, so mirror writes wait for start(), which OneSignalImp calls off main.
+    // Writes wait for start() and run on the caller's thread, so staying off main is caller-dependent:
+    // StartupService runs start() on the default lane, and the flag fetches update ConfigModel on IO.
     @Volatile
     private var started = false
 
