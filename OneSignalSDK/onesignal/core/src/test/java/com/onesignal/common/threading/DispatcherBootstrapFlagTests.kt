@@ -30,7 +30,7 @@ class DispatcherBootstrapFlagTests : FunSpec({
     afterTest {
         reportListener?.let(Logging::removeListener)
         reportListener = null
-        StartupFlagsCache.write(appContext(), emptyList())
+        StartupFlagsCache.write(appContext()) { emptyList() }
         OneSignalDispatchers.resetBootstrapInputsForTest()
         OneSignalDispatchers.resetForTest()
     }
@@ -38,18 +38,18 @@ class DispatcherBootstrapFlagTests : FunSpec({
     test("each APP_STARTUP flag is mirrored on its own") {
         val context = appContext()
         val logging = FeatureFlag.SDK_CUSTOM_LOGGING
-        StartupFlagsCache.write(context, listOf(logging.key))
+        StartupFlagsCache.write(context) { listOf(logging.key) }
         StartupFlagsCache.readFile(context).isEnabled(logging) shouldBe true
         StartupFlagsCache.readFile(context).isEnabled(bootstrap) shouldBe false
 
-        StartupFlagsCache.write(context, listOf(logging.key, key))
+        StartupFlagsCache.write(context) { listOf(logging.key, key) }
         StartupFlagsCache.readFile(context).isEnabled(logging) shouldBe true
         StartupFlagsCache.readFile(context).isEnabled(bootstrap) shouldBe true
     }
 
     test("a mirrored key selects bootstrap on the next pool generation") {
         val context = appContext()
-        StartupFlagsCache.write(context, listOf(key))
+        StartupFlagsCache.write(context) { listOf(key) }
         latchFrom(context)
 
         builtOnCaller() shouldBe false
@@ -57,7 +57,7 @@ class DispatcherBootstrapFlagTests : FunSpec({
 
     test("no mirrored key keeps construction on the caller") {
         val context = appContext()
-        StartupFlagsCache.write(context, emptyList())
+        StartupFlagsCache.write(context) { emptyList() }
         latchFrom(context)
 
         builtOnCaller() shouldBe true
@@ -71,7 +71,7 @@ class DispatcherBootstrapFlagTests : FunSpec({
 
     test("a pool choice failure falls back to lazy pools instead of throwing") {
         val context = appContext()
-        StartupFlagsCache.write(context, listOf(key))
+        StartupFlagsCache.write(context) { listOf(key) }
         DispatcherTestHooks.beforePoolChoice = { throw IllegalStateException("choice failed") }
         latchFrom(context)
 
@@ -80,7 +80,7 @@ class DispatcherBootstrapFlagTests : FunSpec({
 
     test("a choice failure after an on snapshot runs lazy pools while FeatureManager reports on") {
         val context = appContext()
-        StartupFlagsCache.write(context, listOf(key))
+        StartupFlagsCache.write(context) { listOf(key) }
         DispatcherTestHooks.beforePoolChoice = {
             FeatureManager.startupFlags { context }
             throw IllegalStateException("choice failed")
@@ -117,7 +117,7 @@ class DispatcherBootstrapFlagTests : FunSpec({
 
     test("a healthy choice is not reported") {
         val context = appContext()
-        StartupFlagsCache.write(context, listOf(key))
+        StartupFlagsCache.write(context) { listOf(key) }
         val reports = captureChoiceReports()
         latchFrom(context)
         OneSignalDispatchers.reportChoiceToTelemetry()
@@ -159,7 +159,7 @@ class DispatcherBootstrapFlagTests : FunSpec({
     }
 
     test("prewarm latches from the process application when startup did not note a context") {
-        StartupFlagsCache.write(appContext(), listOf(key))
+        StartupFlagsCache.write(appContext()) { listOf(key) }
         OneSignalDispatchers.resetBootstrapInputsForTest()
         OneSignalDispatchers.resetForTest()
 
@@ -168,7 +168,7 @@ class DispatcherBootstrapFlagTests : FunSpec({
 
     test("FeatureManager reports the pools the process actually latched when store and file disagree") {
         val context = appContext()
-        StartupFlagsCache.write(context, emptyList())
+        StartupFlagsCache.write(context) { emptyList() }
         latchFrom(context)
         builtOnCaller() shouldBe true
 

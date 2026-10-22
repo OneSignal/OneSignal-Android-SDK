@@ -45,13 +45,3 @@ private fun chooseFromCache(context: () -> Context?): PoolChoice {
 }
 
 private fun poolsFor(enabled: Boolean): DispatcherPools = if (enabled) BootstrapDispatcherPools() else LazyDispatcherPools()
-
-/** The process Application, for receivers that call prewarm() with no Context when the startup provider is disabled. */
-@Suppress("TooGenericExceptionCaught", "SwallowedException")
-internal fun currentApplication(): Context? =
-    try {
-        val method = Class.forName("android.app.ActivityThread").getMethod("currentApplication")
-        method.invoke(null) as? Context
-    } catch (_: Throwable) {
-        null
-    }

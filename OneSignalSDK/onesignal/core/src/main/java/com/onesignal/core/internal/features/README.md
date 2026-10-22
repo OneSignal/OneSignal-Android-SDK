@@ -42,8 +42,12 @@ process-wide holder (`StartupFlagsCache`).
 - **The snapshot is the process value.** Telemetry tags and `isEnabled` must match what early code
   latched, so APP_STARTUP flags never come from the store at runtime.
 - **Missing or unreadable means off.** A missing file, a read that throws, or no application context
-  all give an empty snapshot. The source (`STORE`, `MISSING`, `UNREADABLE`, `NO_STORE`) is kept for
-  logging.
+  all give an empty snapshot. The source (`STORE`, `MISSING`, `UNREADABLE`, `NO_STORE`) is logged at
+  debug when `FeatureManager` is built.
+- **The process Application is the fallback context.** When the caller has no context yet (the
+  startup provider is disabled, or this is not the default process), the snapshot uses
+  `ActivityThread.currentApplication()`. `NO_STORE` only happens when that is missing too, and logs a
+  warning.
 - **One value per process, even when unreadable.** The first read wins, including an `UNREADABLE`
   one. Later readers in the same process (sync jobs, FCM receivers, prewarm) never re-read and get a
   different answer, so code that already latched "off" never disagrees with code that runs later.
@@ -56,7 +60,8 @@ process-wide holder (`StartupFlagsCache`).
 - **Writes are serialized and read the latest flags.** `start()` and a flags fetch can mirror at the
   same time. Each write reads `ConfigModel` inside the latch's mirror lock, so the last write to finish
   always holds the newest flags, never a list captured before another write landed. A file that can't
-  be read is rewritten rather than skipped.
+  be read is rewritten rather than skipped, and so is one whose last `commit()` failed, since
+  `SharedPreferences` keeps the uncommitted value in memory.
 - **No writes before `start()`.** `FeatureManager` can be constructed on main; the file is only written
   after start.
 - **Main thread cost.** The first reader opens one small XML file. Cheap, but StrictMode can still report
