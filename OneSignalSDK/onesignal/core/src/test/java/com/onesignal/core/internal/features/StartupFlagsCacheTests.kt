@@ -5,6 +5,7 @@ import android.content.SharedPreferences
 import android.os.Build
 import androidx.test.core.app.ApplicationProvider
 import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
+import com.onesignal.common.AppContext
 import com.onesignal.common.modeling.ModelChangeTags
 import com.onesignal.common.modeling.ModelChangedArgs
 import com.onesignal.core.internal.config.CONFIG_NAME_SPACE
@@ -37,6 +38,7 @@ class StartupFlagsCacheTests : FunSpec({
     afterTest {
         clearStores()
         FeatureManager.resetStartupFlagsForTest()
+        AppContext.resetForTest()
     }
 
     test("a missing file is off") {
@@ -220,9 +222,10 @@ class StartupFlagsCacheTests : FunSpec({
         manager.enabledFeatureKeys() shouldBe emptyList()
     }
 
-    test("FeatureManager built before the app context is set still reads the file") {
+    test("FeatureManager built before ApplicationService starts reads the file through the noted context") {
         StartupFlagsCache.write(appContext()) { listOf(key) }
         FeatureManager.resetStartupFlagsForTest()
+        AppContext.note(appContext())
         val applicationService = MockHelper.applicationService()
         every { applicationService.appContext } throws NullPointerException("not started")
 
@@ -230,6 +233,13 @@ class StartupFlagsCacheTests : FunSpec({
 
         manager.isEnabled(logging) shouldBe true
         FeatureManager.startupFlags { null }.source shouldBe StartupFlagsSource.STORE
+    }
+
+    test("with no context anywhere the snapshot is off rather than guessed") {
+        StartupFlagsCache.write(appContext()) { listOf(key) }
+        FeatureManager.resetStartupFlagsForTest()
+
+        FeatureManager.startupFlags { null }.source shouldBe StartupFlagsSource.NO_STORE
     }
 
     test("after a failed commit the next write retries, even with the same flags") {

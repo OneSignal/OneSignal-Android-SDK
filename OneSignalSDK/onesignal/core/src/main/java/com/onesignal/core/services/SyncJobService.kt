@@ -59,7 +59,7 @@ class SyncJobService : JobService() {
         // short-lived daemon thread; idempotent, so it's harmless when initWithContext already
         // ran. Must happen BEFORE suspendifyOnIO; calling it inside the dispatched block would
         // be too late because the cold-init cost has already been paid on entry to the helper.
-        OneSignalDispatchers.prewarm()
+        OneSignalDispatchers.prewarm(this)
 
         val run = JobRun(jobParameters)
         activeRun.getAndSet(run)?.let { previous ->

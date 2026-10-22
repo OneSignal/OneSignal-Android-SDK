@@ -38,6 +38,7 @@ class BootUpReceiver : BroadcastReceiver() {
     ) {
         // Persist the reconstructible restore request without waiting for full SDK initialization.
         runIngressHandoff(
+            context,
             "BootUpReceiver",
             BroadcastCompletion.RECONSTRUCTIBLE_WORK_TIMEOUT_MS,
         ) {
