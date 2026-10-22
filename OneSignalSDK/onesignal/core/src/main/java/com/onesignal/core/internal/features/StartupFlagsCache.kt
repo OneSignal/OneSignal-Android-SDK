@@ -22,7 +22,7 @@ internal object StartupFlagsCache {
 
     // The answer is latched for the whole process, so a missing context must be visible in logcat.
     private fun storeFor(context: Context?): IStartupFlagsStore? {
-        if (context == null) Log.w(PrefsStartupFlagsStore.TAG, "startup flags: no application context, all off for this process")
+        if (context == null) Log.e(PrefsStartupFlagsStore.TAG, "startup flags: no application context, all off for this process")
         return context?.let(::PrefsStartupFlagsStore)
     }
 

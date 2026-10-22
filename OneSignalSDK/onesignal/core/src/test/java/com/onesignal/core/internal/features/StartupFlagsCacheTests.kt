@@ -3,6 +3,7 @@ package com.onesignal.core.internal.features
 import android.content.Context
 import android.content.SharedPreferences
 import android.os.Build
+import android.util.Log
 import androidx.test.core.app.ApplicationProvider
 import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
 import com.onesignal.common.AppContext
@@ -25,6 +26,7 @@ import io.mockk.mockk
 import io.mockk.verify
 import org.json.JSONArray
 import org.robolectric.annotation.Config
+import org.robolectric.shadows.ShadowLog
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.concurrent.thread
@@ -253,8 +255,12 @@ class StartupFlagsCacheTests : FunSpec({
     test("with no context anywhere the snapshot is off rather than guessed") {
         StartupFlagsCache.write(appContext()) { listOf(key) }
         FeatureManager.resetStartupFlagsForTest()
+        ShadowLog.clear()
 
         FeatureManager.startupFlags { null }.source shouldBe StartupFlagsSource.NO_STORE
+        ShadowLog.getLogsForTag(PrefsStartupFlagsStore.TAG).any {
+            it.type == Log.ERROR && "no application context" in it.msg
+        } shouldBe true
     }
 
     test("after a failed commit the next write retries, even with the same flags") {
