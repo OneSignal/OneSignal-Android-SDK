@@ -232,13 +232,13 @@ internal fun buildAnrCrashData(
     )
 }
 
+// Appended last so dashboards grouping on the message prefix keep grouping.
+private fun timelineSuffix(startupTimeline: String?): String = startupTimeline?.let { " | $it" }.orEmpty()
+
 /**
  * Builds the non-fatal record for a backgrounded main-thread block, with a
  * [buildBlockFingerprint] summary embedded in the message.
  */
-// Appended last so dashboards grouping on the message prefix keep grouping.
-private fun timelineSuffix(startupTimeline: String?): String = startupTimeline?.let { " | $it" }.orEmpty()
-
 internal fun buildBackgroundBlockCrashData(
     threadName: String,
     stackTrace: Array<StackTraceElement>,

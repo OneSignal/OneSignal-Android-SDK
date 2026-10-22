@@ -371,6 +371,7 @@ internal class OneSignalImp : IOneSignal,
             // Fresh latch for this init attempt -- prevents retry-after-FAILED waiters from
             // observing the prior init's already-completed deferred.
             suspendCompletion = CompletableDeferred()
+            StartupTimeline.initAttempt()
         }
 
         // Tight try/catch around the only step that can throw synchronously *before* the
@@ -392,6 +393,8 @@ internal class OneSignalImp : IOneSignal,
 
         // Dispatch init asynchronously so this method never blocks the caller. Callers that
         // need to wait (accessors, login, logout) will block via suspendCompletion.
+        // Resolve IO first: lazy pools build it on the caller, which is main_lane_build_ms, not init's queue wait.
+        OneSignalDispatchers.IO
         StartupTimeline.initQueued()
         suspendifyOnIO {
             StartupTimeline.initStarted()
@@ -553,11 +556,9 @@ internal class OneSignalImp : IOneSignal,
         }
         // Intentionally dispatcher-less: wait on the calling thread's own event loop so resuming
         // when init completes never depends on a free worker in a busy pool.
-        StartupTimeline.mainWaitingForInit {
-            runBlocking {
-                waitUntilInitInternal(operationName)
-            }
-        }
+        val wait = { runBlocking { waitUntilInitInternal(operationName) } }
+        // Only an in-progress init can block; NOT_STARTED and FAILED throw right away.
+        if (initState == InitState.IN_PROGRESS) StartupTimeline.mainWaitingForInit(wait) else wait()
     }
 
     /**
@@ -579,8 +580,17 @@ internal class OneSignalImp : IOneSignal,
             initState = terminalState
             suspendCompletion.complete(Unit)
         }
-        // After completing, so a main thread still blocked in waitForInit is counted up to now.
-        if (StartupTimeline.claimReport()) Logging.info("OneSignal: ${StartupTimeline.summary()}")
+        reportStartupTimeline()
+    }
+
+    // After completing, so a main thread still blocked in waitForInit is counted up to now.
+    // Must not throw: log listeners are customer code, and a throw here would fail a finished init.
+    @Suppress("TooGenericExceptionCaught", "SwallowedException")
+    private fun reportStartupTimeline() {
+        try {
+            if (StartupTimeline.claimReport()) Logging.info("OneSignal: ${StartupTimeline.summary()}")
+        } catch (_: RuntimeException) {
+        }
     }
 
     /**
@@ -791,6 +801,7 @@ internal class OneSignalImp : IOneSignal,
                     initState = InitState.IN_PROGRESS
                     // Fresh latch for this init attempt.
                     suspendCompletion = CompletableDeferred()
+                    StartupTimeline.initAttempt()
                     // Only the call that actually starts init owns the failure-attribution exception.
                     // Re-entrant callers must not overwrite it -- otherwise the failure stack trace
                     // would point at the SyncJobService coroutine instead of the original initiator.
@@ -815,8 +826,10 @@ internal class OneSignalImp : IOneSignal,
 
         // Only the caller that actually runs init needs the IO dispatcher, to keep its disk
         // and network work off the calling thread.
+        // Resolved before initQueued, for the same reason as in the synchronous initWithContext.
+        val dispatcher = ioDispatcher
         StartupTimeline.initQueued()
-        return withContext(ioDispatcher) {
+        return withContext(dispatcher) {
             StartupTimeline.initStarted()
             internalInit(context, appId)
         }

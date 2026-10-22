@@ -131,7 +131,7 @@ class StartupTimelineTests : FunSpec({
         Logging.addListener(listener)
         try {
             thread {
-                Thread.sleep(100)
+                awaitUntil { StartupTimeline.summary().contains("main_wait_ongoing=true") }
                 advance(300)
                 completeInit.invoke(os, InitState.SUCCESS)
             }
@@ -143,8 +143,50 @@ class StartupTimelineTests : FunSpec({
 
         lines.size shouldBe 1
         lines[0] shouldContain "init_result=success"
-        lines[0] shouldContain "main_waits=1 main_wait_ongoing=true"
+        field(lines[0], "main_waits") shouldBe 1
         (field(lines[0], "main_wait_ms") >= 300) shouldBe true
+    }
+
+    test("a log listener that throws on the timeline does not fail init") {
+        val os = OneSignalImp()
+        os.setField("initState", InitState.IN_PROGRESS)
+        os.setField("suspendCompletion", CompletableDeferred<Unit>())
+        val listener = ILogListener { if (it.entry.contains("startup_timeline")) throw IllegalStateException("customer") }
+        Logging.addListener(listener)
+        try {
+            os.method("completeInit", InitState::class.java).invoke(os, InitState.SUCCESS)
+        } finally {
+            Logging.removeListener(listener)
+        }
+
+        os.getField("initState") shouldBe InitState.SUCCESS
+    }
+
+    test("waitForInit before init started is not counted as main blocked") {
+        val os = OneSignalImp()
+
+        runCatching { os.method("waitForInit", String::class.java).invoke(os, null) }.isFailure shouldBe true
+
+        field(StartupTimeline.summary(), "main_waits") shouldBe 0
+    }
+
+    test("a retry after a failed init is timed and reported as its own attempt") {
+        StartupTimeline.initAttempt()
+        StartupTimeline.initQueued()
+        StartupTimeline.initStarted()
+        StartupTimeline.initEnded("failed")
+        StartupTimeline.claimReport() shouldBe true
+
+        advance(1_000)
+        StartupTimeline.initAttempt()
+        StartupTimeline.summary() shouldContain "init_attempts=2 init_queued_ms=- init_started_ms=- init_ended_ms=- init_result=pending"
+        StartupTimeline.initQueued()
+        StartupTimeline.initStarted()
+        StartupTimeline.initEnded("success")
+
+        StartupTimeline.summary() shouldContain "init_result=success"
+        StartupTimeline.claimReport() shouldBe true
+        StartupTimeline.claimReport() shouldBe false
     }
 
     test("ANR records carry the timeline during startup, after the existing message") {
@@ -157,15 +199,26 @@ class StartupTimelineTests : FunSpec({
         buildAnrCrashData("main", emptyArray(), 6_000L).exceptionMessage shouldNotContain "startup_timeline"
     }
 
-    test("an ANR long after init ended carries no timeline") {
+    test("an ANR 30 seconds or more after init ended carries no timeline") {
         StartupTimeline.initEnded("success")
-        advance(29_000)
+        advance(29_999)
         (StartupTimeline.anrSummary() != null) shouldBe true
 
-        advance(2_000)
+        advance(1)
         StartupTimeline.anrSummary() shouldBe null
     }
 })
+
+private fun awaitUntil(condition: () -> Boolean) {
+    val deadline = System.nanoTime() + Duration.ofSeconds(10).toNanos()
+    while (!condition()) {
+        check(System.nanoTime() < deadline) { "condition not met in 10s" }
+        Thread.sleep(5)
+    }
+}
+
+private fun OneSignalImp.getField(name: String): Any? =
+    OneSignalImp::class.java.getDeclaredField(name).apply { isAccessible = true }.get(this)
 
 private fun OneSignalImp.setField(
     name: String,
