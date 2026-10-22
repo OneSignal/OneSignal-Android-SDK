@@ -35,7 +35,7 @@ class OneSignalDispatchersTests : FunSpec({
         OneSignalDispatchers.beforeLaneCreateForTest = { created += it }
 
         try {
-            OneSignalDispatchers.prewarm()
+            OneSignalDispatchers.prewarm(null)
             OneSignalDispatchers.awaitReadyForTest() shouldBe true
             created.first() shouldBe "INGRESS"
         } finally {
@@ -231,7 +231,7 @@ class OneSignalDispatchersTests : FunSpec({
             order.add(lane)
             created.countDown()
         }
-        OneSignalDispatchers.prewarm()
+        OneSignalDispatchers.prewarm(null)
         created.await(2, TimeUnit.SECONDS) shouldBe true
         order.first() shouldBe "INGRESS"
     }
@@ -246,7 +246,7 @@ class OneSignalDispatchersTests : FunSpec({
             entered.countDown()
             awaitIgnoringInterrupts(release)
         }
-        OneSignalDispatchers.prewarm()
+        OneSignalDispatchers.prewarm(null)
         entered.await(2, TimeUnit.SECONDS) shouldBe true
         OneSignalDispatchers.resetForTest()
         val builtAfterReset = AtomicInteger()
@@ -272,21 +272,21 @@ class OneSignalDispatchersTests : FunSpec({
         OneSignalDispatchers.bootstrapEnabledForTest = false
         OneSignalDispatchers.resetForTest()
         OneSignalDispatchers.beforeLazyPrewarmStartForTest = { throw IllegalStateException("start failed") }
-        OneSignalDispatchers.prewarm()
+        OneSignalDispatchers.prewarm(null)
 
         OneSignalDispatchers.beforeLazyPrewarmStartForTest = null
         val created = CountDownLatch(4)
         OneSignalDispatchers.beforeLaneCreateForTest = { created.countDown() }
-        OneSignalDispatchers.prewarm()
+        OneSignalDispatchers.prewarm(null)
         created.await(2, TimeUnit.SECONDS) shouldBe true
     }
 
     test("prewarm is idempotent: a second call is a no-op and does not spawn a second prewarm thread") {
         OneSignalDispatchers.resetForTest()
-        OneSignalDispatchers.prewarm()
+        OneSignalDispatchers.prewarm(null)
         OneSignalDispatchers.awaitReadyForTest() shouldBe true
         val statusBefore = OneSignalDispatchers.getStatus()
-        OneSignalDispatchers.prewarm()
+        OneSignalDispatchers.prewarm(null)
         OneSignalDispatchers.getStatus() shouldBe statusBefore
     }
 })

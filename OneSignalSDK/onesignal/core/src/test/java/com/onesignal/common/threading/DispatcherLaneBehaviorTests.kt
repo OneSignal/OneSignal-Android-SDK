@@ -138,7 +138,7 @@ class DispatcherLaneBehaviorTests : FunSpec({
             }
 
             test("getStatus should return meaningful status information") {
-                OneSignalDispatchers.prewarm()
+                OneSignalDispatchers.prewarm(null)
                 OneSignalDispatchers.awaitReadyForTest() shouldBe true
                 val status = OneSignalDispatchers.getStatus()
 
@@ -321,7 +321,7 @@ class DispatcherLaneBehaviorTests : FunSpec({
 
             test("prewarm returns immediately and warms IO / Default / SerialIO dispatchers on a background thread") {
                 OneSignalDispatchers.resetForTest()
-                OneSignalDispatchers.prewarm()
+                OneSignalDispatchers.prewarm(null)
 
                 OneSignalDispatchers.awaitReadyForTest() shouldBe true
                 val status = OneSignalDispatchers.getStatus()

@@ -44,7 +44,7 @@ class FCMBroadcastReceiverTests : FunSpec({
     }
 
     test("FCMBroadcastReceiver.onReceive makes the explicit prewarm() head-start call before dispatch for a normal push") {
-        // Scope of this test: it asserts the explicit `OneSignalDispatchers.prewarm()` call in
+        // Scope of this test: it asserts the explicit `OneSignalDispatchers.prewarm(any())` call in
         // onReceive (the goAsync() head start) happens before the ingress dispatch.
         // IOMockHelper stubs `suspendifyOnIngress` (run inline) and prewarm(), so this verifies
         // placement/ordering, not end-to-end cold-init behavior.
@@ -57,9 +57,9 @@ class FCMBroadcastReceiverTests : FunSpec({
 
         FCMBroadcastReceiver().onReceive(context, intent)
 
-        verify(exactly = 1) { OneSignalDispatchers.prewarm() }
+        verify(exactly = 1) { OneSignalDispatchers.prewarm(any()) }
         verifyOrder {
-            OneSignalDispatchers.prewarm()
+            OneSignalDispatchers.prewarm(any())
             suspendifyOnIngress(any<suspend () -> Unit>(), any<() -> Unit>())
         }
     }
@@ -73,7 +73,7 @@ class FCMBroadcastReceiverTests : FunSpec({
 
         FCMBroadcastReceiver().onReceive(context, intent)
 
-        verify(exactly = 0) { OneSignalDispatchers.prewarm() }
+        verify(exactly = 0) { OneSignalDispatchers.prewarm(any()) }
     }
 
     test("FCMBroadcastReceiver does not claim payloads rejected by durable ingress") {

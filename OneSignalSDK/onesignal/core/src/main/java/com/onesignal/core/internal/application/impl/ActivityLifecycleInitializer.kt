@@ -21,8 +21,7 @@ import com.onesignal.core.internal.application.IApplicationService
  */
 class ActivityLifecycleInitializer : Initializer<IApplicationService> {
     override fun create(context: Context): IApplicationService {
-        OneSignalDispatchers.noteApplicationContext(context)
-        OneSignalDispatchers.prewarm()
+        OneSignalDispatchers.prewarm(context)
         val applicationService = ApplicationService.getInstance()
         (context.applicationContext as? Application)?.let { application ->
             applicationService.attachToApplication(application)

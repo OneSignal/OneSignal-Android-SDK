@@ -3,6 +3,7 @@ package com.onesignal.common.threading
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
+import com.onesignal.common.AppContext
 import com.onesignal.core.internal.features.FeatureManager
 import com.onesignal.core.internal.features.StartupFlagsCache
 import com.onesignal.debug.ILogListener
@@ -109,7 +110,7 @@ class DispatcherBootstrapFlagTests : FunSpec({
         val reports = captureChoiceReports()
         OneSignalDispatchers.resetBootstrapInputsForTest()
         OneSignalDispatchers.reportChoiceToTelemetry()
-        OneSignalDispatchers.noteApplicationContext(unreadableContext())
+        AppContext.note(unreadableContext())
         OneSignalDispatchers.resetForTest()
 
         reports.single() shouldContain "off, cache unreadable"
@@ -152,18 +153,28 @@ class DispatcherBootstrapFlagTests : FunSpec({
             if (priority.compareAndSet(-1, Thread.currentThread().priority)) seen.countDown()
         }
 
-        OneSignalDispatchers.prewarm()
+        OneSignalDispatchers.prewarm(null)
 
         seen.await(2, TimeUnit.SECONDS) shouldBe true
         priority.get() shouldBe Thread.NORM_PRIORITY
     }
 
-    test("prewarm latches from the process application when startup did not note a context") {
+    test("the pools latch from the context passed to prewarm when startup did not note one") {
+        StartupFlagsCache.write(appContext()) { listOf(key) }
+        OneSignalDispatchers.resetBootstrapInputsForTest()
+
+        OneSignalDispatchers.prewarm(appContext())
+        OneSignalDispatchers.resetForTest()
+
+        builtOnCaller() shouldBe false
+    }
+
+    test("with no context noted the pools stay lazy instead of guessing one") {
         StartupFlagsCache.write(appContext()) { listOf(key) }
         OneSignalDispatchers.resetBootstrapInputsForTest()
         OneSignalDispatchers.resetForTest()
 
-        builtOnCaller() shouldBe false
+        builtOnCaller() shouldBe true
     }
 
     test("FeatureManager reports the pools the process actually latched when store and file disagree") {
@@ -206,7 +217,7 @@ private fun applicationServiceFor(context: Context) = MockHelper.applicationServ
 
 private fun latchFrom(context: Context) {
     OneSignalDispatchers.resetBootstrapInputsForTest()
-    OneSignalDispatchers.noteApplicationContext(context)
+    AppContext.note(context)
     OneSignalDispatchers.resetForTest()
 }
 

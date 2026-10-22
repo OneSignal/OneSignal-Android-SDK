@@ -35,6 +35,7 @@ class NotificationDismissReceiver : BroadcastReceiver() {
         intent: Intent,
     ) {
         runIngressHandoff(
+            context,
             "NotificationDismissReceiver",
             BroadcastCompletion.RECONSTRUCTIBLE_WORK_TIMEOUT_MS,
         ) {

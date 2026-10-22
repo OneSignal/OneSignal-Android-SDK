@@ -2,8 +2,8 @@ package com.onesignal.common.threading
 
 import android.content.Context
 import android.util.Log
+import com.onesignal.common.AppContext
 import com.onesignal.core.internal.features.FeatureManager
-import com.onesignal.core.internal.features.currentApplication
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.features.FeatureFlag
@@ -61,9 +61,6 @@ object OneSignalDispatchers {
     private val poolsLock = Any()
 
     @Volatile
-    private var appContext: Context? = null
-
-    @Volatile
     private var telemetryReady = false
 
     @Volatile
@@ -73,21 +70,8 @@ object OneSignalDispatchers {
     @Volatile
     internal var bootstrapEnabledForTest: Boolean? = null
 
-    // Pools latch on first use, so context has to be recorded before the first prewarm or launch.
-    @Suppress("TooGenericExceptionCaught")
-    internal fun noteApplicationContext(context: Context) {
-        if (appContext != null) return
-        appContext =
-            try {
-                context.applicationContext
-            } catch (t: Throwable) {
-                Logging.warn("OneSignalDispatchers: application context unavailable: ${t.message}", t)
-                null
-            }
-    }
-
     internal fun resetBootstrapInputsForTest() {
-        appContext = null
+        AppContext.resetForTest()
         bootstrapEnabledForTest = null
         telemetryReady = false
         pendingChoiceReport = null
@@ -160,7 +144,7 @@ object OneSignalDispatchers {
     }
 
     private fun chooseFromCache(): PoolChoice {
-        val flags = FeatureManager.startupFlags { appContext ?: rememberApplicationContext() }
+        val flags = FeatureManager.startupFlags(AppContext::get)
         val enabled = flags.isEnabled(FeatureFlag.SDK_DISPATCHER_BOOTSTRAP)
         val detail =
             when (flags.source) {
@@ -182,13 +166,6 @@ object OneSignalDispatchers {
         val error: Throwable? = null,
     ) {
         val summary: String get() = "$detail; pools=${if (pools is LazyDispatcherPools) "lazy" else "bootstrap"}"
-    }
-
-    private fun rememberApplicationContext(): Context? {
-        if (appContext != null) return appContext
-        // Receivers call prewarm() with no Context when the startup provider is disabled.
-        currentApplication()?.let { appContext = it.applicationContext }
-        return appContext
     }
 
     /** Logcat at the customer's SDK log level, not through [Logging]: Logging can dispatch. */
@@ -255,11 +232,12 @@ object OneSignalDispatchers {
     private val prewarmLock = Any()
 
     /**
-     * Warms every lane off the caller when it can.
-     * Bootstrap queues construction. Lazy construction runs on the caller, or blocks behind prewarm.
+     * Notes [context] first, since the pools latch from the startup flags file, then warms every lane off
+     * the caller when it can. Bootstrap queues construction. Lazy construction runs on the caller, or blocks behind prewarm.
      */
     @Suppress("TooGenericExceptionCaught")
-    fun prewarm() {
+    fun prewarm(context: Context?) {
+        context?.let(AppContext::note)
         if (prewarmStarted) return
         synchronized(prewarmLock) {
             if (prewarmStarted) return

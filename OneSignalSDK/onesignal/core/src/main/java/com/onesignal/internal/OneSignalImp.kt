@@ -10,6 +10,7 @@ import com.onesignal.OneSignalError
 import com.onesignal.OneSignalResult
 import com.onesignal.OneSignalUserProfile
 import com.onesignal.common.AndroidUtils
+import com.onesignal.common.AppContext
 import com.onesignal.common.DeviceUtils
 import com.onesignal.common.OneSignalUtils
 import com.onesignal.common.isMissing
@@ -247,6 +248,8 @@ internal class OneSignalImp : IOneSignal,
     }
 
     private fun initEssentials(context: Context) {
+        // Before the logger: its first log can build FeatureManager, whose startup flags need a context.
+        AppContext.note(context)
         // LoggerLifecycleManager comes up early so crash handling and remote logging can capture
         // anything that happens during the rest of init. FeatureManager is wired in via a
         // lazy supplier — `enabledFeatureFlags` is read per-event, so resolving the manager
@@ -353,8 +356,7 @@ internal class OneSignalImp : IOneSignal,
         // of suspendifyOnIO / launchOnSerialIO doesn't pay the ThreadPoolExecutor + dispatcher +
         // scope construction cost on the main thread (observed as 5-20s main-thread blocks at the
         // first foreground/background lifecycle event). prewarm() is idempotent and fire-and-forget.
-        OneSignalDispatchers.noteApplicationContext(context)
-        OneSignalDispatchers.prewarm()
+        OneSignalDispatchers.prewarm(context)
 
         synchronized(initLock) {
             if (initState.isSDKAccessible()) {
@@ -763,8 +765,7 @@ internal class OneSignalImp : IOneSignal,
         // (e.g. SyncJobService.onStartJob -> suspendifyOnIO -> initWithContext(context)) pays the
         // cold-init cost on the dispatcher used to enter [withContext] below, so warm
         // OneSignalDispatchers on a background thread before we touch [ioDispatcher].
-        OneSignalDispatchers.noteApplicationContext(context)
-        OneSignalDispatchers.prewarm()
+        OneSignalDispatchers.prewarm(context)
 
         // Observing a terminal SUCCESS must never require an IO worker (see waitForInit).
         if (initState == InitState.SUCCESS) {

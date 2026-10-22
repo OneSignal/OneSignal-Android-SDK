@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.os.Build
 import android.util.Log
+import com.onesignal.common.AppContext
 import com.onesignal.features.IStartupFlagsStore
 import com.onesignal.features.StartupFlags
 import com.onesignal.features.StartupFlagsLatch
@@ -17,7 +18,7 @@ internal object StartupFlagsCache {
     private var latch = StartupFlagsLatch()
 
     /** The first caller in the process reads the file; everyone after gets the same answer. */
-    fun snapshot(context: () -> Context?): StartupFlags = latch.snapshot { storeFor(context() ?: currentApplication()) }
+    fun snapshot(context: () -> Context?): StartupFlags = latch.snapshot { storeFor(context() ?: AppContext.get()) }
 
     // The answer is latched for the whole process, so a missing context must be visible in logcat.
     private fun storeFor(context: Context?): IStartupFlagsStore? {
@@ -97,13 +98,3 @@ internal class PrefsStartupFlagsStore(
         }
     }
 }
-
-/** The process Application, for when the startup provider is disabled or this is not the default process. */
-@Suppress("TooGenericExceptionCaught", "SwallowedException")
-internal fun currentApplication(): Context? =
-    try {
-        val method = Class.forName("android.app.ActivityThread").getMethod("currentApplication")
-        method.invoke(null) as? Context
-    } catch (_: Throwable) {
-        null
-    }
