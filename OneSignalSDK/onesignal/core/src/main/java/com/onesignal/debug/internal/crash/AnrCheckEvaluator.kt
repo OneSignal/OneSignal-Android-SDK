@@ -221,8 +221,9 @@ internal fun buildAnrCrashData(
     threadName: String,
     stackTrace: Array<StackTraceElement>,
     unresponsiveDurationMs: Long,
+    startupTimeline: String? = null,
 ): CrashData {
-    val message = "Application Not Responding: Main thread blocked for ${unresponsiveDurationMs}ms"
+    val message = "Application Not Responding: Main thread blocked for ${unresponsiveDurationMs}ms" + timelineSuffix(startupTimeline)
     return CrashData(
         threadName = threadName,
         exceptionType = ANR_EXCEPTION_TYPE,
@@ -230,6 +231,9 @@ internal fun buildAnrCrashData(
         stacktrace = formatJvmStacktrace(ANR_EXCEPTION_TYPE, message, stackTrace),
     )
 }
+
+// Appended last so dashboards grouping on the message prefix keep grouping.
+private fun timelineSuffix(startupTimeline: String?): String = startupTimeline?.let { " | $it" }.orEmpty()
 
 /**
  * Builds the non-fatal record for a backgrounded main-thread block, with a
@@ -239,9 +243,11 @@ internal fun buildBackgroundBlockCrashData(
     threadName: String,
     stackTrace: Array<StackTraceElement>,
     unresponsiveDurationMs: Long,
+    startupTimeline: String? = null,
 ): CrashData {
     val message =
-        "Background main-thread block for ${unresponsiveDurationMs}ms | ${buildBlockFingerprint(stackTrace)}"
+        "Background main-thread block for ${unresponsiveDurationMs}ms | ${buildBlockFingerprint(stackTrace)}" +
+            timelineSuffix(startupTimeline)
     return CrashData(
         threadName = threadName,
         exceptionType = BACKGROUND_BLOCK_EXCEPTION_TYPE,

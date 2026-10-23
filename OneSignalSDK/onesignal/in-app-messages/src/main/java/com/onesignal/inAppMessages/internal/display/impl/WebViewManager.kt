@@ -5,6 +5,7 @@ import android.app.Activity
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.util.Base64
 import android.view.View
 import android.view.ViewGroup
 import android.webkit.JavascriptInterface
@@ -288,9 +289,7 @@ internal class WebViewManager(
             // At time point the webView isn't attached to a view
             // Set the WebView to the max screen size then run JS to evaluate the height.
             setWebViewToMaxSize(activity, localWebView)
-            if (messageContent.isFullBleed) {
-                updateSafeAreaInsets()
-            }
+            updateSafeAreaInsets()
 
             localWebView.evaluateJavascript(GET_PAGE_META_DATA_JS_FUNCTION) { value ->
                 evaluatePageMetaDataForHeight(value)
@@ -455,9 +454,12 @@ internal class WebViewManager(
         // Setup receiver for page events / data from JS
         localWebView.addJavascriptInterface(OSJavaScriptInterface(), JS_OBJ_NAME)
         if (isFullScreen) {
-            localWebView.systemUiVisibility = View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or
-                View.SYSTEM_UI_FLAG_IMMERSIVE or
-                View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+            // Draw behind the bars. Hiding them changes the activity insets, so the
+            // host's own bottom bar shifts for as long as the message is up.
+            localWebView.systemUiVisibility =
+                View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
+                View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or
+                View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 localWebView.fitsSystemWindows = false
             }
@@ -672,11 +674,27 @@ internal class WebViewManager(
         }
     }
 
+    internal fun encodedPage(
+        content: InAppMessageContent,
+        activity: Activity,
+    ): String {
+        val html = setContentSafeAreaInsets(content, activity)
+        return Base64.encodeToString(
+            html.toByteArray(charset("UTF-8")),
+            Base64.NO_WRAP,
+        )
+    }
+
     fun setContentSafeAreaInsets(
         content: InAppMessageContent,
         activity: Activity,
-    ) {
-        var html = content.contentHtml
+    ): String {
+        val html = content.contentHtml
+        if (html.isNullOrEmpty()) {
+            Logging.warn("In-app message HTML is empty.")
+            return ""
+        }
+        val base = html.substringBefore(SAFE_AREA_MARKER)
         var safeAreaInsetsScript = SET_SAFE_AREA_INSETS_SCRIPT
         val insets = ViewUtils.getCutoutAndStatusBarInsets(activity)
         val safeAreaJSObject =
@@ -688,8 +706,9 @@ internal class WebViewManager(
                 insets[3],
             )
         safeAreaInsetsScript = String.format(safeAreaInsetsScript, safeAreaJSObject)
-        html += safeAreaInsetsScript
-        content.contentHtml = html
+        val withInsets = base + safeAreaInsetsScript
+        content.contentHtml = withInsets
+        return withInsets
     }
 
     // Allow Chrome Remote Debugging if OneSignal.LOG_LEVEL.DEBUG or higher
@@ -709,7 +728,8 @@ internal class WebViewManager(
 
         const val JS_OBJ_NAME = "OSAndroid"
         const val GET_PAGE_META_DATA_JS_FUNCTION = "getPageMetaData()"
-        const val SET_SAFE_AREA_INSETS_JS_FUNCTION = "setSafeAreaInsets(%s)"
+        const val SET_SAFE_AREA_INSETS_JS_FUNCTION =
+            "if (typeof setSafeAreaInsets === 'function') { setSafeAreaInsets(%s); }"
         const val SAFE_AREA_JS_OBJECT =
             "{\n" +
                 "   top: %d,\n" +
@@ -717,10 +737,11 @@ internal class WebViewManager(
                 "   right: %d,\n" +
                 "   left: %d,\n" +
                 "}"
+        const val SAFE_AREA_MARKER = "<!-- onesignal-safe-area -->"
         const val SET_SAFE_AREA_INSETS_SCRIPT =
-            "\n\n" +
+            "\n\n$SAFE_AREA_MARKER\n" +
                 "<script>\n" +
-                "    setSafeAreaInsets(%s);\n" +
+                "    if (typeof setSafeAreaInsets === 'function') { setSafeAreaInsets(%s); }\n" +
                 "</script>"
         const val EVENT_TYPE_KEY = "type"
         const val EVENT_TYPE_RENDERING_COMPLETE = "rendering_complete"

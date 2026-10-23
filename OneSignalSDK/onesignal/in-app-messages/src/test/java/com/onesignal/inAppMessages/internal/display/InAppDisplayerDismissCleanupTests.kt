@@ -129,6 +129,26 @@ class InAppDisplayerDismissCleanupTests : FunSpec({
         verify(exactly = 1) { lifecycle.messageWasDismissed(message) }
     }
 
+    test("a message that is not full bleed still gets the safe area script") {
+        val activity = Robolectric.buildActivity(Activity::class.java).setup().get()
+        val content =
+            InAppMessageContent(
+                JSONObject()
+                    .put("html", "<html><body>page</body></html>")
+                    .put("display_duration", 0),
+            )
+        val backend = mockk<IInAppBackendService>()
+        coEvery { backend.getIAMData(any(), any(), any()) } returns GetIAMDataResponse(content, false)
+        val displayer = createDisplayer(mockApplicationService(activity), mockk(relaxed = true), backend)
+
+        runBlocking {
+            displayer.displayMessage(InAppMessage("test-iam", MockHelper.time(1))) shouldBe true
+        }
+
+        content.isFullBleed shouldBe false
+        content.contentHtml.shouldNotBeNull().contains("setSafeAreaInsets") shouldBe true
+    }
+
     test("preview still displays when the previous instance was already cleared by dismissal") {
         val activity = Robolectric.buildActivity(Activity::class.java).setup().get()
         val applicationService = mockApplicationService(activity)

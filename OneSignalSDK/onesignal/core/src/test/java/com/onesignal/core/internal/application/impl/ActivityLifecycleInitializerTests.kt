@@ -25,7 +25,7 @@ import io.mockk.verifyOrder
 class ActivityLifecycleInitializerTests : FunSpec({
     beforeTest {
         mockkObject(OneSignalDispatchers)
-        every { OneSignalDispatchers.prewarm() } returns Unit
+        every { OneSignalDispatchers.prewarm(any()) } returns Unit
         resetSharedApplicationService()
     }
 
@@ -40,12 +40,12 @@ class ActivityLifecycleInitializerTests : FunSpec({
 
         ActivityLifecycleInitializer().create(application)
 
-        verify(exactly = 1) { OneSignalDispatchers.prewarm() }
+        verify(exactly = 1) { OneSignalDispatchers.prewarm(application) }
         verify(exactly = 1) {
             application.registerActivityLifecycleCallbacks(any<Application.ActivityLifecycleCallbacks>())
         }
         verifyOrder {
-            OneSignalDispatchers.prewarm()
+            OneSignalDispatchers.prewarm(application)
             application.registerActivityLifecycleCallbacks(any<Application.ActivityLifecycleCallbacks>())
         }
     }
@@ -56,7 +56,7 @@ class ActivityLifecycleInitializerTests : FunSpec({
 
         ActivityLifecycleInitializer().create(context)
 
-        verify(exactly = 1) { OneSignalDispatchers.prewarm() }
+        verify(exactly = 1) { OneSignalDispatchers.prewarm(context) }
     }
 })
 

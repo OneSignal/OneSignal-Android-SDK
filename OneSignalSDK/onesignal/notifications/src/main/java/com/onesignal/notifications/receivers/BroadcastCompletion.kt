@@ -1,6 +1,7 @@
 package com.onesignal.notifications.receivers
 
 import android.content.BroadcastReceiver
+import android.content.Context
 import android.os.SystemClock
 import com.onesignal.common.threading.OneSignalDispatchers
 import com.onesignal.common.threading.suspendifyOnIngress
@@ -10,19 +11,21 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 
 internal fun BroadcastReceiver.runIngressHandoff(
+    context: Context,
     receiverName: String,
     timeoutMs: Long,
     block: suspend () -> Unit,
 ) {
-    runOrderedIngressHandoff(receiverName, timeoutMs) { _, _ -> block() }
+    runOrderedIngressHandoff(context, receiverName, timeoutMs) { _, _ -> block() }
 }
 
 internal fun BroadcastReceiver.runOrderedIngressHandoff(
+    context: Context,
     receiverName: String,
     timeoutMs: Long,
     block: suspend (ordered: Boolean, pendingResult: BroadcastReceiver.PendingResult?) -> Unit,
 ) {
-    OneSignalDispatchers.prewarm()
+    OneSignalDispatchers.prewarm(context)
     // goAsync() nulls the pending result, and isOrderedBroadcast is then false.
     val ordered = isOrderedBroadcast
     val pendingResult = goAsync()
