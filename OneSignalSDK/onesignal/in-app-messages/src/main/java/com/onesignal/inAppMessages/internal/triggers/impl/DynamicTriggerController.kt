@@ -149,8 +149,8 @@ internal class DynamicTriggerController(
     companion object {
         private const val REQUIRED_ACCURACY = 0.3
 
-        // Assume last time an In-App Message was displayed a very very long time ago.
-        private const val DEFAULT_LAST_IN_APP_TIME_AGO: Long = 999999
+        // If no In-App Message has been dismissed yet, treat the last one as infinitely long ago.
+        private const val DEFAULT_LAST_IN_APP_TIME_AGO: Long = Long.MAX_VALUE
     }
 
     override fun subscribe(handler: ITriggerHandler) = events.subscribe(handler)
