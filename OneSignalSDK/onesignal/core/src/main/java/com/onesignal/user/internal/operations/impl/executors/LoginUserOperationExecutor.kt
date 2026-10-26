@@ -44,9 +44,9 @@ import com.onesignal.user.internal.properties.PropertiesModel
 import com.onesignal.user.internal.properties.PropertiesModelStore
 import com.onesignal.user.internal.subscriptions.SubscriptionModel
 import com.onesignal.user.internal.subscriptions.SubscriptionModelStore
-import com.onesignal.user.internal.subscriptions.SubscriptionStatus
 import com.onesignal.user.internal.subscriptions.SubscriptionType
 
+@Suppress("TooManyFunctions")
 internal class LoginUserOperationExecutor(
     private val _identityOperationExecutor: IdentityOperationExecutor,
     private val _application: IApplicationService,
@@ -209,9 +209,11 @@ internal class LoginUserOperationExecutor(
                 else -> throw Exception("Unrecognized operation: $operation")
             }
         }
+        // No enabled/notification_types: Create User applies them to an address that already
+        // exists, which would re-subscribe a user who unsubscribed.
         subscriptions =
             LoginProfileApplier.addSubscriptions(createUserOperation, subscriptions) { type, token ->
-                subscriptionWithDevice(type, token, enabled = true, notificationTypes = SubscriptionStatus.SUBSCRIBED.value)
+                subscriptionWithDevice(type, token)
             }
 
         try {
@@ -387,8 +389,8 @@ internal class LoginUserOperationExecutor(
     private fun subscriptionWithDevice(
         type: SubscriptionObjectType,
         token: String,
-        enabled: Boolean,
-        notificationTypes: Int,
+        enabled: Boolean? = null,
+        notificationTypes: Int? = null,
         id: String? = null,
     ) = SubscriptionObject(
         id = id,
