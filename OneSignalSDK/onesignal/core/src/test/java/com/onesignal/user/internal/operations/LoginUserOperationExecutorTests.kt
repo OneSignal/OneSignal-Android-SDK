@@ -1,8 +1,14 @@
 package com.onesignal.user.internal.operations
 
+import android.os.Build
+import androidx.test.core.app.ApplicationProvider
 import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
 import com.onesignal.OneSignalUserProfile
+import com.onesignal.common.AndroidUtils
+import com.onesignal.common.DeviceUtils
+import com.onesignal.common.OneSignalUtils
 import com.onesignal.common.PIIHasher
+import com.onesignal.common.RootToolsInternalMethods
 import com.onesignal.common.exceptions.BackendException
 import com.onesignal.core.internal.operations.ExecutionResponse
 import com.onesignal.core.internal.operations.ExecutionResult
@@ -1076,6 +1082,23 @@ class LoginUserOperationExecutorTests : FunSpec({
         mockk(relaxed = true),
     )
 
+    fun assertProfileSubscription(
+        sub: SubscriptionObject,
+        token: String,
+    ) {
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        sub.token shouldBe token
+        sub.enabled shouldBe true
+        sub.notificationTypes shouldBe SubscriptionStatus.SUBSCRIBED.value
+        sub.sdk shouldBe OneSignalUtils.sdkVersion
+        sub.deviceModel shouldBe Build.MODEL
+        sub.deviceOS shouldBe Build.VERSION.RELEASE
+        sub.rooted shouldBe RootToolsInternalMethods.isRooted
+        sub.netType shouldBe DeviceUtils.getNetType(context)
+        sub.carrier shouldBe DeviceUtils.getCarrierName(context)
+        sub.appVersion shouldBe AndroidUtils.getAppVersion(context)
+    }
+
     test("matchingBackendSubscription matches by id even when another sub has the token") {
         val remaining =
             setOf(
@@ -1209,7 +1232,7 @@ class LoginUserOperationExecutorTests : FunSpec({
                 appId,
                 mapOf(IdentityConstants.EXTERNAL_ID to "externalId"),
                 withArg { subs ->
-                    subs.single { it.type == SubscriptionObjectType.EMAIL }.token shouldBe "a@b.com"
+                    assertProfileSubscription(subs.single { it.type == SubscriptionObjectType.EMAIL }, "a@b.com")
                     subs.none { it.type == SubscriptionObjectType.SMS } shouldBe true
                 },
                 any(),
@@ -1237,7 +1260,7 @@ class LoginUserOperationExecutorTests : FunSpec({
                 appId,
                 mapOf(IdentityConstants.EXTERNAL_ID to "externalId"),
                 withArg { subs ->
-                    subs.single { it.type == SubscriptionObjectType.SMS }.token shouldBe "+15555550100"
+                    assertProfileSubscription(subs.single { it.type == SubscriptionObjectType.SMS }, "+15555550100")
                     subs.none { it.type == SubscriptionObjectType.EMAIL } shouldBe true
                 },
                 any(),
