@@ -8,7 +8,7 @@
     <ID>ComplexMethod:ConfigModelStoreListener.kt$ConfigModelStoreListener$private fun fetchParams()</ID>
     <ID>ComplexMethod:HttpClient.kt$HttpClient$private suspend fun makeRequestIODispatcher( url: String, method: String?, jsonBody: JSONObject?, timeout: Int, headers: OptionalHeaders?, ): HttpResponse</ID>
     <ID>ComplexMethod:IdentityOperationExecutor.kt$IdentityOperationExecutor$override suspend fun execute(operations: List&lt;Operation>): ExecutionResponse</ID>
-    <ID>ComplexMethod:LoginUserOperationExecutor.kt$LoginUserOperationExecutor$private suspend fun createUser( createUserOperation: LoginUserOperation, operations: List&lt;Operation>, ): ExecutionResponse</ID>
+    <ID>ComplexMethod:LoginUserOperationExecutor.kt$LoginUserOperationExecutor$private suspend fun createUser( createUserOperation: LoginUserOperation, operations: List&lt;Operation>, mergeIntoOnesignalId: String? = null, ): ExecutionResponse</ID>
     <ID>ComplexMethod:OSDatabase.kt$OSDatabase$@Synchronized private fun internalOnUpgrade( db: SQLiteDatabase, oldVersion: Int, newVersion: Int, )</ID>
     <ID>ComplexMethod:OperationModelStore.kt$OperationModelStore$override fun create(jsonObject: JSONObject?): Operation?</ID>
     <ID>ComplexMethod:OperationRepo.kt$OperationRepo$internal suspend fun executeOperations(ops: List&lt;OperationQueueItem>)</ID>
@@ -194,7 +194,7 @@
     <ID>LongMethod:FeatureFlagsBackendService.kt$FeatureFlagsBackendService$override suspend fun fetchRemoteFeatureFlags(appId: String): RemoteFeatureFlagsFetchOutcome</ID>
     <ID>LongMethod:HttpClient.kt$HttpClient$private suspend fun makeRequestIODispatcher( url: String, method: String?, jsonBody: JSONObject?, timeout: Int, headers: OptionalHeaders?, ): HttpResponse</ID>
     <ID>LongMethod:IdentityOperationExecutor.kt$IdentityOperationExecutor$override suspend fun execute(operations: List&lt;Operation>): ExecutionResponse</ID>
-    <ID>LongMethod:LoginUserOperationExecutor.kt$LoginUserOperationExecutor$private suspend fun createUser( createUserOperation: LoginUserOperation, operations: List&lt;Operation>, ): ExecutionResponse</ID>
+    <ID>LongMethod:LoginUserOperationExecutor.kt$LoginUserOperationExecutor$private suspend fun createUser( createUserOperation: LoginUserOperation, operations: List&lt;Operation>, mergeIntoOnesignalId: String? = null, ): ExecutionResponse</ID>
     <ID>LongMethod:LoginUserOperationExecutor.kt$LoginUserOperationExecutor$private suspend fun loginUser( loginUserOp: LoginUserOperation, operations: List&lt;Operation>, ): ExecutionResponse</ID>
     <ID>LongMethod:OperationRepo.kt$OperationRepo$internal suspend fun executeOperations(ops: List&lt;OperationQueueItem>)</ID>
     <ID>LongMethod:OperationRepo.kt$OperationRepo$private fun internalEnqueue( queueItem: OperationQueueItem, flush: Boolean, addToStore: Boolean, index: Int? = null, )</ID>
@@ -293,7 +293,7 @@
     <ID>NestedBlockDepth:IdentityOperationExecutor.kt$IdentityOperationExecutor$override suspend fun execute(operations: List&lt;Operation>): ExecutionResponse</ID>
     <ID>NestedBlockDepth:InfluenceManager.kt$InfluenceManager$private fun attemptSessionUpgrade( entryAction: AppEntryAction, directId: String? = null, )</ID>
     <ID>NestedBlockDepth:JSONUtils.kt$JSONUtils$fun compareJSONArrays( jsonArray1: JSONArray?, jsonArray2: JSONArray?, ): Boolean</ID>
-    <ID>NestedBlockDepth:LoginUserOperationExecutor.kt$LoginUserOperationExecutor$private suspend fun createUser( createUserOperation: LoginUserOperation, operations: List&lt;Operation>, ): ExecutionResponse</ID>
+    <ID>NestedBlockDepth:LoginUserOperationExecutor.kt$LoginUserOperationExecutor$private suspend fun createUser( createUserOperation: LoginUserOperation, operations: List&lt;Operation>, mergeIntoOnesignalId: String? = null, ): ExecutionResponse</ID>
     <ID>NestedBlockDepth:RefreshUserOperationExecutor.kt$RefreshUserOperationExecutor$private suspend fun getUser(op: RefreshUserOperation): ExecutionResponse</ID>
     <ID>NestedBlockDepth:ServiceRegistration.kt$ServiceRegistrationReflection$override fun resolve(provider: IServiceProvider): Any?</ID>
     <ID>NestedBlockDepth:ServiceRegistration.kt$ServiceRegistrationReflection$private fun doesHaveAllParameters( constructor: Constructor&lt;*>, provider: IServiceProvider, ): Boolean</ID>
