@@ -46,6 +46,8 @@ import com.onesignal.user.internal.subscriptions.SubscriptionModel
 import com.onesignal.user.internal.subscriptions.SubscriptionModelStore
 import com.onesignal.user.internal.subscriptions.SubscriptionStatus
 import com.onesignal.user.internal.subscriptions.SubscriptionType
+import org.json.JSONException
+import org.json.JSONObject
 
 @Suppress("TooManyFunctions")
 internal class LoginUserOperationExecutor(
@@ -91,19 +93,11 @@ internal class LoginUserOperationExecutor(
             return ExecutionResponse(ExecutionResult.FAIL_NORETRY)
         }
         if (shouldCreateUserDirectly(loginUserOp, alias)) {
-            // When there is no existing user to attempt to associate with the externalId provided, we go right to
-            // createUser.  If there is no externalId provided this is an insert, if there is this will be an
-            // "upsert with retrieval" as the user may already exist.
-            //
-            // Under IV, also skip the optimistic SetAliasOperation: that inline op identifies the
-            // target user by `onesignal_id = existingOnesignalId`, but IV's alias-resolution would
-            // rewrite the call to identify by the new (not-yet-registered) `external_id`, producing
-            // a 404 or idempotent success against the wrong user. createUser's identities-map path
-            // handles the merge correctly through backend upsert semantics.
+            // A server anonymous user is merged by sending its onesignal_id. Under IV, skip
+            // SetAlias: alias resolution would target the new external_id and 404 or hit the wrong user.
             anonymousUserToMerge(loginUserOp, alias)?.let { anonymousId ->
                 val merged = createUser(loginUserOp, operations, anonymousId)
-                // 409: the external ID already belongs to another user, so there is nothing to merge into.
-                if (merged.httpStatusCode != HTTP_CONFLICT) return merged
+                if (!shouldAbandonMerge(merged)) return merged
             }
             return createUser(loginUserOp, operations)
         } else {
@@ -321,17 +315,23 @@ internal class LoginUserOperationExecutor(
                 metadata = LoginWaitMetadata(backendOneSignalId, emailSubscriptionId, smsSubscriptionId),
             )
         } catch (ex: BackendException) {
-            Logging.error("LoginUserOperationExecutor.createUser failed: HTTP ${ex.statusCode}")
             val responseType = NetworkUtils.getResponseStatusType(ex.statusCode)
-
-            return when (responseType) {
-                NetworkUtils.ResponseStatusType.RETRYABLE ->
-                    backendExecutionResponse(ExecutionResult.FAIL_RETRY, ex)
-                NetworkUtils.ResponseStatusType.UNAUTHORIZED ->
-                    backendExecutionResponse(ExecutionResult.FAIL_UNAUTHORIZED, ex)
-                else ->
-                    backendExecutionResponse(ExecutionResult.FAIL_NORETRY, ex)
+            val response =
+                when (responseType) {
+                    NetworkUtils.ResponseStatusType.RETRYABLE ->
+                        backendExecutionResponse(ExecutionResult.FAIL_RETRY, ex)
+                    NetworkUtils.ResponseStatusType.UNAUTHORIZED ->
+                        backendExecutionResponse(ExecutionResult.FAIL_UNAUTHORIZED, ex)
+                    else ->
+                        backendExecutionResponse(ExecutionResult.FAIL_NORETRY, ex)
+                }
+            // The caller retries an abandoned merge, so this failure is not the outcome.
+            if (mergeIntoOnesignalId != null && shouldAbandonMerge(response)) {
+                Logging.debug("LoginUserOperationExecutor merge attempt failed: HTTP ${ex.statusCode}")
+            } else {
+                Logging.error("LoginUserOperationExecutor.createUser failed: HTTP ${ex.statusCode}")
             }
+            return response
         }
     }
 
@@ -483,6 +483,33 @@ internal class LoginUserOperationExecutor(
         return op.existingOnesignalId?.takeUnless { IDManager.isLocalId(it) }
     }
 
+    // Drop the anonymous id and create the identified user. A readable 409 retries only
+    // when onesignal_id collided, or the code is user-2. An alias conflict is final.
+    private fun shouldAbandonMerge(response: ExecutionResponse): Boolean {
+        if (response.result != ExecutionResult.FAIL_NORETRY) return false
+        if (response.httpStatusCode != HTTP_CONFLICT) return true
+        return onesignalIdConflict(response.httpResponse) != false
+    }
+
+    /** False when the body is a conflict that does not name onesignal_id. Null when it cannot be read. */
+    private fun onesignalIdConflict(body: String?): Boolean? {
+        if (body.isNullOrBlank()) return null
+        return try {
+            val errors = JSONObject(body).optJSONArray("errors") ?: return null
+            var sawConflict = false
+            for (index in 0 until errors.length()) {
+                val error = errors.optJSONObject(index) ?: continue
+                sawConflict = true
+                if (error.optString("code") == ALIAS_CLAIMED_BY_ANOTHER_USER) return true
+                val aliases = error.optJSONObject("meta")?.optJSONObject("conflicting_aliases")
+                if (aliases?.has(IdentityConstants.ONESIGNAL_ID) == true) return true
+            }
+            if (sawConflict) false else null
+        } catch (_: JSONException) {
+            null
+        }
+    }
+
     private fun backendExecutionResponse(
         result: ExecutionResult,
         ex: BackendException,
@@ -496,6 +523,7 @@ internal class LoginUserOperationExecutor(
     companion object {
         const val LOGIN_USER = "login-user"
         private const val HTTP_CONFLICT = 409
+        private const val ALIAS_CLAIMED_BY_ANOTHER_USER = "user-2"
     }
 }
 
