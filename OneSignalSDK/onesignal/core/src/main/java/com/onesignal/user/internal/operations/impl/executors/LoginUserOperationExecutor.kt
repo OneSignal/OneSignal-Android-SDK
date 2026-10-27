@@ -327,6 +327,12 @@ internal class LoginUserOperationExecutor(
             // The caller retries an abandoned merge, so this failure is not the outcome.
             if (mergeIntoOnesignalId != null && shouldAbandonMerge(response)) {
                 Logging.debug("LoginUserOperationExecutor merge attempt failed: HTTP ${ex.statusCode}")
+                if (responseType == NetworkUtils.ResponseStatusType.CONFLICT) {
+                    // Hardcode user-1. The 409 line above reads like a failure to the app.
+                    Logging.debug(
+                        "LoginUserOperationExecutor now handling 409 response with \"code\": \"user-1\" by switching to user with \"external_id\": \"${createUserOperation.externalId}\"",
+                    )
+                }
             } else {
                 Logging.error("LoginUserOperationExecutor.createUser failed: HTTP ${ex.statusCode}")
             }
@@ -499,9 +505,9 @@ internal class LoginUserOperationExecutor(
             .takeIf { it.isNotEmpty() }
             ?.any { namesMergedUser(it) }
 
+    // user-1 is any alias clash. Retry only when conflicting_aliases names onesignal_id.
     private fun namesMergedUser(detail: OneSignalError.Detail): Boolean =
-        detail.backendCode == ALIAS_CLAIMED_BY_ANOTHER_USER ||
-            conflictingAliases(detail).containsKey(IdentityConstants.ONESIGNAL_ID)
+        conflictingAliases(detail).containsKey(IdentityConstants.ONESIGNAL_ID)
 
     private fun conflictingAliases(detail: OneSignalError.Detail): Map<*, *> =
         detail.meta?.get(CONFLICTING_ALIASES) as? Map<*, *> ?: emptyMap<String, Any?>()
@@ -519,7 +525,6 @@ internal class LoginUserOperationExecutor(
     companion object {
         const val LOGIN_USER = "login-user"
         private const val HTTP_CONFLICT = 409
-        private const val ALIAS_CLAIMED_BY_ANOTHER_USER = "user-2"
         private const val CONFLICTING_ALIASES = "conflicting_aliases"
     }
 }
