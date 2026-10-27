@@ -6,6 +6,7 @@ import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
 import com.onesignal.OneSignalUserProfile
 import com.onesignal.common.AndroidUtils
 import com.onesignal.common.DeviceUtils
+import com.onesignal.common.IDManager
 import com.onesignal.common.OneSignalUtils
 import com.onesignal.common.PIIHasher
 import com.onesignal.common.RootToolsInternalMethods
@@ -1648,6 +1649,63 @@ class LoginUserOperationExecutorTests : FunSpec({
         response.result shouldBe ExecutionResult.SUCCESS
         coVerify(exactly = 1) { mockUserBackendService.createUser(any(), any(), any(), any()) }
         coVerify(exactly = 0) { identityExecutor.execute(any()) }
+    }
+
+    test("composite login from an anonymous user sends its onesignal_id so the user is merged") {
+        val mockUserBackendService = mockk<IUserBackendService>()
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } returns
+            CreateUserResponse(mapOf(IdentityConstants.ONESIGNAL_ID to "existing-osid"), PropertiesObject(), listOf())
+
+        val response =
+            profileExecutor(mockUserBackendService).execute(
+                listOf(LoginUserOperation(appId, localOneSignalId, "externalId", "existing-osid", OneSignalUserProfile(tags = mapOf("plan" to "pro")))),
+            )
+
+        response.result shouldBe ExecutionResult.SUCCESS
+        response.idTranslations shouldBe mapOf(localOneSignalId to "existing-osid")
+        coVerify(exactly = 1) {
+            mockUserBackendService.createUser(
+                appId,
+                mapOf(IdentityConstants.EXTERNAL_ID to "externalId", IdentityConstants.ONESIGNAL_ID to "existing-osid"),
+                any(),
+                any(),
+            )
+        }
+    }
+
+    test("composite login retries without onesignal_id when the external ID belongs to another user") {
+        val mockUserBackendService = mockk<IUserBackendService>()
+        val mergeIdentities = mapOf(IdentityConstants.EXTERNAL_ID to "externalId", IdentityConstants.ONESIGNAL_ID to "existing-osid")
+        val plainIdentities = mapOf(IdentityConstants.EXTERNAL_ID to "externalId")
+        coEvery { mockUserBackendService.createUser(appId, mergeIdentities, any(), any()) } throws BackendException(409, "user-1")
+        coEvery { mockUserBackendService.createUser(appId, plainIdentities, any(), any()) } returns
+            CreateUserResponse(mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId), PropertiesObject(), listOf())
+
+        val response =
+            profileExecutor(mockUserBackendService).execute(
+                listOf(LoginUserOperation(appId, localOneSignalId, "externalId", "existing-osid", OneSignalUserProfile(tags = mapOf("plan" to "pro")))),
+            )
+
+        response.result shouldBe ExecutionResult.SUCCESS
+        response.idTranslations shouldBe mapOf(localOneSignalId to remoteOneSignalId)
+        coVerify(exactly = 1) { mockUserBackendService.createUser(appId, mergeIdentities, any(), any()) }
+        coVerify(exactly = 1) { mockUserBackendService.createUser(appId, plainIdentities, any(), any()) }
+    }
+
+    test("composite login does not merge when the anonymous user is still local, or under IV") {
+        for ((existingId, ivActive) in listOf(IDManager.createLocalId() to false, "existing-osid" to true)) {
+            val mockUserBackendService = mockk<IUserBackendService>()
+            coEvery { mockUserBackendService.createUser(any(), any(), any(), any(), any()) } returns
+                CreateUserResponse(mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId), PropertiesObject(), listOf())
+
+            profileExecutor(mockUserBackendService, ivActive = ivActive).execute(
+                listOf(LoginUserOperation(appId, localOneSignalId, "externalId", existingId, OneSignalUserProfile(tags = mapOf("plan" to "pro")))),
+            )
+
+            coVerify(exactly = 1) {
+                mockUserBackendService.createUser(appId, mapOf(IdentityConstants.EXTERNAL_ID to "externalId"), any(), any(), any())
+            }
+        }
     }
 
     test("identity-only login still associates via SetAlias when existingOnesignalId is set") {

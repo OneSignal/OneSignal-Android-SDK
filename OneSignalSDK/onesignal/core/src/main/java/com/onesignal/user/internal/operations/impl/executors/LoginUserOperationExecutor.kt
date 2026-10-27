@@ -100,6 +100,11 @@ internal class LoginUserOperationExecutor(
             // rewrite the call to identify by the new (not-yet-registered) `external_id`, producing
             // a 404 or idempotent success against the wrong user. createUser's identities-map path
             // handles the merge correctly through backend upsert semantics.
+            anonymousUserToMerge(loginUserOp, alias)?.let { anonymousId ->
+                val merged = createUser(loginUserOp, operations, anonymousId)
+                // 409: the external ID already belongs to another user, so there is nothing to merge into.
+                if (merged.httpStatusCode != HTTP_CONFLICT) return merged
+            }
             return createUser(loginUserOp, operations)
         } else {
             // before we create a user we attempt to associate the user defined by existingOnesignalId with the
@@ -179,8 +184,10 @@ internal class LoginUserOperationExecutor(
     private suspend fun createUser(
         createUserOperation: LoginUserOperation,
         operations: List<Operation>,
+        mergeIntoOnesignalId: String? = null,
     ): ExecutionResponse {
         val identities = mutableMapOf<String, String>()
+        mergeIntoOnesignalId?.let { identities[IdentityConstants.ONESIGNAL_ID] = it }
         var subscriptions = mapOf<String, SubscriptionObject>()
         val properties =
             PropertiesObject(
@@ -469,6 +476,13 @@ internal class LoginUserOperationExecutor(
         return op.existingOnesignalId == null || alias == null
     }
 
+    // A profile login sends the anonymous user's ID with the new external ID, so Create User attaches
+    // the external ID to that user instead of creating a new one, like the SetAlias path does.
+    private fun anonymousUserToMerge(op: LoginUserOperation, alias: String?): String? {
+        if (!op.hasProfileFields() || _identityVerificationService.ivBehaviorActive || alias == null) return null
+        return op.existingOnesignalId?.takeUnless { IDManager.isLocalId(it) }
+    }
+
     private fun backendExecutionResponse(
         result: ExecutionResult,
         ex: BackendException,
@@ -481,6 +495,7 @@ internal class LoginUserOperationExecutor(
 
     companion object {
         const val LOGIN_USER = "login-user"
+        private const val HTTP_CONFLICT = 409
     }
 }
 
