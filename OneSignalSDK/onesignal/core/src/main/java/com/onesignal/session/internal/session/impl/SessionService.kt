@@ -5,6 +5,7 @@ import com.onesignal.common.events.EventProducer
 import com.onesignal.common.modeling.ISingletonModelStoreChangeHandler
 import com.onesignal.common.modeling.Model
 import com.onesignal.common.modeling.ModelChangedArgs
+import com.onesignal.common.threading.OneSignalDispatchers
 import com.onesignal.common.threading.runOnSerialIO
 import com.onesignal.core.internal.application.IApplicationLifecycleHandler
 import com.onesignal.core.internal.application.IApplicationService
@@ -29,6 +30,8 @@ import com.onesignal.user.internal.backend.IdentityConstants
 import com.onesignal.user.internal.identity.IdentityModelStore
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import java.util.UUID
@@ -44,6 +47,9 @@ import kotlin.reflect.KMutableProperty1
  * some amount of time after losing focus.
  *
  * The time threshold for a session to expire is a configuration option: [ConfigModel.sessionFocusTimeout].
+ *
+ * While focused, a session that [SessionModel.usesSessionsApi] reports its duration every
+ * [HEARTBEAT_INTERVAL_MS] of active time, so the server keeps it open and a crash loses little duration.
  */
 internal class SessionService(
     private val applicationService: IApplicationService,
@@ -57,6 +63,11 @@ internal class SessionService(
     // Not a constructor parameter, since the service container can only inject registered services.
     // Tests replace it with a test dispatcher so the end send stays on the virtual clock.
     internal var ioDispatcher: CoroutineDispatcher = Dispatchers.IO
+
+    // Runs on the serial IO lane so it doesn't race the focus handlers. Not a constructor parameter
+    // for the same reason as ioDispatcher; tests replace it to run the heartbeat on a virtual clock.
+    internal var launchHeartbeat: (suspend () -> Unit) -> Job = OneSignalDispatchers::launchOnSerialIO
+    private val heartbeat = Heartbeat()
 
     override val startTime: Long
         // Pre-bootstrap default returns "now" so call sites computing `_time.currentTimeMillis - startTime`
@@ -169,6 +180,8 @@ internal class SessionService(
         val end = if (session.usesSessionsApi) endSessionOperation(session, config?.appId) else null
         sessionLifeCycleNotifier.fire { it.onSessionEnded(activeDuration) }
         session.activeDuration = 0L
+        session.lastHeartbeatDuration = 0L
+        session.lastHeartbeatTime = null
         return end
     }
 
@@ -238,6 +251,37 @@ internal class SessionService(
             session.focusElapsedRealtime = focusElapsedMs
             sessionLifeCycleNotifier.fire { it.onSessionActive() }
         }
+        if (session.usesSessionsApi) heartbeat.start(session) else heartbeat.stop()
+    }
+
+    /** Sends the session's cumulative duration every [HEARTBEAT_INTERVAL_MS] of active time while focused. */
+    private inner class Heartbeat {
+        private var job: Job? = null
+
+        fun start(session: SessionModel) {
+            stop()
+            job =
+                launchHeartbeat {
+                    while (true) {
+                        val duration = session.activeDurationAt(time.elapsedRealtimeMillis)
+                        val remaining = session.lastHeartbeatDuration + HEARTBEAT_INTERVAL_MS - duration
+                        if (remaining > 0) {
+                            // Rechecked after waking since delay and elapsedRealtime can disagree.
+                            delay(remaining)
+                            continue
+                        }
+                        Logging.debug("SessionService: heartbeat with activeDuration: $duration")
+                        session.lastHeartbeatDuration = duration
+                        session.lastHeartbeatTime = time.currentTimeMillis
+                        updateSessionOperation(session, config?.appId, duration)?.let { operationRepo.enqueue(it) }
+                    }
+                }
+        }
+
+        fun stop() {
+            job?.cancel()
+            job = null
+        }
     }
 
     override fun onUnfocused() {
@@ -258,6 +302,7 @@ internal class SessionService(
             Logging.warn("SessionService.onUnfocused called before bootstrap; ignoring.")
             return
         }
+        heartbeat.stop()
         // capture the amount of time the app was focused
         val dt =
             if (session.usesSessionsApi) {
@@ -285,6 +330,9 @@ internal class SessionService(
     companion object {
         // Covers the post-create delay when the create is still queued, plus the request itself.
         private const val END_SESSION_SEND_TIMEOUT_MS = 30_000L
+
+        // Hardcoded until the interval is remotely configured.
+        internal const val HEARTBEAT_INTERVAL_MS = 30 * 60 * 1000L
     }
 }
 
@@ -304,19 +352,39 @@ private fun createSessionOperation(
         )
     }
 
+/** [SessionModel.activeDuration] including the current focus, which hasn't been added yet. */
+private fun SessionModel.activeDurationAt(elapsedRealtimeMs: Long): Long =
+    activeDuration + (elapsedRealtimeMs - focusElapsedRealtime).coerceAtLeast(0L)
+
+/**
+ * An app killed while focused never adds its last focus to [SessionModel.activeDuration] or sets
+ * [SessionModel.unfocusTime], so fall back to the last focus or heartbeat, whichever is later.
+ */
 private fun endSessionOperation(
     session: SessionModel,
     appId: String?,
 ): UpdateSessionOperation? =
-    withSessionIds(session, appId, "ending") { resolvedAppId, onesignalId, subscriptionId ->
+    updateSessionOperation(
+        session,
+        appId,
+        activeDuration = maxOf(session.activeDuration, session.lastHeartbeatDuration),
+        endTime = maxOf(session.unfocusTime ?: 0L, session.focusTime, session.lastHeartbeatTime ?: 0L),
+    )
+
+private fun updateSessionOperation(
+    session: SessionModel,
+    appId: String?,
+    activeDuration: Long,
+    endTime: Long? = null,
+): UpdateSessionOperation? =
+    withSessionIds(session, appId, if (endTime != null) "ending" else "updating") { resolvedAppId, onesignalId, subscriptionId ->
         UpdateSessionOperation(
             appId = resolvedAppId,
             sessionId = session.localSessionId,
             onesignalId = onesignalId,
             subscriptionId = subscriptionId,
-            activeDuration = session.activeDuration,
-            // An app killed while focused has no unfocus after its last focus.
-            endTime = maxOf(session.unfocusTime ?: 0L, session.focusTime),
+            activeDuration = activeDuration,
+            endTime = endTime,
         )
     }
 
