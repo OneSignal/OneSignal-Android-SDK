@@ -24,8 +24,13 @@ import com.onesignal.session.internal.session.ISessionService
 import com.onesignal.session.internal.session.SessionModel
 import com.onesignal.session.internal.session.SessionModelStore
 import com.onesignal.session.internal.session.operations.CreateSessionOperation
+import com.onesignal.session.internal.session.operations.UpdateSessionOperation
 import com.onesignal.user.internal.backend.IdentityConstants
 import com.onesignal.user.internal.identity.IdentityModelStore
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import java.util.UUID
 import kotlin.reflect.KMutableProperty1
 
@@ -49,6 +54,10 @@ internal class SessionService(
     private val identityModelStore: IdentityModelStore,
     private val operationRepo: IOperationRepo,
 ) : ISessionService, IBootstrapService, IStartableService, IBackgroundService, IApplicationLifecycleHandler {
+    // Not a constructor parameter, since the service container can only inject registered services.
+    // Tests replace it with a test dispatcher so the end send stays on the virtual clock.
+    internal var ioDispatcher: CoroutineDispatcher = Dispatchers.IO
+
     override val startTime: Long
         // Pre-bootstrap default returns "now" so call sites computing `_time.currentTimeMillis - startTime`
         // (e.g. IAM session-duration / SESSION_TIME triggers) see ~0ms elapsed instead of ~58 years
@@ -132,21 +141,35 @@ internal class SessionService(
      * the SDK.
      */
     override suspend fun backgroundRun() {
-        endSession()
+        val end = endSession() ?: return
+        // Android 15+ blocks network requests started after this job finishes, so send the end now
+        // rather than after the queue's batching delay. Flushing is bounded to once per session.
+        // On timeout the end stays queued and is sent on the next app open.
+        // BackgroundManager runs this on Dispatchers.Unconfined, so without the switch the rest of its
+        // loop would resume on the operation repo thread that wakes the wait.
+        val sent =
+            withTimeoutOrNull(END_SESSION_SEND_TIMEOUT_MS) {
+                withContext(ioDispatcher) { operationRepo.enqueueAndWait(end, flush = true) }
+            }
+        Logging.debug("SessionService.backgroundRun: session end sent: $sent")
     }
 
-    private fun endSession() {
+    /**
+     * @return the operation that ends the session through the sessions API, for the caller to enqueue.
+     */
+    private fun endSession(): UpdateSessionOperation? {
         // Defensive: if bootstrap() has not run yet, there is no session state to end.
         // This can happen when SyncJobService races with
         // an in-flight initWithContext that has not yet reached bootstrapServices().
-        val session = this.session ?: return
-        if (!session.isValid) return
+        val session = this.session?.takeIf { it.isValid } ?: return null
         val activeDuration = session.activeDuration
         Logging.debug("SessionService.backgroundRun: Session ended. activeDuration: $activeDuration")
 
         session.isValid = false
+        val end = if (session.usesSessionsApi) endSessionOperation(session, config?.appId) else null
         sessionLifeCycleNotifier.fire { it.onSessionEnded(activeDuration) }
         session.activeDuration = 0L
+        return end
     }
 
     /**
@@ -184,7 +207,7 @@ internal class SessionService(
         // Treat app cold starts as a new session, we attempt to end any previous session to do this.
         if (!hasFocused) {
             hasFocused = true
-            endSession()
+            endSession()?.let { operationRepo.enqueue(it) }
         }
 
         if (!session.isValid) {
@@ -194,6 +217,7 @@ internal class SessionService(
             session.startTime = focusTimeMs
             session.focusTime = session.startTime
             session.focusElapsedRealtime = focusElapsedMs
+            session.unfocusTime = null
             session.usesSessionsApi = featureManager.isEnabled(FeatureFlag.SDK_SESSIONS_V2_API_CUTOVER)
             session.onesignalId =
                 identityModelStore.model
@@ -243,6 +267,7 @@ internal class SessionService(
                 unfocusTimeMs - session.focusTime
             }
         session.activeDuration += dt
+        session.unfocusTime = unfocusTimeMs
         Logging.log(LogLevel.DEBUG, "SessionService.onUnfocused adding time $dt for total: ${session.activeDuration}")
     }
 
@@ -256,28 +281,59 @@ internal class SessionService(
 
     override val hasSubscribers: Boolean
         get() = sessionLifeCycleNotifier.hasSubscribers
+
+    companion object {
+        // Covers the post-create delay when the create is still queued, plus the request itself.
+        private const val END_SESSION_SEND_TIMEOUT_MS = 30_000L
+    }
 }
 
 private fun createSessionOperation(
     session: SessionModel,
     appId: String?,
     externalId: String?,
-): CreateSessionOperation? {
+): CreateSessionOperation? =
+    withSessionIds(session, appId, "creating") { resolvedAppId, onesignalId, subscriptionId ->
+        CreateSessionOperation(
+            appId = resolvedAppId,
+            localSessionId = session.localSessionId,
+            onesignalId = onesignalId,
+            subscriptionId = subscriptionId,
+            startTime = session.startTime,
+            externalId = externalId,
+        )
+    }
+
+private fun endSessionOperation(
+    session: SessionModel,
+    appId: String?,
+): UpdateSessionOperation? =
+    withSessionIds(session, appId, "ending") { resolvedAppId, onesignalId, subscriptionId ->
+        UpdateSessionOperation(
+            appId = resolvedAppId,
+            sessionId = session.localSessionId,
+            onesignalId = onesignalId,
+            subscriptionId = subscriptionId,
+            activeDuration = session.activeDuration,
+            // An app killed while focused has no unfocus after its last focus.
+            endTime = maxOf(session.unfocusTime ?: 0L, session.focusTime),
+        )
+    }
+
+private fun <T> withSessionIds(
+    session: SessionModel,
+    appId: String?,
+    action: String,
+    block: (appId: String, onesignalId: String, subscriptionId: String) -> T,
+): T? {
     val onesignalId = session.onesignalId
     val subscriptionId = session.subscriptionId
     if (appId == null || onesignalId == null || subscriptionId == null) {
         Logging.warn(
-            "SessionService: not creating session ${session.sessionId}, missing appId: ${appId == null}, " +
+            "SessionService: not $action session ${session.sessionId}, missing appId: ${appId == null}, " +
                 "onesignalId: ${onesignalId == null}, subscriptionId: ${subscriptionId == null}",
         )
         return null
     }
-    return CreateSessionOperation(
-        appId = appId,
-        localSessionId = session.localSessionId,
-        onesignalId = onesignalId,
-        subscriptionId = subscriptionId,
-        startTime = session.startTime,
-        externalId = externalId,
-    )
+    return block(appId, onesignalId, subscriptionId)
 }
