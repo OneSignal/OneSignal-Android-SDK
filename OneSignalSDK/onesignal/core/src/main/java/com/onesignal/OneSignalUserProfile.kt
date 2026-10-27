@@ -12,6 +12,9 @@ import java.util.Collections
 class OneSignalUserProfile private constructor(builder: Builder) {
     val email: String? = builder.email?.takeIf { it.isNotBlank() }
     val sms: String? = builder.sms?.takeIf { it.isNotBlank() }
+
+    /** False stores the email unsubscribed. True is not sent. Null omits status. */
+    val emailEnabled: Boolean? = builder.emailEnabled
     val tags: Map<String, String> = Collections.unmodifiableMap(builder.tags.toMap())
     val aliases: Map<String, String> = Collections.unmodifiableMap(builder.aliases.toMap())
 
@@ -39,6 +42,7 @@ class OneSignalUserProfile private constructor(builder: Builder) {
         if (other !is OneSignalUserProfile) return false
         return email == other.email &&
             sms == other.sms &&
+            emailEnabled == other.emailEnabled &&
             tags == other.tags &&
             aliases == other.aliases
     }
@@ -46,6 +50,7 @@ class OneSignalUserProfile private constructor(builder: Builder) {
     override fun hashCode(): Int {
         var result = email?.hashCode() ?: 0
         result = 31 * result + (sms?.hashCode() ?: 0)
+        result = 31 * result + (emailEnabled?.hashCode() ?: 0)
         result = 31 * result + tags.hashCode()
         result = 31 * result + aliases.hashCode()
         return result
@@ -60,6 +65,8 @@ class OneSignalUserProfile private constructor(builder: Builder) {
             private set
         internal var sms: String? = null
             private set
+        internal var emailEnabled: Boolean? = null
+            private set
         internal var tags: Map<String, String> = emptyMap()
             private set
         internal var aliases: Map<String, String> = emptyMap()
@@ -67,6 +74,9 @@ class OneSignalUserProfile private constructor(builder: Builder) {
 
         /** Email to create or transfer onto this user at login. */
         fun setEmail(email: String?) = apply { this.email = email }
+
+        /** Store the email unsubscribed when false. True is not sent on Create User. */
+        fun setEmailEnabled(enabled: Boolean) = apply { this.emailEnabled = enabled }
 
         /** SMS to create or transfer onto this user at login. Must be E.164 (e.g. +14155552671). */
         fun setSms(sms: String?) = apply { this.sms = sms }
@@ -92,7 +102,10 @@ class OneSignalUserProfile private constructor(builder: Builder) {
             sms: String? = null,
             tags: Map<String, String> = emptyMap(),
             aliases: Map<String, String> = emptyMap(),
-        ) = Builder().setEmail(email).setSms(sms).setTags(tags).setAliases(aliases).build()
+            emailEnabled: Boolean? = null,
+        ) = Builder().setEmail(email).setSms(sms).setTags(tags).setAliases(aliases).apply {
+            if (emailEnabled != null) setEmailEnabled(emailEnabled)
+        }.build()
 
         private fun redact(value: String?): String = if (value == null) "null" else "<set>"
     }

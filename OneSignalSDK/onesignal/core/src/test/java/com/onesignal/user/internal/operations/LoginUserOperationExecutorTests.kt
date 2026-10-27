@@ -1,8 +1,14 @@
 package com.onesignal.user.internal.operations
 
+import android.os.Build
+import androidx.test.core.app.ApplicationProvider
 import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
 import com.onesignal.OneSignalUserProfile
+import com.onesignal.common.AndroidUtils
+import com.onesignal.common.DeviceUtils
+import com.onesignal.common.OneSignalUtils
 import com.onesignal.common.PIIHasher
+import com.onesignal.common.RootToolsInternalMethods
 import com.onesignal.common.exceptions.BackendException
 import com.onesignal.core.internal.operations.ExecutionResponse
 import com.onesignal.core.internal.operations.ExecutionResult
@@ -33,11 +39,13 @@ import com.onesignal.user.internal.subscriptions.SubscriptionType
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.collections.shouldBeOneOf
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.slot
 
 @RobolectricTest
 class LoginUserOperationExecutorTests : FunSpec({
@@ -1076,6 +1084,32 @@ class LoginUserOperationExecutorTests : FunSpec({
         mockk(relaxed = true),
     )
 
+    fun assertProfileSubscription(
+        sub: SubscriptionObject,
+        token: String,
+        enabled: Boolean? = null,
+        notificationTypes: Int? = null,
+    ) {
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        sub.token shouldBe token
+        sub.enabled shouldBe enabled
+        sub.notificationTypes shouldBe notificationTypes
+        sub.sdk shouldNotBe null
+        sub.sdk shouldBe OneSignalUtils.sdkVersion
+        sub.deviceModel shouldNotBe null
+        sub.deviceModel shouldBe Build.MODEL
+        sub.deviceOS shouldNotBe null
+        sub.deviceOS shouldBe Build.VERSION.RELEASE
+        sub.rooted shouldNotBe null
+        sub.rooted shouldBe RootToolsInternalMethods.isRooted
+        sub.netType shouldNotBe null
+        sub.netType shouldBe DeviceUtils.getNetType(context)
+        // Robolectric has no carrier, so only equality is checked.
+        sub.carrier shouldBe DeviceUtils.getCarrierName(context)
+        sub.appVersion shouldNotBe null
+        sub.appVersion shouldBe AndroidUtils.getAppVersion(context)
+    }
+
     test("matchingBackendSubscription matches by id even when another sub has the token") {
         val remaining =
             setOf(
@@ -1204,17 +1238,81 @@ class LoginUserOperationExecutorTests : FunSpec({
 
         response.result shouldBe ExecutionResult.SUCCESS
         response.metadata shouldBe LoginWaitMetadata(remoteOneSignalId, "email-sub")
+        val subs = slot<List<SubscriptionObject>>()
         coVerify(exactly = 1) {
-            mockUserBackendService.createUser(
-                appId,
-                mapOf(IdentityConstants.EXTERNAL_ID to "externalId"),
-                withArg { subs ->
-                    subs.single { it.type == SubscriptionObjectType.EMAIL }.token shouldBe "a@b.com"
-                    subs.none { it.type == SubscriptionObjectType.SMS } shouldBe true
-                },
-                any(),
-            )
+            mockUserBackendService.createUser(appId, mapOf(IdentityConstants.EXTERNAL_ID to "externalId"), capture(subs), any())
         }
+        assertProfileSubscription(subs.captured.single { it.type == SubscriptionObjectType.EMAIL }, "a@b.com")
+        subs.captured.none { it.type == SubscriptionObjectType.SMS } shouldBe true
+    }
+
+    test("composite login stores an email unsubscribed when enabled is false") {
+        val mockUserBackendService = mockk<IUserBackendService>()
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } returns
+            CreateUserResponse(
+                mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId),
+                PropertiesObject(),
+                listOf(SubscriptionObject(id = "email-sub", type = SubscriptionObjectType.EMAIL, token = "a@b.com")),
+            )
+        val identityStore = MockHelper.identityModelStore { it.onesignalId = localOneSignalId }
+        val subscriptions = SubscriptionModelStore(MockPreferencesService())
+
+        val response =
+            profileExecutor(mockUserBackendService, subscriptions, identityStore).execute(
+                listOf(
+                    LoginUserOperation(
+                        appId,
+                        localOneSignalId,
+                        "externalId",
+                        null,
+                        OneSignalUserProfile(email = "a@b.com", emailEnabled = false),
+                    ),
+                ),
+            )
+
+        response.result shouldBe ExecutionResult.SUCCESS
+        val subs = slot<List<SubscriptionObject>>()
+        coVerify(exactly = 1) {
+            mockUserBackendService.createUser(appId, mapOf(IdentityConstants.EXTERNAL_ID to "externalId"), capture(subs), any())
+        }
+        assertProfileSubscription(
+            subs.captured.single { it.type == SubscriptionObjectType.EMAIL },
+            "a@b.com",
+            enabled = false,
+            notificationTypes = SubscriptionStatus.UNSUBSCRIBE.value,
+        )
+        subscriptions.list().single { it.type == SubscriptionType.EMAIL }.let {
+            it.optedIn shouldBe false
+            it.status shouldBe SubscriptionStatus.UNSUBSCRIBE
+        }
+    }
+
+    test("composite login omits email status when enabled is true") {
+        val mockUserBackendService = mockk<IUserBackendService>()
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } returns
+            CreateUserResponse(
+                mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId),
+                PropertiesObject(),
+                listOf(SubscriptionObject(id = "email-sub", type = SubscriptionObjectType.EMAIL, token = "a@b.com")),
+            )
+
+        profileExecutor(mockUserBackendService).execute(
+            listOf(
+                LoginUserOperation(
+                    appId,
+                    localOneSignalId,
+                    "externalId",
+                    null,
+                    OneSignalUserProfile(email = "a@b.com", emailEnabled = true),
+                ),
+            ),
+        )
+
+        val subs = slot<List<SubscriptionObject>>()
+        coVerify(exactly = 1) {
+            mockUserBackendService.createUser(appId, mapOf(IdentityConstants.EXTERNAL_ID to "externalId"), capture(subs), any())
+        }
+        assertProfileSubscription(subs.captured.single { it.type == SubscriptionObjectType.EMAIL }, "a@b.com")
     }
 
     test("composite login with phone only sends an SMS subscription") {
@@ -1232,17 +1330,12 @@ class LoginUserOperationExecutorTests : FunSpec({
             )
 
         response.result shouldBe ExecutionResult.SUCCESS
+        val subs = slot<List<SubscriptionObject>>()
         coVerify(exactly = 1) {
-            mockUserBackendService.createUser(
-                appId,
-                mapOf(IdentityConstants.EXTERNAL_ID to "externalId"),
-                withArg { subs ->
-                    subs.single { it.type == SubscriptionObjectType.SMS }.token shouldBe "+15555550100"
-                    subs.none { it.type == SubscriptionObjectType.EMAIL } shouldBe true
-                },
-                any(),
-            )
+            mockUserBackendService.createUser(appId, mapOf(IdentityConstants.EXTERNAL_ID to "externalId"), capture(subs), any())
         }
+        assertProfileSubscription(subs.captured.single { it.type == SubscriptionObjectType.SMS }, "+15555550100")
+        subs.captured.none { it.type == SubscriptionObjectType.EMAIL } shouldBe true
     }
 
     test("composite login with tags only forwards them on createUser") {
@@ -1584,6 +1677,7 @@ class LoginUserOperationExecutorTests : FunSpec({
                     sms = "+15555550100",
                     tags = mapOf("plan" to "pro"),
                     aliases = mapOf("facebook" to "bob"),
+                    emailEnabled = false,
                 ),
             )
 
@@ -1591,6 +1685,7 @@ class LoginUserOperationExecutorTests : FunSpec({
         restored.initializeFromJson(original.toJSON())
 
         restored.email shouldBe "a@b.com"
+        restored.emailEnabled shouldBe false
         restored.sms shouldBe "+15555550100"
         restored.tags shouldBe mapOf("plan" to "pro")
         restored.aliases shouldBe mapOf("facebook" to "bob")

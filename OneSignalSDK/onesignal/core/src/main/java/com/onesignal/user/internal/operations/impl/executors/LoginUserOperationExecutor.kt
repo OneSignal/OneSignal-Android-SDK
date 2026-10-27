@@ -44,8 +44,10 @@ import com.onesignal.user.internal.properties.PropertiesModel
 import com.onesignal.user.internal.properties.PropertiesModelStore
 import com.onesignal.user.internal.subscriptions.SubscriptionModel
 import com.onesignal.user.internal.subscriptions.SubscriptionModelStore
+import com.onesignal.user.internal.subscriptions.SubscriptionStatus
 import com.onesignal.user.internal.subscriptions.SubscriptionType
 
+@Suppress("TooManyFunctions")
 internal class LoginUserOperationExecutor(
     private val _identityOperationExecutor: IdentityOperationExecutor,
     private val _application: IApplicationService,
@@ -208,7 +210,10 @@ internal class LoginUserOperationExecutor(
                 else -> throw Exception("Unrecognized operation: $operation")
             }
         }
-        subscriptions = LoginProfileApplier.addSubscriptions(createUserOperation, subscriptions)
+        subscriptions =
+            LoginProfileApplier.addSubscriptions(createUserOperation, subscriptions) { type, token ->
+                profileSubscription(type, token, createUserOperation.emailEnabled)
+            }
 
         try {
             val subscriptionList = subscriptions.toList()
@@ -259,6 +264,7 @@ internal class LoginUserOperationExecutor(
                                 backendSubscription,
                                 LoginProfileApplier.fallbackToken(backendSubscription.type, createUserOperation),
                                 _subscriptionsModelStore,
+                                optedIn = !emailStoredUnsubscribed(backendSubscription.type, createUserOperation),
                             )
                         }
                         when (LoginProfileApplier.subscriptionType(backendSubscription.type)) {
@@ -291,14 +297,6 @@ internal class LoginUserOperationExecutor(
                 LoginProfileApplier.hydrate(createUserOperation, response, _identityModelStore, _propertiesModelStore)
             } else if (createUserOperation.hasProfileFields()) {
                 Logging.warn("LoginUserOperationExecutor: skipped profile hydration because the current identity is not the created user")
-            }
-
-            if (!_identityVerificationService.ivBehaviorActive &&
-                (!createUserOperation.email.isNullOrBlank() || !createUserOperation.sms.isNullOrBlank())
-            ) {
-                Logging.warn(
-                    "LoginUserOperationExecutor: email or SMS sent without identity verification. If that address belonged to another user it was transferred.",
-                )
             }
 
             val wasPossiblyAnUpsert = identities.isNotEmpty()
@@ -377,23 +375,59 @@ internal class LoginUserOperationExecutor(
             }
         val subId = if (!IDManager.isLocalId(operation.subscriptionId)) operation.subscriptionId else null
         mutableSubscriptions[operation.subscriptionId] =
-            SubscriptionObject(
-                id = subId,
+            subscriptionWithDevice(
                 subscriptionType,
                 operation.address,
                 operation.enabled,
                 operation.status.value,
-                OneSignalUtils.sdkVersion,
-                Build.MODEL,
-                Build.VERSION.RELEASE,
-                RootToolsInternalMethods.isRooted,
-                DeviceUtils.getNetType(_application.appContext),
-                DeviceUtils.getCarrierName(_application.appContext),
-                AndroidUtils.getAppVersion(_application.appContext),
+                subId,
             )
 
         return mutableSubscriptions
     }
+
+    // Create User applies a subscribed status to an address that already opted out.
+    // Send enabled false only when the customer asked, so they can collect the email
+    // without marketing consent. Anything else stays omitted.
+    private fun profileSubscription(
+        type: SubscriptionObjectType,
+        token: String,
+        emailEnabled: Boolean?,
+    ): SubscriptionObject {
+        val unsubscribed = type == SubscriptionObjectType.EMAIL && emailEnabled == false
+        return subscriptionWithDevice(
+            type,
+            token,
+            enabled = if (unsubscribed) false else null,
+            notificationTypes = if (unsubscribed) SubscriptionStatus.UNSUBSCRIBE.value else null,
+        )
+    }
+
+    private fun emailStoredUnsubscribed(
+        type: SubscriptionObjectType?,
+        operation: LoginUserOperation,
+    ): Boolean = LoginProfileApplier.subscriptionType(type) == SubscriptionType.EMAIL && operation.emailEnabled == false
+
+    private fun subscriptionWithDevice(
+        type: SubscriptionObjectType,
+        token: String,
+        enabled: Boolean? = null,
+        notificationTypes: Int? = null,
+        id: String? = null,
+    ) = SubscriptionObject(
+        id = id,
+        type = type,
+        token = token,
+        enabled = enabled,
+        notificationTypes = notificationTypes,
+        sdk = OneSignalUtils.sdkVersion,
+        deviceModel = Build.MODEL,
+        deviceOS = Build.VERSION.RELEASE,
+        rooted = RootToolsInternalMethods.isRooted,
+        netType = DeviceUtils.getNetType(_application.appContext),
+        carrier = DeviceUtils.getCarrierName(_application.appContext),
+        appVersion = AndroidUtils.getAppVersion(_application.appContext),
+    )
 
     private fun createSubscriptionsFromOperation(
         operation: UpdateSubscriptionOperation,

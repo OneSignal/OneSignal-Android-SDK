@@ -24,15 +24,16 @@ internal object LoginProfileApplier {
     fun addSubscriptions(
         op: LoginUserOperation,
         subscriptions: Map<String, SubscriptionObject>,
+        buildProfileSubscription: (SubscriptionObjectType, String) -> SubscriptionObject,
     ): Map<String, SubscriptionObject> {
         val mutable = subscriptions.toMutableMap()
         val email = op.email?.takeIf { it.isNotBlank() }
         if (email != null && mutable.values.none { it.type == SubscriptionObjectType.EMAIL && it.token == email }) {
-            mutable[PROFILE_EMAIL_KEY] = SubscriptionObject(type = SubscriptionObjectType.EMAIL, token = email)
+            mutable[PROFILE_EMAIL_KEY] = buildProfileSubscription(SubscriptionObjectType.EMAIL, email)
         }
         val sms = op.sms?.takeIf { it.isNotBlank() }
         if (sms != null && mutable.values.none { it.type == SubscriptionObjectType.SMS && it.token == sms }) {
-            mutable[PROFILE_SMS_KEY] = SubscriptionObject(type = SubscriptionObjectType.SMS, token = sms)
+            mutable[PROFILE_SMS_KEY] = buildProfileSubscription(SubscriptionObjectType.SMS, sms)
         }
         return mutable
     }
@@ -73,6 +74,7 @@ internal object LoginProfileApplier {
         backend: SubscriptionObject,
         fallbackToken: String?,
         subscriptionsModelStore: SubscriptionModelStore,
+        optedIn: Boolean = true,
     ) {
         val id = backend.id
         val token = backend.token ?: fallbackToken
@@ -93,8 +95,8 @@ internal object LoginProfileApplier {
         model.id = id
         model.type = type
         model.address = token
-        model.status = SubscriptionStatus.SUBSCRIBED
-        model.optedIn = true
+        model.status = if (optedIn) SubscriptionStatus.SUBSCRIBED else SubscriptionStatus.UNSUBSCRIBE
+        model.optedIn = optedIn
         subscriptionsModelStore.add(model, ModelChangeTags.HYDRATE)
     }
 

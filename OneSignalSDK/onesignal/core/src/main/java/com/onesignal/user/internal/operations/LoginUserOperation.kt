@@ -61,6 +61,12 @@ class LoginUserOperation() : Operation(LoginUserOperationExecutor.LOGIN_USER) {
             setOptStringProperty(PROFILE_SMS, value)
         }
 
+    internal var emailEnabled: Boolean?
+        get() = getOptBooleanProperty(PROFILE_EMAIL_ENABLED)
+        set(value) {
+            setOptBooleanProperty(PROFILE_EMAIL_ENABLED, value)
+        }
+
     internal var tags: Map<String, String>
         get() = decodeMap(getOptStringProperty(PROFILE_TAGS))
         set(value) {
@@ -93,6 +99,7 @@ class LoginUserOperation() : Operation(LoginUserOperationExecutor.LOGIN_USER) {
         if (profile != null) {
             this.email = profile.email?.takeIf { it.isNotBlank() }
             this.sms = profile.sms?.takeIf { it.isNotBlank() }
+            this.emailEnabled = profile.emailEnabled
             this.tags = profile.tags
             this.aliases = profile.aliases
         }
@@ -102,7 +109,10 @@ class LoginUserOperation() : Operation(LoginUserOperationExecutor.LOGIN_USER) {
         !email.isNullOrBlank() || !sms.isNullOrBlank() || tags.isNotEmpty() || aliases.isNotEmpty()
 
     internal fun mergeProfileFrom(other: LoginUserOperation) {
-        if (!other.email.isNullOrBlank()) email = other.email
+        if (!other.email.isNullOrBlank()) {
+            email = other.email
+            emailEnabled = other.emailEnabled
+        }
         if (!other.sms.isNullOrBlank()) sms = other.sms
         if (other.tags.isNotEmpty()) tags = tags + other.tags
         if (other.aliases.isNotEmpty()) aliases = aliases + other.aliases
@@ -128,6 +138,7 @@ internal fun reservedLoginAliasLabel(label: String): Boolean =
     label.isBlank() || label == IdentityConstants.ONESIGNAL_ID || label == IdentityConstants.EXTERNAL_ID
 
 private const val PROFILE_EMAIL = "profileEmail"
+private const val PROFILE_EMAIL_ENABLED = "profileEmailEnabled"
 private const val PROFILE_SMS = "profileSms"
 private const val PROFILE_TAGS = "profileTags"
 private const val PROFILE_ALIASES = "profileAliases"
