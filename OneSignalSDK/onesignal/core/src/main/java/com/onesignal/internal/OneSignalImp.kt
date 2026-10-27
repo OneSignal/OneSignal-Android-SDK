@@ -851,10 +851,10 @@ internal class OneSignalImp : IOneSignal,
         loginHelper.enqueueLogin(context)
     }
 
-    override suspend fun login(
+    suspend fun login(
         externalId: String?,
         profile: OneSignalUserProfile,
-        jwtBearerToken: String?,
+        jwtBearerToken: String? = null,
     ): OneSignalResult<LoginData> =
         withContext(ioDispatcher) {
             Logging.log(LogLevel.DEBUG, "login(externalId: $externalId, profile: $profile, jwtBearerToken: ...${jwtBearerToken?.takeLast(8)})")
