@@ -1677,7 +1677,11 @@ class LoginUserOperationExecutorTests : FunSpec({
         val mockUserBackendService = mockk<IUserBackendService>()
         val mergeIdentities = mapOf(IdentityConstants.EXTERNAL_ID to "externalId", IdentityConstants.ONESIGNAL_ID to "existing-osid")
         val plainIdentities = mapOf(IdentityConstants.EXTERNAL_ID to "externalId")
-        coEvery { mockUserBackendService.createUser(appId, mergeIdentities, any(), any()) } throws BackendException(409, "user-1")
+        coEvery { mockUserBackendService.createUser(appId, mergeIdentities, any(), any()) } throws
+            BackendException(
+                409,
+                """{"errors":[{"code":"user-1","meta":{"conflicting_aliases":{"external_id":"externalId","onesignal_id":"existing-osid"}}}]}""",
+            )
         coEvery { mockUserBackendService.createUser(appId, plainIdentities, any(), any()) } returns
             CreateUserResponse(mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId), PropertiesObject(), listOf())
 
@@ -1690,6 +1694,44 @@ class LoginUserOperationExecutorTests : FunSpec({
         response.idTranslations shouldBe mapOf(localOneSignalId to remoteOneSignalId)
         coVerify(exactly = 1) { mockUserBackendService.createUser(appId, mergeIdentities, any(), any()) }
         coVerify(exactly = 1) { mockUserBackendService.createUser(appId, plainIdentities, any(), any()) }
+    }
+
+    test("composite login retries without onesignal_id when the merge attempt is not a conflict") {
+        val mockUserBackendService = mockk<IUserBackendService>()
+        val mergeIdentities = mapOf(IdentityConstants.EXTERNAL_ID to "externalId", IdentityConstants.ONESIGNAL_ID to "existing-osid")
+        val plainIdentities = mapOf(IdentityConstants.EXTERNAL_ID to "externalId")
+        coEvery { mockUserBackendService.createUser(appId, mergeIdentities, any(), any()) } throws
+            BackendException(404, """{"errors":[{"code":"user-0","title":"User not found"}]}""")
+        coEvery { mockUserBackendService.createUser(appId, plainIdentities, any(), any()) } returns
+            CreateUserResponse(mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId), PropertiesObject(), listOf())
+
+        val response =
+            profileExecutor(mockUserBackendService).execute(
+                listOf(LoginUserOperation(appId, localOneSignalId, "externalId", "existing-osid", OneSignalUserProfile(tags = mapOf("plan" to "pro")))),
+            )
+
+        response.result shouldBe ExecutionResult.SUCCESS
+        response.idTranslations shouldBe mapOf(localOneSignalId to remoteOneSignalId)
+        coVerify(exactly = 1) { mockUserBackendService.createUser(appId, mergeIdentities, any(), any()) }
+        coVerify(exactly = 1) { mockUserBackendService.createUser(appId, plainIdentities, any(), any()) }
+    }
+
+    test("composite login does not retry a merge when the 409 is an alias conflict") {
+        val mockUserBackendService = mockk<IUserBackendService>()
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } throws
+            BackendException(
+                409,
+                """{"errors":[{"code":"user-1","meta":{"conflicting_aliases":{"facebook":"bob","external_id":"externalId"}}}]}""",
+            )
+
+        val response =
+            profileExecutor(mockUserBackendService).execute(
+                listOf(LoginUserOperation(appId, localOneSignalId, "externalId", "existing-osid", OneSignalUserProfile(aliases = mapOf("facebook" to "bob")))),
+            )
+
+        response.result shouldBe ExecutionResult.FAIL_NORETRY
+        response.httpStatusCode shouldBe 409
+        coVerify(exactly = 1) { mockUserBackendService.createUser(any(), any(), any(), any()) }
     }
 
     test("composite login does not merge when the anonymous user is still local, or under IV") {
