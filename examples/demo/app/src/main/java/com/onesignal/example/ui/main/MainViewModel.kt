@@ -286,6 +286,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
                 SharedPreferenceUtil.cacheUserExternalUserId(getApplication(), externalUserId)
                 SharedPreferenceUtil.cacheJwtToken(getApplication(), jwtToken)
                 _externalUserId.value = externalUserId
+                resetLanguagePicker()
                 aliasesList.clear()
                 emailsList.clear()
                 smsNumbersList.clear()
@@ -315,6 +316,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
                     SharedPreferenceUtil.cacheUserExternalUserId(getApplication(), externalUserId)
                     SharedPreferenceUtil.cacheJwtToken(getApplication(), jwtToken)
                     _externalUserId.value = externalUserId
+                    resetLanguagePicker()
                     aliasesList.clear()
                     emailsList.clear()
                     smsNumbersList.clear()
@@ -350,7 +352,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
             withContext(Dispatchers.Main) {
                 SharedPreferenceUtil.cacheUserExternalUserId(getApplication(), "")
                 _externalUserId.value = null
-                setLanguage("")
+                resetLanguagePicker()
                 loadExistingAliases()
                 loadExistingTags()
                 refreshPushSubscription()
@@ -376,6 +378,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
         SharedPreferenceUtil.cacheLanguage(getApplication(), language)
         _language.value = language
         DemoLog.i("Language set to: ${language.ifEmpty { "device default" }}")
+    }
+
+    // Clears only the cached choice. setLanguage("") would send the device
+    // language and overwrite the user's backend value.
+    private fun resetLanguagePicker() {
+        SharedPreferenceUtil.cacheLanguage(getApplication(), "")
+        _language.value = ""
     }
 
     // Consent required
