@@ -44,6 +44,7 @@ import com.onesignal.user.internal.properties.PropertiesModel
 import com.onesignal.user.internal.properties.PropertiesModelStore
 import com.onesignal.user.internal.subscriptions.SubscriptionModel
 import com.onesignal.user.internal.subscriptions.SubscriptionModelStore
+import com.onesignal.user.internal.subscriptions.SubscriptionStatus
 import com.onesignal.user.internal.subscriptions.SubscriptionType
 
 @Suppress("TooManyFunctions")
@@ -209,11 +210,9 @@ internal class LoginUserOperationExecutor(
                 else -> throw Exception("Unrecognized operation: $operation")
             }
         }
-        // No enabled/notification_types: Create User applies them to an address that already
-        // exists, which would re-subscribe a user who unsubscribed.
         subscriptions =
             LoginProfileApplier.addSubscriptions(createUserOperation, subscriptions) { type, token ->
-                subscriptionWithDevice(type, token)
+                profileSubscription(type, token, createUserOperation.emailEnabled)
             }
 
         try {
@@ -265,6 +264,7 @@ internal class LoginUserOperationExecutor(
                                 backendSubscription,
                                 LoginProfileApplier.fallbackToken(backendSubscription.type, createUserOperation),
                                 _subscriptionsModelStore,
+                                optedIn = !emailStoredUnsubscribed(backendSubscription.type, createUserOperation),
                             )
                         }
                         when (LoginProfileApplier.subscriptionType(backendSubscription.type)) {
@@ -385,6 +385,28 @@ internal class LoginUserOperationExecutor(
 
         return mutableSubscriptions
     }
+
+    // Create User applies a subscribed status to an address that already opted out.
+    // Send enabled false only when the customer asked, so they can collect the email
+    // without marketing consent. Anything else stays omitted.
+    private fun profileSubscription(
+        type: SubscriptionObjectType,
+        token: String,
+        emailEnabled: Boolean?,
+    ): SubscriptionObject {
+        val unsubscribed = type == SubscriptionObjectType.EMAIL && emailEnabled == false
+        return subscriptionWithDevice(
+            type,
+            token,
+            enabled = if (unsubscribed) false else null,
+            notificationTypes = if (unsubscribed) SubscriptionStatus.UNSUBSCRIBE.value else null,
+        )
+    }
+
+    private fun emailStoredUnsubscribed(
+        type: SubscriptionObjectType?,
+        operation: LoginUserOperation,
+    ): Boolean = LoginProfileApplier.subscriptionType(type) == SubscriptionType.EMAIL && operation.emailEnabled == false
 
     private fun subscriptionWithDevice(
         type: SubscriptionObjectType,

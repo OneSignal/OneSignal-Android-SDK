@@ -74,6 +74,7 @@ internal object LoginProfileApplier {
         backend: SubscriptionObject,
         fallbackToken: String?,
         subscriptionsModelStore: SubscriptionModelStore,
+        optedIn: Boolean = true,
     ) {
         val id = backend.id
         val token = backend.token ?: fallbackToken
@@ -94,8 +95,8 @@ internal object LoginProfileApplier {
         model.id = id
         model.type = type
         model.address = token
-        model.status = SubscriptionStatus.SUBSCRIBED
-        model.optedIn = true
+        model.status = if (optedIn) SubscriptionStatus.SUBSCRIBED else SubscriptionStatus.UNSUBSCRIBE
+        model.optedIn = optedIn
         subscriptionsModelStore.add(model, ModelChangeTags.HYDRATE)
     }
 

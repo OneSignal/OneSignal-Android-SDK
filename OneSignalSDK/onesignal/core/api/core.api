@@ -194,6 +194,7 @@ public final class com/onesignal/OneSignalUserProfile {
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getAliases ()Ljava/util/Map;
 	public final fun getEmail ()Ljava/lang/String;
+	public final fun getEmailEnabled ()Ljava/lang/Boolean;
 	public final fun getSms ()Ljava/lang/String;
 	public final fun getTags ()Ljava/util/Map;
 	public fun hashCode ()I
@@ -205,6 +206,7 @@ public final class com/onesignal/OneSignalUserProfile$Builder {
 	public final fun build ()Lcom/onesignal/OneSignalUserProfile;
 	public final fun setAliases (Ljava/util/Map;)Lcom/onesignal/OneSignalUserProfile$Builder;
 	public final fun setEmail (Ljava/lang/String;)Lcom/onesignal/OneSignalUserProfile$Builder;
+	public final fun setEmailEnabled (Z)Lcom/onesignal/OneSignalUserProfile$Builder;
 	public final fun setSms (Ljava/lang/String;)Lcom/onesignal/OneSignalUserProfile$Builder;
 	public final fun setTags (Ljava/util/Map;)Lcom/onesignal/OneSignalUserProfile$Builder;
 }
