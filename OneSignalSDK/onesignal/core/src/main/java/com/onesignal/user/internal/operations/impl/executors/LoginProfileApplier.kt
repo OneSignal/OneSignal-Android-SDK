@@ -24,16 +24,16 @@ internal object LoginProfileApplier {
     fun addSubscriptions(
         op: LoginUserOperation,
         subscriptions: Map<String, SubscriptionObject>,
-        subscription: (SubscriptionObjectType, String) -> SubscriptionObject,
+        buildProfileSubscription: (SubscriptionObjectType, String) -> SubscriptionObject,
     ): Map<String, SubscriptionObject> {
         val mutable = subscriptions.toMutableMap()
         val email = op.email?.takeIf { it.isNotBlank() }
         if (email != null && mutable.values.none { it.type == SubscriptionObjectType.EMAIL && it.token == email }) {
-            mutable[PROFILE_EMAIL_KEY] = subscription(SubscriptionObjectType.EMAIL, email)
+            mutable[PROFILE_EMAIL_KEY] = buildProfileSubscription(SubscriptionObjectType.EMAIL, email)
         }
         val sms = op.sms?.takeIf { it.isNotBlank() }
         if (sms != null && mutable.values.none { it.type == SubscriptionObjectType.SMS && it.token == sms }) {
-            mutable[PROFILE_SMS_KEY] = subscription(SubscriptionObjectType.SMS, sms)
+            mutable[PROFILE_SMS_KEY] = buildProfileSubscription(SubscriptionObjectType.SMS, sms)
         }
         return mutable
     }
