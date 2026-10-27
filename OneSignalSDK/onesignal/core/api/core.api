@@ -58,7 +58,6 @@ public abstract interface class com/onesignal/IOneSignal {
 	public abstract fun initWithContextSuspend (Landroid/content/Context;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public abstract fun isInitialized ()Z
 	public abstract fun login (Ljava/lang/String;)V
-	public abstract fun login (Ljava/lang/String;Lcom/onesignal/OneSignalUserProfile;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public abstract fun login (Ljava/lang/String;Ljava/lang/String;)V
 	public abstract fun loginSuspend (Ljava/lang/String;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public abstract fun logout ()V
@@ -77,7 +76,6 @@ public abstract interface class com/onesignal/IOneSignal {
 public final class com/onesignal/IOneSignal$DefaultImpls {
 	public static synthetic fun initWithContextSuspend$default (Lcom/onesignal/IOneSignal;Landroid/content/Context;Ljava/lang/String;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public static fun login (Lcom/onesignal/IOneSignal;Ljava/lang/String;)V
-	public static synthetic fun login$default (Lcom/onesignal/IOneSignal;Ljava/lang/String;Lcom/onesignal/OneSignalUserProfile;Ljava/lang/String;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public static synthetic fun login$default (Lcom/onesignal/IOneSignal;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)V
 	public static synthetic fun loginSuspend$default (Lcom/onesignal/IOneSignal;Ljava/lang/String;Ljava/lang/String;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 }
@@ -133,10 +131,7 @@ public final class com/onesignal/OneSignal {
 	public static synthetic fun initWithContextSuspend$default (Landroid/content/Context;Ljava/lang/String;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public static final fun isInitialized ()Z
 	public static final fun login (Ljava/lang/String;)V
-	public static final fun login (Ljava/lang/String;Lcom/onesignal/OneSignalUserProfile;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
-	public static final fun login (Ljava/lang/String;Lcom/onesignal/OneSignalUserProfile;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public static final fun login (Ljava/lang/String;Ljava/lang/String;)V
-	public static synthetic fun login$default (Ljava/lang/String;Lcom/onesignal/OneSignalUserProfile;Ljava/lang/String;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public static synthetic fun login$default (Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)V
 	public static final fun loginSuspend (Ljava/lang/String;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public static synthetic fun loginSuspend$default (Ljava/lang/String;Ljava/lang/String;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;

@@ -23,8 +23,7 @@ import org.json.JSONObject
  *
  * From Kotlin, inside a coroutine:
  * ```kotlin
- * val result = OneSignal.login("user-123", OneSignalUserProfile.builder().setEmail("a@b.co").build())
- * if (result.isSuccess) println(result.data?.onesignalId) else println(result.error?.first?.code)
+ * if (result.isSuccess) println(result.data) else println(result.error?.first?.code)
  * ```
  *
  * From Java the generated accessors read naturally:

@@ -157,7 +157,7 @@ class OneSignalSuspendMethodsExistTest : FunSpec({
         assert(blocking.any { it.parameters.size == 3 }) { "login(externalId, jwtBearerToken) is missing" }
     }
 
-    test("suspend login with profile exists and returns OneSignalResult") {
+    test("suspend login with a profile is not on the public object") {
         val kFunction =
             OneSignal::class.memberFunctions
                 .firstOrNull { fn ->
@@ -166,10 +166,7 @@ class OneSignalSuspendMethodsExistTest : FunSpec({
                         fn.parameters.any { it.type.classifier == OneSignalUserProfile::class }
                 }
 
-        assert(kFunction != null) { "suspend login(externalId, profile) not found" }
-        assert(kFunction!!.returnType.classifier == OneSignalResult::class) {
-            "suspend login(externalId, profile) should return OneSignalResult"
-        }
+        assert(kFunction == null) { "suspend login(externalId, profile) is still public" }
     }
 
     test("logoutSuspend exists with no parameters") {

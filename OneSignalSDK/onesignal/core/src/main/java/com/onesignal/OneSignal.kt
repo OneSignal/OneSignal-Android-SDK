@@ -425,18 +425,6 @@ object OneSignal {
     }
 
     /**
-     * Login with [externalId] plus [profile] as one Create User upsert (anonymous is not merged). Email/SMS create or transfer; a foreign alias fails it.
-     * Same id is a no-op once a backend ID exists. Backend failure leaves this identity local; INVALID_ARGUMENT and NOT_INITIALIZED change nothing.
-     */
-    @JvmStatic
-    @JvmOverloads
-    suspend fun login(
-        externalId: String?,
-        profile: OneSignalUserProfile,
-        jwtBearerToken: String? = null,
-    ): OneSignalResult<LoginData> = oneSignal.login(externalId, profile, jwtBearerToken)
-
-    /**
      * Logout the current user without blocking the calling thread.
      * Suspends until the SDK is initialized if initialization is in progress.
      * This is the suspend-safe version of the [logout] method.
