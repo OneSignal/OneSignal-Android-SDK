@@ -1,6 +1,7 @@
 package com.onesignal.user.internal.operations.impl.executors
 
 import android.os.Build
+import com.onesignal.OneSignalError
 import com.onesignal.common.AndroidUtils
 import com.onesignal.common.DeviceUtils
 import com.onesignal.common.IDManager
@@ -46,8 +47,6 @@ import com.onesignal.user.internal.subscriptions.SubscriptionModel
 import com.onesignal.user.internal.subscriptions.SubscriptionModelStore
 import com.onesignal.user.internal.subscriptions.SubscriptionStatus
 import com.onesignal.user.internal.subscriptions.SubscriptionType
-import org.json.JSONException
-import org.json.JSONObject
 
 @Suppress("TooManyFunctions")
 internal class LoginUserOperationExecutor(
@@ -483,32 +482,29 @@ internal class LoginUserOperationExecutor(
         return op.existingOnesignalId?.takeUnless { IDManager.isLocalId(it) }
     }
 
-    // Drop the anonymous id and create the identified user. A readable 409 retries only
-    // when onesignal_id collided, or the code is user-2. An alias conflict is final.
+    // Drop the anonymous id only when it can be why Create User failed.
+    // A 400 is the payload, so a second request would fail the same way.
     private fun shouldAbandonMerge(response: ExecutionResponse): Boolean {
         if (response.result != ExecutionResult.FAIL_NORETRY) return false
-        if (response.httpStatusCode != HTTP_CONFLICT) return true
-        return onesignalIdConflict(response.httpResponse) != false
+        val status = response.httpStatusCode?.let { NetworkUtils.getResponseStatusType(it) }
+        return status == NetworkUtils.ResponseStatusType.MISSING ||
+            (status == NetworkUtils.ResponseStatusType.CONFLICT && onesignalIdConflict(response.httpResponse) != false)
     }
 
-    /** False when the body is a conflict that does not name onesignal_id. Null when it cannot be read. */
-    private fun onesignalIdConflict(body: String?): Boolean? {
-        if (body.isNullOrBlank()) return null
-        return try {
-            val errors = JSONObject(body).optJSONArray("errors") ?: return null
-            var sawConflict = false
-            for (index in 0 until errors.length()) {
-                val error = errors.optJSONObject(index) ?: continue
-                sawConflict = true
-                if (error.optString("code") == ALIAS_CLAIMED_BY_ANOTHER_USER) return true
-                val aliases = error.optJSONObject("meta")?.optJSONObject("conflicting_aliases")
-                if (aliases?.has(IdentityConstants.ONESIGNAL_ID) == true) return true
-            }
-            if (sawConflict) false else null
-        } catch (_: JSONException) {
-            null
-        }
-    }
+    /** False when a parsed error does not name onesignal_id. Null when the body has none. */
+    private fun onesignalIdConflict(body: String?): Boolean? =
+        OneSignalError.fromBackendResponse(HTTP_CONFLICT, body)
+            .details
+            .filter { it.backendCode != null || conflictingAliases(it).isNotEmpty() }
+            .takeIf { it.isNotEmpty() }
+            ?.any { namesMergedUser(it) }
+
+    private fun namesMergedUser(detail: OneSignalError.Detail): Boolean =
+        detail.backendCode == ALIAS_CLAIMED_BY_ANOTHER_USER ||
+            conflictingAliases(detail).containsKey(IdentityConstants.ONESIGNAL_ID)
+
+    private fun conflictingAliases(detail: OneSignalError.Detail): Map<*, *> =
+        detail.meta?.get(CONFLICTING_ALIASES) as? Map<*, *> ?: emptyMap<String, Any?>()
 
     private fun backendExecutionResponse(
         result: ExecutionResult,
@@ -524,6 +520,7 @@ internal class LoginUserOperationExecutor(
         const val LOGIN_USER = "login-user"
         private const val HTTP_CONFLICT = 409
         private const val ALIAS_CLAIMED_BY_ANOTHER_USER = "user-2"
+        private const val CONFLICTING_ALIASES = "conflicting_aliases"
     }
 }
 
