@@ -12,9 +12,34 @@ class OneSignalUserProfileTests : FunSpec({
 
         profile.email.shouldBeNull()
         profile.sms.shouldBeNull()
+        profile.emailEnabled.shouldBeNull()
         profile.tags shouldBe emptyMap()
         profile.aliases shouldBe emptyMap()
         profile.hasFields shouldBe false
+    }
+
+    test("emailEnabled false is kept and true is distinct from unset") {
+        val unsubscribed = OneSignalUserProfile(email = "bob@example.com", emailEnabled = false)
+        val subscribed = OneSignalUserProfile(email = "bob@example.com", emailEnabled = true)
+        val unset = OneSignalUserProfile(email = "bob@example.com")
+
+        unsubscribed.emailEnabled shouldBe false
+        subscribed.emailEnabled shouldBe true
+        unset.emailEnabled.shouldBeNull()
+        unsubscribed shouldBe OneSignalUserProfile(email = "bob@example.com", emailEnabled = false)
+        (unsubscribed == unset) shouldBe false
+        (unsubscribed == subscribed) shouldBe false
+    }
+
+    test("Java builder can store an email unsubscribed") {
+        val profile =
+            OneSignalUserProfile.builder()
+                .setEmail("bob@example.com")
+                .setEmailEnabled(false)
+                .build()
+
+        profile.email shouldBe "bob@example.com"
+        profile.emailEnabled shouldBe false
     }
 
     test("Kotlin named args set only the fields that were passed") {
