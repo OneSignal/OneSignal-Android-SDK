@@ -23,8 +23,8 @@ sealed interface OneSignalResultData {
  * Field names here are also the wire keys, so they are additive-only: never renamed, never removed.
  */
 
-/** The payload returned by a successful login. */
-class LoginData internal constructor(
+/** Payload from the internal profile login. */
+internal class LoginData internal constructor(
     /** The OneSignal ID the external ID is now associated with. */
     val onesignalId: String,
     /** The external ID that was logged in. */

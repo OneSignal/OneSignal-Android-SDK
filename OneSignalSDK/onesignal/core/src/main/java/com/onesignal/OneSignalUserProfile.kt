@@ -5,11 +5,11 @@ import com.onesignal.common.hasNullByte
 import java.util.Collections
 
 /**
- * Profile applied at login. Email/SMS create or transfer that address onto this user; they do not replace other subscriptions.
- * Build one with [builder]. There is no public constructor, so adding a field never breaks compiled callers.
+ * Email, SMS, tags, and aliases for the internal profile login.
+ * Email and SMS create or transfer that address. They do not replace other subscriptions.
  */
 // Takes the Builder so the synthetic accessor's JVM signature stays fixed as fields are added.
-class OneSignalUserProfile private constructor(builder: Builder) {
+internal class OneSignalUserProfile private constructor(builder: Builder) {
     val email: String? = builder.email?.takeIf { it.isNotBlank() }
     val sms: String? = builder.sms?.takeIf { it.isNotBlank() }
 
@@ -72,7 +72,7 @@ class OneSignalUserProfile private constructor(builder: Builder) {
         internal var aliases: Map<String, String> = emptyMap()
             private set
 
-        /** Email to create or transfer onto this user at login. */
+        /** Email to create or transfer onto this user. */
         fun setEmail(email: String?) = apply { this.email = email }
 
         /** Store the email unsubscribed when false. True is not sent on Create User. */
@@ -81,10 +81,10 @@ class OneSignalUserProfile private constructor(builder: Builder) {
         /** SMS to create or transfer onto this user at login. Must be E.164 (e.g. +14155552671). */
         fun setSms(sms: String?) = apply { this.sms = sms }
 
-        /** Sets tags to apply at login. The map is copied. */
+        /** Tags to include. The map is copied. */
         fun setTags(tags: Map<String, String>) = apply { this.tags = tags.toMap() }
 
-        /** Sets aliases to apply at login. The map is copied. */
+        /** Aliases to include. The map is copied. */
         fun setAliases(aliases: Map<String, String>) = apply { this.aliases = aliases.toMap() }
 
         /** Builds the profile. */

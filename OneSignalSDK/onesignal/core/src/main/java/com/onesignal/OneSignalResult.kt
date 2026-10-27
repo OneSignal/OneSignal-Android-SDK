@@ -4,34 +4,10 @@ import com.onesignal.common.toMap
 import org.json.JSONObject
 
 /**
- * The outcome of an asynchronous OneSignal call: either a [data] payload or an [error], never both
- * and never neither.
- *
- * Every SDK returns the same envelope, so a wrapper can handle results uniformly regardless of the
- * platform underneath it:
- *
- * ```json
- * { "success": true,  "data": { }, "error": null }
- * { "success": false, "data": null, "error": [ { "code": "STORAGE_LOCKED", ... } ] }
- * ```
- *
- * The presence of [error] is what defines the outcome; [isSuccess] and the wire-level `success`
- * flag are both derived from it, so the two can never disagree.
- *
- * Construct through [success], [failure], or [fromMap]. The internal companion is still reachable
- * from Java, so the either/or invariant is enforced in `init`, not by visibility.
- *
- * From Kotlin, inside a coroutine:
- * ```kotlin
- * if (result.isSuccess) println(result.data) else println(result.error?.first?.code)
- * ```
- *
- * From Java the generated accessors read naturally:
- * ```java
- * if (result.isSuccess()) { result.getData(); } else { result.getError().getDetails(); }
- * ```
+ * Either [data] or [error], never both. [isSuccess] follows [error].
+ * Build with [success], [failure], or [fromMap]. Java can reach the companion, so `init` enforces either/or.
  */
-class OneSignalResult<T : OneSignalResultData> private constructor(
+internal class OneSignalResult<T : OneSignalResultData> private constructor(
     /** The payload on success, `null` on failure. */
     val data: T?,
     /** The failure detail on failure, `null` on success. */
