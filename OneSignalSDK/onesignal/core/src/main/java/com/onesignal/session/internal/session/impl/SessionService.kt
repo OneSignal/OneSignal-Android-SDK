@@ -278,7 +278,8 @@ internal class SessionService(
 
         private suspend fun tickForever(session: SessionModel) {
             while (true) {
-                val duration = session.activeDuration + session.focusDurationAt(time.elapsedRealtimeMillis)
+                val focusDuration = session.focusDurationAt(time.elapsedRealtimeMillis)
+                val duration = session.activeDuration + focusDuration
                 val remaining = session.lastHeartbeatDuration + HEARTBEAT_INTERVAL_MS - duration
                 if (remaining > 0) {
                     // Rechecked after waking since delay and elapsedRealtime can disagree.
@@ -287,7 +288,8 @@ internal class SessionService(
                 }
                 Logging.debug("SessionService: heartbeat with activeDuration: $duration")
                 session.lastHeartbeatDuration = duration
-                session.lastHeartbeatTime = time.currentTimeMillis
+                // Measured from the focus, so a wall-clock jump mid-focus can't move a killed session's end.
+                session.lastHeartbeatTime = session.focusTime + focusDuration
                 updateSessionOperation(session, config?.appId, duration)?.let { operationRepo.enqueue(it) }
             }
         }

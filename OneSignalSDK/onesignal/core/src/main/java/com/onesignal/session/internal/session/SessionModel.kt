@@ -76,9 +76,9 @@ class SessionModel : Model() {
         }
 
     /**
-     * When this session's last heartbeat was sent, in Unix time milliseconds. Null until the first
-     * heartbeat, and cleared on unfocus, which then marks the end, so a wall-clock jump on the
-     * heartbeat can't move the end past it.
+     * When this session's last heartbeat was sent, in Unix time milliseconds, measured from [focusTime]
+     * on the monotonic clock so a wall-clock jump mid-focus can't move a killed session's end. Null
+     * until the first heartbeat, and cleared on unfocus, which then marks the end.
      */
     var lastHeartbeatTime: Long?
         get() = getOptLongProperty(::lastHeartbeatTime.name)

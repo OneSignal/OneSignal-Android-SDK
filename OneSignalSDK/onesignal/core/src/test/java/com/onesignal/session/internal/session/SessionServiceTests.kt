@@ -973,6 +973,40 @@ class SessionServiceTests : FunSpec({
         end.endTime shouldBe heartbeatTime
     }
 
+    test("cold start after a kill following a clock-jumped heartbeat ends at the heartbeat's foreground time") {
+        // Given
+        val mocks = Mocks(sessionsApiEnabled = true)
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        mocks.sessionModelStore { it.isValid = false }
+        sessionService.onFocus(false)
+        val focusTime = mocks.currentTime
+        mocks.currentTime += 2 * HEARTBEAT_MS
+        mocks.advanceTime(HEARTBEAT_MS)
+
+        // When
+        val restarted =
+            SessionService(
+                MockHelper.applicationService(),
+                mocks.configModelStore,
+                mocks.sessionModelStore(),
+                mocks.time,
+                mocks.featureManager,
+                mocks.identityModelStore,
+                mocks.operationRepo,
+            ).also { it.launchHeartbeat = { _ -> mockk(relaxed = true) } }
+        mocks.enqueued.clear()
+        restarted.bootstrap()
+        restarted.start()
+        restarted.onFocus(false)
+
+        // Then
+        val end = mocks.enqueued.filterIsInstance<UpdateSessionOperation>().single()
+        end.activeDuration shouldBe HEARTBEAT_MS
+        end.endTime shouldBe focusTime + HEARTBEAT_MS
+    }
+
     test("session that unfocused after a heartbeat ends at its unfocus even if the heartbeat's clock ran ahead") {
         // Given
         val mocks = Mocks(sessionsApiEnabled = true)
