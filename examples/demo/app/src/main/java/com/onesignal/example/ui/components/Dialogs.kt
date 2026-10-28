@@ -468,12 +468,21 @@ fun LoginDialog(
 @Composable
 fun CompositeLoginDialog(
     onDismiss: () -> Unit,
-    onConfirm: (externalId: String, email: String?, sms: String?, jwt: String?) -> Unit,
+    onConfirm: (
+        externalId: String,
+        email: String?,
+        sms: String?,
+        jwt: String?,
+        emailEnabled: Boolean?,
+        smsEnabled: Boolean?,
+    ) -> Unit,
 ) {
     var externalId by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var sms by remember { mutableStateOf("") }
     var jwtToken by remember { mutableStateOf("") }
+    var emailEnabled by remember { mutableStateOf("") }
+    var smsEnabled by remember { mutableStateOf("") }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -523,6 +532,30 @@ fun CompositeLoginDialog(
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 OutlinedTextField(
+                    value = emailEnabled,
+                    onValueChange = { emailEnabled = it },
+                    label = { Text("Email status: true / false / blank") },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("composite_login_email_enabled_input"),
+                    singleLine = true,
+                    shape = TextFieldShape,
+                    colors = dialogTextFieldColors()
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = smsEnabled,
+                    onValueChange = { smsEnabled = it },
+                    label = { Text("SMS status: true / false / blank") },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("composite_login_sms_enabled_input"),
+                    singleLine = true,
+                    shape = TextFieldShape,
+                    colors = dialogTextFieldColors()
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                OutlinedTextField(
                     value = jwtToken,
                     onValueChange = { jwtToken = it },
                     label = { Text("JWT Token (optional)") },
@@ -543,6 +576,8 @@ fun CompositeLoginDialog(
                         email.ifBlank { null },
                         sms.ifBlank { null },
                         jwtToken.ifBlank { null },
+                        emailEnabled.toOptionalBoolean(),
+                        smsEnabled.toOptionalBoolean(),
                     )
                 },
                 enabled = externalId.isNotBlank(),
@@ -560,6 +595,9 @@ fun CompositeLoginDialog(
         shape = DialogShape
     )
 }
+
+/** Blank means the caller is not stating a status, which the SDK sends as omitted. */
+private fun String.toOptionalBoolean(): Boolean? = trim().lowercase().toBooleanStrictOrNull()
 
 /**
  * Dialog for outcome selection and input.

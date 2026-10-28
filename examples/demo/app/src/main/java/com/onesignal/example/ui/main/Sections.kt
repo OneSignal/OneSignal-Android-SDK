@@ -185,7 +185,7 @@ fun UserSection(
     onUseIdentityVerificationChange: (Boolean) -> Unit,
     onLanguageChange: (String) -> Unit,
     onLogin: (String, String?) -> Unit,
-    onLoginWithProfile: (String, String?, String?, String?) -> Unit,
+    onLoginWithProfile: (String, String?, String?, String?, Boolean?, Boolean?) -> Unit,
     onLogout: () -> Unit,
     onUpdateJwt: (String, String) -> Unit,
     isLoading: Boolean = false,
@@ -274,8 +274,8 @@ fun UserSection(
     if (compositeLoginOpen) {
         CompositeLoginDialog(
             onDismiss = { compositeLoginOpen = false },
-            onConfirm = { userId, email, sms, jwt ->
-                onLoginWithProfile(userId, email, sms, jwt)
+            onConfirm = { userId, email, sms, jwt, emailEnabled, smsEnabled ->
+                onLoginWithProfile(userId, email, sms, jwt, emailEnabled, smsEnabled)
                 compositeLoginOpen = false
             },
         )
