@@ -307,10 +307,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
         email: String?,
         sms: String?,
         jwtToken: String? = null,
+        emailEnabled: Boolean? = null,
+        smsEnabled: Boolean? = null,
     ) {
         _isLoading.value = true
         viewModelScope.launch(Dispatchers.IO) {
-            val result = repository.loginUserWithProfile(externalUserId, email, sms, jwtToken)
+            val result =
+                repository.loginUserWithProfile(externalUserId, email, sms, jwtToken, emailEnabled, smsEnabled)
             withContext(Dispatchers.Main) {
                 if (result.isSuccess) {
                     SharedPreferenceUtil.cacheUserExternalUserId(getApplication(), externalUserId)

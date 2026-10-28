@@ -13,8 +13,11 @@ class OneSignalUserProfile private constructor(builder: Builder) {
     val email: String? = builder.email?.takeIf { it.isNotBlank() }
     val sms: String? = builder.sms?.takeIf { it.isNotBlank() }
 
-    /** False stores the email unsubscribed. True is not sent. Null omits status. */
+    /** Subscription status for [email]. Null sends no status. See [Builder.setEmailEnabled]. */
     val emailEnabled: Boolean? = builder.emailEnabled
+
+    /** Subscription status for [sms]. Null sends no status. See [Builder.setSmsEnabled]. */
+    val smsEnabled: Boolean? = builder.smsEnabled
     val tags: Map<String, String> = Collections.unmodifiableMap(builder.tags.toMap())
     val aliases: Map<String, String> = Collections.unmodifiableMap(builder.aliases.toMap())
 
@@ -43,6 +46,7 @@ class OneSignalUserProfile private constructor(builder: Builder) {
         return email == other.email &&
             sms == other.sms &&
             emailEnabled == other.emailEnabled &&
+            smsEnabled == other.smsEnabled &&
             tags == other.tags &&
             aliases == other.aliases
     }
@@ -51,13 +55,15 @@ class OneSignalUserProfile private constructor(builder: Builder) {
         var result = email?.hashCode() ?: 0
         result = 31 * result + (sms?.hashCode() ?: 0)
         result = 31 * result + (emailEnabled?.hashCode() ?: 0)
+        result = 31 * result + (smsEnabled?.hashCode() ?: 0)
         result = 31 * result + tags.hashCode()
         result = 31 * result + aliases.hashCode()
         return result
     }
 
     override fun toString(): String =
-        "OneSignalUserProfile(email=${redact(email)}, sms=${redact(sms)}, tags=${tags.size}, aliases=${aliases.size})"
+        "OneSignalUserProfile(email=${redact(email)}, emailEnabled=$emailEnabled, sms=${redact(sms)}, " +
+            "smsEnabled=$smsEnabled, tags=${tags.size}, aliases=${aliases.size})"
 
     /** Builds a [OneSignalUserProfile]. Unset fields stay empty. */
     class Builder {
@@ -67,6 +73,8 @@ class OneSignalUserProfile private constructor(builder: Builder) {
             private set
         internal var emailEnabled: Boolean? = null
             private set
+        internal var smsEnabled: Boolean? = null
+            private set
         internal var tags: Map<String, String> = emptyMap()
             private set
         internal var aliases: Map<String, String> = emptyMap()
@@ -75,11 +83,24 @@ class OneSignalUserProfile private constructor(builder: Builder) {
         /** Email to create or transfer onto this user at login. */
         fun setEmail(email: String?) = apply { this.email = email }
 
-        /** Store the email unsubscribed when false. True is not sent on Create User. */
+        /**
+         * Subscription status for the email. Subscribes when true, unsubscribes when false.
+         * Unset sends no status, so an address that already exists keeps the status it has,
+         * unless a pending [com.onesignal.user.IUserManager.addEmail] for it sends one.
+         * Ignored without [setEmail]. Cannot be returned to unset once called.
+         */
         fun setEmailEnabled(enabled: Boolean) = apply { this.emailEnabled = enabled }
 
         /** SMS to create or transfer onto this user at login. Must be E.164 (e.g. +14155552671). */
         fun setSms(sms: String?) = apply { this.sms = sms }
+
+        /**
+         * Subscription status for the SMS number. Subscribes when true, unsubscribes when false.
+         * Unset sends no status, so a number that already exists keeps the status it has,
+         * unless a pending [com.onesignal.user.IUserManager.addSms] for it sends one.
+         * Ignored without [setSms]. Cannot be returned to unset once called.
+         */
+        fun setSmsEnabled(enabled: Boolean) = apply { this.smsEnabled = enabled }
 
         /** Sets tags to apply at login. The map is copied. */
         fun setTags(tags: Map<String, String>) = apply { this.tags = tags.toMap() }
@@ -103,8 +124,10 @@ class OneSignalUserProfile private constructor(builder: Builder) {
             tags: Map<String, String> = emptyMap(),
             aliases: Map<String, String> = emptyMap(),
             emailEnabled: Boolean? = null,
+            smsEnabled: Boolean? = null,
         ) = Builder().setEmail(email).setSms(sms).setTags(tags).setAliases(aliases).apply {
             if (emailEnabled != null) setEmailEnabled(emailEnabled)
+            if (smsEnabled != null) setSmsEnabled(smsEnabled)
         }.build()
 
         private fun redact(value: String?): String = if (value == null) "null" else "<set>"

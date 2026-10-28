@@ -27,9 +27,14 @@ class OneSignalRepository {
         email: String?,
         sms: String?,
         jwtToken: String? = null,
+        emailEnabled: Boolean? = null,
+        smsEnabled: Boolean? = null,
     ) = withContext(Dispatchers.IO) {
-        DemoLog.d("Composite login externalUserId: $externalUserId email=$email sms=$sms")
-        val profile = CompositeLoginExample.profile(email, sms)
+        DemoLog.d(
+            "Composite login externalUserId: $externalUserId email=$email sms=$sms " +
+                "emailEnabled=$emailEnabled smsEnabled=$smsEnabled",
+        )
+        val profile = CompositeLoginExample.profile(email, sms, emptyMap(), emptyMap(), emailEnabled, smsEnabled)
         val result = OneSignal.login(externalUserId, profile, jwtToken)
         DemoLog.d("Composite login result: $result")
         result

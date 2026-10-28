@@ -468,12 +468,21 @@ fun LoginDialog(
 @Composable
 fun CompositeLoginDialog(
     onDismiss: () -> Unit,
-    onConfirm: (externalId: String, email: String?, sms: String?, jwt: String?) -> Unit,
+    onConfirm: (
+        externalId: String,
+        email: String?,
+        sms: String?,
+        jwt: String?,
+        emailEnabled: Boolean?,
+        smsEnabled: Boolean?,
+    ) -> Unit,
 ) {
     var externalId by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var sms by remember { mutableStateOf("") }
     var jwtToken by remember { mutableStateOf("") }
+    var emailEnabled by remember { mutableStateOf("") }
+    var smsEnabled by remember { mutableStateOf("") }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -523,6 +532,34 @@ fun CompositeLoginDialog(
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 OutlinedTextField(
+                    value = emailEnabled,
+                    onValueChange = { emailEnabled = it },
+                    label = { Text("Email status: true / false / blank") },
+                    isError = emailEnabled.isStatusTypo(),
+                    supportingText = { if (emailEnabled.isStatusTypo()) Text("Type true, false, or leave blank") },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("composite_login_email_enabled_input"),
+                    singleLine = true,
+                    shape = TextFieldShape,
+                    colors = dialogTextFieldColors()
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = smsEnabled,
+                    onValueChange = { smsEnabled = it },
+                    label = { Text("SMS status: true / false / blank") },
+                    isError = smsEnabled.isStatusTypo(),
+                    supportingText = { if (smsEnabled.isStatusTypo()) Text("Type true, false, or leave blank") },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("composite_login_sms_enabled_input"),
+                    singleLine = true,
+                    shape = TextFieldShape,
+                    colors = dialogTextFieldColors()
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                OutlinedTextField(
                     value = jwtToken,
                     onValueChange = { jwtToken = it },
                     label = { Text("JWT Token (optional)") },
@@ -543,9 +580,11 @@ fun CompositeLoginDialog(
                         email.ifBlank { null },
                         sms.ifBlank { null },
                         jwtToken.ifBlank { null },
+                        emailEnabled.toOptionalBoolean(),
+                        smsEnabled.toOptionalBoolean(),
                     )
                 },
-                enabled = externalId.isNotBlank(),
+                enabled = externalId.isNotBlank() && !emailEnabled.isStatusTypo() && !smsEnabled.isStatusTypo(),
                 modifier = Modifier.testTag("composite_login_confirm_button"),
                 colors = dialogTextButtonColors(),
             ) {
@@ -560,6 +599,12 @@ fun CompositeLoginDialog(
         shape = DialogShape
     )
 }
+
+/** Blank means the caller is not stating a status, which the SDK sends as omitted. */
+private fun String.toOptionalBoolean(): Boolean? = trim().lowercase().toBooleanStrictOrNull()
+
+/** Text that is neither blank nor a boolean, so it would silently read as "no status". */
+private fun String.isStatusTypo(): Boolean = isNotBlank() && toOptionalBoolean() == null
 
 /**
  * Dialog for outcome selection and input.

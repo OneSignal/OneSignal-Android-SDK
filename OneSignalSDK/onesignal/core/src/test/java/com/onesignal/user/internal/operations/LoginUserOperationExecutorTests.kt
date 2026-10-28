@@ -13,6 +13,7 @@ import com.onesignal.common.RootToolsInternalMethods
 import com.onesignal.common.exceptions.BackendException
 import com.onesignal.core.internal.operations.ExecutionResponse
 import com.onesignal.core.internal.operations.ExecutionResult
+import com.onesignal.core.internal.operations.IOperationRepo
 import com.onesignal.core.internal.operations.LoginWaitMetadata
 import com.onesignal.core.internal.operations.Operation
 import com.onesignal.mocks.AndroidMockHelper
@@ -31,6 +32,7 @@ import com.onesignal.user.internal.operations.ExecutorMocks.Companion.getJwtToke
 import com.onesignal.user.internal.operations.impl.executors.IdentityOperationExecutor
 import com.onesignal.user.internal.operations.impl.executors.LoginUserOperationExecutor
 import com.onesignal.user.internal.operations.impl.executors.matchingBackendSubscription
+import com.onesignal.user.internal.operations.impl.listeners.SubscriptionModelStoreListener
 import com.onesignal.user.internal.properties.PropertiesModel
 import com.onesignal.user.internal.properties.PropertiesModelStore
 import com.onesignal.user.internal.subscriptions.SubscriptionModel
@@ -47,6 +49,7 @@ import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
+import io.mockk.verify
 
 @RobolectricTest
 class LoginUserOperationExecutorTests : FunSpec({
@@ -1288,7 +1291,7 @@ class LoginUserOperationExecutorTests : FunSpec({
         }
     }
 
-    test("composite login omits email status when enabled is true") {
+    test("composite login sends an email subscribed when enabled is true") {
         val mockUserBackendService = mockk<IUserBackendService>()
         coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } returns
             CreateUserResponse(
@@ -1313,7 +1316,286 @@ class LoginUserOperationExecutorTests : FunSpec({
         coVerify(exactly = 1) {
             mockUserBackendService.createUser(appId, mapOf(IdentityConstants.EXTERNAL_ID to "externalId"), capture(subs), any())
         }
+        assertProfileSubscription(
+            subs.captured.single { it.type == SubscriptionObjectType.EMAIL },
+            "a@b.com",
+            enabled = true,
+            notificationTypes = SubscriptionStatus.SUBSCRIBED.value,
+        )
+    }
+
+    test("composite login sends an SMS subscribed when enabled is true") {
+        val mockUserBackendService = mockk<IUserBackendService>()
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } returns
+            CreateUserResponse(
+                mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId),
+                PropertiesObject(),
+                listOf(SubscriptionObject(id = "sms-sub", type = SubscriptionObjectType.SMS, token = "+15555550100")),
+            )
+
+        profileExecutor(mockUserBackendService).execute(
+            listOf(
+                LoginUserOperation(
+                    appId,
+                    localOneSignalId,
+                    "externalId",
+                    null,
+                    OneSignalUserProfile(sms = "+15555550100", smsEnabled = true),
+                ),
+            ),
+        )
+
+        val subs = slot<List<SubscriptionObject>>()
+        coVerify(exactly = 1) {
+            mockUserBackendService.createUser(appId, mapOf(IdentityConstants.EXTERNAL_ID to "externalId"), capture(subs), any())
+        }
+        assertProfileSubscription(
+            subs.captured.single { it.type == SubscriptionObjectType.SMS },
+            "+15555550100",
+            enabled = true,
+            notificationTypes = SubscriptionStatus.SUBSCRIBED.value,
+        )
+    }
+
+    test("composite login stores an SMS unsubscribed when enabled is false") {
+        val mockUserBackendService = mockk<IUserBackendService>()
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } returns
+            CreateUserResponse(
+                mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId),
+                PropertiesObject(),
+                listOf(SubscriptionObject(id = "sms-sub", type = SubscriptionObjectType.SMS, token = "+15555550100")),
+            )
+        val identityStore = MockHelper.identityModelStore { it.onesignalId = localOneSignalId }
+        val subscriptions = SubscriptionModelStore(MockPreferencesService())
+
+        profileExecutor(mockUserBackendService, subscriptions, identityStore).execute(
+            listOf(
+                LoginUserOperation(
+                    appId,
+                    localOneSignalId,
+                    "externalId",
+                    null,
+                    OneSignalUserProfile(sms = "+15555550100", smsEnabled = false),
+                ),
+            ),
+        )
+
+        val subs = slot<List<SubscriptionObject>>()
+        coVerify(exactly = 1) {
+            mockUserBackendService.createUser(appId, mapOf(IdentityConstants.EXTERNAL_ID to "externalId"), capture(subs), any())
+        }
+        assertProfileSubscription(
+            subs.captured.single { it.type == SubscriptionObjectType.SMS },
+            "+15555550100",
+            enabled = false,
+            notificationTypes = SubscriptionStatus.UNSUBSCRIBE.value,
+        )
+        subscriptions.list().single { it.type == SubscriptionType.SMS }.let {
+            it.optedIn shouldBe false
+            it.status shouldBe SubscriptionStatus.UNSUBSCRIBE
+        }
+    }
+
+    test("composite login applies the profile status to a grouped subscription for the same address") {
+        val mockUserBackendService = mockk<IUserBackendService>()
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } returns
+            CreateUserResponse(mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId), PropertiesObject(), listOf())
+
+        profileExecutor(mockUserBackendService).execute(
+            listOf(
+                LoginUserOperation(
+                    appId,
+                    localOneSignalId,
+                    "externalId",
+                    null,
+                    OneSignalUserProfile(email = "a@b.com", emailEnabled = false),
+                ),
+                CreateSubscriptionOperation(
+                    appId,
+                    localOneSignalId,
+                    "externalId",
+                    IDManager.createLocalId(),
+                    SubscriptionType.EMAIL,
+                    true,
+                    "a@b.com",
+                    SubscriptionStatus.SUBSCRIBED,
+                ),
+            ),
+        )
+
+        val subs = slot<List<SubscriptionObject>>()
+        coVerify(exactly = 1) {
+            mockUserBackendService.createUser(appId, mapOf(IdentityConstants.EXTERNAL_ID to "externalId"), capture(subs), any())
+        }
+        subs.captured.single { it.type == SubscriptionObjectType.EMAIL }.let {
+            it.token shouldBe "a@b.com"
+            it.enabled shouldBe false
+            it.notificationTypes shouldBe SubscriptionStatus.UNSUBSCRIBE.value
+        }
+    }
+
+    test("composite login applies the profile status to the local record of a grouped subscription") {
+        val mockUserBackendService = mockk<IUserBackendService>()
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } returns
+            CreateUserResponse(
+                mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId),
+                PropertiesObject(),
+                listOf(SubscriptionObject(id = "email-sub", type = SubscriptionObjectType.EMAIL, token = "a@b.com")),
+            )
+        val identityStore = MockHelper.identityModelStore { it.onesignalId = localOneSignalId }
+        val subscriptions = SubscriptionModelStore(MockPreferencesService())
+        val groupedId = IDManager.createLocalId()
+        subscriptions.add(
+            SubscriptionModel().apply {
+                id = groupedId
+                type = SubscriptionType.EMAIL
+                address = "a@b.com"
+                optedIn = true
+                status = SubscriptionStatus.SUBSCRIBED
+            },
+        )
+
+        profileExecutor(mockUserBackendService, subscriptions, identityStore).execute(
+            listOf(
+                LoginUserOperation(
+                    appId,
+                    localOneSignalId,
+                    "externalId",
+                    null,
+                    OneSignalUserProfile(email = "a@b.com", emailEnabled = false),
+                ),
+                CreateSubscriptionOperation(
+                    appId,
+                    localOneSignalId,
+                    "externalId",
+                    groupedId,
+                    SubscriptionType.EMAIL,
+                    true,
+                    "a@b.com",
+                    SubscriptionStatus.SUBSCRIBED,
+                ),
+            ),
+        )
+
+        subscriptions.list().single { it.type == SubscriptionType.EMAIL }.let {
+            it.id shouldBe "email-sub"
+            it.optedIn shouldBe false
+            it.status shouldBe SubscriptionStatus.UNSUBSCRIBE
+        }
+    }
+
+    test("composite login overrides a grouped email that differs only by case") {
+        val mockUserBackendService = mockk<IUserBackendService>()
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } returns
+            CreateUserResponse(mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId), PropertiesObject(), listOf())
+
+        profileExecutor(mockUserBackendService).execute(
+            listOf(
+                LoginUserOperation(
+                    appId,
+                    localOneSignalId,
+                    "externalId",
+                    null,
+                    OneSignalUserProfile(email = "bob@example.com", emailEnabled = false),
+                ),
+                CreateSubscriptionOperation(
+                    appId,
+                    localOneSignalId,
+                    "externalId",
+                    IDManager.createLocalId(),
+                    SubscriptionType.EMAIL,
+                    true,
+                    "Bob@Example.com",
+                    SubscriptionStatus.SUBSCRIBED,
+                ),
+            ),
+        )
+
+        val subs = slot<List<SubscriptionObject>>()
+        coVerify(exactly = 1) {
+            mockUserBackendService.createUser(appId, mapOf(IdentityConstants.EXTERNAL_ID to "externalId"), capture(subs), any())
+        }
+        subs.captured.single { it.type == SubscriptionObjectType.EMAIL }.let {
+            it.enabled shouldBe false
+            it.notificationTypes shouldBe SubscriptionStatus.UNSUBSCRIBE.value
+        }
+    }
+
+    test("composite login leaves a grouped subscription for a different address alone") {
+        val mockUserBackendService = mockk<IUserBackendService>()
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } returns
+            CreateUserResponse(
+                mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId),
+                PropertiesObject(),
+                listOf(
+                    SubscriptionObject(id = "other-sub", type = SubscriptionObjectType.EMAIL, token = "other@b.com"),
+                    SubscriptionObject(id = "profile-sub", type = SubscriptionObjectType.EMAIL, token = "a@b.com"),
+                ),
+            )
+        val identityStore = MockHelper.identityModelStore { it.onesignalId = localOneSignalId }
+        val subscriptions = SubscriptionModelStore(MockPreferencesService())
+        val otherId = IDManager.createLocalId()
+        subscriptions.add(
+            SubscriptionModel().apply {
+                id = otherId
+                type = SubscriptionType.EMAIL
+                address = "other@b.com"
+                optedIn = true
+                status = SubscriptionStatus.SUBSCRIBED
+            },
+        )
+
+        profileExecutor(mockUserBackendService, subscriptions, identityStore).execute(
+            listOf(
+                LoginUserOperation(
+                    appId,
+                    localOneSignalId,
+                    "externalId",
+                    null,
+                    OneSignalUserProfile(email = "a@b.com", emailEnabled = false),
+                ),
+                CreateSubscriptionOperation(
+                    appId,
+                    localOneSignalId,
+                    "externalId",
+                    otherId,
+                    SubscriptionType.EMAIL,
+                    true,
+                    "other@b.com",
+                    SubscriptionStatus.SUBSCRIBED,
+                ),
+            ),
+        )
+
+        subscriptions.list().single { it.address == "other@b.com" }.let {
+            it.optedIn shouldBe true
+            it.status shouldBe SubscriptionStatus.SUBSCRIBED
+        }
+    }
+
+    test("composite login sends no status for an email or SMS when the flag is unset") {
+        val mockUserBackendService = mockk<IUserBackendService>()
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } returns
+            CreateUserResponse(mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId), PropertiesObject(), listOf())
+
+        profileExecutor(mockUserBackendService).execute(
+            listOf(
+                LoginUserOperation(
+                    appId,
+                    localOneSignalId,
+                    "externalId",
+                    null,
+                    OneSignalUserProfile(email = "a@b.com", sms = "+15555550100"),
+                ),
+            ),
+        )
+
+        val subs = slot<List<SubscriptionObject>>()
+        coVerify(exactly = 1) {
+            mockUserBackendService.createUser(appId, mapOf(IdentityConstants.EXTERNAL_ID to "externalId"), capture(subs), any())
+        }
         assertProfileSubscription(subs.captured.single { it.type == SubscriptionObjectType.EMAIL }, "a@b.com")
+        assertProfileSubscription(subs.captured.single { it.type == SubscriptionObjectType.SMS }, "+15555550100")
     }
 
     test("composite login with phone only sends an SMS subscription") {
@@ -1820,6 +2102,239 @@ class LoginUserOperationExecutorTests : FunSpec({
         coVerify(exactly = 1) { identityExecutor.execute(any()) }
     }
 
+    test("mergeProfileFrom keeps an earlier status when the later login states none") {
+        val first =
+            LoginUserOperation(appId, localOneSignalId, "externalId", null, OneSignalUserProfile(email = "a@b.com", emailEnabled = false))
+        val second = LoginUserOperation(appId, localOneSignalId, "externalId", null, OneSignalUserProfile(email = "a@b.com"))
+
+        first.mergeProfileFrom(second)
+
+        first.email shouldBe "a@b.com"
+        first.emailEnabled shouldBe false
+    }
+
+    test("mergeProfileFrom does not carry a status onto a different address") {
+        val first =
+            LoginUserOperation(appId, localOneSignalId, "externalId", null, OneSignalUserProfile(email = "a@b.com", emailEnabled = false))
+        val second = LoginUserOperation(appId, localOneSignalId, "externalId", null, OneSignalUserProfile(email = "c@d.com"))
+
+        first.mergeProfileFrom(second)
+
+        first.email shouldBe "c@d.com"
+        first.emailEnabled shouldBe null
+    }
+
+    test("mergeProfileFrom does not carry an SMS status onto a different number") {
+        val first =
+            LoginUserOperation(appId, localOneSignalId, "externalId", null, OneSignalUserProfile(sms = "+15555550100", smsEnabled = false))
+        val second = LoginUserOperation(appId, localOneSignalId, "externalId", null, OneSignalUserProfile(sms = "+15555550199"))
+
+        first.mergeProfileFrom(second)
+
+        first.sms shouldBe "+15555550199"
+        first.smsEnabled shouldBe null
+    }
+
+    test("mergeProfileFrom takes an explicit status for a different address") {
+        val first =
+            LoginUserOperation(appId, localOneSignalId, "externalId", null, OneSignalUserProfile(email = "a@b.com", emailEnabled = false))
+        val second =
+            LoginUserOperation(appId, localOneSignalId, "externalId", null, OneSignalUserProfile(email = "c@d.com", emailEnabled = true))
+
+        first.mergeProfileFrom(second)
+
+        first.email shouldBe "c@d.com"
+        first.emailEnabled shouldBe true
+    }
+
+    test("mergeProfileFrom takes a later status when the later login states one") {
+        val first =
+            LoginUserOperation(appId, localOneSignalId, "externalId", null, OneSignalUserProfile(sms = "+15555550100", smsEnabled = false))
+        val second =
+            LoginUserOperation(appId, localOneSignalId, "externalId", null, OneSignalUserProfile(sms = "+15555550100", smsEnabled = true))
+
+        first.mergeProfileFrom(second)
+
+        first.smsEnabled shouldBe true
+    }
+
+    test("composite login hydrating a status does not enqueue a subscription operation") {
+        val mockUserBackendService = mockk<IUserBackendService>()
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } returns
+            CreateUserResponse(
+                mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId),
+                PropertiesObject(),
+                listOf(SubscriptionObject(id = "email-sub", type = SubscriptionObjectType.EMAIL, token = "a@b.com")),
+            )
+        val identityStore = MockHelper.identityModelStore { it.onesignalId = localOneSignalId }
+        val subscriptions = SubscriptionModelStore(MockPreferencesService())
+        subscriptions.add(
+            SubscriptionModel().apply {
+                id = IDManager.createLocalId()
+                type = SubscriptionType.EMAIL
+                address = "a@b.com"
+                optedIn = true
+                status = SubscriptionStatus.SUBSCRIBED
+            },
+        )
+        // Real listener over a mock repo: a HYDRATE write must not become a backend operation.
+        val mockOpRepo = mockk<IOperationRepo>(relaxed = true)
+        val listener =
+            SubscriptionModelStoreListener(subscriptions, mockOpRepo, identityStore, MockHelper.configModelStore())
+        listener.bootstrap()
+
+        try {
+            profileExecutor(mockUserBackendService, subscriptions, identityStore).execute(
+                listOf(
+                    LoginUserOperation(
+                        appId,
+                        localOneSignalId,
+                        "externalId",
+                        null,
+                        OneSignalUserProfile(email = "a@b.com", emailEnabled = false),
+                    ),
+                ),
+            )
+        } finally {
+            listener.close()
+        }
+
+        subscriptions.list().single { it.type == SubscriptionType.EMAIL }.optedIn shouldBe false
+        verify(exactly = 0) { mockOpRepo.enqueue(any(), any()) }
+    }
+
+    test("composite login resubscribes an email that is unsubscribed in the local store") {
+        val mockUserBackendService = mockk<IUserBackendService>()
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } returns
+            CreateUserResponse(
+                mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId),
+                PropertiesObject(),
+                listOf(SubscriptionObject(id = "email-sub", type = SubscriptionObjectType.EMAIL, token = "a@b.com")),
+            )
+        val identityStore = MockHelper.identityModelStore { it.onesignalId = localOneSignalId }
+        val subscriptions = SubscriptionModelStore(MockPreferencesService())
+        subscriptions.add(
+            SubscriptionModel().apply {
+                id = IDManager.createLocalId()
+                type = SubscriptionType.EMAIL
+                address = "a@b.com"
+                optedIn = false
+                status = SubscriptionStatus.UNSUBSCRIBE
+            },
+        )
+
+        profileExecutor(mockUserBackendService, subscriptions, identityStore).execute(
+            listOf(
+                LoginUserOperation(
+                    appId,
+                    localOneSignalId,
+                    "externalId",
+                    null,
+                    OneSignalUserProfile(email = "a@b.com", emailEnabled = true),
+                ),
+            ),
+        )
+
+        subscriptions.list().single { it.type == SubscriptionType.EMAIL }.let {
+            it.optedIn shouldBe true
+            it.status shouldBe SubscriptionStatus.SUBSCRIBED
+        }
+    }
+
+    test("composite login leaves a local email status alone when the flag is unset") {
+        val mockUserBackendService = mockk<IUserBackendService>()
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } returns
+            CreateUserResponse(
+                mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId),
+                PropertiesObject(),
+                listOf(SubscriptionObject(id = "email-sub", type = SubscriptionObjectType.EMAIL, token = "a@b.com")),
+            )
+        val identityStore = MockHelper.identityModelStore { it.onesignalId = localOneSignalId }
+        val subscriptions = SubscriptionModelStore(MockPreferencesService())
+        subscriptions.add(
+            SubscriptionModel().apply {
+                id = IDManager.createLocalId()
+                type = SubscriptionType.EMAIL
+                address = "a@b.com"
+                optedIn = false
+                status = SubscriptionStatus.UNSUBSCRIBE
+            },
+        )
+
+        profileExecutor(mockUserBackendService, subscriptions, identityStore).execute(
+            listOf(LoginUserOperation(appId, localOneSignalId, "externalId", null, OneSignalUserProfile(email = "a@b.com"))),
+        )
+
+        subscriptions.list().single { it.type == SubscriptionType.EMAIL }.let {
+            it.optedIn shouldBe false
+            it.status shouldBe SubscriptionStatus.UNSUBSCRIBE
+        }
+    }
+
+    test("composite login ignores an SMS status when no SMS was given") {
+        val mockUserBackendService = mockk<IUserBackendService>()
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } returns
+            CreateUserResponse(mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId), PropertiesObject(), listOf())
+
+        profileExecutor(mockUserBackendService).execute(
+            listOf(
+                LoginUserOperation(
+                    appId,
+                    localOneSignalId,
+                    "externalId",
+                    null,
+                    OneSignalUserProfile(email = "a@b.com", smsEnabled = false),
+                ),
+            ),
+        )
+
+        val subs = slot<List<SubscriptionObject>>()
+        coVerify(exactly = 1) {
+            mockUserBackendService.createUser(appId, mapOf(IdentityConstants.EXTERNAL_ID to "externalId"), capture(subs), any())
+        }
+        subs.captured.none { it.type == SubscriptionObjectType.SMS } shouldBe true
+        assertProfileSubscription(subs.captured.single { it.type == SubscriptionObjectType.EMAIL }, "a@b.com")
+    }
+
+    test("composite login applies an unsubscribe to an email already in the local store") {
+        val mockUserBackendService = mockk<IUserBackendService>()
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } returns
+            CreateUserResponse(
+                mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId),
+                PropertiesObject(),
+                listOf(SubscriptionObject(id = "email-sub", type = SubscriptionObjectType.EMAIL, token = "a@b.com")),
+            )
+        val identityStore = MockHelper.identityModelStore { it.onesignalId = localOneSignalId }
+        val subscriptions = SubscriptionModelStore(MockPreferencesService())
+        subscriptions.add(
+            SubscriptionModel().apply {
+                id = IDManager.createLocalId()
+                type = SubscriptionType.EMAIL
+                address = "a@b.com"
+                optedIn = true
+                status = SubscriptionStatus.SUBSCRIBED
+            },
+        )
+
+        profileExecutor(mockUserBackendService, subscriptions, identityStore).execute(
+            listOf(
+                LoginUserOperation(
+                    appId,
+                    localOneSignalId,
+                    "externalId",
+                    null,
+                    OneSignalUserProfile(email = "a@b.com", emailEnabled = false),
+                ),
+            ),
+        )
+
+        subscriptions.list().single { it.type == SubscriptionType.EMAIL }.let {
+            it.id shouldBe "email-sub"
+            it.optedIn shouldBe false
+            it.status shouldBe SubscriptionStatus.UNSUBSCRIBE
+        }
+    }
+
     test("LoginUserOperation profile fields survive JSON round trip") {
         val original =
             LoginUserOperation(
@@ -1833,6 +2348,7 @@ class LoginUserOperationExecutorTests : FunSpec({
                     tags = mapOf("plan" to "pro"),
                     aliases = mapOf("facebook" to "bob"),
                     emailEnabled = false,
+                    smsEnabled = true,
                 ),
             )
 
@@ -1841,6 +2357,7 @@ class LoginUserOperationExecutorTests : FunSpec({
 
         restored.email shouldBe "a@b.com"
         restored.emailEnabled shouldBe false
+        restored.smsEnabled shouldBe true
         restored.sms shouldBe "+15555550100"
         restored.tags shouldBe mapOf("plan" to "pro")
         restored.aliases shouldBe mapOf("facebook" to "bob")

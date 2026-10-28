@@ -41,6 +41,7 @@ import com.onesignal.user.internal.operations.SetAliasOperation
 import com.onesignal.user.internal.operations.TransferSubscriptionOperation
 import com.onesignal.user.internal.operations.UpdateSubscriptionOperation
 import com.onesignal.user.internal.operations.reservedLoginAliasLabel
+import com.onesignal.user.internal.operations.sameSubscriptionAddress
 import com.onesignal.user.internal.properties.PropertiesModel
 import com.onesignal.user.internal.properties.PropertiesModelStore
 import com.onesignal.user.internal.subscriptions.SubscriptionModel
@@ -211,8 +212,8 @@ internal class LoginUserOperationExecutor(
             }
         }
         subscriptions =
-            LoginProfileApplier.addSubscriptions(createUserOperation, subscriptions) { type, token ->
-                profileSubscription(type, token, createUserOperation.emailEnabled)
+            LoginProfileApplier.addSubscriptions(createUserOperation, subscriptions) { type, token, grouped ->
+                profileSubscription(type, token, profileEnabled(type, createUserOperation), grouped)
             }
 
         try {
@@ -258,13 +259,17 @@ internal class LoginUserOperationExecutor(
                     val subscriptionModel = _subscriptionsModelStore.get(pair.first)
                     if (subscriptionModel != null) {
                         subscriptionModel.setStringProperty(SubscriptionModel::id.name, backendSubscription.id!!, ModelChangeTags.HYDRATE)
+                        // The profile status overrode this grouped operation on the wire, so the local record follows.
+                        profileStatusForAddress(backendSubscription.type, backendSubscription.token, createUserOperation)?.let {
+                            LoginProfileApplier.applyStatus(subscriptionModel, it)
+                        }
                     } else if (LoginProfileApplier.isProfileSubscriptionKey(pair.first)) {
                         if (_identityModelStore.model.onesignalId == backendOneSignalId) {
                             LoginProfileApplier.persistSubscription(
                                 backendSubscription,
                                 LoginProfileApplier.fallbackToken(backendSubscription.type, createUserOperation),
                                 _subscriptionsModelStore,
-                                optedIn = !emailStoredUnsubscribed(backendSubscription.type, createUserOperation),
+                                optedIn = profileEnabled(backendSubscription.type, createUserOperation),
                             )
                         }
                         when (LoginProfileApplier.subscriptionType(backendSubscription.type)) {
@@ -398,27 +403,59 @@ internal class LoginUserOperationExecutor(
         return mutableSubscriptions
     }
 
-    // Create User applies a subscribed status to an address that already opted out.
-    // Send enabled false only when the customer asked, so they can collect the email
-    // without marketing consent. Anything else stays omitted.
+    // Create User applies a status only when one is sent, so omitting leaves an address
+    // that already exists alone. The caller states intent; the SDK never assumes it.
     private fun profileSubscription(
         type: SubscriptionObjectType,
         token: String,
-        emailEnabled: Boolean?,
-    ): SubscriptionObject {
-        val unsubscribed = type == SubscriptionObjectType.EMAIL && emailEnabled == false
+        enabled: Boolean?,
+        grouped: SubscriptionObject?,
+    ): SubscriptionObject? {
+        // A grouped addEmail/addSms already carries a subscribed status. Only an explicit
+        // profile status may override it, otherwise that operation is left untouched.
+        if (grouped != null) {
+            if (enabled == null) return null
+            Logging.debug("LoginUserOperationExecutor: profile status $enabled overrides a grouped $type subscription")
+            return LoginProfileApplier.withStatus(grouped, enabled)
+        }
         return subscriptionWithDevice(
             type,
             token,
-            enabled = if (unsubscribed) false else null,
-            notificationTypes = if (unsubscribed) SubscriptionStatus.UNSUBSCRIBE.value else null,
+            enabled = enabled,
+            notificationTypes =
+            when (enabled) {
+                true -> SubscriptionStatus.SUBSCRIBED.value
+                false -> SubscriptionStatus.UNSUBSCRIBE.value
+                null -> null
+            },
         )
     }
 
-    private fun emailStoredUnsubscribed(
+    private fun profileEnabled(
         type: SubscriptionObjectType?,
         operation: LoginUserOperation,
-    ): Boolean = LoginProfileApplier.subscriptionType(type) == SubscriptionType.EMAIL && operation.emailEnabled == false
+    ): Boolean? =
+        when (LoginProfileApplier.subscriptionType(type)) {
+            SubscriptionType.EMAIL -> operation.emailEnabled
+            SubscriptionType.SMS -> operation.smsEnabled
+            else -> null
+        }
+
+    /** A status only applies to the address the caller stated it for, never a sibling of the same type. */
+    private fun profileStatusForAddress(
+        type: SubscriptionObjectType?,
+        address: String?,
+        operation: LoginUserOperation,
+    ): Boolean? {
+        val profileAddress =
+            when (LoginProfileApplier.subscriptionType(type)) {
+                SubscriptionType.EMAIL -> operation.email
+                SubscriptionType.SMS -> operation.sms
+                else -> null
+            } ?: return null
+        val matches = sameSubscriptionAddress(profileAddress, address, isEmail = type == SubscriptionObjectType.EMAIL)
+        return if (matches) profileEnabled(type, operation) else null
+    }
 
     private fun subscriptionWithDevice(
         type: SubscriptionObjectType,
