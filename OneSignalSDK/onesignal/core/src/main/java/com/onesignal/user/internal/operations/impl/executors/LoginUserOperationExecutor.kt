@@ -41,6 +41,7 @@ import com.onesignal.user.internal.operations.SetAliasOperation
 import com.onesignal.user.internal.operations.TransferSubscriptionOperation
 import com.onesignal.user.internal.operations.UpdateSubscriptionOperation
 import com.onesignal.user.internal.operations.reservedLoginAliasLabel
+import com.onesignal.user.internal.operations.sameSubscriptionAddress
 import com.onesignal.user.internal.properties.PropertiesModel
 import com.onesignal.user.internal.properties.PropertiesModelStore
 import com.onesignal.user.internal.subscriptions.SubscriptionModel
@@ -413,7 +414,9 @@ internal class LoginUserOperationExecutor(
         // A grouped addEmail/addSms already carries a subscribed status. Only an explicit
         // profile status may override it, otherwise that operation is left untouched.
         if (grouped != null) {
-            return enabled?.let { with(LoginProfileApplier) { grouped.withStatus(it) } }
+            if (enabled == null) return null
+            Logging.debug("LoginUserOperationExecutor: profile status $enabled overrides a grouped $type subscription")
+            return LoginProfileApplier.withStatus(grouped, enabled)
         }
         return subscriptionWithDevice(
             type,
@@ -450,7 +453,7 @@ internal class LoginUserOperationExecutor(
                 SubscriptionType.SMS -> operation.sms
                 else -> null
             } ?: return null
-        val matches = profileAddress.equals(address, ignoreCase = type == SubscriptionObjectType.EMAIL)
+        val matches = sameSubscriptionAddress(profileAddress, address, isEmail = type == SubscriptionObjectType.EMAIL)
         return if (matches) profileEnabled(type, operation) else null
     }
 

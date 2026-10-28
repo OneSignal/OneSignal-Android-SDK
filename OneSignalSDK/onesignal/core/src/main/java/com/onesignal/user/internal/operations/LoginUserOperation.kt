@@ -127,11 +127,11 @@ class LoginUserOperation() : Operation(LoginUserOperationExecutor.LOGIN_USER) {
 
     internal fun mergeProfileFrom(other: LoginUserOperation) {
         if (!other.email.isNullOrBlank()) {
-            emailEnabled = mergedStatus(other.email == email, emailEnabled, other.emailEnabled)
+            emailEnabled = mergedStatus(sameSubscriptionAddress(other.email, email, isEmail = true), emailEnabled, other.emailEnabled)
             email = other.email
         }
         if (!other.sms.isNullOrBlank()) {
-            smsEnabled = mergedStatus(other.sms == sms, smsEnabled, other.smsEnabled)
+            smsEnabled = mergedStatus(sameSubscriptionAddress(other.sms, sms, isEmail = false), smsEnabled, other.smsEnabled)
             sms = other.sms
         }
         if (other.tags.isNotEmpty()) tags = tags + other.tags
@@ -153,6 +153,13 @@ class LoginUserOperation() : Operation(LoginUserOperationExecutor.LOGIN_USER) {
         }
     }
 }
+
+/** Mailboxes are case-insensitive, phone numbers are not. One rule so every caller dedupes alike. */
+internal fun sameSubscriptionAddress(
+    left: String?,
+    right: String?,
+    isEmail: Boolean,
+): Boolean = if (isEmail) left.equals(right, ignoreCase = true) else left == right
 
 internal fun reservedLoginAliasLabel(label: String): Boolean =
     label.isBlank() || label == IdentityConstants.ONESIGNAL_ID || label == IdentityConstants.EXTERNAL_ID

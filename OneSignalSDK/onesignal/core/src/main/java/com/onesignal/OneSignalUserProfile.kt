@@ -13,10 +13,10 @@ class OneSignalUserProfile private constructor(builder: Builder) {
     val email: String? = builder.email?.takeIf { it.isNotBlank() }
     val sms: String? = builder.sms?.takeIf { it.isNotBlank() }
 
-    /** Subscription status for [email]. Null leaves an existing address as it is. */
+    /** Subscription status for [email]. Null sends no status. See [Builder.setEmailEnabled]. */
     val emailEnabled: Boolean? = builder.emailEnabled
 
-    /** Subscription status for [sms]. Null leaves an existing address as it is. */
+    /** Subscription status for [sms]. Null sends no status. See [Builder.setSmsEnabled]. */
     val smsEnabled: Boolean? = builder.smsEnabled
     val tags: Map<String, String> = Collections.unmodifiableMap(builder.tags.toMap())
     val aliases: Map<String, String> = Collections.unmodifiableMap(builder.aliases.toMap())
@@ -85,7 +85,9 @@ class OneSignalUserProfile private constructor(builder: Builder) {
 
         /**
          * Subscription status for the email. Subscribes when true, unsubscribes when false.
-         * Unset leaves an address that already exists as it is. Ignored without [setEmail].
+         * Unset sends no status, so an address that already exists keeps the status it has,
+         * unless a pending [com.onesignal.user.IUserManager.addEmail] for it sends one.
+         * Ignored without [setEmail]. Cannot be returned to unset once called.
          */
         fun setEmailEnabled(enabled: Boolean) = apply { this.emailEnabled = enabled }
 
@@ -94,7 +96,9 @@ class OneSignalUserProfile private constructor(builder: Builder) {
 
         /**
          * Subscription status for the SMS number. Subscribes when true, unsubscribes when false.
-         * Unset leaves a number that already exists as it is. Ignored without [setSms].
+         * Unset sends no status, so a number that already exists keeps the status it has,
+         * unless a pending [com.onesignal.user.IUserManager.addSms] for it sends one.
+         * Ignored without [setSms]. Cannot be returned to unset once called.
          */
         fun setSmsEnabled(enabled: Boolean) = apply { this.smsEnabled = enabled }
 

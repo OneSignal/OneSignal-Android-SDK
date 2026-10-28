@@ -8,6 +8,7 @@ import com.onesignal.user.internal.backend.SubscriptionObjectType
 import com.onesignal.user.internal.identity.IdentityModelStore
 import com.onesignal.user.internal.operations.LoginUserOperation
 import com.onesignal.user.internal.operations.reservedLoginAliasLabel
+import com.onesignal.user.internal.operations.sameSubscriptionAddress
 import com.onesignal.user.internal.properties.PropertiesModel
 import com.onesignal.user.internal.properties.PropertiesModelStore
 import com.onesignal.user.internal.subscriptions.SubscriptionModel
@@ -32,7 +33,11 @@ internal object LoginProfileApplier {
     ): Map<String, SubscriptionObject> {
         val mutable = subscriptions.toMutableMap()
         for ((type, token, profileKey) in profileAddresses(op)) {
-            val grouped = mutable.entries.firstOrNull { it.value.type == type && it.value.token == token }
+            val grouped =
+                mutable.entries.firstOrNull {
+                    it.value.type == type &&
+                        sameSubscriptionAddress(it.value.token, token, isEmail = type == SubscriptionObjectType.EMAIL)
+                }
             val subscription = profileSubscription(type, token, grouped?.value) ?: continue
             mutable[grouped?.key ?: profileKey] = subscription
         }
@@ -45,20 +50,23 @@ internal object LoginProfileApplier {
             op.sms?.takeIf { it.isNotBlank() }?.let { add(Triple(SubscriptionObjectType.SMS, it, PROFILE_SMS_KEY)) }
         }
 
-    fun SubscriptionObject.withStatus(enabled: Boolean): SubscriptionObject =
+    fun withStatus(
+        subscription: SubscriptionObject,
+        enabled: Boolean,
+    ): SubscriptionObject =
         SubscriptionObject(
-            id = id,
-            type = type,
-            token = token,
+            id = subscription.id,
+            type = subscription.type,
+            token = subscription.token,
             enabled = enabled,
             notificationTypes = if (enabled) SubscriptionStatus.SUBSCRIBED.value else SubscriptionStatus.UNSUBSCRIBE.value,
-            sdk = sdk,
-            deviceModel = deviceModel,
-            deviceOS = deviceOS,
-            rooted = rooted,
-            netType = netType,
-            carrier = carrier,
-            appVersion = appVersion,
+            sdk = subscription.sdk,
+            deviceModel = subscription.deviceModel,
+            deviceOS = subscription.deviceOS,
+            rooted = subscription.rooted,
+            netType = subscription.netType,
+            carrier = subscription.carrier,
+            appVersion = subscription.appVersion,
         )
 
     /**
@@ -98,7 +106,7 @@ internal object LoginProfileApplier {
         backend: SubscriptionObject,
         fallbackToken: String?,
         subscriptionsModelStore: SubscriptionModelStore,
-        optedIn: Boolean? = null,
+        optedIn: Boolean?,
     ) {
         val id = backend.id
         val token = backend.token ?: fallbackToken
