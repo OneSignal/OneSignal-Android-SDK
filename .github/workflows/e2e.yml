@@ -79,7 +79,7 @@ jobs:
 
   e2e-android:
     needs: build-android
-    uses: OneSignal/sdk-shared/.github/workflows/appium-e2e.yml@main
+    uses: OneSignal/sdk-shared/.github/workflows/appium-e2e.yml@fadi/appium-e2e-ref
     secrets: inherit
     with:
       platform: android
@@ -87,3 +87,4 @@ jobs:
       app-filename: app-gms-debug.apk
       sdk-type: android
       build-name: android-${{ github.ref_name }}-${{ github.run_number }}
+      sdk-shared-ref: fadi/appium-e2e-ref
