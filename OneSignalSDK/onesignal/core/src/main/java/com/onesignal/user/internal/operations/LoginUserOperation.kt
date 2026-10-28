@@ -116,13 +116,14 @@ class LoginUserOperation() : Operation(LoginUserOperationExecutor.LOGIN_USER) {
         !email.isNullOrBlank() || !sms.isNullOrBlank() || tags.isNotEmpty() || aliases.isNotEmpty()
 
     internal fun mergeProfileFrom(other: LoginUserOperation) {
+        // A null status is the later call stating no intent, so it must not clear an earlier one.
         if (!other.email.isNullOrBlank()) {
             email = other.email
-            emailEnabled = other.emailEnabled
+            other.emailEnabled?.let { emailEnabled = it }
         }
         if (!other.sms.isNullOrBlank()) {
             sms = other.sms
-            smsEnabled = other.smsEnabled
+            other.smsEnabled?.let { smsEnabled = it }
         }
         if (other.tags.isNotEmpty()) tags = tags + other.tags
         if (other.aliases.isNotEmpty()) aliases = aliases + other.aliases

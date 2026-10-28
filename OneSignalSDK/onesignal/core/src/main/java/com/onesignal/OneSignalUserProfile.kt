@@ -62,7 +62,8 @@ class OneSignalUserProfile private constructor(builder: Builder) {
     }
 
     override fun toString(): String =
-        "OneSignalUserProfile(email=${redact(email)}, sms=${redact(sms)}, tags=${tags.size}, aliases=${aliases.size})"
+        "OneSignalUserProfile(email=${redact(email)}, emailEnabled=$emailEnabled, sms=${redact(sms)}, " +
+            "smsEnabled=$smsEnabled, tags=${tags.size}, aliases=${aliases.size})"
 
     /** Builds a [OneSignalUserProfile]. Unset fields stay empty. */
     class Builder {

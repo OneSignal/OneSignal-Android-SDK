@@ -211,8 +211,8 @@ internal class LoginUserOperationExecutor(
             }
         }
         subscriptions =
-            LoginProfileApplier.addSubscriptions(createUserOperation, subscriptions) { type, token ->
-                profileSubscription(type, token, profileEnabled(type, createUserOperation))
+            LoginProfileApplier.addSubscriptions(createUserOperation, subscriptions) { type, token, grouped ->
+                profileSubscription(type, token, profileEnabled(type, createUserOperation), grouped)
             }
 
         try {
@@ -264,7 +264,7 @@ internal class LoginUserOperationExecutor(
                                 backendSubscription,
                                 LoginProfileApplier.fallbackToken(backendSubscription.type, createUserOperation),
                                 _subscriptionsModelStore,
-                                optedIn = profileEnabled(backendSubscription.type, createUserOperation) != false,
+                                optedIn = profileEnabled(backendSubscription.type, createUserOperation),
                             )
                         }
                         when (LoginProfileApplier.subscriptionType(backendSubscription.type)) {
@@ -404,8 +404,14 @@ internal class LoginUserOperationExecutor(
         type: SubscriptionObjectType,
         token: String,
         enabled: Boolean?,
-    ): SubscriptionObject =
-        subscriptionWithDevice(
+        grouped: SubscriptionObject?,
+    ): SubscriptionObject? {
+        // A grouped addEmail/addSms already carries a subscribed status. Only an explicit
+        // profile status may override it, otherwise that operation is left untouched.
+        if (grouped != null) {
+            return enabled?.let { with(LoginProfileApplier) { grouped.withStatus(it) } }
+        }
+        return subscriptionWithDevice(
             type,
             token,
             enabled = enabled,
@@ -416,6 +422,7 @@ internal class LoginUserOperationExecutor(
                 null -> null
             },
         )
+    }
 
     private fun profileEnabled(
         type: SubscriptionObjectType?,

@@ -21,22 +21,45 @@ internal object LoginProfileApplier {
 
     fun isProfileSubscriptionKey(key: String): Boolean = key == PROFILE_EMAIL_KEY || key == PROFILE_SMS_KEY
 
+    /**
+     * [profileSubscription] receives the grouped entry for the same address when there is one, and
+     * returns null to leave it as it is.
+     */
     fun addSubscriptions(
         op: LoginUserOperation,
         subscriptions: Map<String, SubscriptionObject>,
-        buildProfileSubscription: (SubscriptionObjectType, String) -> SubscriptionObject,
+        profileSubscription: (SubscriptionObjectType, String, SubscriptionObject?) -> SubscriptionObject?,
     ): Map<String, SubscriptionObject> {
         val mutable = subscriptions.toMutableMap()
-        val email = op.email?.takeIf { it.isNotBlank() }
-        if (email != null && mutable.values.none { it.type == SubscriptionObjectType.EMAIL && it.token == email }) {
-            mutable[PROFILE_EMAIL_KEY] = buildProfileSubscription(SubscriptionObjectType.EMAIL, email)
-        }
-        val sms = op.sms?.takeIf { it.isNotBlank() }
-        if (sms != null && mutable.values.none { it.type == SubscriptionObjectType.SMS && it.token == sms }) {
-            mutable[PROFILE_SMS_KEY] = buildProfileSubscription(SubscriptionObjectType.SMS, sms)
+        for ((type, token, profileKey) in profileAddresses(op)) {
+            val grouped = mutable.entries.firstOrNull { it.value.type == type && it.value.token == token }
+            val subscription = profileSubscription(type, token, grouped?.value) ?: continue
+            mutable[grouped?.key ?: profileKey] = subscription
         }
         return mutable
     }
+
+    private fun profileAddresses(op: LoginUserOperation): List<Triple<SubscriptionObjectType, String, String>> =
+        buildList {
+            op.email?.takeIf { it.isNotBlank() }?.let { add(Triple(SubscriptionObjectType.EMAIL, it, PROFILE_EMAIL_KEY)) }
+            op.sms?.takeIf { it.isNotBlank() }?.let { add(Triple(SubscriptionObjectType.SMS, it, PROFILE_SMS_KEY)) }
+        }
+
+    fun SubscriptionObject.withStatus(enabled: Boolean): SubscriptionObject =
+        SubscriptionObject(
+            id = id,
+            type = type,
+            token = token,
+            enabled = enabled,
+            notificationTypes = if (enabled) SubscriptionStatus.SUBSCRIBED.value else SubscriptionStatus.UNSUBSCRIBE.value,
+            sdk = sdk,
+            deviceModel = deviceModel,
+            deviceOS = deviceOS,
+            rooted = rooted,
+            netType = netType,
+            carrier = carrier,
+            appVersion = appVersion,
+        )
 
     /**
      * The backend wins where it spoke, the request fills the rest. Never deletes: Create User can
@@ -70,11 +93,12 @@ internal object LoginProfileApplier {
         }
     }
 
+    /** [optedIn] null means the caller stated no status, so an existing record keeps the one it has. */
     fun persistSubscription(
         backend: SubscriptionObject,
         fallbackToken: String?,
         subscriptionsModelStore: SubscriptionModelStore,
-        optedIn: Boolean = true,
+        optedIn: Boolean? = null,
     ) {
         val id = backend.id
         val token = backend.token ?: fallbackToken
@@ -89,15 +113,23 @@ internal object LoginProfileApplier {
             }
         if (existing != null) {
             existing.setStringProperty(SubscriptionModel::id.name, id, ModelChangeTags.HYDRATE)
+            if (optedIn != null) applyStatus(existing, optedIn)
             return
         }
         val model = SubscriptionModel()
         model.id = id
         model.type = type
         model.address = token
+        applyStatus(model, optedIn ?: true)
+        subscriptionsModelStore.add(model, ModelChangeTags.HYDRATE)
+    }
+
+    private fun applyStatus(
+        model: SubscriptionModel,
+        optedIn: Boolean,
+    ) {
         model.status = if (optedIn) SubscriptionStatus.SUBSCRIBED else SubscriptionStatus.UNSUBSCRIBE
         model.optedIn = optedIn
-        subscriptionsModelStore.add(model, ModelChangeTags.HYDRATE)
     }
 
     fun subscriptionType(type: SubscriptionObjectType?): SubscriptionType? =

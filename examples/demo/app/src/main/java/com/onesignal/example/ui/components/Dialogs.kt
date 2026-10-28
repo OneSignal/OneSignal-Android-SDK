@@ -535,6 +535,8 @@ fun CompositeLoginDialog(
                     value = emailEnabled,
                     onValueChange = { emailEnabled = it },
                     label = { Text("Email status: true / false / blank") },
+                    isError = emailEnabled.isStatusTypo(),
+                    supportingText = { if (emailEnabled.isStatusTypo()) Text("Type true, false, or leave blank") },
                     modifier = Modifier
                         .fillMaxWidth()
                         .testTag("composite_login_email_enabled_input"),
@@ -547,6 +549,8 @@ fun CompositeLoginDialog(
                     value = smsEnabled,
                     onValueChange = { smsEnabled = it },
                     label = { Text("SMS status: true / false / blank") },
+                    isError = smsEnabled.isStatusTypo(),
+                    supportingText = { if (smsEnabled.isStatusTypo()) Text("Type true, false, or leave blank") },
                     modifier = Modifier
                         .fillMaxWidth()
                         .testTag("composite_login_sms_enabled_input"),
@@ -580,7 +584,7 @@ fun CompositeLoginDialog(
                         smsEnabled.toOptionalBoolean(),
                     )
                 },
-                enabled = externalId.isNotBlank(),
+                enabled = externalId.isNotBlank() && !emailEnabled.isStatusTypo() && !smsEnabled.isStatusTypo(),
                 modifier = Modifier.testTag("composite_login_confirm_button"),
                 colors = dialogTextButtonColors(),
             ) {
@@ -598,6 +602,9 @@ fun CompositeLoginDialog(
 
 /** Blank means the caller is not stating a status, which the SDK sends as omitted. */
 private fun String.toOptionalBoolean(): Boolean? = trim().lowercase().toBooleanStrictOrNull()
+
+/** Text that is neither blank nor a boolean, so it would silently read as "no status". */
+private fun String.isStatusTypo(): Boolean = isNotBlank() && toOptionalBoolean() == null
 
 /**
  * Dialog for outcome selection and input.
