@@ -65,8 +65,9 @@ class SessionModel : Model() {
         }
 
     /**
-     * The duration sent by this session's last heartbeat, in milliseconds. Persisted so an end
-     * after a kill while focused doesn't report less than the server already has.
+     * The duration at this session's last heartbeat, in milliseconds, set even when the heartbeat
+     * couldn't be built. Persisted so an end after a kill while focused doesn't report less than
+     * the server already has.
      */
     var lastHeartbeatDuration: Long
         get() = getLongProperty(::lastHeartbeatDuration.name) { 0L }

@@ -92,7 +92,8 @@ internal class SessionQueuePolicy(
                 val replaced = it.operation as UpdateSessionOperation
                 op.activeDuration = maxOf(op.activeDuration, replaced.activeDuration)
                 incoming.retries = maxOf(incoming.retries, it.retries)
-                incoming.retryAt = maxOf(incoming.retryAt, it.retryAt)
+                // An end is sent while the background job waits for it, so it doesn't wait out a heartbeat's backoff.
+                if (!op.isEnd) incoming.retryAt = maxOf(incoming.retryAt, it.retryAt)
                 val waiters = synchronized(it) { it.waiters.toList().also { _ -> it.waiters.clear() } }
                 incoming.attachOrWake(waiters)
             }

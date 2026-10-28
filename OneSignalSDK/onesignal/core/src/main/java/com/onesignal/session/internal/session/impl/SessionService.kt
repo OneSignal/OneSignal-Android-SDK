@@ -28,6 +28,7 @@ import com.onesignal.session.internal.session.operations.CreateSessionOperation
 import com.onesignal.session.internal.session.operations.UpdateSessionOperation
 import com.onesignal.user.internal.backend.IdentityConstants
 import com.onesignal.user.internal.identity.IdentityModelStore
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -258,24 +259,37 @@ internal class SessionService(
     private inner class Heartbeat {
         private var job: Job? = null
 
+        @Suppress("TooGenericExceptionCaught")
         fun start(session: SessionModel) {
             stop()
             job =
                 launchHeartbeat {
-                    while (true) {
-                        val duration = session.activeDurationAt(time.elapsedRealtimeMillis)
-                        val remaining = session.lastHeartbeatDuration + HEARTBEAT_INTERVAL_MS - duration
-                        if (remaining > 0) {
-                            // Rechecked after waking since delay and elapsedRealtime can disagree.
-                            delay(remaining)
-                            continue
-                        }
-                        Logging.debug("SessionService: heartbeat with activeDuration: $duration")
-                        session.lastHeartbeatDuration = duration
-                        session.lastHeartbeatTime = time.currentTimeMillis
-                        updateSessionOperation(session, config?.appId, duration)?.let { operationRepo.enqueue(it) }
+                    // The serial IO scope has no exception handler, so an escaping failure would crash
+                    // the app. Stop until the next focus instead, which also can't spin on a failed tick.
+                    try {
+                        tickForever(session)
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        Logging.error("SessionService: heartbeat stopped", e)
                     }
                 }
+        }
+
+        private suspend fun tickForever(session: SessionModel) {
+            while (true) {
+                val duration = session.activeDuration + session.focusDurationAt(time.elapsedRealtimeMillis)
+                val remaining = session.lastHeartbeatDuration + HEARTBEAT_INTERVAL_MS - duration
+                if (remaining > 0) {
+                    // Rechecked after waking since delay and elapsedRealtime can disagree.
+                    delay(remaining)
+                    continue
+                }
+                Logging.debug("SessionService: heartbeat with activeDuration: $duration")
+                session.lastHeartbeatDuration = duration
+                session.lastHeartbeatTime = time.currentTimeMillis
+                updateSessionOperation(session, config?.appId, duration)?.let { operationRepo.enqueue(it) }
+            }
         }
 
         fun stop() {
@@ -306,8 +320,7 @@ internal class SessionService(
         // capture the amount of time the app was focused
         val dt =
             if (session.usesSessionsApi) {
-                // elapsedRealtime resets on reboot; drop the interval rather than count a negative one.
-                (unfocusElapsedMs - session.focusElapsedRealtime).coerceAtLeast(0L)
+                session.focusDurationAt(unfocusElapsedMs)
             } else {
                 unfocusTimeMs - session.focusTime
             }
@@ -353,9 +366,10 @@ private fun createSessionOperation(
         )
     }
 
-/** [SessionModel.activeDuration] including the current focus, which hasn't been added yet. */
-private fun SessionModel.activeDurationAt(elapsedRealtimeMs: Long): Long =
-    activeDuration + (elapsedRealtimeMs - focusElapsedRealtime).coerceAtLeast(0L)
+/** Time in the current focus, which [SessionModel.activeDuration] doesn't include until unfocus. */
+private fun SessionModel.focusDurationAt(elapsedRealtimeMs: Long): Long =
+    // elapsedRealtime resets on reboot; drop the interval rather than count a negative one.
+    (elapsedRealtimeMs - focusElapsedRealtime).coerceAtLeast(0L)
 
 /**
  * An app killed while focused never adds its last focus to [SessionModel.activeDuration] or sets

@@ -126,7 +126,9 @@ private class Mocks(
             operationRepo,
         ).also { it.launchHeartbeat = ::launchInHeartbeatScope }
 
-    fun launchInHeartbeatScope(block: suspend () -> Unit): Job = heartbeatScope.launch { block() }
+    var heartbeatJob: Job? = null
+
+    fun launchInHeartbeatScope(block: suspend () -> Unit): Job = heartbeatScope.launch { block() }.also { heartbeatJob = it }
 
     val heartbeats get() = enqueued.filterIsInstance<UpdateSessionOperation>().filter { !it.isEnd }
 
@@ -1013,6 +1015,34 @@ class SessionServiceTests : FunSpec({
         // Then
         sessionModelStore.model.lastHeartbeatDuration shouldBe 0L
         sessionModelStore.model.lastHeartbeatTime shouldBe null
+    }
+
+    test("heartbeat that fails stops without an uncaught exception and restarts on the next focus") {
+        // Given
+        val mocks = Mocks(sessionsApiEnabled = true)
+        every { mocks.operationRepo.enqueue(ofType<UpdateSessionOperation>(), any()) } throws RuntimeException("enqueue failed")
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        mocks.sessionModelStore { it.isValid = false }
+        sessionService.onFocus(false)
+
+        // When
+        mocks.advanceTime(2 * HEARTBEAT_MS)
+
+        // Then
+        verify(exactly = 1) { mocks.operationRepo.enqueue(ofType<UpdateSessionOperation>(), any()) }
+        val failed = mocks.heartbeatJob!!
+        failed.isCompleted shouldBe true
+        failed.isCancelled shouldBe false
+
+        // When
+        sessionService.onUnfocused()
+        sessionService.onFocus(false)
+        mocks.advanceTime(HEARTBEAT_MS)
+
+        // Then
+        verify(exactly = 2) { mocks.operationRepo.enqueue(ofType<UpdateSessionOperation>(), any()) }
     }
 
     test("heartbeat does not run when the session uses the legacy path") {
