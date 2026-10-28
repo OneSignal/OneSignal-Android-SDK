@@ -124,12 +124,17 @@ internal object LoginProfileApplier {
         subscriptionsModelStore.add(model, ModelChangeTags.HYDRATE)
     }
 
-    private fun applyStatus(
+    /**
+     * HYDRATE, not NORMAL: this records what Create User already applied, and a NORMAL write on an
+     * attached model would make [ModelStoreListener] enqueue a redundant subscription update.
+     */
+    fun applyStatus(
         model: SubscriptionModel,
         optedIn: Boolean,
     ) {
-        model.status = if (optedIn) SubscriptionStatus.SUBSCRIBED else SubscriptionStatus.UNSUBSCRIBE
-        model.optedIn = optedIn
+        val status = if (optedIn) SubscriptionStatus.SUBSCRIBED else SubscriptionStatus.UNSUBSCRIBE
+        model.setEnumProperty(SubscriptionModel::status.name, status, ModelChangeTags.HYDRATE)
+        model.setBooleanProperty(SubscriptionModel::optedIn.name, optedIn, ModelChangeTags.HYDRATE)
     }
 
     fun subscriptionType(type: SubscriptionObjectType?): SubscriptionType? =

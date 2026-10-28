@@ -258,6 +258,10 @@ internal class LoginUserOperationExecutor(
                     val subscriptionModel = _subscriptionsModelStore.get(pair.first)
                     if (subscriptionModel != null) {
                         subscriptionModel.setStringProperty(SubscriptionModel::id.name, backendSubscription.id!!, ModelChangeTags.HYDRATE)
+                        // The profile status overrode this grouped operation on the wire, so the local record follows.
+                        profileStatusForAddress(backendSubscription.type, backendSubscription.token, createUserOperation)?.let {
+                            LoginProfileApplier.applyStatus(subscriptionModel, it)
+                        }
                     } else if (LoginProfileApplier.isProfileSubscriptionKey(pair.first)) {
                         if (_identityModelStore.model.onesignalId == backendOneSignalId) {
                             LoginProfileApplier.persistSubscription(
@@ -433,6 +437,22 @@ internal class LoginUserOperationExecutor(
             SubscriptionType.SMS -> operation.smsEnabled
             else -> null
         }
+
+    /** A status only applies to the address the caller stated it for, never a sibling of the same type. */
+    private fun profileStatusForAddress(
+        type: SubscriptionObjectType?,
+        address: String?,
+        operation: LoginUserOperation,
+    ): Boolean? {
+        val profileAddress =
+            when (LoginProfileApplier.subscriptionType(type)) {
+                SubscriptionType.EMAIL -> operation.email
+                SubscriptionType.SMS -> operation.sms
+                else -> null
+            } ?: return null
+        val matches = profileAddress.equals(address, ignoreCase = type == SubscriptionObjectType.EMAIL)
+        return if (matches) profileEnabled(type, operation) else null
+    }
 
     private fun subscriptionWithDevice(
         type: SubscriptionObjectType,
