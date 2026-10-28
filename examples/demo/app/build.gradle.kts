@@ -160,16 +160,7 @@ demoOverride("RETRY_TEST_CA")?.let { caPath ->
             """.trimIndent(),
         )
     }
-    val manifest = layout.buildDirectory.file("generated/retryTestCa/AndroidManifest.xml").get().asFile
-    manifest.writeText(
-        """
-        <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-            <application android:networkSecurityConfig="@xml/network_security_config" />
-        </manifest>
-        """.trimIndent(),
-    )
     android.sourceSets.getByName("debug").res.srcDir(resDir)
-    android.sourceSets.getByName("debug").manifest.srcFile(manifest)
 }
 
 dependencies {
