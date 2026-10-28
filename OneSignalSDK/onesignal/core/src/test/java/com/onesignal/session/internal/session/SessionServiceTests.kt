@@ -971,6 +971,29 @@ class SessionServiceTests : FunSpec({
         end.endTime shouldBe heartbeatTime
     }
 
+    test("session that unfocused after a heartbeat ends at its unfocus even if the heartbeat's clock ran ahead") {
+        // Given
+        val mocks = Mocks(sessionsApiEnabled = true)
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        mocks.sessionModelStore { it.isValid = false }
+        sessionService.onFocus(false)
+        mocks.currentTime += 2 * HEARTBEAT_MS
+        mocks.advanceTime(HEARTBEAT_MS)
+        mocks.currentTime -= HEARTBEAT_MS
+        val unfocusTime = mocks.currentTime
+        sessionService.onUnfocused()
+
+        // When
+        sessionService.backgroundRun()
+
+        // Then
+        val end = mocks.enqueued.filterIsInstance<UpdateSessionOperation>().single { it.isEnd }
+        end.endTime shouldBe unfocusTime
+        end.activeDuration shouldBe HEARTBEAT_MS
+    }
+
     test("session end clears the last heartbeat") {
         // Given
         val mocks = Mocks(sessionsApiEnabled = true)

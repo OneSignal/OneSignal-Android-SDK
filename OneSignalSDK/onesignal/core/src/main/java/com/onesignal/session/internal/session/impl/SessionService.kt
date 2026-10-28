@@ -313,6 +313,7 @@ internal class SessionService(
             }
         session.activeDuration += dt
         session.unfocusTime = unfocusTimeMs
+        session.lastHeartbeatTime = null
         Logging.log(LogLevel.DEBUG, "SessionService.onUnfocused adding time $dt for total: ${session.activeDuration}")
     }
 
