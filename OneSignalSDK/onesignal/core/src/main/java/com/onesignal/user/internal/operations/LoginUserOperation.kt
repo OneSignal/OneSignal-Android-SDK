@@ -115,15 +115,24 @@ class LoginUserOperation() : Operation(LoginUserOperationExecutor.LOGIN_USER) {
     internal fun hasProfileFields(): Boolean =
         !email.isNullOrBlank() || !sms.isNullOrBlank() || tags.isNotEmpty() || aliases.isNotEmpty()
 
+    /**
+     * A status belongs to the address it was stated for. Keeping it across a change would
+     * apply an opt-out the caller never asked for on the new address.
+     */
+    private fun mergedStatus(
+        sameAddress: Boolean,
+        current: Boolean?,
+        incoming: Boolean?,
+    ): Boolean? = if (sameAddress) incoming ?: current else incoming
+
     internal fun mergeProfileFrom(other: LoginUserOperation) {
-        // A null status is the later call stating no intent, so it must not clear an earlier one.
         if (!other.email.isNullOrBlank()) {
+            emailEnabled = mergedStatus(other.email == email, emailEnabled, other.emailEnabled)
             email = other.email
-            other.emailEnabled?.let { emailEnabled = it }
         }
         if (!other.sms.isNullOrBlank()) {
+            smsEnabled = mergedStatus(other.sms == sms, smsEnabled, other.smsEnabled)
             sms = other.sms
-            other.smsEnabled?.let { smsEnabled = it }
         }
         if (other.tags.isNotEmpty()) tags = tags + other.tags
         if (other.aliases.isNotEmpty()) aliases = aliases + other.aliases

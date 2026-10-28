@@ -1971,6 +1971,40 @@ class LoginUserOperationExecutorTests : FunSpec({
         first.emailEnabled shouldBe false
     }
 
+    test("mergeProfileFrom does not carry a status onto a different address") {
+        val first =
+            LoginUserOperation(appId, localOneSignalId, "externalId", null, OneSignalUserProfile(email = "a@b.com", emailEnabled = false))
+        val second = LoginUserOperation(appId, localOneSignalId, "externalId", null, OneSignalUserProfile(email = "c@d.com"))
+
+        first.mergeProfileFrom(second)
+
+        first.email shouldBe "c@d.com"
+        first.emailEnabled shouldBe null
+    }
+
+    test("mergeProfileFrom does not carry an SMS status onto a different number") {
+        val first =
+            LoginUserOperation(appId, localOneSignalId, "externalId", null, OneSignalUserProfile(sms = "+15555550100", smsEnabled = false))
+        val second = LoginUserOperation(appId, localOneSignalId, "externalId", null, OneSignalUserProfile(sms = "+15555550199"))
+
+        first.mergeProfileFrom(second)
+
+        first.sms shouldBe "+15555550199"
+        first.smsEnabled shouldBe null
+    }
+
+    test("mergeProfileFrom takes an explicit status for a different address") {
+        val first =
+            LoginUserOperation(appId, localOneSignalId, "externalId", null, OneSignalUserProfile(email = "a@b.com", emailEnabled = false))
+        val second =
+            LoginUserOperation(appId, localOneSignalId, "externalId", null, OneSignalUserProfile(email = "c@d.com", emailEnabled = true))
+
+        first.mergeProfileFrom(second)
+
+        first.email shouldBe "c@d.com"
+        first.emailEnabled shouldBe true
+    }
+
     test("mergeProfileFrom takes a later status when the later login states one") {
         val first =
             LoginUserOperation(appId, localOneSignalId, "externalId", null, OneSignalUserProfile(sms = "+15555550100", smsEnabled = false))
