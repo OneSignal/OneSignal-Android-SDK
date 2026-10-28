@@ -9,11 +9,14 @@ import io.kotest.matchers.shouldBe
 import io.mockk.mockk
 import org.json.JSONObject
 
-private fun timeSinceLastInAppTrigger(seconds: Int): Trigger {
+private fun timeSinceLastInAppTrigger(
+    seconds: Number,
+    operator: Trigger.OSTriggerOperator = Trigger.OSTriggerOperator.GREATER_THAN
+): Trigger {
     val json = JSONObject()
     json.put("id", "trigger-id")
     json.put("kind", Trigger.OSTriggerKind.TIME_SINCE_LAST_IN_APP.toString())
-    json.put("operator", Trigger.OSTriggerOperator.GREATER_THAN.toString())
+    json.put("operator", operator.toString())
     json.put("value", seconds)
     return Trigger(json)
 }
@@ -42,6 +45,18 @@ class DynamicTriggerControllerTests : FunSpec({
 
         // When
         val result = controller.dynamicTriggerShouldFire(timeSinceLastInAppTrigger(oneHourInSeconds))
+
+        // Then
+        result shouldBe false
+    }
+
+    test("time since last in-app trigger with a negative less-than value does not fire when no in-app message was dismissed yet") {
+        // Given
+        val state = InAppStateService()
+        val controller = DynamicTriggerController(state, mockk<ISessionService>(relaxed = true), MockHelper.time(1_000_000))
+
+        // When
+        val result = controller.dynamicTriggerShouldFire(timeSinceLastInAppTrigger(-1, Trigger.OSTriggerOperator.LESS_THAN))
 
         // Then
         result shouldBe false

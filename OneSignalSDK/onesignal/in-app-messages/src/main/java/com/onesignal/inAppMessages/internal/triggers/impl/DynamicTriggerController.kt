@@ -75,10 +75,12 @@ internal class DynamicTriggerController(
                 return true
             }
 
-            val offset = requiredTimeInterval - currentTimeInterval
-            if (offset <= 0L) {
+            // Compare before subtracting: with an unbounded time since the last in-app
+            // message, a negative required interval would overflow the offset.
+            if (currentTimeInterval >= requiredTimeInterval) {
                 return false
             }
+            val offset = requiredTimeInterval - currentTimeInterval
 
             // Prevents re-scheduling timers for messages that we're already waiting on
             if (scheduledMessages.contains(triggerId)) {
