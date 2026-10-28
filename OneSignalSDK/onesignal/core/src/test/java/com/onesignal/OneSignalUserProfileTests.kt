@@ -13,6 +13,7 @@ class OneSignalUserProfileTests : FunSpec({
         profile.email.shouldBeNull()
         profile.sms.shouldBeNull()
         profile.emailEnabled.shouldBeNull()
+        profile.smsEnabled.shouldBeNull()
         profile.tags shouldBe emptyMap()
         profile.aliases shouldBe emptyMap()
         profile.hasFields shouldBe false
@@ -29,6 +30,27 @@ class OneSignalUserProfileTests : FunSpec({
         unsubscribed shouldBe OneSignalUserProfile(email = "bob@example.com", emailEnabled = false)
         (unsubscribed == unset) shouldBe false
         (unsubscribed == subscribed) shouldBe false
+    }
+
+    test("smsEnabled is independent of emailEnabled") {
+        val both = OneSignalUserProfile(email = "bob@example.com", emailEnabled = false, sms = "+15555550100", smsEnabled = true)
+
+        both.emailEnabled shouldBe false
+        both.smsEnabled shouldBe true
+        (both == OneSignalUserProfile(email = "bob@example.com", emailEnabled = false, sms = "+15555550100")) shouldBe false
+    }
+
+    test("Java builder can set each channel status") {
+        val profile =
+            OneSignalUserProfile.builder()
+                .setEmail("bob@example.com")
+                .setEmailEnabled(true)
+                .setSms("+15555550100")
+                .setSmsEnabled(false)
+                .build()
+
+        profile.emailEnabled shouldBe true
+        profile.smsEnabled shouldBe false
     }
 
     test("Java builder can store an email unsubscribed") {

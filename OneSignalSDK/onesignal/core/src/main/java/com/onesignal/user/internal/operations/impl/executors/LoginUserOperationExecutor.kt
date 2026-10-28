@@ -212,7 +212,7 @@ internal class LoginUserOperationExecutor(
         }
         subscriptions =
             LoginProfileApplier.addSubscriptions(createUserOperation, subscriptions) { type, token ->
-                profileSubscription(type, token, createUserOperation.emailEnabled)
+                profileSubscription(type, token, profileEnabled(type, createUserOperation))
             }
 
         try {
@@ -264,7 +264,7 @@ internal class LoginUserOperationExecutor(
                                 backendSubscription,
                                 LoginProfileApplier.fallbackToken(backendSubscription.type, createUserOperation),
                                 _subscriptionsModelStore,
-                                optedIn = !emailStoredUnsubscribed(backendSubscription.type, createUserOperation),
+                                optedIn = profileEnabled(backendSubscription.type, createUserOperation) != false,
                             )
                         }
                         when (LoginProfileApplier.subscriptionType(backendSubscription.type)) {
@@ -398,27 +398,34 @@ internal class LoginUserOperationExecutor(
         return mutableSubscriptions
     }
 
-    // Create User applies a subscribed status to an address that already opted out.
-    // Send enabled false only when the customer asked, so they can collect the email
-    // without marketing consent. Anything else stays omitted.
+    // Create User applies a status only when one is sent, so omitting leaves an address
+    // that already exists alone. The caller states intent; the SDK never assumes it.
     private fun profileSubscription(
         type: SubscriptionObjectType,
         token: String,
-        emailEnabled: Boolean?,
-    ): SubscriptionObject {
-        val unsubscribed = type == SubscriptionObjectType.EMAIL && emailEnabled == false
-        return subscriptionWithDevice(
+        enabled: Boolean?,
+    ): SubscriptionObject =
+        subscriptionWithDevice(
             type,
             token,
-            enabled = if (unsubscribed) false else null,
-            notificationTypes = if (unsubscribed) SubscriptionStatus.UNSUBSCRIBE.value else null,
+            enabled = enabled,
+            notificationTypes =
+            when (enabled) {
+                true -> SubscriptionStatus.SUBSCRIBED.value
+                false -> SubscriptionStatus.UNSUBSCRIBE.value
+                null -> null
+            },
         )
-    }
 
-    private fun emailStoredUnsubscribed(
+    private fun profileEnabled(
         type: SubscriptionObjectType?,
         operation: LoginUserOperation,
-    ): Boolean = LoginProfileApplier.subscriptionType(type) == SubscriptionType.EMAIL && operation.emailEnabled == false
+    ): Boolean? =
+        when (LoginProfileApplier.subscriptionType(type)) {
+            SubscriptionType.EMAIL -> operation.emailEnabled
+            SubscriptionType.SMS -> operation.smsEnabled
+            else -> null
+        }
 
     private fun subscriptionWithDevice(
         type: SubscriptionObjectType,

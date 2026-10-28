@@ -67,6 +67,12 @@ class LoginUserOperation() : Operation(LoginUserOperationExecutor.LOGIN_USER) {
             setOptBooleanProperty(PROFILE_EMAIL_ENABLED, value)
         }
 
+    internal var smsEnabled: Boolean?
+        get() = getOptBooleanProperty(PROFILE_SMS_ENABLED)
+        set(value) {
+            setOptBooleanProperty(PROFILE_SMS_ENABLED, value)
+        }
+
     internal var tags: Map<String, String>
         get() = decodeMap(getOptStringProperty(PROFILE_TAGS))
         set(value) {
@@ -100,6 +106,7 @@ class LoginUserOperation() : Operation(LoginUserOperationExecutor.LOGIN_USER) {
             this.email = profile.email?.takeIf { it.isNotBlank() }
             this.sms = profile.sms?.takeIf { it.isNotBlank() }
             this.emailEnabled = profile.emailEnabled
+            this.smsEnabled = profile.smsEnabled
             this.tags = profile.tags
             this.aliases = profile.aliases
         }
@@ -113,7 +120,10 @@ class LoginUserOperation() : Operation(LoginUserOperationExecutor.LOGIN_USER) {
             email = other.email
             emailEnabled = other.emailEnabled
         }
-        if (!other.sms.isNullOrBlank()) sms = other.sms
+        if (!other.sms.isNullOrBlank()) {
+            sms = other.sms
+            smsEnabled = other.smsEnabled
+        }
         if (other.tags.isNotEmpty()) tags = tags + other.tags
         if (other.aliases.isNotEmpty()) aliases = aliases + other.aliases
     }
@@ -140,6 +150,7 @@ internal fun reservedLoginAliasLabel(label: String): Boolean =
 private const val PROFILE_EMAIL = "profileEmail"
 private const val PROFILE_EMAIL_ENABLED = "profileEmailEnabled"
 private const val PROFILE_SMS = "profileSms"
+private const val PROFILE_SMS_ENABLED = "profileSmsEnabled"
 private const val PROFILE_TAGS = "profileTags"
 private const val PROFILE_ALIASES = "profileAliases"
 
