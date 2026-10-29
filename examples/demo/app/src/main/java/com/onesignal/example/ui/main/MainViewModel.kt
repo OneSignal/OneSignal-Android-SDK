@@ -286,6 +286,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
                 SharedPreferenceUtil.cacheUserExternalUserId(getApplication(), externalUserId)
                 SharedPreferenceUtil.cacheJwtToken(getApplication(), jwtToken)
                 _externalUserId.value = externalUserId
+                resetLanguagePicker()
                 aliasesList.clear()
                 emailsList.clear()
                 smsNumbersList.clear()
@@ -306,15 +307,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
         email: String?,
         sms: String?,
         jwtToken: String? = null,
+        emailEnabled: Boolean? = null,
+        smsEnabled: Boolean? = null,
     ) {
         _isLoading.value = true
         viewModelScope.launch(Dispatchers.IO) {
-            val result = repository.loginUserWithProfile(externalUserId, email, sms, jwtToken)
+            val result =
+                repository.loginUserWithProfile(externalUserId, email, sms, jwtToken, emailEnabled, smsEnabled)
             withContext(Dispatchers.Main) {
                 if (result.isSuccess) {
                     SharedPreferenceUtil.cacheUserExternalUserId(getApplication(), externalUserId)
                     SharedPreferenceUtil.cacheJwtToken(getApplication(), jwtToken)
                     _externalUserId.value = externalUserId
+                    resetLanguagePicker()
                     aliasesList.clear()
                     emailsList.clear()
                     smsNumbersList.clear()
@@ -350,7 +355,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
             withContext(Dispatchers.Main) {
                 SharedPreferenceUtil.cacheUserExternalUserId(getApplication(), "")
                 _externalUserId.value = null
-                setLanguage("")
+                resetLanguagePicker()
                 loadExistingAliases()
                 loadExistingTags()
                 refreshPushSubscription()
@@ -376,6 +381,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
         SharedPreferenceUtil.cacheLanguage(getApplication(), language)
         _language.value = language
         DemoLog.i("Language set to: ${language.ifEmpty { "device default" }}")
+    }
+
+    // Clears only the cached choice. setLanguage("") would send the device
+    // language and overwrite the user's backend value.
+    private fun resetLanguagePicker() {
+        SharedPreferenceUtil.cacheLanguage(getApplication(), "")
+        _language.value = ""
     }
 
     // Consent required
