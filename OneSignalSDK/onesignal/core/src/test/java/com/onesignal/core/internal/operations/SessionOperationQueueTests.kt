@@ -181,6 +181,20 @@ class SessionOperationQueueTests : FunSpec({
         incoming.retryAt shouldBe 60_000L
     }
 
+    test("an end that replaces a backed-off update keeps its retries but not its backoff") {
+        val policy = SessionQueuePolicy()
+        val backedOff = item(update()).apply {
+            retries = 3
+            retryAt = 60_000L
+        }
+        val end = item(update(activeDuration = 2_000L, endTime = 9L))
+
+        policy.onEnqueue(mutableListOf(backedOff), end)
+
+        end.retries shouldBe 3
+        end.retryAt shouldBe 0L
+    }
+
     test("an update after an end that is executing is dropped") {
         val policy = SessionQueuePolicy()
         val queue = mutableListOf<OperationRepo.OperationQueueItem>()
