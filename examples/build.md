@@ -255,6 +255,7 @@ Some Identity Verification behavior still differs between the demos because the 
 
 - A login without a token parks that user's requests. The iOS SDK asks for a token, so its banner shows. The Android SDK fires nothing until SDK-5476.
 - After a relaunch with a token still owed, the iOS SDK asks again on the first parked request. The Android SDK doesn't, until SDK-5476.
+- The iOS SDK replays a pending ask to a listener added later. The Android SDK doesn't.
 - If a 401 for an old token lands after PROVIDE JWT, the Android SDK deletes the new token and asks again until SDK-5474. The iOS SDK keeps the new token.
 
 ### Notification service extension

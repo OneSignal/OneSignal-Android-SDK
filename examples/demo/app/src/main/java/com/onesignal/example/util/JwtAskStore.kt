@@ -8,7 +8,8 @@ import androidx.lifecycle.MutableLiveData
 /**
  * The SDK's pending ask for a JWT. App-scoped so the listener MainApplication registers at
  * launch reaches the UI whether or not MainActivity exists. The SDK doesn't replay the event.
- * State changes happen on the main thread.
+ * Every write goes through the main handler, so they land in call order and an [answered] or
+ * [clear] called after a 401 wins over it.
  */
 object JwtAskStore {
     private val mainHandler = Handler(Looper.getMainLooper())
@@ -32,12 +33,16 @@ object JwtAskStore {
 
     /** A token for [externalId] answers the ask if it is for that user. */
     fun answered(externalId: String) {
-        if (_externalId.value == externalId) {
-            _externalId.value = null
+        mainHandler.post {
+            if (_externalId.value == externalId) {
+                _externalId.value = null
+            }
         }
     }
 
     fun clear() {
-        _externalId.value = null
+        mainHandler.post {
+            _externalId.value = null
+        }
     }
 }
