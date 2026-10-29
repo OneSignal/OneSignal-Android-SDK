@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import androidx.test.core.app.ApplicationProvider
 import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
+import com.onesignal.common.IDManager
 import com.onesignal.common.threading.withMain
 import com.onesignal.core.internal.application.impl.ApplicationService
 import com.onesignal.core.internal.device.IDeviceService
@@ -41,7 +42,7 @@ import org.json.JSONObject
 import org.robolectric.Robolectric
 import org.robolectric.shadows.ShadowLooper
 
-private class Mocks {
+private class Mocks(onesignalId: String = "onesignalId") {
     val context = ApplicationProvider.getApplicationContext<Context>()
     val applicationService =
         run {
@@ -58,6 +59,15 @@ private class Mocks {
             mockSubManager
         }
 
+    val mockBackend: INotificationBackendService =
+        mockk<INotificationBackendService>().apply {
+            coEvery { updateNotificationAsOpened(any(), any(), any(), any(), any()) } coAnswers {
+                // assume every updateNotificationAsOpened call takes 5 ms
+                delay(5)
+                Unit
+            }
+        }
+
     val realNotificationLifecycleService =
         run {
             NotificationLifecycleService(
@@ -68,16 +78,11 @@ private class Mocks {
                     every { onDirectInfluenceFromNotification(any()) } returns Unit
                 },
                 mockSubscriptionManager,
+                MockHelper.identityModelStore { it.onesignalId = onesignalId },
                 mockk<IDeviceService>().apply {
                     every { deviceType } returns IDeviceService.DeviceType.Android
                 },
-                mockk<INotificationBackendService>().apply {
-                    coEvery { updateNotificationAsOpened(any(), any(), any(), any()) } coAnswers {
-                        // assume every updateNotificationAsOpened call takes 5 ms
-                        delay(5)
-                        Unit
-                    }
-                },
+                mockBackend,
                 mockk<IReceiveReceiptWorkManager>(),
                 mockk<IAnalyticsTracker>().apply {
                     every { trackOpenedEvent(any(), any()) } returns Unit
@@ -95,6 +100,13 @@ private class Mocks {
             activityController.get()
         }
 }
+
+private fun openedPayload(notificationId: String): JSONArray =
+    JSONArray().put(
+        JSONObject()
+            .put("alert", "test message")
+            .put("custom", JSONObject().put("i", notificationId)),
+    )
 
 @RobolectricTest
 class NotificationLifecycleServiceTests : FunSpec({
@@ -128,6 +140,50 @@ class NotificationLifecycleServiceTests : FunSpec({
             notificationLifecycleService.openDestinationActivity(
                 withArg { Any() },
                 withArg { Any() },
+            )
+        }
+    }
+
+    test("notificationOpened reports the open with the backend onesignal id") {
+        // Given
+        val mocks = Mocks(onesignalId = "onesignalId")
+        val notificationLifecycleService = mocks.notificationLifecycleService
+        val activity = mocks.activity
+
+        // When
+        notificationLifecycleService.notificationOpened(activity, openedPayload("notificationId"))
+
+        // Then: the backend update runs on an IO coroutine, so allow it a moment to land.
+        coVerify(timeout = 1000) {
+            mocks.mockBackend.updateNotificationAsOpened(
+                MockHelper.DEFAULT_APP_ID,
+                "notificationId",
+                "UUID1",
+                IDeviceService.DeviceType.Android,
+                "onesignalId",
+            )
+        }
+    }
+
+    test("notificationOpened leaves the onesignal id out while the user has a local placeholder id") {
+        // Given: the tap landed right after login() or logout(), before the create user response
+        // replaced the local id. The server looks the user up by this field, so a placeholder must
+        // be dropped rather than sent.
+        val mocks = Mocks(onesignalId = IDManager.createLocalId())
+        val notificationLifecycleService = mocks.notificationLifecycleService
+        val activity = mocks.activity
+
+        // When
+        notificationLifecycleService.notificationOpened(activity, openedPayload("notificationId"))
+
+        // Then
+        coVerify(timeout = 1000) {
+            mocks.mockBackend.updateNotificationAsOpened(
+                MockHelper.DEFAULT_APP_ID,
+                "notificationId",
+                "UUID1",
+                IDeviceService.DeviceType.Android,
+                null,
             )
         }
     }
