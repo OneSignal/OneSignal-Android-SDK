@@ -99,6 +99,7 @@
     <ID>ConstructorParameterNaming:ReceiveReceiptProcessor.kt$ReceiveReceiptProcessor$private val _deviceService: IDeviceService</ID>
     <ID>ConstructorParameterNaming:ReceiveReceiptWorkManager.kt$ReceiveReceiptWorkManager$private val _applicationService: IApplicationService</ID>
     <ID>ConstructorParameterNaming:ReceiveReceiptWorkManager.kt$ReceiveReceiptWorkManager$private val _configModelStore: ConfigModelStore</ID>
+    <ID>ConstructorParameterNaming:ReceiveReceiptWorkManager.kt$ReceiveReceiptWorkManager$private val _identityModelStore: IdentityModelStore</ID>
     <ID>ConstructorParameterNaming:ReceiveReceiptWorkManager.kt$ReceiveReceiptWorkManager$private val _subscriptionManager: ISubscriptionManager</ID>
     <ID>ConstructorParameterNaming:SummaryNotificationDisplayer.kt$SummaryNotificationDisplayer$private val _applicationService: IApplicationService</ID>
     <ID>ConstructorParameterNaming:SummaryNotificationDisplayer.kt$SummaryNotificationDisplayer$private val _dataController: INotificationRepository</ID>

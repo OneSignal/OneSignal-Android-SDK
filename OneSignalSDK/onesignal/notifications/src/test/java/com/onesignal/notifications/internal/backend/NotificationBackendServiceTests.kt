@@ -32,6 +32,7 @@ class NotificationBackendServiceTests : FunSpec({
             "notificationId",
             "subscriptionId",
             IDeviceService.DeviceType.Android,
+            "onesignalId",
         )
 
         // Then
@@ -42,6 +43,37 @@ class NotificationBackendServiceTests : FunSpec({
                     it.getString("app_id") shouldBe "appId"
                     it.getString("player_id") shouldBe "subscriptionId"
                     it.getInt("device_type") shouldBe IDeviceService.DeviceType.Android.value
+                    it.getString("onesignal_id") shouldBe "onesignalId"
+                },
+            )
+        }
+    }
+
+    test("updateNotificationAsReceived omits onesignal_id when the SDK has no backend id") {
+        // Given: the receipt was enqueued while the user still had a local placeholder id. The
+        // server looks the user up by this field, so a placeholder must never be sent, and the
+        // agreed contract is to leave the key out entirely rather than send null.
+        val spyHttpClient = mockk<IHttpClient>()
+        coEvery { spyHttpClient.put(any(), any()) } returns HttpResponse(202, null)
+
+        val notificationBackendService = NotificationBackendService(spyHttpClient)
+
+        // When
+        notificationBackendService.updateNotificationAsReceived(
+            "appId",
+            "notificationId",
+            "subscriptionId",
+            IDeviceService.DeviceType.Android,
+            null,
+        )
+
+        // Then
+        coVerify {
+            spyHttpClient.put(
+                "notifications/notificationId/report_received",
+                withArg {
+                    it.getString("player_id") shouldBe "subscriptionId"
+                    it.has("onesignal_id") shouldBe false
                 },
             )
         }
@@ -62,6 +94,7 @@ class NotificationBackendServiceTests : FunSpec({
                     "notificationId",
                     "subscriptionId",
                     IDeviceService.DeviceType.Android,
+                    null,
                 )
             }
 
