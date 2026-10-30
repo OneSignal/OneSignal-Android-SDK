@@ -110,10 +110,14 @@ behavior.
 
 ### Send In-App Message
 Trigger pre-configured in-app message layouts by setting SDK triggers:
-- **Top Banner**
-- **Bottom Banner**
-- **Center Modal**
-- **Full Screen**
+- **Top**
+- **Bottom**
+- **Center**
+- **HTML**
+- **Full**
+- **Full Bleed**
+- **Carousel**
+- **Carousel Bleed**
 
 > These require matching in-app messages configured in your OneSignal dashboard.
 
