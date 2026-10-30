@@ -159,16 +159,18 @@ The demo is 100% Jetpack Compose (no XML layouts). Dependencies are pulled via t
 The Android demo **overrides the shared guide's "no repository wrapper" rule**. Instead it uses:
 
 - `MainApplication.kt` — initializes the SDK before any UI renders, restores cached consent + IAM-paused + location-shared state, and registers `IInAppMessageLifecycleListener`, `IInAppMessageClickListener`, `INotificationClickListener`, and `INotificationLifecycleListener` (with `event.preventDefault()` so async display can be exercised).
-- `MainViewModel : AndroidViewModel` — central state with `LiveData<T>` for every UI value. Implements `IPushSubscriptionObserver`, `IPermissionObserver`, `IUserStateObserver`, and `IUserJwtInvalidatedListener`. Holds a monotonic `private var fetchRequestSequence = 0L` that maps to the shared guide's `requestSequence` for stale-result protection in `fetchUserDataFromApi`.
+- `MainViewModel : AndroidViewModel` — central state with `LiveData<T>` for every UI value. Implements `IPushSubscriptionObserver`, `IPermissionObserver`, and `IUserStateObserver`. The JWT invalidated listener lives in `MainApplication`. Holds a monotonic `private var fetchRequestSequence = 0L` that maps to the shared guide's `requestSequence` for stale-result protection in `fetchUserDataFromApi`.
 - `OneSignalRepository.kt` — only some methods are `suspend` + `withContext(Dispatchers.IO)`; many are synchronous wrappers and the ViewModel wraps calls in `viewModelScope.launch(Dispatchers.IO)` itself.
 - `OneSignalService.kt` (`object`) — REST API client described in the shared guide's Prompt 1.4.
-- `SharedPreferenceUtil.kt` — backs the shared guide's PreferencesService (consent required, privacy consent, external user id, location shared, IAM paused, cached JWT token, cached identity-verification toggle, notification service extension switches).
+- `SharedPreferenceUtil.kt` — backs the shared guide's PreferencesService (consent required, privacy consent, external user id, location shared, IAM paused, per-user JWT tokens, cached identity-verification toggle, notification service extension switches).
 
-`fetchUserDataFromApi` loading sequence: the sequence is incremented first, then early returns may set `_isLoading = false` before `_isLoading = true` is set (see `MainViewModel.kt` lines ~167–192). Stale-fetch guards themselves are correct -- results are dropped when `requestId != fetchRequestSequence`, and the same guard wraps the catch branch and the final `_isLoading.value = false`.
+`fetchUserDataFromApi` loading sequence: the sequence is incremented first, then early returns may set `_isLoading = false` before `_isLoading = true` is set (see `fetchUserDataFromApi` in `MainViewModel.kt`). Stale-fetch guards themselves are correct -- results are dropped when `requestId != fetchRequestSequence`, and the same guard wraps the catch branch and the final `_isLoading.value = false`. A user switch or logout also bumps the sequence to drop a fetch still in flight for the previous user. Both paths set `_isLoading = false` themselves, since the dropped fetch won't.
 
 #### `MainApplication` observer
 
 Both `MainApplication` and `MainViewModel` register `IUserStateObserver`. The Application's observer only logs (no UI side effects) and exists so user-state changes are captured even before the first `MainActivity` is created.
+
+`MainApplication` also registers the `IUserJwtInvalidatedListener` and hands each event to `JwtAskStore`. See the Identity Verification controls under Android Additions.
 
 ---
 
@@ -186,7 +188,7 @@ Inline only — no full-screen overlay. The four list sections (Aliases, Emails,
 
 - `SnackbarController` (`ui/components/SnackbarController.kt`) wraps Compose's `SnackbarHostState` and exposes a `show(message)` method with replace-on-show behavior.
 - `MainScreen` creates `val snackbarController = rememberSnackbarController(snackbarHostState)` and exposes it down the tree via `CompositionLocalProvider(LocalSnackbarController provides snackbarController) { ... }` wrapping the sections column. The host is mounted on `Scaffold(snackbarHost = { SnackbarHost(snackbarHostState) })`. The `Snackbar` applies `Modifier.testTag("snackbar_toast")` so the shared Appium suite finds it.
-- Section composables read the controller with `val snackbar = LocalSnackbarController.current` and call `snackbar.show(...)` from action callbacks. Only Outcomes, Custom Events, and Location check trigger the snackbar.
+- Section composables read the controller with `val snackbar = LocalSnackbarController.current` and call `snackbar.show(...)` from action callbacks. Only Outcomes, Custom Events, and Location check trigger the snackbar from a callback. The User section also shows one from a `LaunchedEffect` when the ViewModel's `jwtAskExternalId` turns non-null. The ViewModel only exposes the id, and the UI writes the message.
 - Most other actions write to `android.util.Log.i(TAG, ...)` in `MainViewModel` (add/remove aliases/tags/emails/SMS/triggers, toggles, send push/IAM, etc.). Login and logout are intentionally silent — no snackbar and no `Log.i`. The User section reflects auth state via `externalUserId` LiveData ("Logged In" / "Anonymous"), matching the other wrapper demos.
 - Replace-on-show: `show(...)` cancels any in-flight `showJob` and `dismissJob`, dismisses `hostState.currentSnackbarData`, then launches a new pair where the dismiss coroutine runs `delay(DemoLayout.toastDurationMs)` and the show coroutine calls `hostState.showSnackbar(message, duration = SnackbarDuration.Indefinite)`.
 - Duration is the shared constant `DemoLayout.toastDurationMs = 3_000L` (milliseconds).
@@ -240,10 +242,20 @@ Pass the plain class name as the tag; `DemoLog` adds the prefix, so `[Demo]` is 
 
 The Android demo exercises a few SDK features that are not described in the shared guide today. They are wired into the User section so the shared Appium contract stays stable:
 
-- **Identity Verification toggle** (`UserSection`, `testTag = "identity_verification_toggle"`) — persisted via `SharedPreferenceUtil.cacheIdentityVerification(...)`. When ON, `fetchUserDataFromApi` uses the cached external_id + JWT; when OFF it falls back to the onesignal_id endpoint.
-- **JWT field in `LoginDialog`** — optional `"JWT Token (optional)"` input under the external-user-id field. `testTag = "login_user_jwt_input"`. `MainViewModel.loginUser(externalUserId, jwtToken)` threads the token into `OneSignal.login(externalUserId, jwtToken)` and caches it via `SharedPreferenceUtil.cacheJwtToken(...)`.
-- **UPDATE USER JWT button** (`UserSection`, `testTag = "update_user_jwt_button"`) — opens a `PairInputDialog` (External User Id + JWT Token) and calls `viewModel.updateUserJwt(...)` → `OneSignal.updateUserJwt(...)`.
-- **`IUserJwtInvalidatedListener`** — registered by `MainViewModel`; surfaces a log entry via `Log.w(TAG, ...)` when the SDK reports an invalidated JWT. Per Prompt 7.6 the snackbar is no longer fired from this listener.
+These match the iOS demo's User section in labels, test ids, and behavior. Change both demos together.
+
+- **Fetch by external_id (JWT) toggle** (`testTag = "identity_verification_toggle"`). `SharedPreferenceUtil.cacheIdentityVerification(...)` persists it. When ON, `fetchUserDataFromApi` fetches by the current external_id with that user's stored JWT as bearer, or unsigned when there is none. That includes the fetch at launch, even before the user has a onesignal_id. When OFF it fetches by onesignal_id, unsigned, which an app with Identity Verification on rejects with a 401. Flipping it refetches. It only drives the demo's own REST GET and does not turn Identity Verification on for the app.
+- **REST fetch row** (`testTag = "user_fetch_status_value"`). Reads `—`, `OK`, or the failure reason, for example `external_id fetch failed: HTTP 401`, so a rejected fetch under Identity Verification doesn't look like an empty user. A failed fetch doesn't change the lists. A user switch, a logout, or a fetch skipped for lack of an id resets the row to `—`. A switch or logout also drops any fetch still in flight for the previous user.
+- **Stored tokens.** `SharedPreferenceUtil` keeps every JWT the tester hands the SDK, keyed by external id, as JSON under `JWT_TOKENS_PREF`. A login with a token or an `updateUserJwt` stores it for that id, whoever it is for. A login with the field blank changes nothing, and neither does an invalidation event. Logout clears them all. Plaintext SharedPreferences is fine for a demo and not a pattern for real apps.
+- **JWT field in `LoginDialog`** (`testTag = "login_user_jwt_input"`). Optional. `MainViewModel.loginUser(externalUserId, jwtToken)` passes it to `OneSignal.login(externalUserId, jwtToken)`. A same-user login refetches, because the SDK fires no user-state event for it.
+- **UPDATE USER JWT button** (`testTag = "update_user_jwt_button"`). Always enabled. Opens `UpdateJwtDialog`, which stacks the External User Id and JWT Token fields full width, prefills the id from the pending ask and then the current user, and confirms with `Update`. Calls `OneSignal.updateUserJwt(...)` and refetches when the id is the current user's.
+- **JWT ask banner** (`testTag = "jwt_ask_banner"`, with `jwt_ask_external_id_value` and `jwt_ask_provide_button`). `MainApplication` registers the `IUserJwtInvalidatedListener` right after init, because the SDK doesn't replay the event and `MainViewModel` dies with `MainActivity`. The listener writes the asked id to `JwtAskStore`. It leaves the stored token alone, because an SDK that asks for a token when requests park without one fires the same event, so the event doesn't prove the token is bad. A bad token shows up as a 401 in the REST fetch row. `MainViewModel.jwtAskExternalId` exposes it, and the User section shows the banner plus a snackbar once per ask. A token for that id, from `updateUserJwt` or a login, clears the ask, and so does logout. The demo never answers the ask with a stored token on its own. PROVIDE JWT is always enabled.
+
+Some Identity Verification behavior still differs between the demos because the SDKs differ:
+
+- A login without a token parks that user's requests. The iOS SDK asks for a token, so its banner shows. The Android SDK fires nothing until SDK-5476.
+- After a relaunch with a token still owed, the iOS SDK asks again on the first parked request. The Android SDK doesn't, until SDK-5476.
+- If a 401 for an old token lands after PROVIDE JWT, the Android SDK deletes the new token and asks again until SDK-5474. The iOS SDK keeps the new token.
 
 ### Notification service extension
 
