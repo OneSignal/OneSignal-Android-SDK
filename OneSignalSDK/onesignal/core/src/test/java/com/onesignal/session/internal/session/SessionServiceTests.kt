@@ -572,7 +572,6 @@ class SessionServiceTests : FunSpec({
         // When
         sessionService.onUnfocused()
         sessionService.backgroundRun()
-        mocks.entryState = AppEntryAction.APP_OPEN
         sessionService.onFocus(false)
 
         // Then
