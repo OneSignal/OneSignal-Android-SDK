@@ -491,9 +491,7 @@ internal class OneSignalImp : IOneSignal,
     ) {
         Logging.log(LogLevel.DEBUG, "Calling deprecated login(externalId: $externalId, jwtBearerToken: ...${jwtBearerToken?.takeLast(8)})")
 
-        waitForInit(operationName = "login")
-
-        if (isMissing(externalId, "login: externalId")) return
+        if (!isReadyFor("login") || isMissing(externalId, "login: externalId")) return
 
         val context = loginHelper.switchUser(externalId, jwtBearerToken).context ?: return
 
@@ -503,7 +501,7 @@ internal class OneSignalImp : IOneSignal,
     override fun logout() {
         Logging.log(LogLevel.DEBUG, "Calling deprecated logout()")
 
-        waitForInit(operationName = "logout")
+        if (!isReadyFor("logout")) return
 
         val context = logoutHelper.switchUser() ?: return
 
@@ -516,7 +514,7 @@ internal class OneSignalImp : IOneSignal,
     ) {
         Logging.log(LogLevel.DEBUG, "updateUserJwt(externalId: $externalId, token: ...${token.takeLast(8)})")
 
-        waitForInit(operationName = "updateUserJwt")
+        if (!isReadyFor("updateUserJwt")) return
 
         if (isMissing(externalId, "updateUserJwt: externalId") || isMissing(token, "updateUserJwt: token")) return
 
@@ -526,12 +524,12 @@ internal class OneSignalImp : IOneSignal,
     }
 
     override fun addUserJwtInvalidatedListener(listener: IUserJwtInvalidatedListener) {
-        waitForInit(operationName = "addUserJwtInvalidatedListener")
+        if (!isReadyFor("addUserJwtInvalidatedListener")) return
         jwtTokenStore.addUserJwtInvalidatedListener(listener)
     }
 
     override fun removeUserJwtInvalidatedListener(listener: IUserJwtInvalidatedListener) {
-        waitForInit(operationName = "removeUserJwtInvalidatedListener")
+        if (!isReadyFor("removeUserJwtInvalidatedListener")) return
         jwtTokenStore.removeUserJwtInvalidatedListener(listener)
     }
 
@@ -542,6 +540,30 @@ internal class OneSignalImp : IOneSignal,
     override fun <T> getServiceOrNull(c: Class<T>): T? = services.getServiceOrNull(c)
 
     override fun <T> getAllServices(c: Class<T>): List<T> = services.getAllServices(c)
+
+    // Calls that can be dropped safely log and return false instead of throwing when init never
+    // started or failed. Accessors still throw, since they have no value to return.
+    private fun isReadyFor(operationName: String): Boolean =
+        ignoreIfNotInitialized(operationName) { waitForInit(operationName) } == null
+
+    private suspend fun isReadyForSuspend(operationName: String): Boolean =
+        ignoreIfNotInitialized(operationName) { suspendUntilInit(operationName) } == null
+
+    /** Runs [wait] and returns the init failure it threw, after logging it, or null once init succeeded. */
+    private inline fun ignoreIfNotInitialized(
+        operationName: String,
+        wait: () -> Unit,
+    ): IllegalStateException? =
+        try {
+            wait()
+            null
+        } catch (e: CancellationException) {
+            // A subclass of IllegalStateException, so it must be rethrown before the catch below.
+            throw e
+        } catch (e: IllegalStateException) {
+            Logging.error("'$operationName' ignored: ${e.message}", e)
+            e
+        }
 
     /**
      * Blocking version that waits for initialization to complete.
@@ -841,9 +863,7 @@ internal class OneSignalImp : IOneSignal,
     ) = withContext(ioDispatcher) {
         Logging.log(LogLevel.DEBUG, "login(externalId: $externalId, jwtBearerToken: ...${jwtBearerToken?.takeLast(8)})")
 
-        // suspendUntilInit throws on NOT_STARTED / FAILED (preserving initFailureException as the
-        // cause), and only returns once initState == SUCCESS — so no post-check is needed here.
-        suspendUntilInit(operationName = "login")
+        if (!isReadyForSuspend("login")) return@withContext
 
         if (isMissing(externalId, "login: externalId")) return@withContext
 
@@ -898,17 +918,8 @@ internal class OneSignalImp : IOneSignal,
 
     /** Waits for init; returns a NOT_INITIALIZED failure instead of throwing when it never started or failed. */
     internal suspend fun awaitInitForLogin(): OneSignalResult<LoginData>? =
-        try {
-            suspendUntilInit(operationName = "login")
-            null
-        } catch (e: CancellationException) {
-            // A subclass of IllegalStateException, so it must be rethrown before the catch below.
-            throw e
-        } catch (e: IllegalStateException) {
-            // Callers can ignore the result, so the failure has to show up in the log.
-            Logging.error("login(externalId, profile) skipped: ${e.message}", e)
-            OneSignalResult.failure(ErrorCode.NOT_INITIALIZED, e.message, cause = e)
-        }
+        ignoreIfNotInitialized("login") { suspendUntilInit(operationName = "login") }
+            ?.let { OneSignalResult.failure(ErrorCode.NOT_INITIALIZED, it.message, cause = it) }
 
     private fun loginFailureMessage(wait: OperationWaitResult): String =
         wait.httpStatusCode?.let { "Login did not complete (HTTP $it)." } ?: "Login did not complete."
@@ -919,11 +930,7 @@ internal class OneSignalImp : IOneSignal,
     ) = withContext(ioDispatcher) {
         Logging.log(LogLevel.DEBUG, "updateUserJwtSuspend(externalId: $externalId, token: ...${token.takeLast(8)})")
 
-        suspendUntilInit(operationName = "updateUserJwt")
-
-        if (!isInitialized) {
-            throw IllegalStateException("'initWithContext failed' before 'updateUserJwt'")
-        }
+        if (!isReadyForSuspend("updateUserJwt")) return@withContext
 
         if (isMissing(externalId, "updateUserJwt: externalId") || isMissing(token, "updateUserJwt: token")) {
             return@withContext
@@ -937,7 +944,7 @@ internal class OneSignalImp : IOneSignal,
         withContext(ioDispatcher) {
             Logging.log(LogLevel.DEBUG, "logoutSuspend()")
 
-            suspendUntilInit(operationName = "logout")
+            if (!isReadyForSuspend("logout")) return@withContext
 
             val context = logoutHelper.switchUser() ?: return@withContext
             logoutHelper.enqueueLogout(context)

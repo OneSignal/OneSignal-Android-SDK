@@ -677,32 +677,20 @@ class SDKInitTests : FunSpec({
         os.isInitialized shouldBe true
     }
 
-    test("login should throw exception when initWithContext is never called") {
-        // Given
+    test("login is ignored when initWithContext is never called") {
         val oneSignalImp = OneSignalImp()
 
-        // When/Then - should throw exception immediately
-        val exception =
-            shouldThrow<IllegalStateException> {
-                oneSignalImp.login("testUser", null)
-            }
+        oneSignalImp.login("testUser", null)
 
-        // Should throw immediately because isInitialized is false
-        exception.message shouldBe "Must call 'initWithContext' before 'login'"
+        oneSignalImp.isInitialized shouldBe false
     }
 
-    test("logout should throw exception when initWithContext is never called") {
-        // Given
+    test("logout is ignored when initWithContext is never called") {
         val oneSignalImp = OneSignalImp()
 
-        // When/Then - should throw exception immediately
-        val exception =
-            shouldThrow<IllegalStateException> {
-                oneSignalImp.logout()
-            }
+        oneSignalImp.logout()
 
-        // Should throw immediately because isInitialized is false
-        exception.message shouldBe "Must call 'initWithContext' before 'logout'"
+        oneSignalImp.isInitialized shouldBe false
     }
 
     // Regression test for the SessionService NPE during in-flight background init.

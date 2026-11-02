@@ -1,12 +1,12 @@
 package com.onesignal.internal
 
 import com.onesignal.ErrorCode
+import com.onesignal.IUserJwtInvalidatedListener
 import com.onesignal.LoginData
 import com.onesignal.OneSignalResult
 import com.onesignal.OneSignalUserProfile
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
-import io.kotest.assertions.throwables.shouldThrowUnit
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.CancellationException
@@ -40,29 +40,31 @@ class OneSignalImpTests : FunSpec({
         field.set(os, value)
     }
 
-    test("attempting login before initWithContext throws exception") {
-        // Given
+    test("login, logout, updateUserJwt and the JWT listeners before initWithContext are ignored") {
         val os = OneSignalImp()
+        Logging.logLevel = LogLevel.NONE
+        val listener = IUserJwtInvalidatedListener { }
 
-        // When
-        val exception =
-            shouldThrowUnit<Exception> {
-                os.login("login-id")
-            }
+        os.login("login-id")
+        os.login("")
+        os.logout()
+        os.updateUserJwt("user", "token")
+        os.addUserJwtInvalidatedListener(listener)
+        os.removeUserJwtInvalidatedListener(listener)
 
-        // Then
-        exception.message shouldBe "Must call 'initWithContext' before 'login'"
+        os.isInitialized shouldBe false
     }
 
-    test("login with empty externalId before init still throws") {
+    test("login and logout after a failed init are ignored") {
         val os = OneSignalImp()
+        Logging.logLevel = LogLevel.NONE
+        setPrivateField(os, "initState", InitState.FAILED)
 
-        val exception =
-            shouldThrowUnit<Exception> {
-                os.login("")
-            }
+        os.login("login-id")
+        os.logout()
+        runBlocking { os.loginSuspend("login-id") }
 
-        exception.message shouldBe "Must call 'initWithContext' before 'login'"
+        os.isInitialized shouldBe false
     }
 
     test("login with empty externalId after init does not switch user") {
@@ -89,20 +91,6 @@ class OneSignalImpTests : FunSpec({
 
         os.updateUserJwt("", "token")
         os.updateUserJwt("user", "")
-    }
-
-    test("attempting logout before initWithContext throws exception") {
-        // Given
-        val os = OneSignalImp()
-
-        // When
-        val exception =
-            shouldThrowUnit<Exception> {
-                os.logout()
-            }
-
-        // Then
-        exception.message shouldBe "Must call 'initWithContext' before 'logout'"
     }
 
     test("waitForInit returns synchronously without dispatching when initState is SUCCESS") {
