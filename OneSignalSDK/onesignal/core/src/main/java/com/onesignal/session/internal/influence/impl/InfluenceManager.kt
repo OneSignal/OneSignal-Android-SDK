@@ -100,7 +100,9 @@ internal class InfluenceManager(
             return
         }
 
-        _sessionService.attributeNextSessionTo(notificationId)
+        if (_configModelStore.model.influenceParams.isDirectEnabled) {
+            _sessionService.attributeNextSessionTo(notificationId)
+        }
         attemptSessionUpgrade(AppEntryAction.NOTIFICATION_CLICK, notificationId)
     }
 

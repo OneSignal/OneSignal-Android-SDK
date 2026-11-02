@@ -196,14 +196,30 @@ class InfluenceManagerTests : FunSpec({
         val mockSessionService = mockk<ISessionService>()
         every { mockSessionService.subscribe(any()) } just Runs
         every { mockSessionService.attributeNextSessionTo(any()) } just Runs
+        val configModelStore = MockHelper.configModelStore { it.influenceParams.isDirectEnabled = true }
         val influenceManager =
-            InfluenceManager(mockSessionService, mockk(), MockHelper.configModelStore(), MockPreferencesService(), MockHelper.time(1111))
+            InfluenceManager(mockSessionService, mockk(), configModelStore, MockPreferencesService(), MockHelper.time(1111))
 
         // When
         influenceManager.onDirectInfluenceFromNotification("notificationId")
 
         // Then
         verify(exactly = 1) { mockSessionService.attributeNextSessionTo("notificationId") }
+    }
+
+    test("notification opened does not attribute the next session when direct influence is disabled") {
+        // Given
+        val mockSessionService = mockk<ISessionService>()
+        every { mockSessionService.subscribe(any()) } just Runs
+        val configModelStore = MockHelper.configModelStore { it.influenceParams.isDirectEnabled = false }
+        val influenceManager =
+            InfluenceManager(mockSessionService, mockk(), configModelStore, MockPreferencesService(), MockHelper.time(1111))
+
+        // When
+        influenceManager.onDirectInfluenceFromNotification("notificationId")
+
+        // Then
+        verify(exactly = 0) { mockSessionService.attributeNextSessionTo(any()) }
     }
 
     test("IAM clicked while open creates IAM direct influence") {
