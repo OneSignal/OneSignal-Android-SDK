@@ -134,9 +134,8 @@ class NotificationBackendServiceTests : FunSpec({
     }
 
     test("updateNotificationAsOpened omits onesignal_id when the SDK has no backend id") {
-        // Given: the tap happened while the user still had a local placeholder id. The server
-        // looks the user up by this field, so a placeholder must never be sent, and the agreed
-        // contract is to leave the key out entirely rather than send null.
+        // Given: the tap happened while the user still had a local placeholder id, so the key is
+        // left out for the same reason as the receipt case above.
         val spyHttpClient = mockk<IHttpClient>()
         coEvery { spyHttpClient.put(any(), any()) } returns HttpResponse(202, null)
 
