@@ -131,24 +131,19 @@ internal class OneSignalImp : IOneSignal,
     override val debug: IDebugManager = DebugManager()
 
     override val session: ISessionManager
-        get() =
-            waitAndReturn { services.getService() }
+        get() = if (isReadyFor("Session")) services.getService() else UninitializedSessionManager
 
     override val notifications: INotificationsManager
-        get() =
-            waitAndReturn { services.getService() }
+        get() = if (isReadyFor("Notifications")) services.getService() else UninitializedNotificationsManager
 
     override val location: ILocationManager
-        get() =
-            waitAndReturn { services.getService() }
+        get() = if (isReadyFor("Location")) services.getService() else UninitializedLocationManager
 
     override val inAppMessages: IInAppMessagesManager
-        get() =
-            waitAndReturn { services.getService() }
+        get() = if (isReadyFor("InAppMessages")) services.getService() else UninitializedInAppMessagesManager
 
     override val user: IUserManager
-        get() =
-            waitAndReturn { services.getService() }
+        get() = if (isReadyFor("User")) services.getService() else UninitializedUserManager
 
     // Services required by this class
     // WARNING: OperationRepo depends on OperationModelStore which in-turn depends
@@ -491,9 +486,7 @@ internal class OneSignalImp : IOneSignal,
     ) {
         Logging.log(LogLevel.DEBUG, "Calling deprecated login(externalId: $externalId, jwtBearerToken: ...${jwtBearerToken?.takeLast(8)})")
 
-        waitForInit(operationName = "login")
-
-        if (isMissing(externalId, "login: externalId")) return
+        if (!isReadyFor("login") || isMissing(externalId, "login: externalId")) return
 
         val context = loginHelper.switchUser(externalId, jwtBearerToken).context ?: return
 
@@ -503,7 +496,7 @@ internal class OneSignalImp : IOneSignal,
     override fun logout() {
         Logging.log(LogLevel.DEBUG, "Calling deprecated logout()")
 
-        waitForInit(operationName = "logout")
+        if (!isReadyFor("logout")) return
 
         val context = logoutHelper.switchUser() ?: return
 
@@ -516,7 +509,7 @@ internal class OneSignalImp : IOneSignal,
     ) {
         Logging.log(LogLevel.DEBUG, "updateUserJwt(externalId: $externalId, token: ...${token.takeLast(8)})")
 
-        waitForInit(operationName = "updateUserJwt")
+        if (!isReadyFor("updateUserJwt")) return
 
         if (isMissing(externalId, "updateUserJwt: externalId") || isMissing(token, "updateUserJwt: token")) return
 
@@ -526,12 +519,12 @@ internal class OneSignalImp : IOneSignal,
     }
 
     override fun addUserJwtInvalidatedListener(listener: IUserJwtInvalidatedListener) {
-        waitForInit(operationName = "addUserJwtInvalidatedListener")
+        if (!isReadyFor("addUserJwtInvalidatedListener")) return
         jwtTokenStore.addUserJwtInvalidatedListener(listener)
     }
 
     override fun removeUserJwtInvalidatedListener(listener: IUserJwtInvalidatedListener) {
-        waitForInit(operationName = "removeUserJwtInvalidatedListener")
+        if (!isReadyFor("removeUserJwtInvalidatedListener")) return
         jwtTokenStore.removeUserJwtInvalidatedListener(listener)
     }
 
@@ -542,6 +535,30 @@ internal class OneSignalImp : IOneSignal,
     override fun <T> getServiceOrNull(c: Class<T>): T? = services.getServiceOrNull(c)
 
     override fun <T> getAllServices(c: Class<T>): List<T> = services.getAllServices(c)
+
+    // Log and return false instead of throwing when init never started or failed, so callers can
+    // skip the call or hand out a stand-in manager.
+    private fun isReadyFor(operationName: String): Boolean =
+        ignoreIfNotInitialized(operationName) { waitForInit(operationName) } == null
+
+    private suspend fun isReadyForSuspend(operationName: String): Boolean =
+        ignoreIfNotInitialized(operationName) { suspendUntilInit(operationName) } == null
+
+    /** Runs [wait] and returns the init failure it threw, after logging it, or null once init succeeded. */
+    private inline fun ignoreIfNotInitialized(
+        operationName: String,
+        wait: () -> Unit,
+    ): IllegalStateException? =
+        try {
+            wait()
+            null
+        } catch (e: CancellationException) {
+            // A subclass of IllegalStateException, so it must be rethrown before the catch below.
+            throw e
+        } catch (e: IllegalStateException) {
+            Logging.error("'$operationName' ignored: ${e.message}", e)
+            e
+        }
 
     /**
      * Blocking version that waits for initialization to complete.
@@ -680,13 +697,6 @@ internal class OneSignalImp : IOneSignal,
         return getter()
     }
 
-    // Blocks until init completes; [waitForInit] throws on NOT_STARTED / FAILED and
-    // returns once initState == SUCCESS.
-    private fun <T> waitAndReturn(getter: () -> T): T {
-        waitForInit()
-        return getter()
-    }
-
     private fun <T> blockingGet(getter: () -> T): T {
         try {
             if (AndroidUtils.isRunningOnMainThread()) {
@@ -713,27 +723,27 @@ internal class OneSignalImp : IOneSignal,
 
     override suspend fun getSession(): ISessionManager =
         withContext(ioDispatcher) {
-            suspendAndReturn { services.getService() }
+            if (isReadyForSuspend("Session")) services.getService() else UninitializedSessionManager
         }
 
     override suspend fun getNotifications(): INotificationsManager =
         withContext(ioDispatcher) {
-            suspendAndReturn { services.getService() }
+            if (isReadyForSuspend("Notifications")) services.getService() else UninitializedNotificationsManager
         }
 
     override suspend fun getLocation(): ILocationManager =
         withContext(ioDispatcher) {
-            suspendAndReturn { services.getService() }
+            if (isReadyForSuspend("Location")) services.getService() else UninitializedLocationManager
         }
 
     override suspend fun getInAppMessages(): IInAppMessagesManager =
         withContext(ioDispatcher) {
-            suspendAndReturn { services.getService() }
+            if (isReadyForSuspend("InAppMessages")) services.getService() else UninitializedInAppMessagesManager
         }
 
     override suspend fun getUser(): IUserManager =
         withContext(ioDispatcher) {
-            suspendAndReturn { services.getService() }
+            if (isReadyForSuspend("User")) services.getService() else UninitializedUserManager
         }
 
     override suspend fun getConsentRequired(): Boolean =
@@ -841,9 +851,7 @@ internal class OneSignalImp : IOneSignal,
     ) = withContext(ioDispatcher) {
         Logging.log(LogLevel.DEBUG, "login(externalId: $externalId, jwtBearerToken: ...${jwtBearerToken?.takeLast(8)})")
 
-        // suspendUntilInit throws on NOT_STARTED / FAILED (preserving initFailureException as the
-        // cause), and only returns once initState == SUCCESS — so no post-check is needed here.
-        suspendUntilInit(operationName = "login")
+        if (!isReadyForSuspend("login")) return@withContext
 
         if (isMissing(externalId, "login: externalId")) return@withContext
 
@@ -898,17 +906,8 @@ internal class OneSignalImp : IOneSignal,
 
     /** Waits for init; returns a NOT_INITIALIZED failure instead of throwing when it never started or failed. */
     internal suspend fun awaitInitForLogin(): OneSignalResult<LoginData>? =
-        try {
-            suspendUntilInit(operationName = "login")
-            null
-        } catch (e: CancellationException) {
-            // A subclass of IllegalStateException, so it must be rethrown before the catch below.
-            throw e
-        } catch (e: IllegalStateException) {
-            // Callers can ignore the result, so the failure has to show up in the log.
-            Logging.error("login(externalId, profile) skipped: ${e.message}", e)
-            OneSignalResult.failure(ErrorCode.NOT_INITIALIZED, e.message, cause = e)
-        }
+        ignoreIfNotInitialized("login") { suspendUntilInit(operationName = "login") }
+            ?.let { OneSignalResult.failure(ErrorCode.NOT_INITIALIZED, it.message, cause = it) }
 
     private fun loginFailureMessage(wait: OperationWaitResult): String =
         wait.httpStatusCode?.let { "Login did not complete (HTTP $it)." } ?: "Login did not complete."
@@ -919,11 +918,7 @@ internal class OneSignalImp : IOneSignal,
     ) = withContext(ioDispatcher) {
         Logging.log(LogLevel.DEBUG, "updateUserJwtSuspend(externalId: $externalId, token: ...${token.takeLast(8)})")
 
-        suspendUntilInit(operationName = "updateUserJwt")
-
-        if (!isInitialized) {
-            throw IllegalStateException("'initWithContext failed' before 'updateUserJwt'")
-        }
+        if (!isReadyForSuspend("updateUserJwt")) return@withContext
 
         if (isMissing(externalId, "updateUserJwt: externalId") || isMissing(token, "updateUserJwt: token")) {
             return@withContext
@@ -937,7 +932,7 @@ internal class OneSignalImp : IOneSignal,
         withContext(ioDispatcher) {
             Logging.log(LogLevel.DEBUG, "logoutSuspend()")
 
-            suspendUntilInit(operationName = "logout")
+            if (!isReadyForSuspend("logout")) return@withContext
 
             val context = logoutHelper.switchUser() ?: return@withContext
             logoutHelper.enqueueLogout(context)
