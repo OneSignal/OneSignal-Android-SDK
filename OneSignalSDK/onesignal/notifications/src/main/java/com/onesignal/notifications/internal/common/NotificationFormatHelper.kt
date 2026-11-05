@@ -42,7 +42,10 @@ internal object NotificationFormatHelper {
     }
 
     private fun getOSNotificationIdFromJsonString(jsonStr: String?): String? {
-        if (jsonStr == null) return null
+        if (jsonStr == null) {
+            Logging.debug("Not a OneSignal formatted JSON. No 'custom' field in the payload.")
+            return null
+        }
         try {
             val customJSON = JSONObject(jsonStr)
             if (customJSON.has(PAYLOAD_OS_NOTIFICATION_ID)) {
