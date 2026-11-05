@@ -179,19 +179,34 @@ object Logging {
         }
     }
 
+    // A listener that calls back into the SDK logs again on this thread; delivering that line to the
+    // listeners too would recurse until the stack overflows.
+    private val dispatchingToListeners = ThreadLocal<Boolean>()
+
+    @Suppress("TooGenericExceptionCaught")
     private fun callLogListeners(
         level: LogLevel,
         message: String,
         throwable: Throwable?,
     ) {
-        if (logListeners.isEmpty()) return
+        if (logListeners.isEmpty() || dispatchingToListeners.get() == true) return
 
         var logEntry = message
         if (throwable != null) {
             logEntry += "\n" + android.util.Log.getStackTraceString(throwable)
         }
-        for (listener in logListeners) {
-            listener.onLogEvent(OneSignalLogEvent(level, logEntry))
+        dispatchingToListeners.set(true)
+        try {
+            for (listener in logListeners) {
+                try {
+                    listener.onLogEvent(OneSignalLogEvent(level, logEntry))
+                } catch (e: Exception) {
+                    // The SDK line being logged may be on a path that promises not to throw.
+                    logToLogcat(LogLevel.ERROR, "A OneSignal log listener threw", e)
+                }
+            }
+        } finally {
+            dispatchingToListeners.set(false)
         }
     }
 

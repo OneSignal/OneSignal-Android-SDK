@@ -55,6 +55,7 @@ import com.onesignal.user.internal.resolveAppIdV2
 import com.onesignal.user.internal.subscriptions.SubscriptionModelStore
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
+import java.util.concurrent.atomic.AtomicBoolean
 
 internal class OneSignalImpV2 : IOneSignal,
     IServiceProvider {
@@ -398,10 +399,24 @@ internal class OneSignalImpV2 : IOneSignal,
 
         // Dispatch init asynchronously so this method never blocks the caller. Callers that
         // need to wait (accessors, login, logout) block on the gate.
-        suspendifyOnIO {
-            gate.runInit { internalInit(context, appId) }
-        }
+        val started = AtomicBoolean(false)
+        OneSignalDispatchers
+            .launchOnIO {
+                started.set(true)
+                gate.runInit { internalInit(context, appId) }
+            }.invokeOnCompletion { cause ->
+                // A full IO pool rejects the dispatch and cancels the job before it runs; left alone the
+                // attempt stays IN_PROGRESS and every accessor blocks forever.
+                if (!started.get()) failUnscheduledInit(cause)
+            }
         return true
+    }
+
+    private fun failUnscheduledInit(cause: Throwable?) {
+        val failure = IllegalStateException("initWithContext could not be scheduled: the OneSignal IO pool rejected it", cause)
+        Logging.error("initWithContext could not be scheduled; marking init FAILED", failure)
+        gate.addFailureCause(failure)
+        gate.complete(InitState.FAILED)
     }
 
     /**
