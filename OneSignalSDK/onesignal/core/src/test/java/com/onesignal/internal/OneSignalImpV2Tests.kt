@@ -22,17 +22,20 @@ class OneSignalImpV2Tests : FunSpec({
 
         os.login("login-id")
         os.login("")
+        os.login(null)
+        os.updateUserJwt(null, "token")
 
         os.isInitialized shouldBe false
     }
 
-    test("login with empty externalId after init does not switch user") {
+    test("login with a null or empty externalId after init does not switch user") {
         val os = OneSignalImpV2()
         markInitialized(os)
         // NONE: otherwise Logging.error calls the unmocked android.util.Log.
         Logging.logLevel = LogLevel.NONE
 
         os.login("")
+        os.login(null)
     }
 
     test("login with a null byte in externalId after init does not switch user") {
@@ -49,6 +52,7 @@ class OneSignalImpV2Tests : FunSpec({
         Logging.logLevel = LogLevel.NONE
 
         os.updateUserJwt("", "token")
+        os.updateUserJwt(null, "token")
         os.updateUserJwt("user", "")
     }
 
