@@ -11,6 +11,7 @@ import com.onesignal.core.internal.startup.IStartableService
 import com.onesignal.core.internal.time.ITime
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 
 internal class PreferencesService(
@@ -234,6 +235,9 @@ internal class PreferencesService(
 
                     // wait to be woken up for the next pass
                     waiter.waitForWake()
+                } catch (e: CancellationException) {
+                    // Swallowing this turns the loop into a hot spin once the scope is gone.
+                    throw e
                 } catch (e: Throwable) {
                     Logging.log(LogLevel.ERROR, "Error with Preference work loop", e)
                 }
