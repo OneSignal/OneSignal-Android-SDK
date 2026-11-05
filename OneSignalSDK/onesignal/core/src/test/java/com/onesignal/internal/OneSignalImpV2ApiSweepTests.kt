@@ -158,8 +158,8 @@ class OneSignalImpV2ApiSweepTests : FunSpec({
         managers(os).flatMap { (type, target) -> sweep(type, target) } shouldBe emptyList()
     }
 
-    // Java callers passing null hit Kotlin's parameter check, the same as legacy; the suspend entry points
-    // return before touching the value. Either way the call must not hang or surface anything else.
+    // Java callers passing null for a still-required argument hit Kotlin's parameter check. externalId,
+    // context, and appId are nullable and log instead. Either way the call must not hang.
     test("a null argument for a required parameter never hangs and throws nothing but a NullPointerException") {
         val before = quietOneSignal()
         val failed = failedOneSignal()
