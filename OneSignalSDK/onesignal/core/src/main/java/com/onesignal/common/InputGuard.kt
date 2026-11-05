@@ -1,7 +1,6 @@
 package com.onesignal.common
 
 import com.onesignal.debug.internal.logging.Logging
-import com.onesignal.internal.SdkOperation
 
 internal fun hasNullByte(value: String?): Boolean = value != null && '\u0000' in value
 
@@ -22,12 +21,6 @@ fun isMissing(
     error?.let { Logging.error(it) }
     return error != null
 }
-
-internal fun isMissing(
-    value: String?,
-    operation: SdkOperation,
-    parameter: String,
-): Boolean = isMissing(value, "$operation: $parameter")
 
 /**
  * Returns true when any of [values] is missing, per [isMissing].

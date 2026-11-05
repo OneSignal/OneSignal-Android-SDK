@@ -422,7 +422,7 @@ internal class OneSignalImpV2 : IOneSignal,
     /**
      * Called from internal classes only. Remain suspend until initialization is fully completed.
      */
-    override suspend fun initWithContext(context: Context): Boolean {
+    override suspend fun initWithContext(context: Context?): Boolean {
         Logging.log(LogLevel.DEBUG, "initWithContext(context: $context)")
         return initWithContextSuspend(context, null)
     }
@@ -478,14 +478,14 @@ internal class OneSignalImpV2 : IOneSignal,
     }
 
     override fun login(
-        externalId: String,
+        externalId: String?,
         jwtBearerToken: String?,
     ) {
         Logging.log(LogLevel.DEBUG, "Calling deprecated login(externalId: $externalId, jwtBearerToken: ...${jwtBearerToken?.takeLast(8)})")
 
-        if (!gate.isReady(SdkOperation.LOGIN) || isMissing(externalId, SdkOperation.LOGIN, EXTERNAL_ID_PARAM)) return
+        if (!gate.isReady(SdkOperation.LOGIN) || isMissing(externalId, "login: externalId")) return
 
-        val context = loginHelper.switchUser(externalId, jwtBearerToken).context ?: return
+        val context = loginHelper.switchUser(externalId!!, jwtBearerToken).context ?: return
 
         suspendifyOnIO { loginHelper.enqueueLogin(context) }
     }
@@ -501,16 +501,16 @@ internal class OneSignalImpV2 : IOneSignal,
     }
 
     override fun updateUserJwt(
-        externalId: String,
+        externalId: String?,
         token: String,
     ) {
         Logging.log(LogLevel.DEBUG, "updateUserJwt(externalId: $externalId, token: ...${token.takeLast(8)})")
 
         if (!gate.isReady(SdkOperation.UPDATE_USER_JWT)) return
 
-        if (isMissing(externalId, SdkOperation.UPDATE_USER_JWT, EXTERNAL_ID_PARAM) || isMissing(token, SdkOperation.UPDATE_USER_JWT, TOKEN_PARAM)) return
+        if (isMissing(externalId, "updateUserJwt: externalId") || isMissing(token, "updateUserJwt: token")) return
 
-        jwtTokenStore.putJwt(externalId, token)
+        jwtTokenStore.putJwt(externalId!!, token)
         // Wake the queue so any deferred ops can dispatch with the fresh token.
         operationRepo.forceExecuteOperations()
     }
@@ -629,16 +629,16 @@ internal class OneSignalImpV2 : IOneSignal,
     }
 
     override suspend fun loginSuspend(
-        externalId: String,
+        externalId: String?,
         jwtBearerToken: String?,
     ) = withContext(ioDispatcher) {
         Logging.log(LogLevel.DEBUG, "login(externalId: $externalId, jwtBearerToken: ...${jwtBearerToken?.takeLast(8)})")
 
         if (!gate.awaitReady(SdkOperation.LOGIN)) return@withContext
 
-        if (isMissing(externalId, SdkOperation.LOGIN, EXTERNAL_ID_PARAM)) return@withContext
+        if (isMissing(externalId, "login: externalId")) return@withContext
 
-        val context = loginHelper.switchUser(externalId, jwtBearerToken).context ?: return@withContext
+        val context = loginHelper.switchUser(externalId!!, jwtBearerToken).context ?: return@withContext
         loginHelper.enqueueLogin(context)
     }
 
@@ -659,7 +659,7 @@ internal class OneSignalImpV2 : IOneSignal,
                 return@withContext OneSignalResult.failure(ErrorCode.NOT_INITIALIZED, gate.notReadyMessage("login"))
             }
 
-            if (isMissing(externalId, SdkOperation.LOGIN, EXTERNAL_ID_PARAM) || externalId == null) {
+            if (isMissing(externalId, "login: externalId") || externalId == null) {
                 return@withContext OneSignalResult.failure(
                     ErrorCode.INVALID_ARGUMENT,
                     "login: externalId is required",
@@ -693,18 +693,18 @@ internal class OneSignalImpV2 : IOneSignal,
         wait.httpStatusCode?.let { "Login did not complete (HTTP $it)." } ?: "Login did not complete."
 
     override suspend fun updateUserJwtSuspend(
-        externalId: String,
+        externalId: String?,
         token: String,
     ) = withContext(ioDispatcher) {
         Logging.log(LogLevel.DEBUG, "updateUserJwtSuspend(externalId: $externalId, token: ...${token.takeLast(8)})")
 
         if (!gate.awaitReady(SdkOperation.UPDATE_USER_JWT)) return@withContext
 
-        if (isMissing(externalId, SdkOperation.UPDATE_USER_JWT, EXTERNAL_ID_PARAM) || isMissing(token, SdkOperation.UPDATE_USER_JWT, TOKEN_PARAM)) {
+        if (isMissing(externalId, "updateUserJwt: externalId") || isMissing(token, "updateUserJwt: token")) {
             return@withContext
         }
 
-        jwtTokenStore.putJwt(externalId, token)
+        jwtTokenStore.putJwt(externalId!!, token)
         operationRepo.forceExecuteOperations()
     }
 
@@ -720,7 +720,5 @@ internal class OneSignalImpV2 : IOneSignal,
 
     private companion object {
         const val MISSING_CONTEXT_MESSAGE = "initWithContext skipped: context is required."
-        const val EXTERNAL_ID_PARAM = "externalId"
-        const val TOKEN_PARAM = "token"
     }
 }
