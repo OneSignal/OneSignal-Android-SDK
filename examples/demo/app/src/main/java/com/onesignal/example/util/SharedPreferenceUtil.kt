@@ -3,6 +3,7 @@ package com.onesignal.example.util
 import android.content.Context
 import android.content.SharedPreferences
 import com.onesignal.example.data.model.NotificationExtensionOptions
+import org.json.JSONObject
 
 object SharedPreferenceUtil {
 
@@ -13,7 +14,14 @@ object SharedPreferenceUtil {
     private const val IN_APP_MESSAGING_PAUSED_PREF = "IN_APP_MESSAGING_PAUSED_PREF"
     private const val CONSENT_REQUIRED_PREF = "CONSENT_REQUIRED_PREF"
     private const val IDENTITY_VERIFICATION_PREF = "IDENTITY_VERIFICATION_PREF"
-    private const val JWT_TOKEN_PREF = "JWT_TOKEN_PREF"
+
+    // Every JWT the tester handed the SDK, as a JSON object keyed by external id. Bearers for
+    // the demo's own /users fetch only. The demo never passes them to login or updateUserJwt
+    // on its own. Plaintext SharedPreferences is fine for a demo and not a pattern for real apps.
+    private const val JWT_TOKENS_PREF = "JWT_TOKENS_PREF"
+
+    // The single token the demo kept before JWT_TOKENS_PREF. Deleted on first read.
+    private const val LEGACY_JWT_TOKEN_PREF = "JWT_TOKEN_PREF"
     private const val LANGUAGE_PREF = "LANGUAGE_PREF"
 
     // Notification service extension switches. DemoNotificationServiceExtension reads these
@@ -83,12 +91,33 @@ object SharedPreferenceUtil {
         getSharedPreference(context).edit().putBoolean(IDENTITY_VERIFICATION_PREF, enabled).apply()
     }
 
-    fun getCachedJwtToken(context: Context): String? {
-        return getSharedPreference(context).getString(JWT_TOKEN_PREF, null)
+    fun getCachedJwtToken(context: Context, externalId: String): String? {
+        return readJwtTokens(context).optString(externalId).ifEmpty { null }
     }
 
-    fun cacheJwtToken(context: Context, token: String?) {
-        getSharedPreference(context).edit().putString(JWT_TOKEN_PREF, token).apply()
+    fun cacheJwtToken(context: Context, externalId: String, token: String) {
+        writeJwtTokens(context, readJwtTokens(context).put(externalId, token))
+    }
+
+    fun clearCachedJwtTokens(context: Context) {
+        getSharedPreference(context).edit().remove(JWT_TOKENS_PREF).apply()
+    }
+
+    private fun readJwtTokens(context: Context): JSONObject {
+        val prefs = getSharedPreference(context)
+        if (prefs.contains(LEGACY_JWT_TOKEN_PREF)) {
+            prefs.edit().remove(LEGACY_JWT_TOKEN_PREF).apply()
+        }
+        val json = prefs.getString(JWT_TOKENS_PREF, null) ?: return JSONObject()
+        return try {
+            JSONObject(json)
+        } catch (e: Exception) {
+            JSONObject()
+        }
+    }
+
+    private fun writeJwtTokens(context: Context, tokens: JSONObject) {
+        getSharedPreference(context).edit().putString(JWT_TOKENS_PREF, tokens.toString()).apply()
     }
 
     fun getCachedLanguage(context: Context): String {

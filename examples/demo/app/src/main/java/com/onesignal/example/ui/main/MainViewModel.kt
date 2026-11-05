@@ -5,14 +5,14 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
-import com.onesignal.IUserJwtInvalidatedListener
 import com.onesignal.OneSignal
-import com.onesignal.UserJwtInvalidatedEvent
 import com.onesignal.notifications.IPermissionObserver
 import com.onesignal.example.data.model.NotificationExtensionOptions
 import com.onesignal.example.data.model.NotificationType
+import com.onesignal.example.data.network.UserFetchResult
 import com.onesignal.example.data.repository.OneSignalRepository
 import com.onesignal.example.util.DemoLog
+import com.onesignal.example.util.JwtAskStore
 import com.onesignal.example.util.SharedPreferenceUtil
 import com.onesignal.user.state.IUserStateObserver
 import com.onesignal.user.state.UserChangedState
@@ -23,7 +23,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-class MainViewModel(application: Application) : AndroidViewModel(application), IPushSubscriptionObserver, IPermissionObserver, IUserStateObserver, IUserJwtInvalidatedListener {
+class MainViewModel(application: Application) : AndroidViewModel(application), IPushSubscriptionObserver, IPermissionObserver, IUserStateObserver {
 
     private companion object {
     }
@@ -92,9 +92,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
     private val _notificationExtensionOptions = MutableLiveData<NotificationExtensionOptions>()
     val notificationExtensionOptions: LiveData<NotificationExtensionOptions> = _notificationExtensionOptions
 
-    // Identity Verification toggle (demo app only, controls alias used for API calls)
+    // Picks the alias for the demo's own REST fetch. When on, it fetches by external_id with
+    // that user's stored JWT as bearer. It does not turn Identity Verification on for the app.
     private val _useIdentityVerification = MutableLiveData<Boolean>()
     val useIdentityVerification: LiveData<Boolean> = _useIdentityVerification
+
+    // External id the SDK is waiting on a JWT for. Drives the banner in UserSection.
+    // MainApplication's listener fills it.
+    val jwtAskExternalId: LiveData<String?> = JwtAskStore.externalId
+
+    // Outcome of the last demo /users fetch, "OK" or the failure reason.
+    private val _userFetchStatus = MutableLiveData<String?>()
+    val userFetchStatus: LiveData<String?> = _userFetchStatus
 
     // Loading state
     private val _isLoading = MutableLiveData<Boolean>()
@@ -116,7 +125,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
 
     // Monotonic counter for fetchUserDataFromApi. Mirrors the Capacitor demo's
     // `requestSequenceRef` so stale fetches after rapid login/logout cycles
-    // don't overwrite fresh state. Touched only on the main thread.
+    // don't overwrite fresh state. A user switch or logout bumps it too, through
+    // resetUserFetch. Touched only on the main thread.
     private var fetchRequestSequence = 0L
 
     init {
@@ -125,7 +135,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
         OneSignal.User.pushSubscription.addObserver(this)
         OneSignal.Notifications.addPermissionObserver(this)
         OneSignal.User.addObserver(this)
-        OneSignal.addUserJwtInvalidatedListener(this)
         DemoLog.d("init: observers registered, current onesignalId=${OneSignal.User.onesignalId}")
         DemoLog.d("OneSignal ID: ${OneSignal.User.onesignalId ?: "not set"}")
     }
@@ -169,11 +178,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
         refreshEmails()
         refreshSmsNumbers()
         refreshTriggers()
-        
-        val onesignalId = OneSignal.User.onesignalId
-        if (!onesignalId.isNullOrEmpty()) {
-            fetchUserDataFromApi()
-        }
+
+        // No onesignal_id guard here. A user whose create is waiting on a JWT has none yet,
+        // and with the toggle on the fetch goes by external_id. fetchUserDataFromApi checks
+        // for the alias it needs.
+        fetchUserDataFromApi()
     }
     
     fun fetchUserDataFromApi() {
@@ -185,6 +194,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
         if (useIV) {
             val externalId = _externalUserId.value
             if (externalId.isNullOrEmpty()) {
+                _userFetchStatus.value = null
                 _isLoading.value = false
                 return
             }
@@ -193,6 +203,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
         } else {
             val onesignalId = OneSignal.User.onesignalId
             if (onesignalId.isNullOrEmpty()) {
+                _userFetchStatus.value = null
                 _isLoading.value = false
                 return
             }
@@ -200,41 +211,48 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
             aliasValue = onesignalId
         }
 
-        val jwt = if (useIV) SharedPreferenceUtil.getCachedJwtToken(getApplication()) else null
+        val jwt = if (useIV) SharedPreferenceUtil.getCachedJwtToken(getApplication(), aliasValue) else null
 
         _isLoading.value = true
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val userData = repository.fetchUser(aliasLabel, aliasValue, jwt)
+                val result = repository.fetchUser(aliasLabel, aliasValue, jwt)
                 withContext(Dispatchers.Main) {
                     if (requestId != fetchRequestSequence) {
                         // A newer fetch superseded this one; drop the stale result.
                         return@withContext
                     }
-                    if (userData != null) {
-                        aliasesList.clear()
-                        aliasesList.addAll(userData.aliases.map { Pair(it.key, it.value) })
-                        refreshAliases()
-
-                        tagsList.clear()
-                        tagsList.addAll(userData.tags.map { Pair(it.key, it.value) })
-                        refreshTags()
-
-                        emailsList.clear()
-                        emailsList.addAll(userData.emails)
-                        refreshEmails()
-
-                        smsNumbersList.clear()
-                        smsNumbersList.addAll(userData.smsNumbers)
-                        refreshSmsNumbers()
-
-                        if (!userData.externalId.isNullOrEmpty()) {
-                            _externalUserId.value = userData.externalId
-                            SharedPreferenceUtil.cacheUserExternalUserId(getApplication(), userData.externalId)
+                    when (result) {
+                        is UserFetchResult.Failure -> {
+                            _userFetchStatus.value = "$aliasLabel fetch failed: ${result.reason}"
                         }
+                        is UserFetchResult.Success -> {
+                            val userData = result.userData
+                            aliasesList.clear()
+                            aliasesList.addAll(userData.aliases.map { Pair(it.key, it.value) })
+                            refreshAliases()
 
-                        kotlinx.coroutines.delay(100)
-                        if (requestId != fetchRequestSequence) return@withContext
+                            tagsList.clear()
+                            tagsList.addAll(userData.tags.map { Pair(it.key, it.value) })
+                            refreshTags()
+
+                            emailsList.clear()
+                            emailsList.addAll(userData.emails)
+                            refreshEmails()
+
+                            smsNumbersList.clear()
+                            smsNumbersList.addAll(userData.smsNumbers)
+                            refreshSmsNumbers()
+
+                            if (!userData.externalId.isNullOrEmpty()) {
+                                _externalUserId.value = userData.externalId
+                                SharedPreferenceUtil.cacheUserExternalUserId(getApplication(), userData.externalId)
+                            }
+                            _userFetchStatus.value = "OK"
+
+                            kotlinx.coroutines.delay(100)
+                            if (requestId != fetchRequestSequence) return@withContext
+                        }
                     }
                     _isLoading.value = false
                 }
@@ -279,14 +297,30 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
 
     // User operations
     fun loginUser(externalUserId: String, jwtToken: String? = null) {
+        val externalId = externalUserId.trim()
+        if (externalId.isEmpty()) return
+        val token = jwtToken?.trim()?.ifEmpty { null }
         _isLoading.value = true
         viewModelScope.launch(Dispatchers.IO) {
-            repository.loginUser(externalUserId, jwtToken)
+            val sameUser = externalId == OneSignal.User.externalId
+            repository.loginUser(externalId, token)
             withContext(Dispatchers.Main) {
-                SharedPreferenceUtil.cacheUserExternalUserId(getApplication(), externalUserId)
-                SharedPreferenceUtil.cacheJwtToken(getApplication(), jwtToken)
-                _externalUserId.value = externalUserId
+                SharedPreferenceUtil.cacheUserExternalUserId(getApplication(), externalId)
+                // A blank token field leaves any token already stored for this user.
+                if (token != null) {
+                    SharedPreferenceUtil.cacheJwtToken(getApplication(), externalId, token)
+                    JwtAskStore.answered(externalId)
+                }
+                _externalUserId.value = externalId
                 resetLanguagePicker()
+                refreshPushSubscription()
+                if (sameUser) {
+                    // No user-state event fires for the same user, so refetch here instead of
+                    // clearing lists that nothing would repopulate.
+                    fetchUserDataFromApi()
+                    return@withContext
+                }
+                resetUserFetch()
                 aliasesList.clear()
                 emailsList.clear()
                 smsNumbersList.clear()
@@ -296,7 +330,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
                 refreshSmsNumbers()
                 refreshTriggers()
                 loadExistingTags()
-                refreshPushSubscription()
                 _isLoading.value = false
             }
         }
@@ -317,7 +350,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
             withContext(Dispatchers.Main) {
                 if (result.isSuccess) {
                     SharedPreferenceUtil.cacheUserExternalUserId(getApplication(), externalUserId)
-                    SharedPreferenceUtil.cacheJwtToken(getApplication(), jwtToken)
+                    // A blank token field leaves any token already stored for this user.
+                    if (jwtToken != null) {
+                        SharedPreferenceUtil.cacheJwtToken(getApplication(), externalUserId, jwtToken)
+                        JwtAskStore.answered(externalUserId)
+                    }
                     _externalUserId.value = externalUserId
                     resetLanguagePicker()
                     aliasesList.clear()
@@ -339,11 +376,22 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
     }
 
     fun updateUserJwt(externalUserId: String, jwtToken: String) {
+        val externalId = externalUserId.trim()
+        val token = jwtToken.trim()
+        if (externalId.isEmpty() || token.isEmpty()) return
+        // Stored whoever it's for. The SDK can hold parked requests for a user who isn't the
+        // current one, including one who has logged out.
+        SharedPreferenceUtil.cacheJwtToken(getApplication(), externalId, token)
+        JwtAskStore.answered(externalId)
         viewModelScope.launch(Dispatchers.IO) {
-            repository.updateUserJwt(externalUserId, jwtToken)
+            repository.updateUserJwt(externalId, token)
             withContext(Dispatchers.Main) {
-                SharedPreferenceUtil.cacheJwtToken(getApplication(), jwtToken)
-                DemoLog.i("Updated JWT for: $externalUserId")
+                DemoLog.i("Updated JWT for: $externalId")
+                if (externalId == _externalUserId.value) {
+                    // updateUserJwt may not fire a user-state event, so refetch instead of
+                    // leaving the last failure on screen.
+                    fetchUserDataFromApi()
+                }
             }
         }
     }
@@ -354,7 +402,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
             repository.logoutUser()
             withContext(Dispatchers.Main) {
                 SharedPreferenceUtil.cacheUserExternalUserId(getApplication(), "")
+                SharedPreferenceUtil.clearCachedJwtTokens(getApplication())
                 _externalUserId.value = null
+                JwtAskStore.clear()
+                resetUserFetch()
                 resetLanguagePicker()
                 loadExistingAliases()
                 loadExistingTags()
@@ -370,10 +421,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
         }
     }
 
+    // A fetch still in flight belongs to the previous user, so drop its result. Clear the row
+    // too, because a new user's create can wait on a JWT, and then no user-state event comes
+    // to refetch.
+    private fun resetUserFetch() {
+        fetchRequestSequence++
+        _userFetchStatus.value = null
+    }
+
     fun setUseIdentityVerification(enabled: Boolean) {
         SharedPreferenceUtil.cacheIdentityVerification(getApplication(), enabled)
         _useIdentityVerification.value = enabled
-        DemoLog.i(if (enabled) "Identity verification enabled" else "Identity verification disabled")
+        DemoLog.i(if (enabled) "Fetch by external_id enabled" else "Fetch by external_id disabled")
+        fetchUserDataFromApi()
     }
 
     fun setLanguage(language: String) {
@@ -773,15 +833,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
     // The SDK reports missing ids as empty strings; the Log View format uses "null".
     private fun String?.orNullText(): String = if (isNullOrEmpty()) "null" else this
 
-    override fun onUserJwtInvalidated(event: UserJwtInvalidatedEvent) {
-        DemoLog.w("JWT invalidated for externalId: ${event.externalId}")
-    }
-
     override fun onCleared() {
         super.onCleared()
         OneSignal.User.pushSubscription.removeObserver(this)
         OneSignal.Notifications.removePermissionObserver(this)
         OneSignal.User.removeObserver(this)
-        OneSignal.removeUserJwtInvalidatedListener(this)
     }
 }
