@@ -3,7 +3,9 @@ package com.onesignal.core.internal.preferences
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
+import com.onesignal.common.threading.OneSignalDispatchers
 import com.onesignal.core.internal.preferences.impl.PreferencesService
+import com.onesignal.debug.ILogListener
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.mocks.AndroidMockHelper
@@ -12,6 +14,7 @@ import io.kotest.assertions.throwables.shouldThrowUnit
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.delay
+import java.util.concurrent.atomic.AtomicInteger
 
 @RobolectricTest
 class PreferencesServiceTests : FunSpec({
@@ -227,5 +230,24 @@ class PreferencesServiceTests : FunSpec({
         store.contains(mockLongPrefStoreKey) shouldBe false
         store.contains(mockStringPrefStoreKey) shouldBe false
         store.contains(mockStringSetPrefStoreKey) shouldBe false
+    }
+
+    test("the write loop stops when its scope is cancelled instead of spinning on the error path") {
+        val preferencesService = PreferencesService(AndroidMockHelper.applicationService(), MockHelper.time(1000))
+        val loopErrors = AtomicInteger()
+        val listener = ILogListener { if (it.entry.contains("Error with Preference work loop")) loopErrors.incrementAndGet() }
+        Logging.addListener(listener)
+        try {
+            preferencesService.start()
+            preferencesService.saveBool(mockPrefStoreName, mockBoolPrefStoreKey, true)
+            delay(300)
+
+            OneSignalDispatchers.resetForTest()
+            delay(500)
+
+            loopErrors.get() shouldBe 0
+        } finally {
+            Logging.removeListener(listener)
+        }
     }
 })
