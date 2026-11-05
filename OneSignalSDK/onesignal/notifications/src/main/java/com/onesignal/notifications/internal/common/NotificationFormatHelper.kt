@@ -42,6 +42,7 @@ internal object NotificationFormatHelper {
     }
 
     private fun getOSNotificationIdFromJsonString(jsonStr: String?): String? {
+        if (jsonStr == null) return null
         try {
             val customJSON = JSONObject(jsonStr)
             if (customJSON.has(PAYLOAD_OS_NOTIFICATION_ID)) {
