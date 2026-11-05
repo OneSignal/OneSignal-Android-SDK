@@ -131,24 +131,19 @@ internal class OneSignalImp : IOneSignal,
     override val debug: IDebugManager = DebugManager()
 
     override val session: ISessionManager
-        get() =
-            waitAndReturn { services.getService() }
+        get() = if (isReadyFor("Session")) services.getService() else UninitializedSessionManager
 
     override val notifications: INotificationsManager
-        get() =
-            waitAndReturn { services.getService() }
+        get() = if (isReadyFor("Notifications")) services.getService() else UninitializedNotificationsManager
 
     override val location: ILocationManager
-        get() =
-            waitAndReturn { services.getService() }
+        get() = if (isReadyFor("Location")) services.getService() else UninitializedLocationManager
 
     override val inAppMessages: IInAppMessagesManager
-        get() =
-            waitAndReturn { services.getService() }
+        get() = if (isReadyFor("InAppMessages")) services.getService() else UninitializedInAppMessagesManager
 
     override val user: IUserManager
-        get() =
-            waitAndReturn { services.getService() }
+        get() = if (isReadyFor("User")) services.getService() else UninitializedUserManager
 
     // Services required by this class
     // WARNING: OperationRepo depends on OperationModelStore which in-turn depends
@@ -541,8 +536,8 @@ internal class OneSignalImp : IOneSignal,
 
     override fun <T> getAllServices(c: Class<T>): List<T> = services.getAllServices(c)
 
-    // Calls that can be dropped safely log and return false instead of throwing when init never
-    // started or failed. Accessors still throw, since they have no value to return.
+    // Log and return false instead of throwing when init never started or failed, so callers can
+    // skip the call or hand out a stand-in manager.
     private fun isReadyFor(operationName: String): Boolean =
         ignoreIfNotInitialized(operationName) { waitForInit(operationName) } == null
 
@@ -702,13 +697,6 @@ internal class OneSignalImp : IOneSignal,
         return getter()
     }
 
-    // Blocks until init completes; [waitForInit] throws on NOT_STARTED / FAILED and
-    // returns once initState == SUCCESS.
-    private fun <T> waitAndReturn(getter: () -> T): T {
-        waitForInit()
-        return getter()
-    }
-
     private fun <T> blockingGet(getter: () -> T): T {
         try {
             if (AndroidUtils.isRunningOnMainThread()) {
@@ -735,27 +723,27 @@ internal class OneSignalImp : IOneSignal,
 
     override suspend fun getSession(): ISessionManager =
         withContext(ioDispatcher) {
-            suspendAndReturn { services.getService() }
+            if (isReadyForSuspend("Session")) services.getService() else UninitializedSessionManager
         }
 
     override suspend fun getNotifications(): INotificationsManager =
         withContext(ioDispatcher) {
-            suspendAndReturn { services.getService() }
+            if (isReadyForSuspend("Notifications")) services.getService() else UninitializedNotificationsManager
         }
 
     override suspend fun getLocation(): ILocationManager =
         withContext(ioDispatcher) {
-            suspendAndReturn { services.getService() }
+            if (isReadyForSuspend("Location")) services.getService() else UninitializedLocationManager
         }
 
     override suspend fun getInAppMessages(): IInAppMessagesManager =
         withContext(ioDispatcher) {
-            suspendAndReturn { services.getService() }
+            if (isReadyForSuspend("InAppMessages")) services.getService() else UninitializedInAppMessagesManager
         }
 
     override suspend fun getUser(): IUserManager =
         withContext(ioDispatcher) {
-            suspendAndReturn { services.getService() }
+            if (isReadyForSuspend("User")) services.getService() else UninitializedUserManager
         }
 
     override suspend fun getConsentRequired(): Boolean =
