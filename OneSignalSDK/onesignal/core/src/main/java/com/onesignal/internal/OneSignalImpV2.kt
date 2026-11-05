@@ -373,7 +373,7 @@ internal class OneSignalImpV2 : IOneSignal,
         Logging.log(LogLevel.DEBUG, "Calling deprecated initWithContext(context: $context, appId: $appId)")
 
         if (context == null) {
-            Logging.error(MISSING_CONTEXT_MESSAGE)
+            logNullArgument("initWithContext", "context")
             return false
         }
 
@@ -446,15 +446,16 @@ internal class OneSignalImpV2 : IOneSignal,
 
             val result = resolveAppIdV2(appId, configModel, preferencesService)
             if (result.failed) {
-                val message = "initWithContext skipped: no valid appId was passed and none is cached. Pass your OneSignal app ID to initWithContext()."
+                val message = rejectedAppIdMessage(appId)
                 gate.addFailureCause(IllegalStateException(message))
-                // Null is also how background entry points (e.g. SyncJobService) start init, so it is not an app error.
-                if (appId == null) Logging.warn(message) else Logging.error(message)
+                Logging.error(message)
                 gate.complete(InitState.FAILED)
                 return false
             }
-            if (appId != null && !isUsableAppId(appId)) {
-                Logging.warn("initWithContext: appId is empty or contains a null byte, using the cached app ID instead.")
+            if (appId == null) {
+                Logging.warn("initWithContext: appId is null. Using the cached app ID.")
+            } else if (!isUsableAppId(appId)) {
+                Logging.warn("initWithContext: appId is empty or contains a null byte. Using the cached app ID.")
             }
             configModel.appId = result.appId!! // safe because failed is false
             val forceCreateUser = result.forceCreateUser
@@ -483,9 +484,10 @@ internal class OneSignalImpV2 : IOneSignal,
     ) {
         Logging.log(LogLevel.DEBUG, "Calling deprecated login(externalId: $externalId, jwtBearerToken: ...${jwtBearerToken?.takeLast(8)})")
 
-        if (!gate.isReady(SdkOperation.LOGIN) || isMissing(externalId, "login: externalId")) return
+        val id = requireExternalId(externalId, SdkOperation.LOGIN)
+        if (id == null || !gate.isReady(SdkOperation.LOGIN) || isMissing(id, "login: externalId")) return
 
-        val context = loginHelper.switchUser(externalId!!, jwtBearerToken).context ?: return
+        val context = loginHelper.switchUser(id, jwtBearerToken).context ?: return
 
         suspendifyOnIO { loginHelper.enqueueLogin(context) }
     }
@@ -506,11 +508,11 @@ internal class OneSignalImpV2 : IOneSignal,
     ) {
         Logging.log(LogLevel.DEBUG, "updateUserJwt(externalId: $externalId, token: ...${token.takeLast(8)})")
 
-        if (!gate.isReady(SdkOperation.UPDATE_USER_JWT)) return
+        val id = requireExternalId(externalId, SdkOperation.UPDATE_USER_JWT)
+        if (id == null || !gate.isReady(SdkOperation.UPDATE_USER_JWT)) return
+        if (isMissing(id, "updateUserJwt: externalId") || isMissing(token, "updateUserJwt: token")) return
 
-        if (isMissing(externalId, "updateUserJwt: externalId") || isMissing(token, "updateUserJwt: token")) return
-
-        jwtTokenStore.putJwt(externalId!!, token)
+        jwtTokenStore.putJwt(id, token)
         // Wake the queue so any deferred ops can dispatch with the fresh token.
         operationRepo.forceExecuteOperations()
     }
@@ -588,7 +590,7 @@ internal class OneSignalImpV2 : IOneSignal,
         Logging.log(LogLevel.DEBUG, "initWithContext(context: $context, appId: $appId)")
 
         if (context == null) {
-            Logging.error(MISSING_CONTEXT_MESSAGE)
+            logNullArgument("initWithContext", "context")
             return false
         }
 
@@ -634,11 +636,10 @@ internal class OneSignalImpV2 : IOneSignal,
     ) = withContext(ioDispatcher) {
         Logging.log(LogLevel.DEBUG, "login(externalId: $externalId, jwtBearerToken: ...${jwtBearerToken?.takeLast(8)})")
 
-        if (!gate.awaitReady(SdkOperation.LOGIN)) return@withContext
+        val id = requireExternalId(externalId, SdkOperation.LOGIN)
+        if (id == null || !gate.awaitReady(SdkOperation.LOGIN) || isMissing(id, "login: externalId")) return@withContext
 
-        if (isMissing(externalId, "login: externalId")) return@withContext
-
-        val context = loginHelper.switchUser(externalId!!, jwtBearerToken).context ?: return@withContext
+        val context = loginHelper.switchUser(id, jwtBearerToken).context ?: return@withContext
         loginHelper.enqueueLogin(context)
     }
 
@@ -655,18 +656,18 @@ internal class OneSignalImpV2 : IOneSignal,
                 return@withContext OneSignalResult.failure(ErrorCode.INVALID_ARGUMENT, it)
             }
 
-            if (!gate.awaitReady(SdkOperation.LOGIN)) {
-                return@withContext OneSignalResult.failure(ErrorCode.NOT_INITIALIZED, gate.notReadyMessage("login"))
+            val id = requireExternalId(externalId, SdkOperation.LOGIN)
+            if (id == null || !gate.awaitReady(SdkOperation.LOGIN) || isMissing(id, "login: externalId")) {
+                if (id == null) {
+                    return@withContext OneSignalResult.failure(ErrorCode.INVALID_ARGUMENT, nullArgumentMessage(SdkOperation.LOGIN.label, "externalId"))
+                }
+                if (!gate.isSuccess) {
+                    return@withContext OneSignalResult.failure(ErrorCode.NOT_INITIALIZED, gate.notReadyMessage("login"))
+                }
+                return@withContext OneSignalResult.failure(ErrorCode.INVALID_ARGUMENT, "login: externalId is required")
             }
 
-            if (isMissing(externalId, "login: externalId") || externalId == null) {
-                return@withContext OneSignalResult.failure(
-                    ErrorCode.INVALID_ARGUMENT,
-                    "login: externalId is required",
-                )
-            }
-
-            val switched = loginHelper.switchUser(externalId, jwtBearerToken, profile)
+            val switched = loginHelper.switchUser(id, jwtBearerToken, profile)
             if (switched.context != null) {
                 val completed = loginHelper.enqueueLogin(switched.context, profile)
                 if (!completed.success) {
@@ -683,10 +684,10 @@ internal class OneSignalImpV2 : IOneSignal,
                     return@withContext OneSignalResult.failure(error)
                 }
                 return@withContext OneSignalResult.success(
-                    loginHelper.loginData(externalId, profile, completed, switched.onesignalId),
+                    loginHelper.loginData(id, profile, completed, switched.onesignalId),
                 )
             }
-            OneSignalResult.success(loginHelper.loginData(externalId, profile, fallbackOnesignalId = switched.onesignalId))
+            OneSignalResult.success(loginHelper.loginData(id, profile, fallbackOnesignalId = switched.onesignalId))
         }
 
     private fun loginFailureMessage(wait: OperationWaitResult): String =
@@ -698,13 +699,11 @@ internal class OneSignalImpV2 : IOneSignal,
     ) = withContext(ioDispatcher) {
         Logging.log(LogLevel.DEBUG, "updateUserJwtSuspend(externalId: $externalId, token: ...${token.takeLast(8)})")
 
-        if (!gate.awaitReady(SdkOperation.UPDATE_USER_JWT)) return@withContext
+        val id = requireExternalId(externalId, SdkOperation.UPDATE_USER_JWT)
+        if (id == null || !gate.awaitReady(SdkOperation.UPDATE_USER_JWT)) return@withContext
+        if (isMissing(id, "updateUserJwt: externalId") || isMissing(token, "updateUserJwt: token")) return@withContext
 
-        if (isMissing(externalId, "updateUserJwt: externalId") || isMissing(token, "updateUserJwt: token")) {
-            return@withContext
-        }
-
-        jwtTokenStore.putJwt(externalId!!, token)
+        jwtTokenStore.putJwt(id, token)
         operationRepo.forceExecuteOperations()
     }
 
@@ -718,7 +717,38 @@ internal class OneSignalImpV2 : IOneSignal,
             logoutHelper.enqueueLogout(context)
         }
 
-    private companion object {
-        const val MISSING_CONTEXT_MESSAGE = "initWithContext skipped: context is required."
+    private fun requireExternalId(
+        externalId: String?,
+        operation: SdkOperation,
+    ): String? {
+        if (externalId != null) return externalId
+        logNullArgument(operation.label, "externalId")
+        return null
+    }
+
+    private fun logNullArgument(
+        method: String,
+        parameter: String,
+    ) {
+        Logging.error(nullArgumentMessage(method, parameter))
+    }
+
+    // isInitialized is false while init is in progress, which is the state a rejected init leaves behind.
+    private fun nullArgumentMessage(
+        method: String,
+        parameter: String,
+    ): String {
+        val problem = "$method: $parameter is null, so this call did not run."
+        return if (isInitialized) problem else "$problem The SDK is not initialized."
+    }
+
+    private fun rejectedAppIdMessage(appId: String?): String {
+        val problem =
+            when {
+                appId == null -> "initWithContext: appId is null and no app ID is cached"
+                appId.isEmpty() -> "initWithContext: appId is empty and no app ID is cached"
+                else -> "initWithContext: appId contains a null byte and no app ID is cached"
+            }
+        return "$problem, so initialization did not finish. The SDK is not initialized."
     }
 }
