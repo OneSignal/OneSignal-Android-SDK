@@ -537,7 +537,7 @@
     <ID>UndocumentedPublicFunction:IMigrationRecovery.kt$IMigrationRecovery$fun isInBadState(): Boolean</ID>
     <ID>UndocumentedPublicFunction:IMigrationRecovery.kt$IMigrationRecovery$fun recover()</ID>
     <ID>UndocumentedPublicFunction:IMigrationRecovery.kt$IMigrationRecovery$fun recoveryMessage(): String</ID>
-    <ID>UndocumentedPublicFunction:IOneSignal.kt$IOneSignal$fun login(externalId: String)</ID>
+    <ID>UndocumentedPublicFunction:IOneSignal.kt$IOneSignal$fun login(externalId: String?)</ID>
     <ID>UndocumentedPublicFunction:IOperationRepo.kt$IOperationRepo$fun forceExecuteOperations()</ID>
     <ID>UndocumentedPublicFunction:IOperationRepo.kt$IOperationRepo$suspend fun awaitInitialized()</ID>
     <ID>UndocumentedPublicFunction:IOperationRepo.kt$inline fun &lt;reified T : Operation> IOperationRepo.containsInstanceOf(): Boolean</ID>
