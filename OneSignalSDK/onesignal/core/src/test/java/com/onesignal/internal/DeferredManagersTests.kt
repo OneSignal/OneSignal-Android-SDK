@@ -26,6 +26,9 @@ import io.mockk.mockk
 import io.mockk.verify
 import io.mockk.verifyOrder
 import kotlinx.coroutines.runBlocking
+import java.util.Collections
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 
 private class FakeSource<T : Any>(private val real: T) : ManagerSource<T> {
     var ready = false
@@ -328,6 +331,36 @@ class DeferredManagersTests : FunSpec({
         verify(exactly = 1) { real.addClickListener(listener) }
         verify(exactly = 1) { real.paused = true }
         deferred.paused shouldBe true
+    }
+
+    test("a remove that arrives while its add is being replayed runs after that add") {
+        val real = mockk<INotificationsManager>(relaxed = true)
+        val deferred = DeferredNotificationsManager(FakeSource(real))
+        val listener = mockk<INotificationClickListener>()
+        val addEntered = CountDownLatch(1)
+        val removeFinished = CountDownLatch(1)
+        val order = Collections.synchronizedList(mutableListOf<String>())
+        every { real.addClickListener(listener) } answers {
+            addEntered.countDown()
+            check(removeFinished.await(5, TimeUnit.SECONDS))
+            order.add("add-done")
+        }
+        every { real.removeClickListener(listener) } answers { order.add("remove") }
+        deferred.addClickListener(listener)
+
+        val remover =
+            Thread {
+                check(addEntered.await(5, TimeUnit.SECONDS))
+                deferred.removeClickListener(listener)
+                removeFinished.countDown()
+            }
+        remover.isDaemon = true
+        remover.start()
+        deferred.replay(real)
+        remover.join(5_000)
+
+        remover.isAlive shouldBe false
+        order shouldBe listOf("add-done", "remove")
     }
 
     test("a listener that registers another while it is replayed reaches the real manager without waiting") {

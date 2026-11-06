@@ -84,6 +84,46 @@ private val replayCases: List<ReplayCase<*>> =
     )
 
 private val replayedMember = Regex("^add\\w*(Listener|Observer)$")
+private val removedMember = Regex("^remove\\w*(Listener|Observer)$")
+
+private class RemoveCase<T : Any>(
+    val type: KClass<T>,
+    val member: String,
+    val standIn: (ManagerSource<T>) -> DeferredManager<T>,
+    val add: T.() -> Unit,
+    val remove: T.() -> Unit,
+) {
+    fun run() {
+        val real = mockkClass(type, relaxed = true)
+        val deferred = standIn(NotReadySource())
+        @Suppress("UNCHECKED_CAST")
+        (deferred as T).add()
+        @Suppress("UNCHECKED_CAST")
+        (deferred as T).remove()
+        deferred.replay(real)
+        verify(exactly = 0) { real.add() }
+    }
+}
+
+private inline fun <reified T : Any, reified L : Any> removal(
+    noinline standIn: (ManagerSource<T>) -> DeferredManager<T>,
+    add: KFunction2<T, L, Unit>,
+    remove: KFunction2<T, L, Unit>,
+): RemoveCase<T> {
+    val listener = mockk<L>(relaxed = true)
+    return RemoveCase(T::class, remove.name, standIn, { add(this, listener) }, { remove(this, listener) })
+}
+
+private val removeCases: List<RemoveCase<*>> =
+    listOf(
+        removal(::DeferredUserManager, IUserManager::addObserver, IUserManager::removeObserver),
+        removal(::DeferredPushSubscription, IPushSubscription::addObserver, IPushSubscription::removeObserver),
+        removal(::DeferredNotificationsManager, INotificationsManager::addPermissionObserver, INotificationsManager::removePermissionObserver),
+        removal(::DeferredNotificationsManager, INotificationsManager::addForegroundLifecycleListener, INotificationsManager::removeForegroundLifecycleListener),
+        removal(::DeferredNotificationsManager, INotificationsManager::addClickListener, INotificationsManager::removeClickListener),
+        removal(::DeferredInAppMessagesManager, IInAppMessagesManager::addLifecycleListener, IInAppMessagesManager::removeLifecycleListener),
+        removal(::DeferredInAppMessagesManager, IInAppMessagesManager::addClickListener, IInAppMessagesManager::removeClickListener),
+    )
 
 private fun KCallable<*>.signature() = "$name(${parameters.drop(1).joinToString { it.type.toString() }})"
 
@@ -113,5 +153,20 @@ class DeferredManagersCoverageTests : FunSpec({
 
     test("each queued registration or setting reaches the real manager on replay") {
         replayCases.forEach { case -> withClue("${case.type.simpleName}.${case.member}") { case.run() } }
+    }
+
+    test("every remove has an add-then-remove case") {
+        val covered = removeCases.map { "${it.type.simpleName}.${it.member}" }.toSet()
+        val uncovered =
+            standIns.keys.flatMap { iface ->
+                iface.apiMembers().filter { removedMember.matches(it.name) }
+                    .map { "${iface.simpleName}.${it.name}" }
+                    .filter { it !in covered }
+            }
+        withClue("pair each add with an add-then-remove that expects the real manager to see neither") { uncovered shouldBe emptyList() }
+    }
+
+    test("a remove before replay cancels the queued add") {
+        removeCases.forEach { case -> withClue("${case.type.simpleName}.${case.member}") { case.run() } }
     }
 })

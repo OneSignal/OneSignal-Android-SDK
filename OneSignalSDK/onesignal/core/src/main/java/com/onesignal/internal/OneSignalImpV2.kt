@@ -385,15 +385,21 @@ internal class OneSignalImpV2 : IOneSignal,
             return true
         }
 
-        // The only step that can throw before dispatch (the Application cast can fail in restricted
-        // hosts). It must end in FAILED, or IN_PROGRESS is never retired and every accessor blocks
-        // forever. Failures inside [internalInit] are caught there.
-        try {
-            ensureApplicationServiceStarted(context)
-        } catch (e: Exception) {
-            gate.addFailureCause(e)
+        // Claim this thread for the pre-dispatch work. A log listener that touches the SDK would
+        // otherwise wait for a job this thread has not launched. A throw must end FAILED.
+        val startedOk =
+            gate.runInit(finishIfUnfinished = false) {
+                try {
+                    ensureApplicationServiceStarted(context)
+                    true
+                } catch (e: Exception) {
+                    gate.addFailureCause(e)
+                    false
+                }
+            }
+        if (!startedOk) {
             gate.complete(InitState.FAILED)
-            Logging.error("initWithContext failed to start the application service", e)
+            Logging.error("initWithContext failed to start the application service", gate.failure)
             return false
         }
 
@@ -414,9 +420,9 @@ internal class OneSignalImpV2 : IOneSignal,
 
     private fun failUnscheduledInit(cause: Throwable?) {
         val failure = IllegalStateException("initWithContext could not be scheduled: the OneSignal IO pool rejected it", cause)
-        Logging.error("initWithContext could not be scheduled; marking init FAILED", failure)
         gate.addFailureCause(failure)
         gate.complete(InitState.FAILED)
+        Logging.error("initWithContext could not be scheduled; marking init FAILED", failure)
     }
 
     /**
