@@ -51,7 +51,7 @@ class OneSignalImpParityTests : FunSpec({
         val warm = if (this is OneSignalImpV2) OneSignalImpV2() else OneSignalImp()
         Logging.logLevel = LogLevel.NONE
         warm.initWithContext(context, appId)
-        warm.awaitInit()
+        warm.awaitInit() shouldBe true
         val prefs = context.getSharedPreferences("OneSignal", Context.MODE_PRIVATE)
         val deadline = System.currentTimeMillis() + 5_000
         while (prefs.all.values.none { it.toString().contains(appId) } && System.currentTimeMillis() < deadline) Thread.sleep(10)
@@ -82,7 +82,9 @@ class OneSignalImpParityTests : FunSpec({
     test("init then reading every top-level value") {
         parity { os, context ->
             os.initWithContext(context, "appId")
-            os.awaitInit()
+            os.awaitInit() shouldBe true
+            os.isInitialized shouldBe true
+            os.appIdInConfig() shouldBe "appId"
             listOf(
                 os.isInitialized,
                 os.user.onesignalId.isNotEmpty(),
@@ -104,7 +106,8 @@ class OneSignalImpParityTests : FunSpec({
             os.disableGMSMissingPrompt = true
             val beforeInit = listOf(os.consentRequired, os.consentGiven, os.disableGMSMissingPrompt)
             os.initWithContext(context, "appId")
-            os.awaitInit()
+            os.awaitInit() shouldBe true
+            os.isInitialized shouldBe true
             val model = (os as IServiceProvider).getService(ConfigModelStore::class.java).model
             beforeInit + listOf(os.consentRequired, os.consentGiven, os.disableGMSMissingPrompt, model.consentRequired, model.consentGiven, model.disableGMSMissingPrompt)
         }
@@ -113,7 +116,9 @@ class OneSignalImpParityTests : FunSpec({
     test("a second initWithContext after success keeps the first app ID") {
         parity { os, context ->
             os.initWithContext(context, "appId")
-            os.awaitInit()
+            os.awaitInit() shouldBe true
+            os.isInitialized shouldBe true
+            os.appIdInConfig() shouldBe "appId"
             val second = os.initWithContext(context, "otherAppId")
             Thread.sleep(100)
             listOf(second, os.isInitialized, os.appIdInConfig())
@@ -123,9 +128,11 @@ class OneSignalImpParityTests : FunSpec({
     test("login, tags and logout after init") {
         parity { os, context ->
             os.initWithContext(context, "appId")
-            os.awaitInit()
+            os.awaitInit() shouldBe true
+            os.isInitialized shouldBe true
             os.login("ext-1")
             val afterLogin = os.awaitExternalId("ext-1")
+            afterLogin shouldBe "ext-1"
             os.user.addTags(mapOf("a" to "1", "b" to "2"))
             os.user.removeTag("b")
             val tags = os.user.getTags()
@@ -140,7 +147,9 @@ class OneSignalImpParityTests : FunSpec({
             os.cacheAppId(context, "cachedAppId")
 
             os.initWithContext(context, "")
-            os.awaitInit()
+            os.awaitInit() shouldBe true
+            os.isInitialized shouldBe true
+            os.appIdInConfig() shouldBe "cachedAppId"
             listOf(os.isInitialized, os.appIdInConfig())
         }
     }
@@ -151,6 +160,9 @@ class OneSignalImpParityTests : FunSpec({
 
             val result =
                 kotlinx.coroutines.runBlocking { os.initWithContextSuspend(context, null) }
+            result shouldBe true
+            os.isInitialized shouldBe true
+            os.appIdInConfig() shouldBe "cachedAppId"
             listOf(result, os.isInitialized, os.appIdInConfig())
         }
     }

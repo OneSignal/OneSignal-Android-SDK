@@ -29,8 +29,9 @@ import kotlin.reflect.KType
 import kotlin.reflect.full.callSuspend
 
 private fun dummy(type: KType): Any? {
-    if (type.isMarkedNullable) return null
     val kClass = type.classifier as KClass<*>
+    // A nullable string still has to reach the gate. A nullable Context would start a real init.
+    if (type.isMarkedNullable && kClass != String::class) return null
     return when {
         kClass == String::class -> "sample"
         kClass == Boolean::class -> false

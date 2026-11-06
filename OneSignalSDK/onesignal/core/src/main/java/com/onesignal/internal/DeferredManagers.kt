@@ -41,6 +41,11 @@ internal open class DeferredManager<T : Any>(
     private val pending = mutableListOf<Pending<T>>()
     private var replayed = false
 
+    // Set for the whole drain. Other threads enqueue instead of touching the real manager, so a remove
+    // cannot land before the add that was already copied into the batch being applied.
+    private var replaying = false
+    private var replayThread: Thread? = null
+
     // Kept after replay: if init then fails, or a replayed listener calls back in, the gate is not ready
     // but this manager already holds the replayed registrations, so later ones must reach it too.
     private var replayedTo: T? = null
@@ -55,6 +60,7 @@ internal open class DeferredManager<T : Any>(
     ) = forwardOrQueue(member, call) { pending.size < MAX_PENDING && pending.add(Pending(member, target, call)) }
 
     // Before replay the real manager holds nothing, so a removal only has to cancel the queued add.
+    // Once that add has been copied into the batch in flight, the removal itself is queued behind it.
     protected fun unregisterOrCancel(
         member: String,
         addMember: String,
@@ -62,8 +68,14 @@ internal open class DeferredManager<T : Any>(
         call: (T) -> Unit,
     ) = forwardOrQueue(member, call) {
         val index = pending.indexOfLast { it.member == addMember && it.target === target }
-        if (index >= 0) pending.removeAt(index)
-        true
+        if (index >= 0) {
+            pending.removeAt(index)
+            true
+        } else if (replaying) {
+            pending.size < MAX_PENDING && pending.add(Pending(member, target, call))
+        } else {
+            false
+        }
     }
 
     // [onQueued] runs under the queue lock, so a getter cache it sets always matches what replays.
@@ -85,13 +97,11 @@ internal open class DeferredManager<T : Any>(
         call: (T) -> Unit,
         enqueue: () -> Boolean,
     ) {
-        source.peek()?.let {
-            call(it)
-            return
-        }
         val (queued, target) =
             synchronized(pending) {
-                if (replayed) false to replayedTo else enqueue() to null
+                val applying = replaying && Thread.currentThread() === replayThread
+                val finished = replayed && !replaying
+                if (applying || finished) false to (replayedTo ?: source.peek()) else enqueue() to null
             }
         when {
             queued -> source.logQueued(member)
@@ -100,20 +110,52 @@ internal open class DeferredManager<T : Any>(
         }
     }
 
-    @Suppress("TooGenericExceptionCaught")
     open fun replay(real: T) {
-        val calls =
-            synchronized(pending) {
-                replayed = true
-                replayedTo = real
-                pending.toList().also { pending.clear() }
+        if (!beginReplay(real)) return
+        try {
+            while (true) {
+                val batch = takeBatch()
+                if (batch.isEmpty()) return
+                batch.forEach { deliver(it, real) }
             }
-        for (entry in calls) {
-            try {
-                entry.call(real)
-            } catch (e: Exception) {
-                Logging.error("Replaying '${entry.member}' threw; that queued call is lost", e)
-            }
+        } finally {
+            abandonReplay()
+        }
+    }
+
+    private fun beginReplay(real: T): Boolean =
+        synchronized(pending) {
+            if (replayed || replaying) return@synchronized false
+            replaying = true
+            replayThread = Thread.currentThread()
+            replayedTo = real
+            true
+        }
+
+    private fun takeBatch(): List<Pending<T>> =
+        synchronized(pending) {
+            if (pending.isNotEmpty()) return@synchronized pending.toList().also { pending.clear() }
+            replaying = false
+            replayThread = null
+            replayed = true
+            emptyList()
+        }
+
+    @Suppress("TooGenericExceptionCaught")
+    private fun deliver(entry: Pending<T>, real: T) {
+        try {
+            entry.call(real)
+        } catch (e: Exception) {
+            Logging.error("Replaying '${entry.member}' threw; that queued call is lost", e)
+        }
+    }
+
+    private fun abandonReplay() {
+        synchronized(pending) {
+            if (!replaying) return@synchronized
+            replaying = false
+            replayThread = null
+            replayed = true
         }
     }
 

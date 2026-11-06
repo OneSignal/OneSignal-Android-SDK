@@ -45,7 +45,8 @@ internal class InitGate {
     private val isOnInitThread: Boolean get() = state == InitState.IN_PROGRESS && initThread.get() === Thread.currentThread()
 
     // Every attempt must end: one left IN_PROGRESS blocks every sync accessor forever.
-    fun runInit(block: () -> Boolean): Boolean {
+    // [finishIfUnfinished] is false only for the caller's pre-dispatch work, which completes itself.
+    fun runInit(finishIfUnfinished: Boolean = true, block: () -> Boolean): Boolean {
         val current = Thread.currentThread()
         val owned = synchronized(lock) { attempt }
         initThread.set(current)
@@ -56,7 +57,7 @@ internal class InitGate {
             addFailureCause(e)
             return false
         } finally {
-            failIfUnfinished(owned)
+            if (finishIfUnfinished) failIfUnfinished(owned)
             // A retry woken by this attempt's FAILED may already have claimed the slot.
             initThread.compareAndSet(current, null)
         }
