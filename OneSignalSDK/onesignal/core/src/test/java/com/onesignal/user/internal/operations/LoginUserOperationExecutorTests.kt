@@ -16,6 +16,10 @@ import com.onesignal.core.internal.operations.ExecutionResult
 import com.onesignal.core.internal.operations.IOperationRepo
 import com.onesignal.core.internal.operations.LoginWaitMetadata
 import com.onesignal.core.internal.operations.Operation
+import com.onesignal.debug.ILogListener
+import com.onesignal.debug.LogLevel
+import com.onesignal.debug.OneSignalLogEvent
+import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.mocks.AndroidMockHelper
 import com.onesignal.mocks.MockHelper
 import com.onesignal.mocks.MockPreferencesService
@@ -43,6 +47,8 @@ import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.collections.shouldBeOneOf
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import io.kotest.matchers.string.shouldContain
+import io.kotest.matchers.string.shouldNotContain
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -2362,5 +2368,151 @@ class LoginUserOperationExecutorTests : FunSpec({
         restored.tags shouldBe mapOf("plan" to "pro")
         restored.aliases shouldBe mapOf("facebook" to "bob")
         restored.existingOnesignalId shouldBe "existing-osid"
+    }
+
+    test("create user logs a missing local model at ERROR only for the current push subscription") {
+        // Given: the config names localSubscriptionId1 as the device's push subscription, but the
+        // store has no model for either queued key (a user switch replaced them after the ops were
+        // queued, or the keys are stale ops from an older SDK). SDK-5676: 5.11.0 logged every missing
+        // model at ERROR, and stuck queues draining after the upgrade produced over a million rows of
+        // stale or replaced keys in two days. Only the current push subscription is worth an ERROR, because
+        // the config now points at a subscription id the store cannot hydrate.
+        val mockUserBackendService = mockk<IUserBackendService>()
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } returns
+            CreateUserResponse(
+                mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId),
+                PropertiesObject(),
+                listOf(
+                    SubscriptionObject(id = remoteSubscriptionId1, type = SubscriptionObjectType.ANDROID_PUSH, token = "pushToken1"),
+                    SubscriptionObject(id = remoteSubscriptionId2, type = SubscriptionObjectType.EMAIL, token = "name@company.com"),
+                ),
+            )
+        val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
+        every { mockSubscriptionsModelStore.get(any()) } returns null
+        val configModelStore = MockHelper.configModelStore()
+        configModelStore.model.pushSubscriptionId = localSubscriptionId1
+
+        val executor =
+            LoginUserOperationExecutor(
+                mockk<IdentityOperationExecutor>(),
+                AndroidMockHelper.applicationService(),
+                MockHelper.deviceService(),
+                mockUserBackendService,
+                MockHelper.identityModelStore(),
+                MockHelper.propertiesModelStore(),
+                mockSubscriptionsModelStore,
+                configModelStore,
+                MockHelper.languageContext(),
+                getJwtTokenStore(), getIdentityVerificationService(), mockk<com.onesignal.common.consistency.models.IConsistencyManager>(relaxed = true),
+            )
+        val ops =
+            listOf(
+                LoginUserOperation(appId, localOneSignalId, null, null),
+                CreateSubscriptionOperation(appId, localOneSignalId, null, localSubscriptionId1, SubscriptionType.PUSH, true, "pushToken1", SubscriptionStatus.SUBSCRIBED),
+                CreateSubscriptionOperation(appId, localOneSignalId, null, localSubscriptionId2, SubscriptionType.EMAIL, true, "name@company.com", SubscriptionStatus.SUBSCRIBED),
+            )
+        val capturedLogs = mutableListOf<OneSignalLogEvent>()
+        val listener = ILogListener { event -> capturedLogs.add(event) }
+        Logging.addListener(listener)
+
+        // When
+        val response =
+            try {
+                executor.execute(ops)
+            } finally {
+                Logging.removeListener(listener)
+            }
+
+        // Then: the log level split changes nothing else. Both keys are still translated and the
+        // config push id still moves to the backend id.
+        response.result shouldBe ExecutionResult.SUCCESS
+        response.idTranslations shouldBe
+            mapOf(
+                localOneSignalId to remoteOneSignalId,
+                localSubscriptionId1 to remoteSubscriptionId1,
+                localSubscriptionId2 to remoteSubscriptionId2,
+            )
+        configModelStore.model.pushSubscriptionId shouldBe remoteSubscriptionId1
+
+        val missingModelErrors = capturedLogs.filter { it.level == LogLevel.ERROR && it.entry.contains("missing a local subscription model") }
+        missingModelErrors.size shouldBe 1
+        missingModelErrors.single().entry shouldContain "for $localSubscriptionId1 (current push subscription)"
+        missingModelErrors.single().entry shouldNotContain localSubscriptionId2
+
+        val missingModelDebugLines = capturedLogs.filter { it.level == LogLevel.DEBUG && it.entry.contains("with no local model") }
+        missingModelDebugLines.size shouldBe 1
+        missingModelDebugLines.single().entry shouldContain "1 subscription(s)"
+        missingModelDebugLines.single().entry shouldContain localSubscriptionId2
+    }
+
+    test("create user logs other missing model keys once at DEBUG, not once per key at ERROR") {
+        // Given: neither queued key is the device's current push subscription and neither has a
+        // model in the store. This is the SDK-5676 production shape: a batch of queued create ops
+        // whose models a later logout or login already replaced. The translation still has to be
+        // recorded for every key so ops that reference them get rewritten, but nothing is wrong
+        // on the device, so the batch gets one DEBUG line instead of an ERROR per key.
+        val mockUserBackendService = mockk<IUserBackendService>()
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } returns
+            CreateUserResponse(
+                mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId),
+                PropertiesObject(),
+                listOf(
+                    SubscriptionObject(id = remoteSubscriptionId1, type = SubscriptionObjectType.ANDROID_PUSH, token = "pushToken1"),
+                    SubscriptionObject(id = remoteSubscriptionId2, type = SubscriptionObjectType.EMAIL, token = "name@company.com"),
+                ),
+            )
+        val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
+        every { mockSubscriptionsModelStore.get(any()) } returns null
+        val configModelStore = MockHelper.configModelStore()
+        configModelStore.model.pushSubscriptionId = "current-push-subscriptionId"
+
+        val executor =
+            LoginUserOperationExecutor(
+                mockk<IdentityOperationExecutor>(),
+                AndroidMockHelper.applicationService(),
+                MockHelper.deviceService(),
+                mockUserBackendService,
+                MockHelper.identityModelStore(),
+                MockHelper.propertiesModelStore(),
+                mockSubscriptionsModelStore,
+                configModelStore,
+                MockHelper.languageContext(),
+                getJwtTokenStore(), getIdentityVerificationService(), mockk<com.onesignal.common.consistency.models.IConsistencyManager>(relaxed = true),
+            )
+        val ops =
+            listOf(
+                LoginUserOperation(appId, localOneSignalId, null, null),
+                CreateSubscriptionOperation(appId, localOneSignalId, null, localSubscriptionId1, SubscriptionType.PUSH, true, "pushToken1", SubscriptionStatus.SUBSCRIBED),
+                CreateSubscriptionOperation(appId, localOneSignalId, null, localSubscriptionId2, SubscriptionType.EMAIL, true, "name@company.com", SubscriptionStatus.SUBSCRIBED),
+            )
+        val capturedLogs = mutableListOf<OneSignalLogEvent>()
+        val listener = ILogListener { event -> capturedLogs.add(event) }
+        Logging.addListener(listener)
+
+        // When
+        val response =
+            try {
+                executor.execute(ops)
+            } finally {
+                Logging.removeListener(listener)
+            }
+
+        // Then
+        response.result shouldBe ExecutionResult.SUCCESS
+        response.idTranslations shouldBe
+            mapOf(
+                localOneSignalId to remoteOneSignalId,
+                localSubscriptionId1 to remoteSubscriptionId1,
+                localSubscriptionId2 to remoteSubscriptionId2,
+            )
+        // The current push subscription was not in the batch, so the config id is untouched.
+        configModelStore.model.pushSubscriptionId shouldBe "current-push-subscriptionId"
+
+        capturedLogs.none { it.level == LogLevel.ERROR && it.entry.contains("missing a local subscription model") } shouldBe true
+        val missingModelDebugLines = capturedLogs.filter { it.level == LogLevel.DEBUG && it.entry.contains("with no local model") }
+        missingModelDebugLines.size shouldBe 1
+        missingModelDebugLines.single().entry shouldContain "2 subscription(s)"
+        missingModelDebugLines.single().entry shouldContain localSubscriptionId1
+        missingModelDebugLines.single().entry shouldContain localSubscriptionId2
     }
 })
