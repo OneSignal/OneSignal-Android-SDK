@@ -289,7 +289,7 @@ class SDKInitV2Tests : FunSpec({
 
         os.isInitialized shouldBe true
         events.filter { it.level == LogLevel.ERROR && it.entry.contains("appId") } shouldBe emptyList()
-        events.count { it.level == LogLevel.WARN && it.entry.contains("using the cached app ID") } shouldBe 1
+        events.count { it.level == LogLevel.WARN && it.entry.contains("Using the cached app ID") } shouldBe 1
     }
 
     test("an ignored call logs one error per attempt, with the failure trace, and repeats at debug") {
