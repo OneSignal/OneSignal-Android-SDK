@@ -282,6 +282,39 @@ class LoggingTest : FunSpec({
         Logging.removeListener(mockListener)
     }
 
+    test("a listener that logs is not re-entered for the line it caused") {
+        val events = mutableListOf<String>()
+        val listener =
+            ILogListener { event ->
+                events.add(event.entry)
+                Logging.error("from inside the listener")
+            }
+        Logging.addListener(listener)
+        try {
+            Logging.error("outer")
+
+            events.size shouldBe 1
+            events.single().contains("outer") shouldBe true
+        } finally {
+            Logging.removeListener(listener)
+        }
+    }
+
+    test("a listener that throws does not stop the other listeners or the caller") {
+        val throwing = ILogListener { throw IllegalStateException("listener bug") }
+        val second = mockk<ILogListener>(relaxed = true)
+        Logging.addListener(throwing)
+        Logging.addListener(second)
+        try {
+            Logging.error("outer")
+
+            verify { second.onLogEvent(any()) }
+        } finally {
+            Logging.removeListener(throwing)
+            Logging.removeListener(second)
+        }
+    }
+
     // ===== All Log Levels Tests =====
 
     test("all log levels should work correctly") {
