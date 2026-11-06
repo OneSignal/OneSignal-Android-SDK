@@ -38,8 +38,25 @@ class NeverCrashKillSwitchTests : FunSpec({
 
     afterEach { NeverCrashKillSwitch.resetForTest() }
 
-    test("the cached kill switch selects the legacy implementation") {
+    test("the cached flag selects the never-crash implementation") {
         cacheFlags("other_flag", NeverCrashKillSwitch.FLAG_KEY)
+
+        NeverCrashKillSwitch.evaluate(getApplicationContext())
+
+        NeverCrashKillSwitch.useLegacy shouldBe false
+        NeverCrashKillSwitch.create().shouldBeInstanceOf<OneSignalImpV2>()
+    }
+
+    test("the cached flag matches regardless of wire casing") {
+        cacheFlags(NeverCrashKillSwitch.FLAG_KEY.uppercase())
+
+        NeverCrashKillSwitch.evaluate(getApplicationContext())
+
+        NeverCrashKillSwitch.useLegacy shouldBe false
+    }
+
+    test("without the flag the legacy implementation is used") {
+        cacheFlags("other_flag")
 
         NeverCrashKillSwitch.evaluate(getApplicationContext())
 
@@ -47,39 +64,22 @@ class NeverCrashKillSwitchTests : FunSpec({
         NeverCrashKillSwitch.create().shouldBeInstanceOf<OneSignalImp>()
     }
 
-    test("the cached kill switch matches regardless of wire casing") {
-        cacheFlags(NeverCrashKillSwitch.FLAG_KEY.uppercase())
-
+    test("a fresh install with nothing cached uses the legacy implementation") {
         NeverCrashKillSwitch.evaluate(getApplicationContext())
 
         NeverCrashKillSwitch.useLegacy shouldBe true
     }
 
-    test("without the kill switch the never-crash implementation is used") {
-        cacheFlags("other_flag")
-
-        NeverCrashKillSwitch.evaluate(getApplicationContext())
-
-        NeverCrashKillSwitch.useLegacy shouldBe false
-        NeverCrashKillSwitch.create().shouldBeInstanceOf<OneSignalImpV2>()
-    }
-
-    test("a fresh install with nothing cached uses the never-crash implementation") {
-        NeverCrashKillSwitch.evaluate(getApplicationContext())
-
-        NeverCrashKillSwitch.useLegacy shouldBe false
-    }
-
-    test("an unreadable cached config keeps the never-crash implementation without throwing") {
+    test("an unreadable cached config keeps the legacy implementation without throwing") {
         prefs().edit().putString(configKey, "{not json").commit()
 
         NeverCrashKillSwitch.evaluate(getApplicationContext())
 
         NeverCrashKillSwitch.evaluated shouldBe true
-        NeverCrashKillSwitch.useLegacy shouldBe false
+        NeverCrashKillSwitch.useLegacy shouldBe true
     }
 
-    test("a locked device keeps the never-crash implementation") {
+    test("a locked device keeps the legacy implementation") {
         cacheFlags(NeverCrashKillSwitch.FLAG_KEY)
         mockkObject(AndroidUtils)
         try {
@@ -87,13 +87,13 @@ class NeverCrashKillSwitchTests : FunSpec({
 
             NeverCrashKillSwitch.evaluate(getApplicationContext())
 
-            NeverCrashKillSwitch.useLegacy shouldBe false
+            NeverCrashKillSwitch.useLegacy shouldBe true
         } finally {
             unmockkObject(AndroidUtils)
         }
     }
 
-    test("first use before the switch is evaluated uses the never-crash implementation") {
-        NeverCrashKillSwitch.create().shouldBeInstanceOf<OneSignalImpV2>()
+    test("first use before the flag is evaluated uses the legacy implementation") {
+        NeverCrashKillSwitch.create().shouldBeInstanceOf<OneSignalImp>()
     }
 })

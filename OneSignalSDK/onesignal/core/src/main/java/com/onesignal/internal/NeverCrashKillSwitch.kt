@@ -12,17 +12,17 @@ import org.json.JSONArray
 
 /**
  * Chooses the [IOneSignal] implementation once per process, from the feature flags cached by the
- * previous run, so a remote change applies on the next cold start. Any failure keeps the new behavior.
+ * previous run, so a remote change applies on the next cold start. Any failure keeps the legacy behavior.
  */
 internal object NeverCrashKillSwitch {
-    // Present means off, so installs whose init never succeeds (and never fetch flags) keep the safe default.
-    const val FLAG_KEY = "sdk_never_crash_disabled"
+    // Absent means the legacy implementation, so the rollout stays off until Turbine sends the flag.
+    const val FLAG_KEY = "sdk_never_crash_enabled"
 
     // Local testing only: true forces the legacy implementation, false the new one, null reads the flag.
     private val localOverride: Boolean? = null
 
     @Volatile
-    var useLegacy: Boolean = false
+    var useLegacy: Boolean = true
         private set
 
     @Volatile
@@ -33,10 +33,10 @@ internal object NeverCrashKillSwitch {
     @Suppress("TooGenericExceptionCaught")
     fun evaluate(context: Context) {
         useLegacy = localOverride ?: try {
-            isDisabledByCachedFlags(context)
+            !isEnabledByCachedFlags(context)
         } catch (t: Throwable) {
-            Logging.warn("OneSignal: could not read cached feature flags, keeping the default init behavior", t)
-            false
+            Logging.warn("OneSignal: could not read cached feature flags, keeping the legacy init behavior", t)
+            true
         }
         evaluated = true
     }
@@ -44,17 +44,17 @@ internal object NeverCrashKillSwitch {
     fun create(): IOneSignal =
         when {
             !evaluated -> {
-                Logging.debug("OneSignal: kill switch not evaluated before first use, keeping the default init behavior")
-                OneSignalImpV2()
-            }
-            useLegacy -> {
-                Logging.warn("OneSignal: $FLAG_KEY is on, using the legacy init behavior")
+                Logging.debug("OneSignal: rollout flag not evaluated before first use, keeping the legacy init behavior")
                 OneSignalImp()
             }
-            else -> OneSignalImpV2()
+            !useLegacy -> {
+                Logging.warn("OneSignal: $FLAG_KEY is on, using the never-crash init behavior")
+                OneSignalImpV2()
+            }
+            else -> OneSignalImp()
         }
 
-    internal fun isDisabledByCachedFlags(context: Context): Boolean {
+    internal fun isEnabledByCachedFlags(context: Context): Boolean {
         // Credential-encrypted prefs throw on access before the user unlocks the device.
         val keys = if (AndroidUtils.isAndroidUserUnlocked(context)) cachedFeatureKeys(context) else null
         return keys?.any { it.equals(FLAG_KEY, ignoreCase = true) } == true
@@ -70,7 +70,7 @@ internal object NeverCrashKillSwitch {
     }
 
     internal fun resetForTest() {
-        useLegacy = false
+        useLegacy = true
         evaluated = false
     }
 }
