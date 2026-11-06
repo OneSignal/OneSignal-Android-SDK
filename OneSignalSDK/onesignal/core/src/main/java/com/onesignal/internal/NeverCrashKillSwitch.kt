@@ -8,6 +8,7 @@ import com.onesignal.core.internal.config.ConfigModel
 import com.onesignal.core.internal.preferences.PreferenceOneSignalKeys
 import com.onesignal.core.internal.preferences.PreferenceStores
 import com.onesignal.debug.internal.logging.Logging
+import com.onesignal.features.FeatureFlag
 import org.json.JSONArray
 
 /**
@@ -16,7 +17,7 @@ import org.json.JSONArray
  */
 internal object NeverCrashKillSwitch {
     // Absent means the legacy implementation, so the rollout stays off until Turbine sends the flag.
-    const val FLAG_KEY = "sdk_never_crash_enabled"
+    val FLAG_KEY: String = FeatureFlag.SDK_NEVER_CRASH_ENABLED.key
 
     // Local testing only: true forces the legacy implementation, false the new one, null reads the flag.
     private val localOverride: Boolean? = null
