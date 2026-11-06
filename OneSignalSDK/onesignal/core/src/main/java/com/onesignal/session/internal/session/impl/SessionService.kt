@@ -36,6 +36,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import java.util.UUID
+import java.util.concurrent.atomic.AtomicReference
 import kotlin.reflect.KMutableProperty1
 
 /**
@@ -52,6 +53,7 @@ import kotlin.reflect.KMutableProperty1
  * While focused, a session that [SessionModel.usesSessionsApi] reports its duration every
  * [HEARTBEAT_INTERVAL_MS] of active time, so the server keeps it open and a crash loses little duration.
  */
+@Suppress("TooManyFunctions")
 internal class SessionService(
     private val applicationService: IApplicationService,
     private val configModelStore: ConfigModelStore,
@@ -97,6 +99,8 @@ internal class SessionService(
 
     // True if app has been foregrounded at least once since the app started
     private var hasFocused = false
+
+    private val pendingDirectAttributionId = AtomicReference<String?>()
 
     override fun bootstrap() {
         session = sessionModelStore.model
@@ -146,6 +150,10 @@ internal class SessionService(
                 if (pinnedId.get(session) == localId && appliesTo(session)) pinnedId.set(session, backendId)
             }
         }
+    }
+
+    override fun attributeNextSessionTo(notificationId: String) {
+        pendingDirectAttributionId.set(notificationId)
     }
 
     /** NOTE: This triggers more often than scheduleBackgroundRunIn defined above,
@@ -200,8 +208,14 @@ internal class SessionService(
         // arrival, not dispatcher latency (SDK-4506).
         val focusTimeMs = time.currentTimeMillis
         val focusElapsedMs = time.elapsedRealtimeMillis
+        // Any focus consumes the open, so one that didn't bring the app forward (e.g. it opened a
+        // browser) isn't credited to a later organic open. Entry state is read here because it
+        // resets on unfocus, which can run before the serial IO lane gets to this focus.
+        val directAttributionId =
+            pendingDirectAttributionId.getAndSet(null)
+                ?.takeIf { applicationService.entryState.isNotificationClick }
         runOnSerialIO {
-            handleOnFocus(firedOnSubscribe, focusTimeMs, focusElapsedMs)
+            handleOnFocus(firedOnSubscribe, focusTimeMs, focusElapsedMs, directAttributionId)
         }
     }
 
@@ -209,6 +223,7 @@ internal class SessionService(
         firedOnSubscribe: Boolean,
         focusTimeMs: Long,
         focusElapsedMs: Long,
+        directAttributionId: String?,
     ) {
         Logging.log(LogLevel.DEBUG, "SessionService.onFocus() - fired from start: $firedOnSubscribe")
 
@@ -242,7 +257,8 @@ internal class SessionService(
             session.isValid = true
             Logging.debug("SessionService: New session started at ${session.startTime}")
             if (session.usesSessionsApi) {
-                createSessionOperation(session, config?.appId, identityModelStore.model.externalId)?.let { operationRepo.enqueue(it) }
+                createSessionOperation(session, config?.appId, identityModelStore.model.externalId, directAttributionId)
+                    ?.let { operationRepo.enqueue(it) }
             }
             sessionLifeCycleNotifier.fire { it.onSessionStarted() }
         } else {
@@ -356,6 +372,7 @@ private fun createSessionOperation(
     session: SessionModel,
     appId: String?,
     externalId: String?,
+    directAttributionId: String?,
 ): CreateSessionOperation? =
     withSessionIds(session, appId, "creating") { resolvedAppId, onesignalId, subscriptionId ->
         CreateSessionOperation(
@@ -365,6 +382,7 @@ private fun createSessionOperation(
             subscriptionId = subscriptionId,
             startTime = session.startTime,
             externalId = externalId,
+            directAttributionId = directAttributionId,
         )
     }
 

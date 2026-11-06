@@ -42,6 +42,7 @@ internal class SessionOperationExecutor(
                         subscriptionType = SubscriptionObjectType.fromDeviceType(deviceService.deviceType).value,
                         startTime = TimeUnit.MILLISECONDS.toSeconds(operation.startTime),
                         idempotencyKey = operation.idempotencyKey,
+                        directAttributionId = operation.directAttributionId,
                     ),
                 )
             } catch (ex: BackendException) {

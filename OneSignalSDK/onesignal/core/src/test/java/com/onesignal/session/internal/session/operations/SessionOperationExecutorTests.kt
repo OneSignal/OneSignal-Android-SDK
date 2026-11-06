@@ -32,7 +32,16 @@ private class Mocks {
         )
 }
 
-private fun create() = CreateSessionOperation("appId", "local-session", "onesignalId", "subscriptionId", startTime = 1_700_000_000_500L, externalId = null)
+private fun create(directAttributionId: String? = null) =
+    CreateSessionOperation(
+        "appId",
+        "local-session",
+        "onesignalId",
+        "subscriptionId",
+        startTime = 1_700_000_000_500L,
+        externalId = null,
+        directAttributionId = directAttributionId,
+    )
 
 private fun update(endTime: Long? = null) =
     UpdateSessionOperation("appId", "server-session", "onesignalId", "subscriptionId", activeDuration = 61_900L, endTime = endTime)
@@ -60,6 +69,18 @@ class SessionOperationExecutorTests : FunSpec({
                 CreateSessionRequest("onesignalId", "subscriptionId", "AndroidPush", 1_700_000_000L, op.idempotencyKey),
             )
         }
+    }
+
+    test("create sends the direct attribution ID") {
+        // Given
+        val mocks = Mocks()
+        coEvery { mocks.backend.createSession(any(), any()) } returns "server-session"
+
+        // When
+        mocks.executor.execute(listOf(create(directAttributionId = "notificationId")))
+
+        // Then
+        coVerify { mocks.backend.createSession("appId", match { it.directAttributionId == "notificationId" }) }
     }
 
     test("create without a session_id in the response is retried, then dropped") {
