@@ -54,6 +54,9 @@ class MainApplication : MultiDexApplication() {
         // App ID comes from BuildConfig, sourced from local.properties / -P override at build
         // time. Update via `examples/demo/local.properties` (ONESIGNAL_APP_ID=...) and rebuild.
         val appId = BuildConfig.ONESIGNAL_APP_ID
+        check(appId.isNotBlank()) {
+            "ONESIGNAL_APP_ID is not set. Add it to examples/demo/local.properties or pass -PONESIGNAL_APP_ID=..."
+        }
         OneSignalService.setAppId(appId)
         
         // Initialize tooltip helper

@@ -54,11 +54,9 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         // OneSignal App ID exposed via BuildConfig so the demo always reads it from one place.
-        // Override via `local.properties` (ONESIGNAL_APP_ID=...) or `-PONESIGNAL_APP_ID=...`.
-        // The built-in default points at the shared OneSignal demo app so the project builds
-        // and runs out of the box.
-        val onesignalAppId = demoOverride("ONESIGNAL_APP_ID")
-            ?: "77e32082-ea27-42e3-a898-c72e141824ef"
+        // Set via `local.properties` (ONESIGNAL_APP_ID=...) or `-PONESIGNAL_APP_ID=...`.
+        // Left empty when unset so CI can still assemble; the app fails fast at launch.
+        val onesignalAppId = demoOverride("ONESIGNAL_APP_ID") ?: ""
         buildConfigField("String", "ONESIGNAL_APP_ID", "\"$onesignalAppId\"")
 
         // Optional OneSignal channel id used by the "WITH SOUND" notification payload.

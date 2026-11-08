@@ -27,7 +27,7 @@ ONESIGNAL_APP_ID=
 ONESIGNAL_ANDROID_CHANNEL_ID=
 ```
 
-Each key resolves in this order at build time: `-PKEY=value` from the CLI → `local.properties` → a sensible built-in default. The values are surfaced through `BuildConfig.ONESIGNAL_APP_ID` and `BuildConfig.ONESIGNAL_ANDROID_CHANNEL_ID` (see `app/build.gradle.kts`'s `demoOverride(...)` helper).
+Each key resolves in this order at build time: `-PKEY=value` from the CLI → `local.properties` → a built-in default. `ONESIGNAL_APP_ID` has no default and is required; the app throws at launch if it is unset. The values are surfaced through `BuildConfig.ONESIGNAL_APP_ID` and `BuildConfig.ONESIGNAL_ANDROID_CHANNEL_ID` (see `app/build.gradle.kts`'s `demoOverride(...)` helper).
 
 | Key | Used by | Capacitor counterpart |
 |-----|---------|-----------------------|
@@ -100,9 +100,8 @@ android {
         targetSdk = 34
         multiDexEnabled = true
 
-        // demoOverride() walks -P, then local.properties, then the built-in default.
-        val onesignalAppId = demoOverride("ONESIGNAL_APP_ID")
-            ?: "77e32082-ea27-42e3-a898-c72e141824ef"
+        // demoOverride() walks -P, then local.properties. No default: the app fails at launch if unset.
+        val onesignalAppId = demoOverride("ONESIGNAL_APP_ID") ?: ""
         buildConfigField("String", "ONESIGNAL_APP_ID", "\"$onesignalAppId\"")
     }
 

@@ -69,9 +69,9 @@ Alternatively, from the terminal:
 ./gradlew :app:installGmsDebug
 ```
 
-The app ships with a default OneSignal App ID (`77e32082-ea27-42e3-a898-c72e141824ef`).
+A OneSignal App ID is required; the app throws at launch without one.
 
-To use your own App ID, copy `examples/demo/local.properties.example` to `examples/demo/local.properties` and set `ONESIGNAL_APP_ID=YOUR_APP_ID_HERE` (or pass `-PONESIGNAL_APP_ID=...` on the Gradle CLI). The value is read straight from `BuildConfig` on every launch — no uninstall required. See [`examples/build.md`](../build.md) for the full override contract.
+Copy `examples/demo/local.properties.example` to `examples/demo/local.properties` and set `ONESIGNAL_APP_ID=YOUR_APP_ID_HERE` (or pass `-PONESIGNAL_APP_ID=...` on the Gradle CLI). The value is read straight from `BuildConfig` on every launch — no uninstall required. See [`examples/build.md`](../build.md) for the full override contract.
 
 Once launched, you should see the following screen:
 

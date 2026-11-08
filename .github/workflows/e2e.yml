@@ -28,7 +28,7 @@ jobs:
           submodules: recursive
 
       # Fail fast on unset var. Otherwise `demoOverride()` collapses "" to
-      # null and the build silently uses the hardcoded default app ID.
+      # null and the app builds without an app ID, failing only at launch.
       - name: Validate APPIUM_ONESIGNAL_APP_ID
         env:
           ONESIGNAL_APP_ID: ${{ vars.APPIUM_ONESIGNAL_APP_ID }}

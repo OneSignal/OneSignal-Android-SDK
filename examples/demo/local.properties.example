@@ -7,8 +7,8 @@
 # (e.g. `./gradlew :app:installGmsDebug -PONESIGNAL_APP_ID=...`),
 # and the CLI takes precedence over local.properties.
 
-# Required for real testing: your OneSignal App ID. Get one at https://onesignal.com.
-# Leave unset to use the demo's shared default app.
+# Required: your OneSignal App ID. Get one at https://onesignal.com.
+# The app throws at launch if this is unset.
 ONESIGNAL_APP_ID=
 
 # Optional: notification channel id used by the "WITH SOUND" payload.
