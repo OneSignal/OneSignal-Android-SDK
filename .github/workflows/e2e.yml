@@ -42,6 +42,7 @@ jobs:
         uses: ./.github/actions/setup-demo
         with:
           onesignal-app-id: ${{ vars.APPIUM_ONESIGNAL_APP_ID }}
+          google-services-json: ${{ secrets.APPIUM_GOOGLE_SERVICES_JSON }}
 
       - name: Resolve OneSignal Android SDK version
         id: android-sdk-version
@@ -86,4 +87,5 @@ jobs:
       app-artifact: demo-apk
       app-filename: app-gms-debug.apk
       sdk-type: android
+      bundle-id: com.onesignal.sdkdemo
       build-name: android-${{ github.ref_name }}-${{ github.run_number }}

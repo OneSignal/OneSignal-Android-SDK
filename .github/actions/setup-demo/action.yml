@@ -1,8 +1,11 @@
 name: 'Setup Demo'
-description: 'Installs the JDK and Android toolchains, caches Gradle, and writes the demo local.properties file'
+description: 'Installs the JDK and Android toolchains, caches Gradle, and writes the demo local.properties and google-services.json files'
 inputs:
   onesignal-app-id:
     description: 'OneSignal App ID written into examples/demo/local.properties'
+    required: true
+  google-services-json:
+    description: 'google-services.json contents for the demo app (secrets.APPIUM_GOOGLE_SERVICES_JSON)'
     required: true
 runs:
   using: 'composite'
@@ -48,3 +51,9 @@ runs:
           echo "ONESIGNAL_APP_ID=${ONESIGNAL_APP_ID}"
           echo "ONESIGNAL_ANDROID_CHANNEL_ID=7ec2ece9-c538-4656-9516-1316f48a005c"
         } > local.properties
+
+    - name: Write demo google-services.json
+      uses: OneSignal/sdk-shared/.github/actions/setup-google-services@main
+      with:
+        google-services-json: ${{ inputs.google-services-json }}
+        path: examples/demo/app/google-services.json

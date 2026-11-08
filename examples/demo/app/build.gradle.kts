@@ -88,7 +88,8 @@ android {
     productFlavors {
         create("gms") {
             dimension = "default"
-            applicationId = "com.onesignal.example"
+            applicationId = "com.onesignal.sdkdemo"
+            minSdk = 23
         }
         create("huawei") {
             dimension = "default"
@@ -207,6 +208,8 @@ dependencies {
 
     // OneSignal - Google Play Builds
     "gmsImplementation"("com.onesignal:OneSignal:$sdkVersion")
+    // Firebase Installation ID registration needs firebase-messaging 25.1.2+, which needs minSdk 23.
+    "gmsImplementation"("com.google.firebase:firebase-messaging:25.1.2")
 
     // OneSignal - Huawei Builds
     "huaweiImplementation"("com.onesignal:OneSignal:$sdkVersion") {

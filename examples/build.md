@@ -43,7 +43,7 @@ Two flavors are declared on the `default` dimension:
 
 | Flavor | Use case |
 |--------|----------|
-| `gms`  | Google Play Services / FCM — pulls `play-services-location`. The legacy FCM token path uses OneSignal's Firebase app and does not require the Google Services plugin. Firebase Installation ID registration requires the host app configuration described below. |
+| `gms`  | Google Play Services / FCM — pulls `play-services-location`. The legacy FCM token path uses OneSignal's Firebase app and does not require the Google Services plugin. Firebase Installation ID registration requires the host app configuration described below; the demo enables it with `firebase-messaging` 25.1.2 and `minSdk` 23. |
 | `huawei` | Huawei HMS — applies `com.huawei.agconnect`, excludes the GMS transitive deps from the OneSignal artifact, and pulls `com.huawei.hms:push` + `com.huawei.hms:location`. |
 
 The Huawei plugin is selected at configuration time by inspecting `gradle.startParameter.taskRequests` so a clean `./gradlew tasks` doesn't require Huawei configuration.
@@ -114,7 +114,7 @@ android {
     composeOptions { kotlinCompilerExtensionVersion = "1.5.15" }
 
     productFlavors {
-        create("gms")    { dimension = "default"; applicationId = "com.onesignal.example" }
+        create("gms")    { dimension = "default"; applicationId = "com.onesignal.sdkdemo"; minSdk = 23 }
         create("huawei") { dimension = "default"; applicationId = "com.onesignal.example" }
     }
 }
@@ -294,7 +294,7 @@ Declared in `app/src/main/AndroidManifest.xml`:
 - `android.permission.ACCESS_BACKGROUND_LOCATION`
 - `com.android.vending.BILLING`
 - `android.permission.WAKE_LOCK`
-- ADM / Amazon push wiring (`com.amazon.device.messaging.permission.RECEIVE`, plus the app-scoped `com.onesignal.example.permission.RECEIVE_ADM_MESSAGE` and matching intent category).
+- ADM / Amazon push wiring (`com.amazon.device.messaging.permission.RECEIVE`, plus the app-scoped `${applicationId}.permission.RECEIVE_ADM_MESSAGE` and matching intent category).
 
 Contributed via manifest merge from the OneSignal SDK:
 
@@ -304,7 +304,7 @@ Contributed via manifest merge from the OneSignal SDK:
 - Badge permissions (Samsung / Sony / HTC / etc.)
 - `android.permission.RECEIVE_BOOT_COMPLETED` and other SDK-side wiring
 
-The ADM permission name and intent category use the application's package, so they reference `com.onesignal.example` (not the SDK's package).
+The ADM permission name and intent category use the application's package, so they reference `${applicationId}` (not the SDK's package).
 
 ### Custom notification sound
 
@@ -314,7 +314,9 @@ The `vine_boom.wav` file from [`sdk-shared/assets`](https://github.com/OneSignal
 
 ### Service config files
 
-The shared default `applicationId` is `com.onesignal.example`.
+The `gms` flavor's `applicationId` is `com.onesignal.sdkdemo`. The `huawei` flavor stays on `com.onesignal.example`.
+
+- `app/google-services.json` → a client for `com.onesignal.sdkdemo`. It is gitignored; the Google Services plugin is applied only when the file exists. CI writes it from the `APPIUM_GOOGLE_SERVICES_JSON` secret.
 
 - `app/agconnect-services.json` → every `package_name` entry set to `com.onesignal.example` for the `huawei` flavor.
 

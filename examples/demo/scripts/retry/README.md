@@ -20,7 +20,7 @@ cd examples/demo/scripts/retry
 2. `./retry-test.sh install` builds the demo against the local SDK source and installs it. The
    debug build trusts the mitmproxy CA (`-PRETRY_TEST_CA`), so nothing has to be installed on the
    device. If a demo signed with another key is already installed, `adb uninstall
-   com.onesignal.example` first.
+   com.onesignal.sdkdemo` first.
 3. `./retry-test.sh start` starts mitmproxy on port 8899 and sets the device's global HTTP proxy.
    An emulator reaches it at `10.0.2.2`, a physical device through `adb reverse`.
 4. `./retry-test.sh fresh` clears the demo's data so the SDK starts as a new install.
