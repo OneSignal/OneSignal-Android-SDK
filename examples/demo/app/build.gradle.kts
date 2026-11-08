@@ -37,6 +37,19 @@ if (file("google-services.json").exists()) {
     apply(plugin = "com.google.gms.google-services")
 }
 
+// Required: set via `local.properties` (ONESIGNAL_APP_ID=...) or `-PONESIGNAL_APP_ID=...`.
+// Checked when a build runs rather than at configuration, so IDE sync and lint work without it.
+val onesignalAppId: String? = demoOverride("ONESIGNAL_APP_ID")
+tasks.named("preBuild") {
+    doFirst {
+        if (onesignalAppId == null) {
+            throw GradleException(
+                "ONESIGNAL_APP_ID is not set. Add it to examples/demo/local.properties or pass -PONESIGNAL_APP_ID=...",
+            )
+        }
+    }
+}
+
 // OneSignal SDK version - can be overridden via gradle property SDK_VERSION
 val sdkVersion: String = rootProject.findProperty("SDK_VERSION") as? String ?: "5.6.1"
 
@@ -54,10 +67,7 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         // OneSignal App ID exposed via BuildConfig so the demo always reads it from one place.
-        // Set via `local.properties` (ONESIGNAL_APP_ID=...) or `-PONESIGNAL_APP_ID=...`.
-        // Left empty when unset so CI can still assemble; the app fails fast at launch.
-        val onesignalAppId = demoOverride("ONESIGNAL_APP_ID") ?: ""
-        buildConfigField("String", "ONESIGNAL_APP_ID", "\"$onesignalAppId\"")
+        buildConfigField("String", "ONESIGNAL_APP_ID", "\"${onesignalAppId.orEmpty()}\"")
 
         // Optional OneSignal channel id used by the "WITH SOUND" notification payload.
         // Falls back to the same default the Capacitor demo ships with so the shared Appium

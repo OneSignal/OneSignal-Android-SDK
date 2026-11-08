@@ -8,7 +8,7 @@
 # and the CLI takes precedence over local.properties.
 
 # Required: your OneSignal App ID. Get one at https://onesignal.com.
-# The app throws at launch if this is unset.
+# The build fails if this is unset.
 ONESIGNAL_APP_ID=
 
 # Optional: notification channel id used by the "WITH SOUND" payload.
