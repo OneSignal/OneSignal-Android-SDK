@@ -9,13 +9,12 @@ internal class StartupService(
 ) {
     private val bootstrapped = mutableSetOf<IBootstrapService>()
 
-    // Retryable after a failure: services that already bootstrapped are skipped, so none subscribes twice.
+    // Marked before the call, so a service that subscribes and then throws is not run again on retry.
     fun bootstrap() {
         services.getAllServices<IBootstrapService>().forEach {
-            if (it !in bootstrapped) {
-                it.bootstrap()
-                bootstrapped += it
-            }
+            if (it in bootstrapped) return@forEach
+            bootstrapped += it
+            it.bootstrap()
         }
     }
 

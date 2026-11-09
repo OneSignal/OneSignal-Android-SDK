@@ -92,7 +92,7 @@ class StartupServiceTests : FunSpec({
         startupService.bootstrap()
 
         verify(exactly = 1) { done.bootstrap() }
-        verify(exactly = 2) { flaky.bootstrap() }
+        verify(exactly = 1) { flaky.bootstrap() }
     }
 
     test("startup will call all IStartableService dependencies successfully after a short delay") {
