@@ -91,6 +91,8 @@ class InitGateTests : FunSpec({
         gate.tryStart()
         gate.complete(InitState.FAILED)
         gate.notReadyMessage("login") shouldBe "'login' ignored: initWithContext failed."
+        gate.tryStart()
+        gate.notReadyMessage("login", InitState.FAILED) shouldBe "'login' ignored: initWithContext failed."
     }
 
     test("a wait on the init thread while init is running returns false instead of waiting on itself") {

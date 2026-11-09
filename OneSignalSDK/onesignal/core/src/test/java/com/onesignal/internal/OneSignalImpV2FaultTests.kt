@@ -117,6 +117,29 @@ class OneSignalImpV2FaultTests : FunSpec({
         awaitTerminal(retry) shouldBe InitState.SUCCESS
     }
 
+    test("initWithContextSuspend on a full IO pool returns false instead of throwing") {
+        OneSignalDispatchers.resetForTest()
+        val ioExecutor = AtomicReference<ThreadPoolExecutor?>(null)
+        OneSignalDispatchers.afterExecutorCreateForTest = { lane, executor -> if (lane == "IO") ioExecutor.set(executor) }
+        val release = CountDownLatch(1)
+        try {
+            repeat(203) { OneSignalDispatchers.launchOnIO { release.await(30, TimeUnit.SECONDS) } }
+            val deadline = System.currentTimeMillis() + 5_000
+            while (System.currentTimeMillis() < deadline) {
+                val pool = ioExecutor.get()
+                if (pool != null && pool.queue.remainingCapacity() == 0) break
+                Thread.sleep(10)
+            }
+            ioExecutor.get()!!.queue.remainingCapacity() shouldBe 0
+
+            val os = quietOneSignal()
+            runBlocking { os.initWithContextSuspend(getApplicationContext(), "appId") } shouldBe false
+            os.gate.state shouldBe InitState.FAILED
+        } finally {
+            release.countDown()
+        }
+    }
+
     test("a log listener that touches the SDK while init is starting does not block the dispatch") {
         val os = quietOneSignal()
         val listener = ILogListener { if (it.entry.contains("ApplicationService.init")) os.user.onesignalId }

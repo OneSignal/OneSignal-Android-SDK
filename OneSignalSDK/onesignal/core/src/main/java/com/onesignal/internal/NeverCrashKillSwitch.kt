@@ -30,26 +30,39 @@ internal object NeverCrashKillSwitch {
     var evaluated: Boolean = false
         private set
 
-    // Runs on the main thread before Application.onCreate, so it must never throw.
+    private val evaluateLock = Any()
+
+    // First call wins. A later read must not disagree with the implementation already created.
+    // Must not throw: process start and the first SDK call both land here.
     @Suppress("TooGenericExceptionCaught")
     fun evaluate(context: Context) {
-        useLegacy = localOverride ?: try {
-            !isEnabledByCachedFlags(context)
-        } catch (t: Throwable) {
-            Logging.warn("OneSignal: could not read cached feature flags, keeping the legacy init behavior", t)
-            true
+        if (evaluated) return
+        synchronized(evaluateLock) {
+            if (evaluated) return
+            useLegacy = localOverride ?: try {
+                !isEnabledByCachedFlags(context)
+            } catch (t: Throwable) {
+                Logging.warn("OneSignal: could not read cached feature flags, keeping the legacy init behavior", t)
+                true
+            }
+            evaluated = true
         }
-        evaluated = true
+    }
+
+    // Null does not invent a Context. Init passes one, or the startup provider already evaluated.
+    fun select(context: Context?): IOneSignal {
+        if (context != null) evaluate(context)
+        return create()
     }
 
     fun create(): IOneSignal =
         when {
             !evaluated -> {
-                Logging.debug("OneSignal: rollout flag not evaluated before first use, keeping the legacy init behavior")
+                Logging.warn("OneSignal: rollout flag not evaluated before first use, keeping the legacy init behavior")
                 OneSignalImp()
             }
             !useLegacy -> {
-                Logging.warn("OneSignal: $FLAG_KEY is on, using the never-crash init behavior")
+                Logging.debug("OneSignal: $FLAG_KEY is on, using the never-crash init behavior")
                 OneSignalImpV2()
             }
             else -> OneSignalImp()

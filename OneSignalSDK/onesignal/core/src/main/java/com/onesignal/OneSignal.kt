@@ -1,10 +1,11 @@
 package com.onesignal
 
 import android.content.Context
+import com.onesignal.common.OneSignalUtils
 import com.onesignal.common.services.IServiceProvider
 import com.onesignal.debug.IDebugManager
 import com.onesignal.inAppMessages.IInAppMessagesManager
-import com.onesignal.internal.NeverCrashKillSwitch
+import com.onesignal.internal.OneSignalChoice
 import com.onesignal.location.ILocationManager
 import com.onesignal.notifications.INotificationsManager
 import com.onesignal.session.ISessionManager
@@ -27,14 +28,14 @@ object OneSignal {
      */
     @JvmStatic
     val isInitialized: Boolean
-        get() = oneSignal.isInitialized
+        get() = OneSignalChoice.isInitialized
 
     /**
      * The current SDK version as a string.
      */
     @JvmStatic
     val sdkVersion: String
-        get() = oneSignal.sdkVersion
+        get() = OneSignalUtils.sdkVersion
 
     /**
      * The user manager, with a device-scoped user until (or if) [login] is called. Waits while init is running.
@@ -42,7 +43,7 @@ object OneSignal {
      */
     @JvmStatic
     val User: IUserManager
-        get() = oneSignal.user
+        get() = OneSignalChoice.resolve().user
 
     /**
      * The session manager for accessing session-scoped management.
@@ -50,7 +51,7 @@ object OneSignal {
      */
     @JvmStatic
     val Session: ISessionManager
-        get() = oneSignal.session
+        get() = OneSignalChoice.resolve().session
 
     /**
      * The notification manager. Waits while init is running. Before [initWithContext] succeeds this is a stand-in:
@@ -58,7 +59,7 @@ object OneSignal {
      */
     @JvmStatic
     val Notifications: INotificationsManager
-        get() = oneSignal.notifications
+        get() = OneSignalChoice.resolve().notifications
 
     /**
      * The location manager. Waits while init is running. Before [initWithContext] succeeds this is a stand-in:
@@ -66,7 +67,7 @@ object OneSignal {
      */
     @JvmStatic
     val Location: ILocationManager
-        get() = oneSignal.location
+        get() = OneSignalChoice.resolve().location
 
     /**
      * The In App Messaging manager. Waits while init is running. Before [initWithContext] succeeds this is a stand-in:
@@ -74,7 +75,7 @@ object OneSignal {
      */
     @JvmStatic
     val InAppMessages: IInAppMessagesManager
-        get() = oneSignal.inAppMessages
+        get() = OneSignalChoice.resolve().inAppMessages
 
     /**
      * Access to debug the SDK in the additional information is required to diagnose any
@@ -84,7 +85,7 @@ object OneSignal {
      */
     @JvmStatic
     val Debug: IDebugManager
-        get() = oneSignal.debug
+        get() = OneSignalChoice.debug
 
     /**
      * Determines whether a user must consent to privacy prior
@@ -94,9 +95,9 @@ object OneSignal {
      */
     @JvmStatic
     var consentRequired: Boolean
-        get() = oneSignal.consentRequired
+        get() = OneSignalChoice.consentRequired
         set(value) {
-            oneSignal.consentRequired = value
+            OneSignalChoice.consentRequired = value
         }
 
     /**
@@ -105,9 +106,9 @@ object OneSignal {
      */
     @JvmStatic
     var consentGiven: Boolean
-        get() = oneSignal.consentGiven
+        get() = OneSignalChoice.consentGiven
         set(value) {
-            oneSignal.consentGiven = value
+            OneSignalChoice.consentGiven = value
         }
 
     /**
@@ -115,9 +116,9 @@ object OneSignal {
      */
     @JvmStatic
     var disableGMSMissingPrompt: Boolean
-        get() = oneSignal.disableGMSMissingPrompt
+        get() = OneSignalChoice.disableGMSMissingPrompt
         set(value) {
-            oneSignal.disableGMSMissingPrompt = value
+            OneSignalChoice.disableGMSMissingPrompt = value
         }
 
     /**
@@ -132,7 +133,7 @@ object OneSignal {
         context: Context?,
         appId: String?,
     ) {
-        oneSignal.initWithContext(context, appId)
+        OneSignalChoice.resolve(context).initWithContext(context, appId)
     }
 
     /**
@@ -150,7 +151,7 @@ object OneSignal {
         context: Context?,
         appId: String? = null,
     ): Boolean {
-        return oneSignal.initWithContextSuspend(context, appId)
+        return OneSignalChoice.resolve(context).initWithContextSuspend(context, appId)
     }
 
     /**
@@ -162,7 +163,7 @@ object OneSignal {
      */
     @JvmStatic
     suspend fun getUserSuspend(): IUserManager {
-        return oneSignal.getUser()
+        return OneSignalChoice.resolve().getUser()
     }
 
     /**
@@ -174,7 +175,7 @@ object OneSignal {
      */
     @JvmStatic
     suspend fun getSessionSuspend(): ISessionManager {
-        return oneSignal.getSession()
+        return OneSignalChoice.resolve().getSession()
     }
 
     /**
@@ -186,7 +187,7 @@ object OneSignal {
      */
     @JvmStatic
     suspend fun getNotificationsSuspend(): INotificationsManager {
-        return oneSignal.getNotifications()
+        return OneSignalChoice.resolve().getNotifications()
     }
 
     /**
@@ -198,7 +199,7 @@ object OneSignal {
      */
     @JvmStatic
     suspend fun getLocationSuspend(): ILocationManager {
-        return oneSignal.getLocation()
+        return OneSignalChoice.resolve().getLocation()
     }
 
     /**
@@ -210,7 +211,7 @@ object OneSignal {
      */
     @JvmStatic
     suspend fun getInAppMessagesSuspend(): IInAppMessagesManager {
-        return oneSignal.getInAppMessages()
+        return OneSignalChoice.resolve().getInAppMessages()
     }
 
     /**
@@ -221,9 +222,7 @@ object OneSignal {
      * @return Whether a user must consent to privacy prior to their user data being sent to OneSignal.
      */
     @JvmStatic
-    suspend fun getConsentRequiredSuspend(): Boolean {
-        return oneSignal.getConsentRequired()
-    }
+    suspend fun getConsentRequiredSuspend(): Boolean = OneSignalChoice.getConsentRequired()
 
     /**
      * Set the consent required flag in a thread-safe manner without blocking the calling thread.
@@ -235,7 +234,7 @@ object OneSignal {
      */
     @JvmStatic
     suspend fun setConsentRequiredSuspend(required: Boolean) {
-        oneSignal.setConsentRequired(required)
+        OneSignalChoice.setConsentRequired(required)
     }
 
     /**
@@ -248,7 +247,7 @@ object OneSignal {
      */
     @JvmStatic
     suspend fun getConsentGivenSuspend(): Boolean {
-        return oneSignal.getConsentGiven()
+        return OneSignalChoice.getConsentGiven()
     }
 
     /**
@@ -260,7 +259,7 @@ object OneSignal {
      */
     @JvmStatic
     suspend fun setConsentGivenSuspend(value: Boolean) {
-        oneSignal.setConsentGiven(value)
+        OneSignalChoice.setConsentGiven(value)
     }
 
     /**
@@ -272,7 +271,7 @@ object OneSignal {
      */
     @JvmStatic
     suspend fun getDisableGMSMissingPromptSuspend(): Boolean {
-        return oneSignal.getDisableGMSMissingPrompt()
+        return OneSignalChoice.getDisableGMSMissingPrompt()
     }
 
     /**
@@ -284,7 +283,7 @@ object OneSignal {
      */
     @JvmStatic
     suspend fun setDisableGMSMissingPromptSuspend(value: Boolean) {
-        oneSignal.setDisableGMSMissingPrompt(value)
+        OneSignalChoice.setDisableGMSMissingPrompt(value)
     }
 
     /**
@@ -306,7 +305,7 @@ object OneSignal {
      * @param externalId The external ID of the user to log in. Required: null or empty is ignored and logged. A null value's log says the SDK is not initialized when it is not.
      */
     @JvmStatic
-    fun login(externalId: String?) = oneSignal.login(externalId)
+    fun login(externalId: String?) = OneSignalChoice.resolve().login(externalId)
 
     /**
      * Login to OneSignal under the user identified by the [externalId] provided. The act of
@@ -333,7 +332,7 @@ object OneSignal {
     fun login(
         externalId: String?,
         jwtBearerToken: String? = null,
-    ) = oneSignal.login(externalId, jwtBearerToken)
+    ) = OneSignalChoice.resolve().login(externalId, jwtBearerToken)
 
     /**
      * Logout the user previously logged in via [login]. The [User] property now references
@@ -342,7 +341,7 @@ object OneSignal {
      * data is not cleared.
      */
     @JvmStatic
-    fun logout() = oneSignal.logout()
+    fun logout() = OneSignalChoice.resolve().logout()
 
     /**
      * Update the JWT bearer token associated with [externalId]. Use this when your backend
@@ -357,7 +356,7 @@ object OneSignal {
     fun updateUserJwt(
         externalId: String?,
         token: String,
-    ) = oneSignal.updateUserJwt(externalId, token)
+    ) = OneSignalChoice.resolve().updateUserJwt(externalId, token)
 
     /**
      * Subscribe a listener for JWT-invalidated events. Fires on a background thread when
@@ -370,17 +369,12 @@ object OneSignal {
      */
     @JvmStatic
     fun addUserJwtInvalidatedListener(listener: IUserJwtInvalidatedListener) =
-        oneSignal.addUserJwtInvalidatedListener(listener)
+        OneSignalChoice.resolve().addUserJwtInvalidatedListener(listener)
 
     /** Unsubscribe a listener previously registered via [addUserJwtInvalidatedListener]. */
     @JvmStatic
     fun removeUserJwtInvalidatedListener(listener: IUserJwtInvalidatedListener) =
-        oneSignal.removeUserJwtInvalidatedListener(listener)
-
-    @Suppress("MemberNameEqualsClassName")
-    private val oneSignal: IOneSignal by lazy {
-        NeverCrashKillSwitch.create()
-    }
+        OneSignalChoice.resolve().removeUserJwtInvalidatedListener(listener)
 
     /**
      * Used to initialize the SDK when driven through user action. It is assumed [initWithContext]
@@ -391,7 +385,7 @@ object OneSignal {
      */
     @JvmStatic
     suspend fun initWithContext(context: Context?): Boolean {
-        return oneSignal.initWithContext(context)
+        return OneSignalChoice.resolve(context).initWithContext(context)
     }
 
     /**
@@ -423,7 +417,7 @@ object OneSignal {
         externalId: String?,
         jwtBearerToken: String? = null,
     ) {
-        oneSignal.loginSuspend(externalId, jwtBearerToken)
+        OneSignalChoice.resolve().loginSuspend(externalId, jwtBearerToken)
     }
 
     /**
@@ -437,7 +431,7 @@ object OneSignal {
         externalId: String?,
         profile: OneSignalUserProfile,
         jwtBearerToken: String? = null,
-    ): OneSignalResult<LoginData> = oneSignal.login(externalId, profile, jwtBearerToken)
+    ): OneSignalResult<LoginData> = OneSignalChoice.resolve().login(externalId, profile, jwtBearerToken)
 
     /**
      * Logout the current user without blocking the calling thread.
@@ -450,7 +444,7 @@ object OneSignal {
      */
     @JvmStatic
     suspend fun logoutSuspend() {
-        oneSignal.logoutSuspend()
+        OneSignalChoice.resolve().logoutSuspend()
     }
 
     /**
@@ -465,7 +459,7 @@ object OneSignal {
         externalId: String?,
         token: String,
     ) {
-        oneSignal.updateUserJwtSuspend(externalId, token)
+        OneSignalChoice.resolve().updateUserJwtSuspend(externalId, token)
     }
 
     /**
@@ -475,7 +469,7 @@ object OneSignal {
      * THIS IS AN INTERNAL INTERFACE AND SHOULD NOT BE USED DIRECTLY.
      */
     val services: IServiceProvider
-        get() = oneSignal as IServiceProvider
+        get() = OneSignalChoice.resolve() as IServiceProvider
 
     /**
      * Inline function to retrieve a specific service.

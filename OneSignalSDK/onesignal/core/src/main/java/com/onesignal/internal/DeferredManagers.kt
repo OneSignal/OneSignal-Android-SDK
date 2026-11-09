@@ -60,7 +60,8 @@ internal open class DeferredManager<T : Any>(
     ) = forwardOrQueue(member, call) { pending.size < MAX_PENDING && pending.add(Pending(member, target, call)) }
 
     // Before replay the real manager holds nothing, so a removal only has to cancel the queued add.
-    // Once that add has been copied into the batch in flight, the removal itself is queued behind it.
+    // Once that add is in the batch in flight, the removal is queued behind it. A remove with no
+    // queued add returns without waiting on init.
     protected fun unregisterOrCancel(
         member: String,
         addMember: String,
@@ -74,7 +75,7 @@ internal open class DeferredManager<T : Any>(
         } else if (replaying) {
             pending.size < MAX_PENDING && pending.add(Pending(member, target, call))
         } else {
-            false
+            true
         }
     }
 
