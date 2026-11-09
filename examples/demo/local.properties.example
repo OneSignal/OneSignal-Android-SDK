@@ -16,3 +16,7 @@ ONESIGNAL_APP_ID=
 # VITE_ONESIGNAL_ANDROID_CHANNEL_ID default).
 # If you set your own ONESIGNAL_APP_ID, also set this from your OneSignal dashboard.
 ONESIGNAL_ANDROID_CHANNEL_ID=
+
+# Optional: turn on Firebase Installation ID registration (gms only).
+# Requires app/google-services.json with a client for com.onesignal.sdkdemo.
+FIREBASE_INSTALLATION_ID_ENABLED=false

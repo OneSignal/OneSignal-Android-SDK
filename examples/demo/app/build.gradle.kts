@@ -53,6 +53,13 @@ tasks.named("preBuild") {
     }
 }
 
+// Off by default so local and release builds keep the legacy token path. E2E opts in with
+// `-PFIREBASE_INSTALLATION_ID_ENABLED=true`; the flag does nothing without the default FirebaseApp.
+val firebaseInstallationIdEnabled = demoOverride("FIREBASE_INSTALLATION_ID_ENABLED")?.toBoolean() ?: false
+if (firebaseInstallationIdEnabled && !hasGoogleServices) {
+    throw GradleException("FIREBASE_INSTALLATION_ID_ENABLED requires examples/demo/app/google-services.json")
+}
+
 // OneSignal SDK version - can be overridden via gradle property SDK_VERSION
 val sdkVersion: String = rootProject.findProperty("SDK_VERSION") as? String ?: "5.6.1"
 
@@ -101,9 +108,7 @@ android {
             dimension = "default"
             applicationId = "com.onesignal.sdkdemo"
             minSdk = 23
-            // Installation ID registration needs the default FirebaseApp from google-services.json;
-            // without it, keep the legacy token path so push still registers.
-            manifestPlaceholders["firebaseInstallationIdEnabled"] = hasGoogleServices.toString()
+            manifestPlaceholders["firebaseInstallationIdEnabled"] = firebaseInstallationIdEnabled.toString()
         }
         create("huawei") {
             dimension = "default"

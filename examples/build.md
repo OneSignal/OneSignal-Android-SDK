@@ -314,7 +314,7 @@ The `vine_boom.wav` file from [`sdk-shared/assets`](https://github.com/OneSignal
 
 The `gms` flavor's `applicationId` is `com.onesignal.sdkdemo`. The `huawei` flavor stays on `com.onesignal.example`.
 
-- `app/google-services.json` → a client for `com.onesignal.sdkdemo`. It is gitignored. When it exists, the Google Services plugin is applied (except for Huawei-only runs) and the `gms` manifest turns on `firebase_messaging_installation_id_enabled`; otherwise the flag stays off and the legacy token path is used. CI writes it from the `APPIUM_GOOGLE_SERVICES_JSON` secret.
+- `app/google-services.json` → a client for `com.onesignal.sdkdemo`. It is gitignored. When it exists, the Google Services plugin is applied (except for Huawei-only runs). `firebase_messaging_installation_id_enabled` stays off unless the build sets `FIREBASE_INSTALLATION_ID_ENABLED=true`, which requires this file. The E2E workflow writes it from the `APPIUM_GOOGLE_SERVICES_JSON` secret and turns the flag on.
 
 - `app/agconnect-services.json` → every `package_name` entry set to `com.onesignal.example` for the `huawei` flavor.
 

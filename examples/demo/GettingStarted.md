@@ -71,7 +71,7 @@ Alternatively, from the terminal:
 
 A OneSignal App ID is required; the build fails without one.
 
-For Firebase Installation ID registration, add a `google-services.json` with a client for `com.onesignal.sdkdemo` to `examples/demo/app/` (gitignored). Without it, the `gms` build falls back to the legacy FCM token path.
+Firebase Installation ID registration is off by default. To turn it on, add a `google-services.json` with a client for `com.onesignal.sdkdemo` to `examples/demo/app/` (gitignored) and set `FIREBASE_INSTALLATION_ID_ENABLED=true`. Otherwise the `gms` build uses the legacy FCM token path.
 
 Copy `examples/demo/local.properties.example` to `examples/demo/local.properties` and set `ONESIGNAL_APP_ID=YOUR_APP_ID_HERE` (or pass `-PONESIGNAL_APP_ID=...` on the Gradle CLI). The value is read straight from `BuildConfig` on every launch — no uninstall required. See [`examples/build.md`](../build.md) for the full override contract.
 

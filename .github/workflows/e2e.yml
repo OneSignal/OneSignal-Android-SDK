@@ -68,7 +68,7 @@ jobs:
         working-directory: OneSignalSDK
         env:
           SDK_VERSION: ${{ steps.android-sdk-version.outputs.version }}
-        run: ./gradlew :app:assembleGmsDebug "-PSDK_VERSION=$SDK_VERSION" --console=plain --warning-mode=summary
+        run: ./gradlew :app:assembleGmsDebug "-PSDK_VERSION=$SDK_VERSION" -PFIREBASE_INSTALLATION_ID_ENABLED=true --console=plain --warning-mode=summary
 
       - name: Upload APK
         uses: actions/upload-artifact@v7
