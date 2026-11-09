@@ -123,7 +123,7 @@ android {
 - `release` -- `isMinifyEnabled = true`, `isShrinkResources = true`, consumes the SDK's published ProGuard rules.
 - `profileable` -- declared via `create("profileable") { initWith(release); ... }` so it inherits R8/shrinker settings while staying profileable on-device (used for Macrobenchmark / Android Studio profiling).
 - `flavorDimensions += "default"` with `gms` and `huawei` flavors (see table above).
-- BuildConfig fields: `ONESIGNAL_APP_ID`, `ONESIGNAL_ANDROID_CHANNEL_ID`, and the boolean `SHOW_NSE_SECTION`, all populated through the `demoOverride(...)` helper (`-P` -> `local.properties` -> default).
+- BuildConfig fields: `ONESIGNAL_APP_ID`, `ONESIGNAL_ANDROID_CHANNEL_ID`, and the boolean `SHOW_NSE_SECTION`, all populated through the `demoOverride(...)` helper (`-P` -> `local.properties` -> default). `ONESIGNAL_APP_ID` has no default; `preBuild` fails if it is unset.
 
 #### Root Gradle toolchain
 
@@ -314,7 +314,7 @@ The `vine_boom.wav` file from [`sdk-shared/assets`](https://github.com/OneSignal
 
 The `gms` flavor's `applicationId` is `com.onesignal.sdkdemo`. The `huawei` flavor stays on `com.onesignal.example`.
 
-- `app/google-services.json` → a client for `com.onesignal.sdkdemo`. It is gitignored; the Google Services plugin is applied only when the file exists. CI writes it from the `APPIUM_GOOGLE_SERVICES_JSON` secret.
+- `app/google-services.json` → a client for `com.onesignal.sdkdemo`. It is gitignored. When it exists, the Google Services plugin is applied (except for Huawei-only runs) and the `gms` manifest turns on `firebase_messaging_installation_id_enabled`; otherwise the flag stays off and the legacy token path is used. CI writes it from the `APPIUM_GOOGLE_SERVICES_JSON` secret.
 
 - `app/agconnect-services.json` → every `package_name` entry set to `com.onesignal.example` for the `huawei` flavor.
 

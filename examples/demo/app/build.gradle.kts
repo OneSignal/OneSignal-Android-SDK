@@ -33,7 +33,10 @@ if (taskRequests.contains("huawei")) {
 }
 
 // Firebase configuration is local so the demo must remain buildable without it.
-if (file("google-services.json").exists()) {
+// Skipped for Huawei-only runs: the file may have no client for the huawei applicationId.
+val hasGoogleServices = file("google-services.json").exists()
+val huaweiOnly = taskRequests.contains("huawei") && !taskRequests.contains("gms")
+if (hasGoogleServices && !huaweiOnly) {
     apply(plugin = "com.google.gms.google-services")
 }
 
@@ -98,6 +101,9 @@ android {
             dimension = "default"
             applicationId = "com.onesignal.sdkdemo"
             minSdk = 23
+            // Installation ID registration needs the default FirebaseApp from google-services.json;
+            // without it, keep the legacy token path so push still registers.
+            manifestPlaceholders["firebaseInstallationIdEnabled"] = hasGoogleServices.toString()
         }
         create("huawei") {
             dimension = "default"

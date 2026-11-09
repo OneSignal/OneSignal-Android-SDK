@@ -39,8 +39,8 @@ runs:
     # build runs so the OneSignal App ID + channel id end up baked into
     # BuildConfig. `examples/demo/app/build.gradle.kts` resolves each key in
     # this order: `-PKEY=value` from the CLI > local.properties > built-in
-    # default, so writing to local.properties is the closest equivalent to
-    # the Capacitor `.env` flow.
+    # default (ONESIGNAL_APP_ID has none and is required), so writing to
+    # local.properties is the closest equivalent to the Capacitor `.env` flow.
     - name: Write demo local.properties
       shell: bash
       working-directory: examples/demo
