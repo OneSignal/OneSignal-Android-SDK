@@ -62,8 +62,11 @@ internal class SessionListener(
         _propertiesModelStore.model.timezone = TimeUtils.getTimeZoneId()
     }
 
-    override fun onSessionEnded(duration: Long) {
-        if (sessionModelStore.model.usesSessionsApi) return
+    override fun onSessionEnded(
+        duration: Long,
+        usesSessionsApi: Boolean,
+    ) {
+        if (usesSessionsApi) return
 
         val durationInSeconds = duration / 1000
 

@@ -311,7 +311,10 @@ internal class InAppMessagesManager(
 
     override fun onSessionActive() { }
 
-    override fun onSessionEnded(duration: Long) { }
+    override fun onSessionEnded(
+        duration: Long,
+        usesSessionsApi: Boolean,
+    ) { }
 
     private fun fetchMessagesWhenConditionIsMet() {
         suspendifyOnIO {

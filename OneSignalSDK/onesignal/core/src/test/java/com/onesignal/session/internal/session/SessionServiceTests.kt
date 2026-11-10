@@ -285,7 +285,7 @@ class SessionServiceTests : FunSpec({
 
         // Then
         sessionModelStore.model.isValid shouldBe false
-        verify(exactly = 1) { mocks.spyCallback.onSessionEnded(activeDuration) }
+        verify(exactly = 1) { mocks.spyCallback.onSessionEnded(activeDuration, false) }
     }
 
     test("do not trigger onSessionEnd if session is not active") {
@@ -301,7 +301,7 @@ class SessionServiceTests : FunSpec({
         sessionService.backgroundRun()
 
         // Then
-        verify(exactly = 0) { mocks.spyCallback.onSessionEnded(any()) }
+        verify(exactly = 0) { mocks.spyCallback.onSessionEnded(any(), any()) }
     }
 
     test("new session uses the sessions API when the flag is on") {
@@ -674,14 +674,14 @@ class SessionServiceTests : FunSpec({
         verify(exactly = 1) { mocks.spyCallback.onSessionStarted() }
     }
 
-    test("new session does not enqueue a create without a push subscription ID") {
+    test("new session without a push subscription ID falls back to legacy reporting") {
         // Given
         val mocks = Mocks(sessionsApiEnabled = true)
         mocks.configModelStore.model.pushSubscriptionId = null
         val sessionService = mocks.sessionService
         sessionService.bootstrap()
         sessionService.start()
-        mocks.sessionModelStore { it.isValid = false }
+        val sessionModelStore = mocks.sessionModelStore { it.isValid = false }
         sessionService.subscribe(mocks.spyCallback)
 
         // When
@@ -689,7 +689,26 @@ class SessionServiceTests : FunSpec({
 
         // Then
         mocks.enqueued shouldBe emptyList()
+        sessionModelStore.model.usesSessionsApi shouldBe false
         verify(exactly = 1) { mocks.spyCallback.onSessionStarted() }
+    }
+
+    test("session end tells handlers the ended session used the sessions API") {
+        // Given
+        val mocks = Mocks(sessionsApiEnabled = true)
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        mocks.sessionModelStore { it.isValid = false }
+        sessionService.subscribe(mocks.spyCallback)
+        sessionService.onFocus(false)
+        sessionService.onUnfocused()
+
+        // When
+        sessionService.backgroundRun()
+
+        // Then
+        verify(exactly = 1) { mocks.spyCallback.onSessionEnded(any(), true) }
     }
 
     test("background run sends the end with the unfocus time and final duration when the flag is on") {
@@ -841,10 +860,10 @@ class SessionServiceTests : FunSpec({
         // Then
         mocks.enqueued shouldBe emptyList()
         coVerify(exactly = 0) { mocks.operationRepo.enqueueAndWait(any(), any()) }
-        verify(exactly = 1) { mocks.spyCallback.onSessionEnded(any()) }
+        verify(exactly = 1) { mocks.spyCallback.onSessionEnded(any(), any()) }
     }
 
-    test("session end does not send an end without a push subscription ID") {
+    test("session end without a push subscription ID sends no end and reports a legacy session") {
         // Given
         val mocks = Mocks(sessionsApiEnabled = true)
         mocks.configModelStore.model.pushSubscriptionId = null
@@ -861,7 +880,7 @@ class SessionServiceTests : FunSpec({
 
         // Then
         mocks.enqueued shouldBe emptyList()
-        verify(exactly = 1) { mocks.spyCallback.onSessionEnded(any()) }
+        verify(exactly = 1) { mocks.spyCallback.onSessionEnded(any(), false) }
     }
 
     test("sessions API active duration uses the monotonic clock") {

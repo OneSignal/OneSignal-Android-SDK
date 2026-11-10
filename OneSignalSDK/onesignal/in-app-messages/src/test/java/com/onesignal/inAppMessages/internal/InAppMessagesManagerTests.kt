@@ -684,7 +684,7 @@ class InAppMessagesManagerTests : FunSpec({
             val iamManager = mocks.inAppMessagesManager
 
             // When/Then - should not throw
-            iamManager.onSessionEnded(10L)
+            iamManager.onSessionEnded(10L, usesSessionsApi = false)
 
             // Verified by no exception being thrown
         }

@@ -97,10 +97,9 @@ class SessionListenerTests : FunSpec({
     test("onSessionEnded sends the session duration outcome for a legacy session") {
         // Given
         val mocks = Mocks()
-        mocks.sessionModelStore.model.usesSessionsApi = false
 
         // When
-        mocks.sessionListener.onSessionEnded(5_000)
+        mocks.sessionListener.onSessionEnded(5_000, usesSessionsApi = false)
 
         // Then
         verify(exactly = 1) { mocks.mockOperationRepo.enqueue(any<TrackSessionEndOperation>()) }
@@ -138,10 +137,9 @@ class SessionListenerTests : FunSpec({
     test("onSessionEnded skips session time and the duration outcome for a sessions API session") {
         // Given
         val mocks = Mocks()
-        mocks.sessionModelStore.model.usesSessionsApi = true
 
         // When
-        mocks.sessionListener.onSessionEnded(5_000)
+        mocks.sessionListener.onSessionEnded(5_000, usesSessionsApi = true)
 
         // Then
         verify(exactly = 0) { mocks.mockOperationRepo.enqueue(any(), any()) }
