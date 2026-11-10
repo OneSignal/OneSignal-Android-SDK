@@ -405,4 +405,48 @@ class UpdateUserOperationExecutorTests :
                 mockConsistencyManager.setRywData(remoteOneSignalId, IamFetchRywTokenKey.USER, rywData)
             }
         }
+
+        test("session start that does not count the session still refreshes device metadata without a session count") {
+            // Given
+            val mockUserBackendService = mockk<IUserBackendService>()
+            coEvery {
+                mockUserBackendService.updateUser(any(), any(), any(), any(), any(), any(), any())
+            } returns rywData
+
+            val updateUserOperationExecutor =
+                UpdateUserOperationExecutor(
+                    mockUserBackendService,
+                    MockHelper.identityModelStore(),
+                    MockHelper.propertiesModelStore(),
+                    mockk<IRebuildUserService>(),
+                    getNewRecordState(),
+                    mockConsistencyManager,
+                    getJwtTokenStore(), getIdentityVerificationService(),
+                )
+
+            val operations =
+                listOf<Operation>(
+                    TrackSessionStartOperation(appId, remoteOneSignalId, null, countsSession = false),
+                )
+
+            // When
+            val response = updateUserOperationExecutor.execute(operations)
+
+            // Then
+            response.result shouldBe ExecutionResult.SUCCESS
+            coVerify(exactly = 1) {
+                mockUserBackendService.updateUser(
+                    appId,
+                    any(),
+                    any(),
+                    any(),
+                    true,
+                    match { it.sessionCount == null },
+                    any(),
+                )
+            }
+            coVerify(exactly = 1) {
+                mockConsistencyManager.setRywData(remoteOneSignalId, IamFetchRywTokenKey.USER, rywData)
+            }
+        }
     })

@@ -2,8 +2,11 @@ package com.onesignal.session.internal.session.impl
 
 import com.onesignal.common.TimeUtils
 import com.onesignal.mocks.MockHelper
+import com.onesignal.session.internal.outcomes.IOutcomeEventsController
+import com.onesignal.user.internal.operations.TrackSessionEndOperation
 import com.onesignal.user.internal.operations.TrackSessionStartOperation
 import io.kotest.core.spec.style.FunSpec
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkObject
@@ -15,6 +18,10 @@ private class Mocks {
 
     val propertiesModelStore = MockHelper.propertiesModelStore()
 
+    val outcomeEventsController = mockk<IOutcomeEventsController>(relaxed = true)
+
+    val sessionModelStore = MockHelper.sessionModelStore()
+
     val sessionListener =
         SessionListener(
             mockOperationRepo,
@@ -22,7 +29,8 @@ private class Mocks {
             MockHelper.configModelStore(),
             MockHelper.identityModelStore(),
             propertiesModelStore,
-            mockk<com.onesignal.session.internal.outcomes.IOutcomeEventsController>(relaxed = true),
+            outcomeEventsController,
+            sessionModelStore,
         )
 }
 
@@ -84,5 +92,59 @@ class SessionListenerTests : FunSpec({
         propertiesModel.timezone = timezoneId
 
         unmockkAll()
+    }
+
+    test("onSessionEnded sends the session duration outcome for a legacy session") {
+        // Given
+        val mocks = Mocks()
+        mocks.sessionModelStore.model.usesSessionsApi = false
+
+        // When
+        mocks.sessionListener.onSessionEnded(5_000)
+
+        // Then
+        verify(exactly = 1) { mocks.mockOperationRepo.enqueue(any<TrackSessionEndOperation>()) }
+        coVerify(exactly = 1, timeout = 1_000) { mocks.outcomeEventsController.sendSessionEndOutcomeEvent(5) }
+    }
+
+    test("onSessionStarted counts a legacy session") {
+        // Given
+        val mocks = Mocks()
+        mocks.sessionModelStore.model.usesSessionsApi = false
+
+        // When
+        mocks.sessionListener.onSessionStarted()
+
+        // Then
+        verify(exactly = 1) {
+            mocks.mockOperationRepo.enqueue(match<TrackSessionStartOperation> { it.countsSession }, true)
+        }
+    }
+
+    test("onSessionStarted does not count a sessions API session") {
+        // Given
+        val mocks = Mocks()
+        mocks.sessionModelStore.model.usesSessionsApi = true
+
+        // When
+        mocks.sessionListener.onSessionStarted()
+
+        // Then
+        verify(exactly = 1) {
+            mocks.mockOperationRepo.enqueue(match<TrackSessionStartOperation> { !it.countsSession }, true)
+        }
+    }
+
+    test("onSessionEnded skips session time and the duration outcome for a sessions API session") {
+        // Given
+        val mocks = Mocks()
+        mocks.sessionModelStore.model.usesSessionsApi = true
+
+        // When
+        mocks.sessionListener.onSessionEnded(5_000)
+
+        // Then
+        verify(exactly = 0) { mocks.mockOperationRepo.enqueue(any(), any()) }
+        coVerify(exactly = 0) { mocks.outcomeEventsController.sendSessionEndOutcomeEvent(any()) }
     }
 })

@@ -9,6 +9,7 @@ import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.session.internal.outcomes.IOutcomeEventsController
 import com.onesignal.session.internal.session.ISessionLifecycleHandler
 import com.onesignal.session.internal.session.ISessionService
+import com.onesignal.session.internal.session.SessionModelStore
 import com.onesignal.user.internal.identity.IdentityModelStore
 import com.onesignal.user.internal.operations.TrackSessionEndOperation
 import com.onesignal.user.internal.operations.TrackSessionStartOperation
@@ -20,14 +21,15 @@ import com.onesignal.user.internal.properties.PropertiesModelStore
  *
  * We need to do the following on session start:
  *
- * 1. Enqueue a [TrackSessionStartOperation] to the [IOperationRepo] so session data will be counted
- *    against the user.
+ * 1. Enqueue a [TrackSessionStartOperation] to the [IOperationRepo] so device metadata is refreshed
+ *    and, for legacy sessions, the session is counted against the user.
  *
- * We need to do the following on session end:
+ * We need to do the following on legacy session end; sessions API sessions report these through
+ * the sessions API instead:
  *
- * 1. Enqueue a [TrackSessionEndOperation] to the [IOperationRepo] so session data will be counted
+ * 1. Enqueue a [TrackSessionEndOperation] to the [IOperationRepo] so session time will be counted
  *    against the user.
- * 2. Send up an internal `__os_session_end` outcome, which will pick up any influences that led
+ * 2. Send up an internal `os__session_duration` outcome, which will pick up any influences that led
  *    to the session existing.
  */
 internal class SessionListener(
@@ -37,6 +39,7 @@ internal class SessionListener(
     private val _identityModelStore: IdentityModelStore,
     private val _propertiesModelStore: PropertiesModelStore,
     private val _outcomeEventsController: IOutcomeEventsController,
+    private val sessionModelStore: SessionModelStore,
 ) : IStartableService, ISessionLifecycleHandler {
     override fun start() {
         _sessionService.subscribe(this)
@@ -49,6 +52,7 @@ internal class SessionListener(
                 _configModelStore.model.appId,
                 _identityModelStore.model.onesignalId,
                 _identityModelStore.model.externalId,
+                countsSession = !sessionModelStore.model.usesSessionsApi,
             ),
             true,
         )
@@ -59,6 +63,8 @@ internal class SessionListener(
     }
 
     override fun onSessionEnded(duration: Long) {
+        if (sessionModelStore.model.usesSessionsApi) return
+
         val durationInSeconds = duration / 1000
 
         // Time is erroneous if below 1 second or over a day
