@@ -5,6 +5,7 @@ import android.content.Context
 import androidx.startup.Initializer
 import com.onesignal.common.threading.OneSignalDispatchers
 import com.onesignal.core.internal.application.IApplicationService
+import com.onesignal.internal.NeverCrashKillSwitch
 
 /**
  * Registers activity lifecycle observation at process start via androidx.startup, before the host
@@ -16,12 +17,13 @@ import com.onesignal.core.internal.application.IApplicationService
  * full lifecycle regardless of when init later happens.
  *
  * This intentionally does NOT initialize the SDK or require an App ID; it only attaches lifecycle
- * observation and starts pure dispatcher warmup. App ID / consent gating remains in the runtime
- * `initWithContext` path.
+ * observation, starts pure dispatcher warmup, and reads the cached init kill switch. App ID / consent
+ * gating remains in the runtime `initWithContext` path.
  */
 class ActivityLifecycleInitializer : Initializer<IApplicationService> {
     override fun create(context: Context): IApplicationService {
         OneSignalDispatchers.prewarm()
+        NeverCrashKillSwitch.evaluate(context)
         val applicationService = ApplicationService.getInstance()
         (context.applicationContext as? Application)?.let { application ->
             applicationService.attachToApplication(application)
