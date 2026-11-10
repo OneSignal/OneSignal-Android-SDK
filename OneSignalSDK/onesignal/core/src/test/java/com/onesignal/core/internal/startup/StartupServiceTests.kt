@@ -2,7 +2,9 @@ package com.onesignal.core.internal.startup
 
 import com.onesignal.common.services.ServiceBuilder
 import com.onesignal.common.services.ServiceProvider
+import com.onesignal.debug.ILogListener
 import com.onesignal.debug.LogLevel
+import com.onesignal.debug.OneSignalLogEvent
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.mocks.IOMockHelper
 import com.onesignal.mocks.IOMockHelper.awaitIO
@@ -14,6 +16,7 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.spyk
 import io.mockk.verify
+import java.util.concurrent.CopyOnWriteArrayList
 
 class StartupServiceTests : FunSpec({
     fun setupServiceProvider(
@@ -82,17 +85,27 @@ class StartupServiceTests : FunSpec({
     }
 
     test("a bootstrap retried after a failure skips the services that already bootstrapped") {
+        val events = CopyOnWriteArrayList<OneSignalLogEvent>()
+        val listener = ILogListener { events += it }
+        Logging.addListener(listener)
         val done = mockk<IBootstrapService>(relaxed = true)
         val flaky = mockk<IBootstrapService>()
         every { flaky.bootstrap() } throws Exception("first attempt") andThen Unit
         val startupService = StartupService(setupServiceProvider(listOf(done, flaky), listOf()))
 
-        shouldThrowUnit<Exception> { startupService.bootstrap() }
-        startupService.bootstrap()
-        startupService.bootstrap()
+        try {
+            shouldThrowUnit<Exception> { startupService.bootstrap() }
+            startupService.bootstrap()
+            startupService.bootstrap()
+        } finally {
+            Logging.removeListener(listener)
+        }
 
         verify(exactly = 1) { done.bootstrap() }
         verify(exactly = 1) { flaky.bootstrap() }
+        events.count {
+            it.level == LogLevel.WARN && it.entry.contains("bootstrap failed and will not be retried")
+        } shouldBe 1
     }
 
     test("startup will call all IStartableService dependencies successfully after a short delay") {

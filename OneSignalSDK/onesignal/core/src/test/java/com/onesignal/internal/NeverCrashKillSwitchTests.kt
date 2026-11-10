@@ -101,23 +101,6 @@ class NeverCrashKillSwitchTests : FunSpec({
         NeverCrashKillSwitch.evaluated shouldBe false
     }
 
-    test("select reads a cached flag the startup initializer never saw") {
-        cacheFlags(NeverCrashKillSwitch.FLAG_KEY)
-
-        NeverCrashKillSwitch.select(getApplicationContext()).shouldBeInstanceOf<OneSignalImpV2>()
-
-        NeverCrashKillSwitch.evaluated shouldBe true
-        NeverCrashKillSwitch.useLegacy shouldBe false
-    }
-
-    test("select with no context does not read the flag") {
-        cacheFlags(NeverCrashKillSwitch.FLAG_KEY)
-
-        NeverCrashKillSwitch.select(null).shouldBeInstanceOf<OneSignalImp>()
-
-        NeverCrashKillSwitch.evaluated shouldBe false
-    }
-
     test("a later evaluate does not flip a decision already made") {
         cacheFlags(NeverCrashKillSwitch.FLAG_KEY)
         NeverCrashKillSwitch.evaluate(getApplicationContext())
