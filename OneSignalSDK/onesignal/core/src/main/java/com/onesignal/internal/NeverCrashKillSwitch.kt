@@ -49,12 +49,6 @@ internal object NeverCrashKillSwitch {
         }
     }
 
-    // Null does not invent a Context. Init passes one, or the startup provider already evaluated.
-    fun select(context: Context?): IOneSignal {
-        if (context != null) evaluate(context)
-        return create()
-    }
-
     fun create(): IOneSignal =
         when {
             !evaluated -> {
