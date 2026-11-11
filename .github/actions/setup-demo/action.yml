@@ -7,6 +7,10 @@ inputs:
   google-services-json:
     description: 'google-services.json contents for the demo app (secrets.APPIUM_GOOGLE_SERVICES_JSON)'
     required: true
+  google-services-enabled:
+    description: "Set to 'false' to build without google-services.json (Firebase Installation IDs off)"
+    required: false
+    default: 'true'
 runs:
   using: 'composite'
   steps:
@@ -57,3 +61,4 @@ runs:
       with:
         google-services-json: ${{ inputs.google-services-json }}
         path: examples/demo/app/google-services.json
+        enabled: ${{ inputs.google-services-enabled }}
