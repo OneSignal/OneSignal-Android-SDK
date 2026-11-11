@@ -20,6 +20,7 @@ concurrency:
 
 jobs:
   build-android:
+    name: build-android (FID ${{ matrix.fid }})
     runs-on: ubuntu-latest
     strategy:
       matrix:
