@@ -185,12 +185,15 @@ internal class SessionService(
         val activeDuration = session.activeDuration
         Logging.debug("SessionService.backgroundRun: Session ended. activeDuration: $activeDuration")
 
-        session.isValid = false
-        val end = if (session.usesSessionsApi) endSessionOperation(session, config?.appId) else null
-        sessionLifeCycleNotifier.fire { it.onSessionEnded(activeDuration) }
+        // Read and reset before clearing isValid: after that, a focus on the serial IO lane can start
+        // the next session and write these fields while this runs on the background thread.
+        val usesSessionsApi = session.usesSessionsApi
+        val end = if (usesSessionsApi) endSessionOperation(session, config?.appId) else null
         session.activeDuration = 0L
         session.lastHeartbeatDuration = 0L
         session.lastHeartbeatTime = null
+        session.isValid = false
+        sessionLifeCycleNotifier.fire { it.onSessionEnded(activeDuration, usesSessionsApi) }
         return end
     }
 
@@ -247,19 +250,17 @@ internal class SessionService(
             session.focusTime = session.startTime
             session.focusElapsedRealtime = focusElapsedMs
             session.unfocusTime = null
-            session.usesSessionsApi = featureManager.isEnabled(FeatureFlag.SDK_SESSIONS_V2_API_CUTOVER)
             session.onesignalId =
                 identityModelStore.model
                     .takeIf { it.hasProperty(IdentityConstants.ONESIGNAL_ID) }
                     ?.onesignalId
             session.subscriptionId = config?.pushSubscriptionId
             session.localSessionId = IDManager.createLocalId()
+            val create = sessionsApiCreate(session, directAttributionId)
+            session.usesSessionsApi = create != null
             session.isValid = true
             Logging.debug("SessionService: New session started at ${session.startTime}")
-            if (session.usesSessionsApi) {
-                createSessionOperation(session, config?.appId, identityModelStore.model.externalId, directAttributionId)
-                    ?.let { operationRepo.enqueue(it) }
-            }
+            create?.let { operationRepo.enqueue(it) }
             sessionLifeCycleNotifier.fire { it.onSessionStarted() }
         } else {
             // existing session: just remember the focus time so we can calculate the active time
@@ -269,6 +270,18 @@ internal class SessionService(
             sessionLifeCycleNotifier.fire { it.onSessionActive() }
         }
         if (session.usesSessionsApi) heartbeat.start(session) else heartbeat.stop()
+    }
+
+    /**
+     * @return the create for a new session when the sessions API is on, or null to report it through
+     * the legacy paths. A session the sessions API can't create falls back to legacy so it is still counted.
+     */
+    private fun sessionsApiCreate(
+        session: SessionModel,
+        directAttributionId: String?,
+    ): CreateSessionOperation? {
+        if (!featureManager.isEnabled(FeatureFlag.SDK_SESSIONS_V2_API_CUTOVER)) return null
+        return createSessionOperation(session, config?.appId, identityModelStore.model.externalId, directAttributionId)
     }
 
     /** Sends the session's cumulative duration every [HEARTBEAT_INTERVAL_MS] of active time while focused. */

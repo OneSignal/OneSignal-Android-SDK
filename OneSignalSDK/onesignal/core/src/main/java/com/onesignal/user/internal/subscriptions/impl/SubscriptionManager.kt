@@ -64,7 +64,10 @@ internal class SubscriptionManager(
 
     override fun onSessionActive() { }
 
-    override fun onSessionEnded(duration: Long) { }
+    override fun onSessionEnded(
+        duration: Long,
+        usesSessionsApi: Boolean,
+    ) { }
 
     override fun addEmailSubscription(email: String) {
         addSubscriptionToModels(SubscriptionType.EMAIL, email)

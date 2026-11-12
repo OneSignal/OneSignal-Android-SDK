@@ -55,7 +55,10 @@ internal class OutcomeEventsController(
 
     override fun onSessionActive() { }
 
-    override fun onSessionEnded(duration: Long) { }
+    override fun onSessionEnded(
+        duration: Long,
+        usesSessionsApi: Boolean,
+    ) { }
 
     /**
      * Any outcomes cached in local DB will be reattempted to be sent again

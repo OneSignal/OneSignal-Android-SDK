@@ -88,10 +88,12 @@ internal class UpdateUserOperationExecutor(
                     // operations we come across in this group, while the session time we pass up is
                     // the total session time across all `TrackSessionOperation` operations
                     // that exist in this group.
-                    val sessionCount = if (deltasObject.sessionCount != null) deltasObject.sessionCount!! + 1 else 1
+                    if (operation.countsSession) {
+                        val sessionCount = if (deltasObject.sessionCount != null) deltasObject.sessionCount!! + 1 else 1
 
-                    deltasObject =
-                        PropertiesDeltasObject(deltasObject.sessionTime, sessionCount, deltasObject.amountSpent, deltasObject.purchases)
+                        deltasObject =
+                            PropertiesDeltasObject(deltasObject.sessionTime, sessionCount, deltasObject.amountSpent, deltasObject.purchases)
+                    }
                     refreshDeviceMetadata = true
                 }
                 is TrackSessionEndOperation -> {

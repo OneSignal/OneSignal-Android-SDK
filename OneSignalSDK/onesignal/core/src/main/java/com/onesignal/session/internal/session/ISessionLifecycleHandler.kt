@@ -19,6 +19,11 @@ interface ISessionLifecycleHandler {
      * Called when a session has ended.
      *
      * @param duration The active duration of the session, in milliseconds.
+     * @param usesSessionsApi Whether the ended session reported through the sessions API. Passed in
+     * because the session model may already belong to the next session.
      */
-    fun onSessionEnded(duration: Long)
+    fun onSessionEnded(
+        duration: Long,
+        usesSessionsApi: Boolean,
+    )
 }

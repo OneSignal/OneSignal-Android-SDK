@@ -28,16 +28,28 @@ class TrackSessionStartOperation() : Operation(UpdateUserOperationExecutor.TRACK
             setStringProperty(::onesignalId.name, value)
         }
 
+    /**
+     * Whether to add this session to the user's `session_count`. False for sessions the sessions API
+     * reports, whose count the backend derives from the session events. The update still refreshes
+     * device metadata either way.
+     */
+    var countsSession: Boolean
+        get() = getBooleanProperty(::countsSession.name) { true }
+        private set(value) {
+            setBooleanProperty(::countsSession.name, value)
+        }
+
     override val createComparisonKey: String get() = ""
     override val modifyComparisonKey: String get() = "$appId.User.$onesignalId"
     override val groupComparisonType: GroupComparisonType = GroupComparisonType.ALTER
     override val canStartExecute: Boolean get() = !IDManager.isLocalId(onesignalId)
     override val applyToRecordId: String get() = onesignalId
 
-    constructor(appId: String, onesignalId: String, externalId: String?) : this() {
+    constructor(appId: String, onesignalId: String, externalId: String?, countsSession: Boolean = true) : this() {
         this.appId = appId
         this.onesignalId = onesignalId
         this.externalId = externalId
+        this.countsSession = countsSession
     }
 
     override fun translateIds(map: Map<String, String>) {

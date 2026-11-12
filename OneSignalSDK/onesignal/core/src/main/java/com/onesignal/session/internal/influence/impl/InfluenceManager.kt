@@ -61,7 +61,10 @@ internal class InfluenceManager(
         attemptSessionUpgrade(_applicationService.entryState)
     }
 
-    override fun onSessionEnded(duration: Long) {
+    override fun onSessionEnded(
+        duration: Long,
+        usesSessionsApi: Boolean,
+    ) {
     }
 
     private fun getChannelByEntryAction(entryAction: AppEntryAction): IChannelTracker? {
