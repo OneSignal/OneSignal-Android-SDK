@@ -27,7 +27,7 @@ ONESIGNAL_APP_ID=
 ONESIGNAL_ANDROID_CHANNEL_ID=
 ```
 
-Each key resolves in this order at build time: `-PKEY=value` from the CLI → `local.properties` → a sensible built-in default. The values are surfaced through `BuildConfig.ONESIGNAL_APP_ID` and `BuildConfig.ONESIGNAL_ANDROID_CHANNEL_ID` (see `app/build.gradle.kts`'s `demoOverride(...)` helper).
+Each key resolves in this order at build time: `-PKEY=value` from the CLI → `local.properties` → a built-in default. `ONESIGNAL_APP_ID` has no default and is required; the build fails if it is unset. The values are surfaced through `BuildConfig.ONESIGNAL_APP_ID` and `BuildConfig.ONESIGNAL_ANDROID_CHANNEL_ID` (see `app/build.gradle.kts`'s `demoOverride(...)` helper).
 
 | Key | Used by | Capacitor counterpart |
 |-----|---------|-----------------------|
@@ -43,7 +43,7 @@ Two flavors are declared on the `default` dimension:
 
 | Flavor | Use case |
 |--------|----------|
-| `gms`  | Google Play Services / FCM — pulls `play-services-location`. The legacy FCM token path uses OneSignal's Firebase app and does not require the Google Services plugin. Firebase Installation ID registration requires the host app configuration described below. |
+| `gms`  | Google Play Services / FCM — pulls `play-services-location`. The legacy FCM token path uses OneSignal's Firebase app and does not require the Google Services plugin. Firebase Installation ID registration requires the host app configuration described below; the demo enables it with `firebase-messaging` 25.1.2 and `minSdk` 23. |
 | `huawei` | Huawei HMS — applies `com.huawei.agconnect`, excludes the GMS transitive deps from the OneSignal artifact, and pulls `com.huawei.hms:push` + `com.huawei.hms:location`. |
 
 The Huawei plugin is selected at configuration time by inspecting `gradle.startParameter.taskRequests` so a clean `./gradlew tasks` doesn't require Huawei configuration.
@@ -100,10 +100,8 @@ android {
         targetSdk = 34
         multiDexEnabled = true
 
-        // demoOverride() walks -P, then local.properties, then the built-in default.
-        val onesignalAppId = demoOverride("ONESIGNAL_APP_ID")
-            ?: "77e32082-ea27-42e3-a898-c72e141824ef"
-        buildConfigField("String", "ONESIGNAL_APP_ID", "\"$onesignalAppId\"")
+        // demoOverride() walks -P, then local.properties. No default: preBuild fails if unset.
+        buildConfigField("String", "ONESIGNAL_APP_ID", "\"${onesignalAppId.orEmpty()}\"")
     }
 
     buildFeatures {
@@ -114,7 +112,7 @@ android {
     composeOptions { kotlinCompilerExtensionVersion = "1.5.15" }
 
     productFlavors {
-        create("gms")    { dimension = "default"; applicationId = "com.onesignal.example" }
+        create("gms")    { dimension = "default"; applicationId = "com.onesignal.sdkdemo"; minSdk = 23 }
         create("huawei") { dimension = "default"; applicationId = "com.onesignal.example" }
     }
 }
@@ -125,7 +123,7 @@ android {
 - `release` -- `isMinifyEnabled = true`, `isShrinkResources = true`, consumes the SDK's published ProGuard rules.
 - `profileable` -- declared via `create("profileable") { initWith(release); ... }` so it inherits R8/shrinker settings while staying profileable on-device (used for Macrobenchmark / Android Studio profiling).
 - `flavorDimensions += "default"` with `gms` and `huawei` flavors (see table above).
-- BuildConfig fields: `ONESIGNAL_APP_ID`, `ONESIGNAL_ANDROID_CHANNEL_ID`, and the boolean `SHOW_NSE_SECTION`, all populated through the `demoOverride(...)` helper (`-P` -> `local.properties` -> default).
+- BuildConfig fields: `ONESIGNAL_APP_ID`, `ONESIGNAL_ANDROID_CHANNEL_ID`, and the boolean `SHOW_NSE_SECTION`, all populated through the `demoOverride(...)` helper (`-P` -> `local.properties` -> default). `ONESIGNAL_APP_ID` has no default; `preBuild` fails if it is unset.
 
 #### Root Gradle toolchain
 
@@ -294,7 +292,7 @@ Declared in `app/src/main/AndroidManifest.xml`:
 - `android.permission.ACCESS_BACKGROUND_LOCATION`
 - `com.android.vending.BILLING`
 - `android.permission.WAKE_LOCK`
-- ADM / Amazon push wiring (`com.amazon.device.messaging.permission.RECEIVE`, plus the app-scoped `com.onesignal.example.permission.RECEIVE_ADM_MESSAGE` and matching intent category).
+- ADM / Amazon push wiring (`com.amazon.device.messaging.permission.RECEIVE`, plus the app-scoped `${applicationId}.permission.RECEIVE_ADM_MESSAGE` and matching intent category).
 
 Contributed via manifest merge from the OneSignal SDK:
 
@@ -304,7 +302,7 @@ Contributed via manifest merge from the OneSignal SDK:
 - Badge permissions (Samsung / Sony / HTC / etc.)
 - `android.permission.RECEIVE_BOOT_COMPLETED` and other SDK-side wiring
 
-The ADM permission name and intent category use the application's package, so they reference `com.onesignal.example` (not the SDK's package).
+The ADM permission name and intent category use the application's package, so they reference `${applicationId}` (not the SDK's package).
 
 ### Custom notification sound
 
@@ -314,7 +312,9 @@ The `vine_boom.wav` file from [`sdk-shared/assets`](https://github.com/OneSignal
 
 ### Service config files
 
-The shared default `applicationId` is `com.onesignal.example`.
+The `gms` flavor's `applicationId` is `com.onesignal.sdkdemo`. The `huawei` flavor stays on `com.onesignal.example`.
+
+- `app/google-services.json` → a client for `com.onesignal.sdkdemo`. It is gitignored. When it exists, the Google Services plugin is applied (except for Huawei-only runs). `firebase_messaging_installation_id_enabled` stays off unless the build sets `FIREBASE_INSTALLATION_ID_ENABLED=true`, which requires this file. The E2E workflow writes it from the `APPIUM_GOOGLE_SERVICES_JSON` secret and turns the flag on.
 
 - `app/agconnect-services.json` → every `package_name` entry set to `com.onesignal.example` for the `huawei` flavor.
 

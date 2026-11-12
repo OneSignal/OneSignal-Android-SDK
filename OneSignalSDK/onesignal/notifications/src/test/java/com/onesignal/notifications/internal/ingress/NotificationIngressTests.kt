@@ -84,6 +84,17 @@ class NotificationIngressTests : FunSpec({
         NotificationIngress.pendingCountForTest(context) shouldBe 1
     }
 
+    test("FCM input without a OneSignal payload is rejected without scheduling") {
+        var scheduled = false
+        NotificationIngress.drainSchedulerForTest = { scheduled = true }
+        val bundle = Bundle().apply { putString("type", "call") }
+
+        NotificationIngress.persistFcm(context, Intent("com.google.android.c2dm.intent.RECEIVE"), bundle) shouldBe false
+
+        NotificationIngress.pendingCountForTest(context) shouldBe 0
+        scheduled shouldBe false
+    }
+
     test("dismiss input is persisted before scheduling") {
         var countAtSchedule = 0
         NotificationIngress.drainSchedulerForTest = {
