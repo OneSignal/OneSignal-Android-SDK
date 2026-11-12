@@ -185,15 +185,15 @@ internal class SessionService(
         val activeDuration = session.activeDuration
         Logging.debug("SessionService.backgroundRun: Session ended. activeDuration: $activeDuration")
 
-        // Read before clearing isValid: after that, a focus on the serial IO lane can start the next
-        // session and rewrite these fields while this runs on the background thread.
+        // Read and reset before clearing isValid: after that, a focus on the serial IO lane can start
+        // the next session and write these fields while this runs on the background thread.
         val usesSessionsApi = session.usesSessionsApi
         val end = if (usesSessionsApi) endSessionOperation(session, config?.appId) else null
-        session.isValid = false
-        sessionLifeCycleNotifier.fire { it.onSessionEnded(activeDuration, usesSessionsApi) }
         session.activeDuration = 0L
         session.lastHeartbeatDuration = 0L
         session.lastHeartbeatTime = null
+        session.isValid = false
+        sessionLifeCycleNotifier.fire { it.onSessionEnded(activeDuration, usesSessionsApi) }
         return end
     }
 

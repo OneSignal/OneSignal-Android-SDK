@@ -711,6 +711,36 @@ class SessionServiceTests : FunSpec({
         verify(exactly = 1) { mocks.spyCallback.onSessionEnded(any(), true) }
     }
 
+    test("session end does not reset a session that starts while handlers run") {
+        // Given
+        val mocks = Mocks(sessionsApiEnabled = true)
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        val sessionModelStore = mocks.sessionModelStore { it.isValid = false }
+        sessionService.onFocus(false)
+        mocks.elapsedRealtime += 750L
+        sessionService.onUnfocused()
+        // Stands in for a focus that starts the next session as soon as isValid is cleared.
+        every { mocks.spyCallback.onSessionEnded(any(), any()) } answers {
+            sessionModelStore.model.isValid shouldBe false
+            sessionModelStore.model.activeDuration shouldBe 0L
+            sessionModelStore.model.activeDuration = 100L
+            sessionModelStore.model.lastHeartbeatDuration = 100L
+            sessionModelStore.model.lastHeartbeatTime = 5000L
+        }
+        sessionService.subscribe(mocks.spyCallback)
+
+        // When
+        sessionService.backgroundRun()
+
+        // Then
+        verify(exactly = 1) { mocks.spyCallback.onSessionEnded(750L, true) }
+        sessionModelStore.model.activeDuration shouldBe 100L
+        sessionModelStore.model.lastHeartbeatDuration shouldBe 100L
+        sessionModelStore.model.lastHeartbeatTime shouldBe 5000L
+    }
+
     test("background run sends the end with the unfocus time and final duration when the flag is on") {
         // Given
         val mocks = Mocks(sessionsApiEnabled = true)
