@@ -1,9 +1,12 @@
 package com.onesignal.internal
 
+import com.onesignal.debug.ILogListener
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldContain
+import io.kotest.matchers.string.shouldNotContain
 
 class OneSignalImpV2Tests : FunSpec({
     beforeAny {
@@ -22,17 +25,43 @@ class OneSignalImpV2Tests : FunSpec({
 
         os.login("login-id")
         os.login("")
+        os.login(null)
+        os.updateUserJwt(null, "token")
 
         os.isInitialized shouldBe false
     }
 
-    test("login with empty externalId after init does not switch user") {
+    test("a null context or externalId is logged, and the log says the SDK is not initialized") {
+        val os = OneSignalImpV2()
+        val entries = mutableListOf<String>()
+        val listener = ILogListener { entries.add(it.entry) }
+        Logging.addListener(listener)
+        Logging.logLevel = LogLevel.NONE
+        try {
+            os.initWithContext(null, "app-id") shouldBe false
+            os.login(null)
+            entries.single { "context is null" in it } shouldContain "The SDK is not initialized."
+            entries.single { "login: externalId is null" in it } shouldContain "The SDK is not initialized."
+
+            entries.clear()
+            markInitialized(os)
+            os.login(null)
+            val afterInit = entries.single { "login: externalId is null" in it }
+            afterInit shouldContain "so this call did not run."
+            afterInit shouldNotContain "The SDK is not initialized."
+        } finally {
+            Logging.removeListener(listener)
+        }
+    }
+
+    test("login with a null or empty externalId after init does not switch user") {
         val os = OneSignalImpV2()
         markInitialized(os)
         // NONE: otherwise Logging.error calls the unmocked android.util.Log.
         Logging.logLevel = LogLevel.NONE
 
         os.login("")
+        os.login(null)
     }
 
     test("login with a null byte in externalId after init does not switch user") {
@@ -49,6 +78,7 @@ class OneSignalImpV2Tests : FunSpec({
         Logging.logLevel = LogLevel.NONE
 
         os.updateUserJwt("", "token")
+        os.updateUserJwt(null, "token")
         os.updateUserJwt("user", "")
     }
 

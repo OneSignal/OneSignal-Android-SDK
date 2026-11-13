@@ -289,7 +289,40 @@ class SDKInitV2Tests : FunSpec({
 
         os.isInitialized shouldBe true
         events.filter { it.level == LogLevel.ERROR && it.entry.contains("appId") } shouldBe emptyList()
-        events.count { it.level == LogLevel.WARN && it.entry.contains("using the cached app ID") } shouldBe 1
+        events.count { it.level == LogLevel.WARN && it.entry.contains("Using the cached app ID") } shouldBe 1
+    }
+
+    test("a null appId uses the cached app id and names it, and a null appId with nothing cached warns and does not init") {
+        val cached = IsolatedPrefsContext(getApplicationContext())
+        cached.getSharedPreferences("OneSignal", Context.MODE_PRIVATE).edit().putString(PREFS_LEGACY_APP_ID, "cachedAppId").commit()
+        val cachedEvents = CopyOnWriteArrayList<OneSignalLogEvent>()
+        val cachedListener = ILogListener { cachedEvents += it }
+        Logging.addListener(cachedListener)
+        try {
+            val os = OneSignalImpV2()
+            os.initWithContext(cached, null)
+            waitForInitialization(os)
+            os.isInitialized shouldBe true
+        } finally {
+            Logging.removeListener(cachedListener)
+        }
+        cachedEvents.count { it.level == LogLevel.WARN && it.entry.contains("Using the cached app ID cachedAppId") } shouldBe 1
+
+        val missingEvents = CopyOnWriteArrayList<OneSignalLogEvent>()
+        val missingListener = ILogListener { missingEvents += it }
+        Logging.addListener(missingListener)
+        try {
+            val os = OneSignalImpV2()
+            os.initWithContext(IsolatedPrefsContext(getApplicationContext()), null)
+            val deadline = System.currentTimeMillis() + 2_000
+            while (os.gate.state == InitState.IN_PROGRESS && System.currentTimeMillis() < deadline) Thread.sleep(20)
+            os.gate.state shouldBe InitState.FAILED
+            os.isInitialized shouldBe false
+        } finally {
+            Logging.removeListener(missingListener)
+        }
+        missingEvents.count { it.level == LogLevel.WARN && it.entry.contains("appId is null and no app ID is cached") } shouldBe 1
+        missingEvents.filter { it.level == LogLevel.ERROR && it.entry.contains("appId") } shouldBe emptyList()
     }
 
     test("an ignored call logs one error per attempt, with the failure trace, and repeats at debug") {

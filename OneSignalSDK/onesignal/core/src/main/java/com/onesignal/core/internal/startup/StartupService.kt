@@ -9,12 +9,17 @@ internal class StartupService(
 ) {
     private val bootstrapped = mutableSetOf<IBootstrapService>()
 
-    // Retryable after a failure: services that already bootstrapped are skipped, so none subscribes twice.
+    // Marked before the call, so a service that subscribes and then throws is not run again.
+    @Suppress("TooGenericExceptionCaught")
     fun bootstrap() {
         services.getAllServices<IBootstrapService>().forEach {
-            if (it !in bootstrapped) {
+            if (it in bootstrapped) return@forEach
+            bootstrapped += it
+            try {
                 it.bootstrap()
-                bootstrapped += it
+            } catch (e: Exception) {
+                Logging.warn("OneSignal: ${it.javaClass.simpleName} bootstrap failed and will not be retried: ${e.message}")
+                throw e
             }
         }
     }

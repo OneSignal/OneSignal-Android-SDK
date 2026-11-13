@@ -96,9 +96,14 @@ class OneSignalImpV2FaultTests : FunSpec({
             ioExecutor.get()!!.queue.remainingCapacity() shouldBe 0
 
             val os = quietOneSignal()
-            os.initWithContext(getApplicationContext(), "appId")
-
-            awaitTerminal(os) shouldBe InitState.FAILED
+            val listener = ILogListener { if (it.entry.contains("could not be scheduled")) os.user.onesignalId }
+            Logging.addListener(listener)
+            try {
+                os.initWithContext(getApplicationContext(), "appId")
+                awaitTerminal(os) shouldBe InitState.FAILED
+            } finally {
+                Logging.removeListener(listener)
+            }
             onDaemonThread { os.user.onesignalId } shouldBe ""
             os.isInitialized shouldBe false
         } finally {
@@ -110,6 +115,57 @@ class OneSignalImpV2FaultTests : FunSpec({
         val retry = quietOneSignal()
         retry.initWithContext(getApplicationContext(), "appId")
         awaitTerminal(retry) shouldBe InitState.SUCCESS
+    }
+
+    test("initWithContextSuspend on a full IO pool returns false instead of throwing") {
+        OneSignalDispatchers.resetForTest()
+        val ioExecutor = AtomicReference<ThreadPoolExecutor?>(null)
+        OneSignalDispatchers.afterExecutorCreateForTest = { lane, executor -> if (lane == "IO") ioExecutor.set(executor) }
+        val release = CountDownLatch(1)
+        try {
+            repeat(203) { OneSignalDispatchers.launchOnIO { release.await(30, TimeUnit.SECONDS) } }
+            val deadline = System.currentTimeMillis() + 5_000
+            while (System.currentTimeMillis() < deadline) {
+                val pool = ioExecutor.get()
+                if (pool != null && pool.queue.remainingCapacity() == 0) break
+                Thread.sleep(10)
+            }
+            ioExecutor.get()!!.queue.remainingCapacity() shouldBe 0
+
+            val os = quietOneSignal()
+            runBlocking { os.initWithContextSuspend(getApplicationContext(), "appId") } shouldBe false
+            os.gate.state shouldBe InitState.FAILED
+        } finally {
+            release.countDown()
+        }
+    }
+
+    test("a log listener that touches the SDK while init is starting does not block the dispatch") {
+        val os = quietOneSignal()
+        val listener = ILogListener { if (it.entry.contains("ApplicationService.init")) os.user.onesignalId }
+        Logging.addListener(listener)
+        try {
+            onDaemonThread { os.initWithContext(getApplicationContext(), "appId") }
+            awaitTerminal(os) shouldBe InitState.SUCCESS
+        } finally {
+            Logging.removeListener(listener)
+        }
+    }
+
+    test("a LinkageError while starting the application service marks init FAILED") {
+        val os = quietOneSignal()
+        val listener =
+            ILogListener {
+                if (it.entry.contains("ApplicationService.init")) throw NoClassDefFoundError("missing")
+            }
+        Logging.addListener(listener)
+        try {
+            onDaemonThread { os.initWithContext(getApplicationContext(), "appId") } shouldBe false
+            os.gate.state shouldBe InitState.FAILED
+            onDaemonThread { os.user.onesignalId } shouldBe ""
+        } finally {
+            Logging.removeListener(listener)
+        }
     }
 
     test("a log listener that calls back into the SDK before init does not recurse until the stack overflows") {

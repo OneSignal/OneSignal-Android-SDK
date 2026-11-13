@@ -45,7 +45,8 @@ internal class InitGate {
     private val isOnInitThread: Boolean get() = state == InitState.IN_PROGRESS && initThread.get() === Thread.currentThread()
 
     // Every attempt must end: one left IN_PROGRESS blocks every sync accessor forever.
-    fun runInit(block: () -> Boolean): Boolean {
+    // [finishIfUnfinished] is false only for the caller's pre-dispatch work, which completes itself.
+    fun runInit(finishIfUnfinished: Boolean = true, block: () -> Boolean): Boolean {
         val current = Thread.currentThread()
         val owned = synchronized(lock) { attempt }
         initThread.set(current)
@@ -56,7 +57,7 @@ internal class InitGate {
             addFailureCause(e)
             return false
         } finally {
-            failIfUnfinished(owned)
+            if (finishIfUnfinished) failIfUnfinished(owned)
             // A retry woken by this attempt's FAILED may already have claimed the slot.
             initThread.compareAndSet(current, null)
         }
@@ -98,35 +99,36 @@ internal class InitGate {
         earlyCalls.logAndClear()
     }
 
-    /** Waits out in-progress attempts, including a retry that starts while waiting. True only on SUCCESS. */
-    suspend fun await(operation: SdkOperation? = null): Boolean {
+    /** Waits out in-progress attempts, including a retry that starts while waiting. Returns the state that ended the wait. */
+    suspend fun await(operation: SdkOperation? = null): InitState {
         while (true) {
             val (observed, signal) = synchronized(lock) { state to completion }
-            if (observed != InitState.IN_PROGRESS || isOnInitThread) return observed == InitState.SUCCESS
-            awaitAttempt(signal, operation)
+            if (observed != InitState.IN_PROGRESS || isOnInitThread) return observed
+            awaitAttempt(signal, operation) { state }
         }
     }
 
-    /** Blocking form of [awaitReady]. On the main thread this blocks until init finishes. */
+    // On the main thread this blocks until init finishes. On the init thread it returns not ready,
+    // so login, logout, and tag calls from an init callback are ignored. Registrations stay queued.
     fun isReady(
         operation: SdkOperation,
         member: String? = null,
         log: Boolean = true,
     ): Boolean {
         if (isSuccess) return true
-        val ready = if (state == InitState.IN_PROGRESS && !isOnInitThread) awaitBlocking(operation) else isSuccess
-        if (!ready && log) logNotReady(target(operation, member))
-        return ready
+        val outcome = if (state == InitState.IN_PROGRESS && !isOnInitThread) awaitBlocking(operation) else state
+        if (outcome != InitState.SUCCESS && log) logNotReady(target(operation, member), outcome)
+        return outcome == InitState.SUCCESS
     }
 
     // runBlocking throws on an interrupted thread, so it is only entered when there is something to wait for.
-    private fun awaitBlocking(operation: SdkOperation): Boolean =
+    private fun awaitBlocking(operation: SdkOperation): InitState =
         try {
             // Dispatcher-less: resumes on the caller's own event loop, never on a busy IO worker.
             runBlocking { await(operation) }
         } catch (e: InterruptedException) {
             Thread.currentThread().interrupt()
-            false
+            InitState.IN_PROGRESS
         }
 
     suspend fun awaitReady(
@@ -134,16 +136,17 @@ internal class InitGate {
         member: String? = null,
         log: Boolean = true,
     ): Boolean {
-        if (await(operation)) return true
-        if (log) logNotReady(target(operation, member))
+        val outcome = await(operation)
+        if (outcome == InitState.SUCCESS) return true
+        if (log) logNotReady(target(operation, member), outcome)
         return false
     }
 
-    fun notReadyMessage(target: String): String =
+    fun notReadyMessage(target: String, observed: InitState = state): String =
         when {
-            state == InitState.FAILED -> "'$target' ignored: initWithContext failed."
-            isOnInitThread -> "'$target' ignored: called from inside initWithContext."
-            state == InitState.IN_PROGRESS -> "'$target' ignored: the thread was interrupted while waiting for initWithContext."
+            observed == InitState.FAILED -> "'$target' ignored: initWithContext failed."
+            observed == InitState.IN_PROGRESS && isOnInitThread -> "'$target' ignored: called from inside initWithContext."
+            observed == InitState.IN_PROGRESS -> "'$target' ignored: the thread was interrupted while waiting for initWithContext."
             else -> "'$target' ignored: call initWithContext with a valid appId first."
         }
 
@@ -154,8 +157,8 @@ internal class InitGate {
         Logging.warn("'${target(operation, member)}' queued until initWithContext succeeds.")
     }
 
-    private fun logNotReady(target: String) {
-        val message = notReadyMessage(target)
+    internal fun logNotReady(target: String, observed: InitState = state): String {
+        val message = notReadyMessage(target, observed)
         var first = false
         val trace =
             synchronized(lock) {
@@ -168,6 +171,7 @@ internal class InitGate {
             trace == null -> Logging.error(message)
             else -> Logging.error(message, trace)
         }
+        return message
     }
 }
 
@@ -194,13 +198,14 @@ private class EarlyCalls {
 private suspend fun awaitAttempt(
     signal: CompletableDeferred<Unit>,
     operation: SdkOperation?,
+    state: () -> InitState,
 ) {
     Logging.debug("Waiting for init to complete...")
     val startTime = System.currentTimeMillis()
     signal.await()
     val elapsed = System.currentTimeMillis() - startTime
     val before = operation?.let { " before '$it'" } ?: ""
-    Logging.debug("OneSignalImpV2 initialization completed$before (took ${elapsed}ms)")
+    Logging.debug("OneSignalImpV2 initialization finished$before (${state()}, took ${elapsed}ms)")
 }
 
 private fun target(
