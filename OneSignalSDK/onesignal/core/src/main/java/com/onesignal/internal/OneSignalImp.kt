@@ -348,10 +348,12 @@ internal class OneSignalImp : IOneSignal,
      */
     @Suppress("ReturnCount", "TooGenericExceptionCaught")
     override fun initWithContext(
-        context: Context,
-        appId: String,
+        context: Context?,
+        appId: String?,
     ): Boolean {
         Logging.log(LogLevel.DEBUG, "Calling deprecated initWithContext(context: $context, appId: $appId)")
+        if (context == null) throw nullParameter("initWithContext", "context")
+        if (appId == null) throw nullParameter("initWithContext", "appId")
 
         // Warm OneSignalDispatchers on a dedicated daemon thread so the first production caller
         // of suspendifyOnIO / launchOnSerialIO doesn't pay the ThreadPoolExecutor + dispatcher +
@@ -406,8 +408,9 @@ internal class OneSignalImp : IOneSignal,
     /**
      * Called from internal classes only. Remain suspend until initialization is fully completed.
      */
-    override suspend fun initWithContext(context: Context): Boolean {
+    override suspend fun initWithContext(context: Context?): Boolean {
         Logging.log(LogLevel.DEBUG, "initWithContext(context: $context)")
+        if (context == null) throw nullParameter("initWithContext", "context")
         return initWithContextSuspend(context, null)
     }
 
@@ -486,10 +489,11 @@ internal class OneSignalImp : IOneSignal,
     }
 
     override fun login(
-        externalId: String,
+        externalId: String?,
         jwtBearerToken: String?,
     ) {
         Logging.log(LogLevel.DEBUG, "Calling deprecated login(externalId: $externalId, jwtBearerToken: ...${jwtBearerToken?.takeLast(8)})")
+        if (externalId == null) throw nullParameter("login", "externalId")
 
         waitForInit(operationName = "login")
 
@@ -511,10 +515,11 @@ internal class OneSignalImp : IOneSignal,
     }
 
     override fun updateUserJwt(
-        externalId: String,
+        externalId: String?,
         token: String,
     ) {
         Logging.log(LogLevel.DEBUG, "updateUserJwt(externalId: $externalId, token: ...${token.takeLast(8)})")
+        if (externalId == null) throw nullParameter("updateUserJwt", "externalId")
 
         waitForInit(operationName = "updateUserJwt")
 
@@ -774,10 +779,11 @@ internal class OneSignalImp : IOneSignal,
         }
 
     override suspend fun initWithContextSuspend(
-        context: Context,
+        context: Context?,
         appId: String?,
     ): Boolean {
         Logging.log(LogLevel.DEBUG, "initWithContext(context: $context, appId: $appId)")
+        if (context == null) throw nullParameter("initWithContextSuspend", "context")
 
         // Same warm-up as the synchronous variant. Reaching this entry point on the main thread
         // (e.g. SyncJobService.onStartJob -> suspendifyOnIO -> initWithContext(context)) pays the
@@ -836,10 +842,11 @@ internal class OneSignalImp : IOneSignal,
     }
 
     override suspend fun loginSuspend(
-        externalId: String,
+        externalId: String?,
         jwtBearerToken: String?,
     ) = withContext(ioDispatcher) {
         Logging.log(LogLevel.DEBUG, "login(externalId: $externalId, jwtBearerToken: ...${jwtBearerToken?.takeLast(8)})")
+        if (externalId == null) throw nullParameter("loginSuspend", "externalId")
 
         // suspendUntilInit throws on NOT_STARTED / FAILED (preserving initFailureException as the
         // cause), and only returns once initState == SUCCESS — so no post-check is needed here.
@@ -914,10 +921,11 @@ internal class OneSignalImp : IOneSignal,
         wait.httpStatusCode?.let { "Login did not complete (HTTP $it)." } ?: "Login did not complete."
 
     override suspend fun updateUserJwtSuspend(
-        externalId: String,
+        externalId: String?,
         token: String,
     ) = withContext(ioDispatcher) {
         Logging.log(LogLevel.DEBUG, "updateUserJwtSuspend(externalId: $externalId, token: ...${token.takeLast(8)})")
+        if (externalId == null) throw nullParameter("updateUserJwtSuspend", "externalId")
 
         suspendUntilInit(operationName = "updateUserJwt")
 
@@ -943,3 +951,9 @@ internal class OneSignalImp : IOneSignal,
             logoutHelper.enqueueLogout(context)
         }
 }
+
+// The kill switch's fallback keeps the crash a Java null used to hit in the non-null facade.
+private fun nullParameter(
+    method: String,
+    parameter: String,
+) = NullPointerException("Parameter specified as non-null is null: method com.onesignal.OneSignal.$method, parameter $parameter")

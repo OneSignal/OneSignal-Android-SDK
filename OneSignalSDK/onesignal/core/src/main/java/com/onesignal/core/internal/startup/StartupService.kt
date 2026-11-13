@@ -7,8 +7,21 @@ import com.onesignal.debug.internal.logging.Logging
 internal class StartupService(
     private val services: ServiceProvider,
 ) {
+    private val bootstrapped = mutableSetOf<IBootstrapService>()
+
+    // Marked before the call, so a service that subscribes and then throws is not run again.
+    @Suppress("TooGenericExceptionCaught")
     fun bootstrap() {
-        services.getAllServices<IBootstrapService>().forEach { it.bootstrap() }
+        services.getAllServices<IBootstrapService>().forEach {
+            if (it in bootstrapped) return@forEach
+            bootstrapped += it
+            try {
+                it.bootstrap()
+            } catch (e: Exception) {
+                Logging.warn("OneSignal: ${it.javaClass.simpleName} bootstrap failed and will not be retried: ${e.message}")
+                throw e
+            }
+        }
     }
 
     // schedule to start all startable services using OneSignal dispatcher

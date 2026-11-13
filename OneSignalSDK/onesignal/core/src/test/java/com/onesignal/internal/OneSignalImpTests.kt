@@ -1,5 +1,6 @@
 package com.onesignal.internal
 
+import android.content.Context
 import com.onesignal.ErrorCode
 import com.onesignal.LoginData
 import com.onesignal.OneSignalResult
@@ -9,6 +10,7 @@ import com.onesignal.debug.internal.logging.Logging
 import io.kotest.assertions.throwables.shouldThrowUnit
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import io.mockk.mockk
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineStart
@@ -437,5 +439,24 @@ class OneSignalImpTests : FunSpec({
 
         result.error!!.first.code shouldBe ErrorCode.INVALID_ARGUMENT
         result.error!!.first.message shouldBe "Tag keys must be non-empty and values non-null"
+    }
+
+    test("a null context or a null appId still crashes the legacy init the way the non-null API did") {
+        val os = OneSignalImp()
+        val context = mockk<Context>(relaxed = true)
+
+        shouldThrowUnit<NullPointerException> { os.initWithContext(null, "appId") }.message shouldBe
+            "Parameter specified as non-null is null: method com.onesignal.OneSignal.initWithContext, parameter context"
+        shouldThrowUnit<NullPointerException> { os.initWithContext(context, null) }.message shouldBe
+            "Parameter specified as non-null is null: method com.onesignal.OneSignal.initWithContext, parameter appId"
+        shouldThrowUnit<NullPointerException> { runBlocking { os.initWithContextSuspend(null, "appId") } }.message shouldBe
+            "Parameter specified as non-null is null: method com.onesignal.OneSignal.initWithContextSuspend, parameter context"
+        shouldThrowUnit<NullPointerException> { runBlocking { os.initWithContext(null) } }.message shouldBe
+            "Parameter specified as non-null is null: method com.onesignal.OneSignal.initWithContext, parameter context"
+        shouldThrowUnit<NullPointerException> { os.login(null) }.message shouldBe
+            "Parameter specified as non-null is null: method com.onesignal.OneSignal.login, parameter externalId"
+        shouldThrowUnit<NullPointerException> { os.updateUserJwt(null, "token") }.message shouldBe
+            "Parameter specified as non-null is null: method com.onesignal.OneSignal.updateUserJwt, parameter externalId"
+        os.isInitialized shouldBe false
     }
 })
