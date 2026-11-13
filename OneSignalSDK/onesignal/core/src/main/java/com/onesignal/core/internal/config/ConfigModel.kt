@@ -62,6 +62,12 @@ class ConfigModel : Model() {
         }
 
     /**
+     * Whether privacy consent is required but not given, so no user data may be collected or sent.
+     */
+    val isAwaitingConsent: Boolean
+        get() = consentRequired == true && consentGiven != true
+
+    /**
      * Whether location is shared.
      */
     var locationShared: Boolean

@@ -13,7 +13,9 @@ import io.mockk.mockkObject
 import io.mockk.unmockkAll
 import io.mockk.verify
 
-private class Mocks {
+private class Mocks(
+    awaitingConsent: Boolean = false,
+) {
     val mockOperationRepo = mockk<com.onesignal.core.internal.operations.IOperationRepo>(relaxed = true)
 
     val propertiesModelStore = MockHelper.propertiesModelStore()
@@ -26,7 +28,12 @@ private class Mocks {
         SessionListener(
             mockOperationRepo,
             mockk<com.onesignal.session.internal.session.ISessionService>(relaxed = true),
-            MockHelper.configModelStore(),
+            MockHelper.configModelStore {
+                if (awaitingConsent) {
+                    it.consentRequired = true
+                    it.consentGiven = false
+                }
+            },
             MockHelper.identityModelStore(),
             propertiesModelStore,
             outcomeEventsController,
@@ -140,6 +147,29 @@ class SessionListenerTests : FunSpec({
 
         // When
         mocks.sessionListener.onSessionEnded(5_000, usesSessionsApi = true)
+
+        // Then
+        verify(exactly = 0) { mocks.mockOperationRepo.enqueue(any(), any()) }
+        coVerify(exactly = 0) { mocks.outcomeEventsController.sendSessionEndOutcomeEvent(any()) }
+    }
+
+    test("onSessionStarted without consent enqueues nothing") {
+        // Given
+        val mocks = Mocks(awaitingConsent = true)
+
+        // When
+        mocks.sessionListener.onSessionStarted()
+
+        // Then
+        verify(exactly = 0) { mocks.mockOperationRepo.enqueue(any(), any()) }
+    }
+
+    test("onSessionEnded without consent drops a legacy session's time and duration outcome") {
+        // Given
+        val mocks = Mocks(awaitingConsent = true)
+
+        // When
+        mocks.sessionListener.onSessionEnded(5_000, usesSessionsApi = false)
 
         // Then
         verify(exactly = 0) { mocks.mockOperationRepo.enqueue(any(), any()) }

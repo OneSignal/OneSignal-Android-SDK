@@ -52,6 +52,9 @@ import kotlin.reflect.KMutableProperty1
  *
  * While focused, a session that [SessionModel.usesSessionsApi] reports its duration every
  * [HEARTBEAT_INTERVAL_MS] of active time, so the server keeps it open and a crash loses little duration.
+ *
+ * Time without privacy consent is not counted: losing consent while focused counts as an unfocus,
+ * and regaining it while in the foreground counts as a focus.
  */
 @Suppress("TooManyFunctions")
 internal class SessionService(
@@ -100,6 +103,9 @@ internal class SessionService(
     // True if app has been foregrounded at least once since the app started
     private var hasFocused = false
 
+    // Set while focused without privacy consent, so the next unfocus adds no time. Serial IO lane only.
+    private var pausedForConsent = false
+
     private val pendingDirectAttributionId = AtomicReference<String?>()
 
     override fun bootstrap() {
@@ -109,6 +115,7 @@ internal class SessionService(
 
     override fun start() {
         applicationService.addApplicationLifecycleHandler(this)
+        configModelStore.subscribe(ConsentChangeHandler())
         identityModelStore.subscribe(PinnedLocalIdTranslator(IdentityConstants.ONESIGNAL_ID, SessionModel::onesignalId))
         // Login before the anonymous user is created carries the local push subscription over to
         // the new user, so its backend ID belongs to that user, not the one pinned on this session.
@@ -148,6 +155,40 @@ internal class SessionService(
             runOnSerialIO {
                 val session = this@SessionService.session ?: return@runOnSerialIO
                 if (pinnedId.get(session) == localId && appliesTo(session)) pinnedId.set(session, backendId)
+            }
+        }
+    }
+
+    private inner class ConsentChangeHandler : ISingletonModelStoreChangeHandler<ConfigModel> {
+        override fun onModelReplaced(
+            model: ConfigModel,
+            tag: String,
+        ) = onConsentChanged()
+
+        override fun onModelUpdated(
+            args: ModelChangedArgs,
+            tag: String,
+        ) {
+            if (args.property == ConfigModel::consentRequired.name || args.property == ConfigModel::consentGiven.name) {
+                onConsentChanged()
+            }
+        }
+    }
+
+    private fun onConsentChanged() {
+        val nowMs = time.currentTimeMillis
+        val elapsedMs = time.elapsedRealtimeMillis
+        runOnSerialIO {
+            // A focus that has not arrived yet checks consent itself.
+            if (session == null || !hasFocused || !applicationService.isInForeground) return@runOnSerialIO
+            val awaitingConsent = config?.isAwaitingConsent == true
+            if (awaitingConsent && !pausedForConsent) {
+                Logging.debug("SessionService: privacy consent revoked, pausing the session")
+                handleOnUnfocused(nowMs, elapsedMs)
+                pausedForConsent = true
+            } else if (!awaitingConsent && pausedForConsent) {
+                Logging.debug("SessionService: privacy consent given, resuming the session")
+                handleOnFocus(false, nowMs, elapsedMs, null)
             }
         }
     }
@@ -269,7 +310,8 @@ internal class SessionService(
             session.focusElapsedRealtime = focusElapsedMs
             sessionLifeCycleNotifier.fire { it.onSessionActive() }
         }
-        if (session.usesSessionsApi) heartbeat.start(session) else heartbeat.stop()
+        pausedForConsent = config?.isAwaitingConsent == true
+        if (session.usesSessionsApi && !pausedForConsent) heartbeat.start(session) else heartbeat.stop()
     }
 
     /**
@@ -348,6 +390,10 @@ internal class SessionService(
             return
         }
         heartbeat.stop()
+        if (pausedForConsent) {
+            pausedForConsent = false
+            return
+        }
         // capture the amount of time the app was focused
         val dt =
             if (session.usesSessionsApi) {

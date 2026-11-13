@@ -47,6 +47,7 @@ internal class SessionListener(
 
     override fun onSessionStarted() {
         _propertiesModelStore.model.timezone = TimeUtils.getTimeZoneId()
+        if (_configModelStore.model.isAwaitingConsent) return
         _operationRepo.enqueue(
             TrackSessionStartOperation(
                 _configModelStore.model.appId,
@@ -67,6 +68,11 @@ internal class SessionListener(
         usesSessionsApi: Boolean,
     ) {
         if (usesSessionsApi) return
+        // Without consent these would be kept and sent once it is given, reporting activity from before it.
+        if (_configModelStore.model.isAwaitingConsent) {
+            Logging.debug("SessionListener.onSessionEnded: privacy consent not given, dropping the session end")
+            return
+        }
 
         val durationInSeconds = duration / 1000
 
