@@ -37,41 +37,40 @@ object OneSignal {
         get() = oneSignal.sdkVersion
 
     /**
-     * The user manager for accessing user-scoped management.  Initialized only after [initWithContext]
-     * has been called, and initialized with a device-scoped user until (or if) [login] has been
-     * called.
+     * The user manager, with a device-scoped user until (or if) [login] is called. Waits while init is running.
+     * Before [initWithContext] succeeds this is a stand-in: observers are attached once init succeeds, other calls are logged and ignored.
      */
     @JvmStatic
     val User: IUserManager
         get() = oneSignal.user
 
     /**
-     * The session manager for accessing session-scoped management.  Initialized only after [initWithContext]
-     * has been called.
+     * The session manager for accessing session-scoped management.
+     * Before [initWithContext] succeeds this is a stand-in: outcome calls are logged and ignored.
      */
     @JvmStatic
     val Session: ISessionManager
         get() = oneSignal.session
 
     /**
-     * The notification manager for accessing device-scoped notification management. Initialized
-     * only after [initWithContext] has been called.
+     * The notification manager. Waits while init is running. Before [initWithContext] succeeds this is a stand-in:
+     * listeners and permission observers are attached once init succeeds, other calls are logged and ignored.
      */
     @JvmStatic
     val Notifications: INotificationsManager
         get() = oneSignal.notifications
 
     /**
-     * The location manager for accessing device-scoped location management. Initialized
-     * only after [initWithContext] has been called.
+     * The location manager. Waits while init is running. Before [initWithContext] succeeds this is a stand-in:
+     * a value set on `isShared` is applied once init succeeds, other calls are logged and ignored.
      */
     @JvmStatic
     val Location: ILocationManager
         get() = oneSignal.location
 
     /**
-     * The In App Messaging manager for accessing device-scoped IAP management. Initialized
-     * only after [initWithContext] has been called.
+     * The In App Messaging manager. Waits while init is running. Before [initWithContext] succeeds this is a stand-in:
+     * listeners and `paused` are applied once init succeeds, other calls are logged and ignored.
      */
     @JvmStatic
     val InAppMessages: IInAppMessagesManager
@@ -124,13 +123,14 @@ object OneSignal {
     /**
      * Initialize the OneSignal SDK.  This should be called during startup of the application.
      *
-     * @param context The Android context the SDK should use.
-     * @param appId The application ID the OneSignal SDK is bound to.
+     * @param context The Android context the SDK should use. Required: a null context is logged and init does not start.
+     * @param appId Your OneSignal app ID. Always pass it: a null or invalid value falls back to the app ID
+     * cached by an earlier launch, and with none cached init fails and logs. Check [isInitialized] for the outcome.
      */
     @JvmStatic
     fun initWithContext(
-        context: Context,
-        appId: String,
+        context: Context?,
+        appId: String?,
     ) {
         oneSignal.initWithContext(context, appId)
     }
@@ -140,13 +140,14 @@ object OneSignal {
      * This method provides a suspended version that returns a boolean indicating success.
      * Uses Dispatchers.IO internally to prevent ANRs and optimize for I/O operations.
      *
-     * @param context Application context is recommended for SDK operations
-     * @param appId The application ID the OneSignal SDK is bound to.
+     * @param context Application context is recommended for SDK operations. Required: a null context is logged and init does not start.
+     * @param appId Your OneSignal app ID. Always pass it: a null or invalid value falls back to the app ID
+     * cached by an earlier launch, and with none cached init fails and logs.
      * @return Boolean indicating if initialization was successful.
      */
     @JvmStatic
     suspend fun initWithContextSuspend(
-        context: Context,
+        context: Context?,
         appId: String? = null,
     ): Boolean {
         return oneSignal.initWithContextSuspend(context, appId)
@@ -302,7 +303,7 @@ object OneSignal {
      * subscriptions from the current user (if there is one) to the newly logged in user.  This is
      * because both Push and IAM are owned by the device.
      *
-     * @param externalId The external ID of the user that is to be logged in.
+     * @param externalId The external ID of the user to log in. Must be non-empty: an empty value is ignored and logged.
      */
     @JvmStatic
     fun login(externalId: String) = oneSignal.login(externalId)
@@ -323,7 +324,7 @@ object OneSignal {
      * subscriptions from the current user (if there is one) to the newly logged in user.  This is
      * because both Push and IAM are owned by the device.
      *
-     * @param externalId The external ID of the user that is to be logged in.
+     * @param externalId The external ID of the user to log in. Must be non-empty: an empty value is ignored and logged.
      * @param jwtBearerToken The optional JWT bearer token generated by your backend to establish
      * trust for the login operation.  Required when identity verification has been enabled. See
      * [Identity Verification | OneSignal](https://documentation.onesignal.com/docs/identity-verification)
@@ -349,8 +350,8 @@ object OneSignal {
      * [IUserJwtInvalidatedListener.onUserJwtInvalidated] callback). Stores the JWT and
      * wakes the operation queue so any deferred ops can dispatch with the fresh token.
      *
-     * @param externalId The external ID the JWT belongs to.
-     * @param token The new JWT bearer token issued by your backend.
+     * @param externalId The external ID the JWT belongs to. Must be non-empty.
+     * @param token The new JWT bearer token issued by your backend. Must be non-empty; empty values are ignored and logged.
      */
     @JvmStatic
     fun updateUserJwt(
@@ -412,7 +413,7 @@ object OneSignal {
      * subscriptions from the current user (if there is one) to the newly logged in user.  This is
      * because both Push and IAM are owned by the device.
      *
-     * @param externalId The external ID of the user that is to be logged in.
+     * @param externalId The external ID of the user to log in. Must be non-empty: an empty value is ignored and logged.
      * @param jwtBearerToken The optional JWT bearer token generated by your backend to establish
      * trust for the login operation.  Required when identity verification has been enabled. See
      * [Identity Verification | OneSignal](https://documentation.onesignal.com/docs/identity-verification)
@@ -428,6 +429,7 @@ object OneSignal {
     /**
      * Login with [externalId] plus [profile] as one Create User upsert (anonymous is not merged). Email/SMS create or transfer; a foreign alias fails it.
      * Same id is a no-op once a backend ID exists. Backend failure leaves this identity local; INVALID_ARGUMENT and NOT_INITIALIZED change nothing.
+     * @param externalId Required: null or empty returns INVALID_ARGUMENT and changes nothing.
      */
     @JvmStatic
     @JvmOverloads
@@ -455,8 +457,8 @@ object OneSignal {
      * Update the JWT bearer token associated with [externalId] without blocking the calling
      * thread. Suspend-safe version of [updateUserJwt].
      *
-     * @param externalId The external ID the JWT belongs to.
-     * @param token The new JWT bearer token issued by your backend.
+     * @param externalId The external ID the JWT belongs to. Must be non-empty.
+     * @param token The new JWT bearer token issued by your backend. Must be non-empty; empty values are ignored and logged.
      */
     @JvmStatic
     suspend fun updateUserJwtSuspend(
