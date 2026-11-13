@@ -27,20 +27,28 @@ internal object OneSignalChoice {
         set(value) =
             setBeforeChoice(value, { pendingDisableGmsMissingPrompt = it }) { it.disableGMSMissingPrompt = value }
 
-    suspend fun getConsentRequired(): Boolean = readSuspend({ pendingConsentRequired }) { it.getConsentRequired() }
+    suspend fun getConsentRequired(): Boolean {
+        val ready = chosen ?: synchronized(choiceLock) { chosen }
+        return if (ready != null) ready.getConsentRequired() else pendingConsentRequired == true
+    }
 
     suspend fun setConsentRequired(required: Boolean) {
         writeSuspend(required, { pendingConsentRequired = it }) { it.setConsentRequired(required) }
     }
 
-    suspend fun getConsentGiven(): Boolean = readSuspend({ pendingConsentGiven }) { it.getConsentGiven() }
+    suspend fun getConsentGiven(): Boolean {
+        val ready = chosen ?: synchronized(choiceLock) { chosen }
+        return if (ready != null) ready.getConsentGiven() else pendingConsentGiven == true
+    }
 
     suspend fun setConsentGiven(value: Boolean) {
         writeSuspend(value, { pendingConsentGiven = it }) { it.setConsentGiven(value) }
     }
 
-    suspend fun getDisableGMSMissingPrompt(): Boolean =
-        readSuspend({ pendingDisableGmsMissingPrompt }) { it.getDisableGMSMissingPrompt() }
+    suspend fun getDisableGMSMissingPrompt(): Boolean {
+        val ready = chosen ?: synchronized(choiceLock) { chosen }
+        return if (ready != null) ready.getDisableGMSMissingPrompt() else pendingDisableGmsMissingPrompt == true
+    }
 
     suspend fun setDisableGMSMissingPrompt(value: Boolean) {
         writeSuspend(value, { pendingDisableGmsMissingPrompt = it }) { it.setDisableGMSMissingPrompt(value) }
@@ -49,20 +57,24 @@ internal object OneSignalChoice {
     // The startup provider usually evaluated already. Otherwise only a Context passed to init can.
     fun resolve(context: Context? = null): IOneSignal {
         chosen?.let { return it }
-        synchronized(choiceLock) {
-            chosen?.let { return it }
-            if (context != null) NeverCrashKillSwitch.evaluate(context)
-            // Construction resets log levels. Put back whatever was set before the choice.
-            val keptLogLevel = Logging.logLevel
-            val keptVisualLogLevel = Logging.visualLogLevel
-            val impl = NeverCrashKillSwitch.create()
-            Logging.logLevel = keptLogLevel
-            Logging.visualLogLevel = keptVisualLogLevel
-            pendingConsentRequired?.let { impl.consentRequired = it }
-            pendingConsentGiven?.let { impl.consentGiven = it }
-            pendingDisableGmsMissingPrompt?.let { impl.disableGMSMissingPrompt = it }
-            chosen = impl
-            return impl
+        return synchronized(choiceLock) {
+            val current = chosen
+            if (current != null) {
+                current
+            } else {
+                if (context != null) NeverCrashKillSwitch.evaluate(context)
+                // Construction resets log levels. Put back whatever was set before the choice.
+                val keptLogLevel = Logging.logLevel
+                val keptVisualLogLevel = Logging.visualLogLevel
+                val impl = NeverCrashKillSwitch.create()
+                Logging.logLevel = keptLogLevel
+                Logging.visualLogLevel = keptVisualLogLevel
+                pendingConsentRequired?.let { impl.consentRequired = it }
+                pendingConsentGiven?.let { impl.consentGiven = it }
+                pendingDisableGmsMissingPrompt?.let { impl.disableGMSMissingPrompt = it }
+                chosen = impl
+                impl
+            }
         }
     }
 
@@ -83,9 +95,8 @@ internal object OneSignalChoice {
     private val debugManager: IDebugManager by lazy { DebugManager() }
 
     private fun readBeforeChoice(pending: Boolean?, read: (IOneSignal) -> Boolean): Boolean {
-        chosen?.let { return read(it) }
-        val impl = synchronized(choiceLock) { chosen ?: return pending == true }
-        return read(impl)
+        val ready = chosen ?: synchronized(choiceLock) { chosen }
+        return if (ready != null) read(ready) else pending == true
     }
 
     private fun setBeforeChoice(value: Boolean, stash: (Boolean) -> Unit, write: (IOneSignal) -> Unit) {
@@ -95,11 +106,6 @@ internal object OneSignalChoice {
             current
         }
         impl?.let(write)
-    }
-
-    private suspend fun readSuspend(pending: () -> Boolean?, read: suspend (IOneSignal) -> Boolean): Boolean {
-        val impl = synchronized(choiceLock) { chosen } ?: return pending() == true
-        return read(impl)
     }
 
     private suspend fun writeSuspend(value: Boolean, stash: (Boolean) -> Unit, write: suspend (IOneSignal) -> Unit) {

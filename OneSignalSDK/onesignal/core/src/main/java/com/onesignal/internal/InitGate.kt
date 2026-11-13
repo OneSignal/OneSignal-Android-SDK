@@ -57,16 +57,14 @@ internal class InitGate {
             addFailureCause(e)
             return false
         } finally {
-            if (finishIfUnfinished) failIfUnfinished(owned)
+            // Keyed by attempt, not thread: a retry may start before this attempt's thread leaves runInit.
+            if (finishIfUnfinished) {
+                val abandoned = synchronized(lock) { state == InitState.IN_PROGRESS && attempt == owned }
+                if (abandoned) complete(InitState.FAILED)
+            }
             // A retry woken by this attempt's FAILED may already have claimed the slot.
             initThread.compareAndSet(current, null)
         }
-    }
-
-    // Keyed by attempt, not thread: a retry may start before this attempt's thread leaves [runInit].
-    private fun failIfUnfinished(owned: Int) {
-        val abandoned = synchronized(lock) { state == InitState.IN_PROGRESS && attempt == owned }
-        if (abandoned) complete(InitState.FAILED)
     }
 
     /** Starts a new attempt and returns true, or returns false if one is running or has succeeded. */
@@ -116,20 +114,22 @@ internal class InitGate {
         log: Boolean = true,
     ): Boolean {
         if (isSuccess) return true
-        val outcome = if (state == InitState.IN_PROGRESS && !isOnInitThread) awaitBlocking(operation) else state
+        // runBlocking throws on an interrupted thread, so it is only entered when there is something to wait for.
+        val outcome =
+            if (state == InitState.IN_PROGRESS && !isOnInitThread) {
+                try {
+                    // Dispatcher-less: resumes on the caller's own event loop, never on a busy IO worker.
+                    runBlocking { await(operation) }
+                } catch (e: InterruptedException) {
+                    Thread.currentThread().interrupt()
+                    InitState.IN_PROGRESS
+                }
+            } else {
+                state
+            }
         if (outcome != InitState.SUCCESS && log) logNotReady(target(operation, member), outcome)
         return outcome == InitState.SUCCESS
     }
-
-    // runBlocking throws on an interrupted thread, so it is only entered when there is something to wait for.
-    private fun awaitBlocking(operation: SdkOperation): InitState =
-        try {
-            // Dispatcher-less: resumes on the caller's own event loop, never on a busy IO worker.
-            runBlocking { await(operation) }
-        } catch (e: InterruptedException) {
-            Thread.currentThread().interrupt()
-            InitState.IN_PROGRESS
-        }
 
     suspend fun awaitReady(
         operation: SdkOperation,
