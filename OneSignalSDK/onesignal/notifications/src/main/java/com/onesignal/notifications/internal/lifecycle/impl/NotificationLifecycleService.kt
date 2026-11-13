@@ -35,6 +35,8 @@ import com.onesignal.notifications.internal.lifecycle.INotificationLifecycleCall
 import com.onesignal.notifications.internal.lifecycle.INotificationLifecycleService
 import com.onesignal.notifications.internal.receivereceipt.IReceiveReceiptWorkManager
 import com.onesignal.session.internal.influence.IInfluenceManager
+import com.onesignal.user.internal.identity.IdentityModelStore
+import com.onesignal.user.internal.identity.backendOneSignalIdOrNull
 import com.onesignal.user.internal.subscriptions.ISubscriptionManager
 import kotlinx.coroutines.delay
 import org.json.JSONArray
@@ -47,6 +49,7 @@ internal class NotificationLifecycleService(
     private val _configModelStore: ConfigModelStore,
     private val _influenceManager: IInfluenceManager,
     private val _subscriptionManager: ISubscriptionManager,
+    private val _identityModelStore: IdentityModelStore,
     private val _deviceService: IDeviceService,
     private val _backend: INotificationBackendService,
     private val _receiveReceiptWorkManager: IReceiveReceiptWorkManager,
@@ -135,6 +138,7 @@ internal class NotificationLifecycleService(
         val config = _configModelStore.model
         val appId: String = config.appId ?: ""
         val subscriptionId: String = _subscriptionManager.subscriptions.push.id
+        val onesignalId = _identityModelStore.backendOneSignalIdOrNull()
         val deviceType = _deviceService.deviceType
 
         for (i in 0 until data.length()) {
@@ -150,7 +154,7 @@ internal class NotificationLifecycleService(
                 useIO = true,
                 // or false for CPU operations
                 block = {
-                    confirmNotificationOpened(appId, notificationId, subscriptionId, deviceType)
+                    confirmNotificationOpened(appId, notificationId, subscriptionId, deviceType, onesignalId)
                 },
                 onError = { ex ->
                     if (ex is BackendException) {
@@ -204,10 +208,11 @@ internal class NotificationLifecycleService(
         notificationId: String,
         subscriptionId: String,
         deviceType: IDeviceService.DeviceType,
+        onesignalId: String?,
     ) {
         for (attempt in 1..NetworkUtils.maxNetworkRequestAttemptCount) {
             try {
-                _backend.updateNotificationAsOpened(appId, notificationId, subscriptionId, deviceType)
+                _backend.updateNotificationAsOpened(appId, notificationId, subscriptionId, deviceType, onesignalId)
                 return
             } catch (ex: BackendException) {
                 val responseType = NetworkUtils.getResponseStatusType(ex.statusCode)
