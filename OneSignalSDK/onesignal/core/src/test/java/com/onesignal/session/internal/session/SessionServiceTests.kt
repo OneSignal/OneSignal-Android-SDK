@@ -1303,7 +1303,7 @@ class SessionServiceTests : FunSpec({
         mocks.heartbeats shouldBe emptyList()
     }
 
-    test("time without consent is not counted when consent is given again in the foreground") {
+    test("time without consent is not counted when consent is given again within the session timeout") {
         // Given
         val mocks = Mocks(sessionsApiEnabled = true)
         val sessionService = mocks.sessionService
@@ -1313,7 +1313,8 @@ class SessionServiceTests : FunSpec({
         sessionService.onFocus(false)
         mocks.advanceTime(10 * MINUTE_MS)
         mocks.setConsentGiven(false)
-        mocks.advanceTime(60 * MINUTE_MS)
+        mocks.currentTime += 10_000L
+        mocks.elapsedRealtime += 10_000L
 
         // When
         mocks.setConsentGiven(true)
@@ -1327,6 +1328,76 @@ class SessionServiceTests : FunSpec({
 
         // Then
         mocks.heartbeats.single().activeDuration shouldBe HEARTBEAT_MS
+    }
+
+    test("consent given after a pause past the session timeout ends the session and starts the next") {
+        // Given
+        val mocks = Mocks(sessionsApiEnabled = true)
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        val sessionModelStore = mocks.sessionModelStore { it.isValid = false }
+        sessionService.onFocus(false)
+        val firstSessionId = sessionModelStore.model.localSessionId
+        mocks.advanceTime(10 * MINUTE_MS)
+        mocks.setConsentGiven(false)
+        mocks.currentTime += 60 * MINUTE_MS
+
+        // When
+        mocks.setConsentGiven(true)
+
+        // Then
+        val end = mocks.enqueued.filterIsInstance<UpdateSessionOperation>().single { it.isEnd }
+        end.sessionId shouldBe firstSessionId
+        end.activeDuration shouldBe 10 * MINUTE_MS
+        val next = mocks.enqueued.filterIsInstance<CreateSessionOperation>().last()
+        next.localSessionId shouldNotBe firstSessionId
+        next.startTime shouldBe mocks.currentTime
+    }
+
+    test("a session that started without consent starts over when consent is given") {
+        // Given
+        val mocks = Mocks(sessionsApiEnabled = true)
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        val sessionModelStore = mocks.sessionModelStore { it.isValid = false }
+        sessionService.subscribe(mocks.spyCallback)
+        mocks.setConsentGiven(false)
+        sessionService.onFocus(false)
+        val unreportedSessionId = sessionModelStore.model.localSessionId
+        mocks.currentTime += 5_000L
+
+        // When
+        mocks.setConsentGiven(true)
+
+        // Then
+        val next = mocks.enqueued.filterIsInstance<CreateSessionOperation>().last()
+        next.localSessionId shouldNotBe unreportedSessionId
+        next.startTime shouldBe mocks.currentTime
+        verify(exactly = 2) { mocks.spyCallback.onSessionStarted() }
+        verify(exactly = 0) { mocks.spyCallback.onSessionEnded(any(), any()) }
+    }
+
+    test("background run without consent queues the end without waiting for it") {
+        // Given
+        val mocks = Mocks(sessionsApiEnabled = true)
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        mocks.sessionModelStore { it.isValid = false }
+        sessionService.onFocus(false)
+        mocks.advanceTime(10 * MINUTE_MS)
+        mocks.setConsentGiven(false)
+        mocks.isInForeground = false
+        sessionService.onUnfocused()
+
+        // When
+        sessionService.backgroundRun()
+
+        // Then
+        mocks.enqueued.filterIsInstance<UpdateSessionOperation>().single { it.isEnd }.activeDuration shouldBe 10 * MINUTE_MS
+        coVerify(exactly = 0) { mocks.operationRepo.enqueueAndWait(any(), any()) }
     }
 
     test("focus without consent adds no time and sends no heartbeat") {
@@ -1380,7 +1451,7 @@ class SessionServiceTests : FunSpec({
         sessionService.onFocus(false)
         mocks.currentTime += 10 * MINUTE_MS
         mocks.setConsentGiven(false)
-        mocks.currentTime += 60 * MINUTE_MS
+        mocks.currentTime += 10_000L
 
         // When
         mocks.setConsentGiven(true)

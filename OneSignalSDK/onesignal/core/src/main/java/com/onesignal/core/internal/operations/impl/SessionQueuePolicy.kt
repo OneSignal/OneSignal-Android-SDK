@@ -15,7 +15,8 @@ import com.onesignal.session.internal.session.operations.UpdateSessionOperation
  */
 internal class SessionQueuePolicy(
     private val maxQueued: Int = MAX_QUEUED_SESSION_OPERATIONS,
-    // Without consent HttpClient fails every request, so these must not be stored or sent.
+    // A session that starts without consent must not be reported. Updates for one that started with
+    // consent carry only time with consent, so they wait in the queue until consent is given.
     private val awaitingConsent: () -> Boolean = { false },
     private val sessions: SimpleModelStore<SessionStateModel> = SimpleModelStore({ SessionStateModel() }),
 ) {
@@ -46,7 +47,7 @@ internal class SessionQueuePolicy(
 
         val result =
             when {
-                awaitingConsent() -> {
+                op is CreateSessionOperation && awaitingConsent() -> {
                     Logging.debug("SessionQueuePolicy: privacy consent not given, dropping $op")
                     EnqueueResult(accept = false)
                 }

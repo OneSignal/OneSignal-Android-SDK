@@ -164,7 +164,7 @@ class SessionListenerTests : FunSpec({
         verify(exactly = 0) { mocks.mockOperationRepo.enqueue(any(), any()) }
     }
 
-    test("onSessionEnded without consent drops a legacy session's time and duration outcome") {
+    test("onSessionEnded without consent still reports a legacy session's time, which waits for consent") {
         // Given
         val mocks = Mocks(awaitingConsent = true)
 
@@ -172,7 +172,7 @@ class SessionListenerTests : FunSpec({
         mocks.sessionListener.onSessionEnded(5_000, usesSessionsApi = false)
 
         // Then
-        verify(exactly = 0) { mocks.mockOperationRepo.enqueue(any(), any()) }
-        coVerify(exactly = 0) { mocks.outcomeEventsController.sendSessionEndOutcomeEvent(any()) }
+        verify(exactly = 1) { mocks.mockOperationRepo.enqueue(any<TrackSessionEndOperation>(), any()) }
+        coVerify(timeout = 1_000, exactly = 1) { mocks.outcomeEventsController.sendSessionEndOutcomeEvent(5) }
     }
 })

@@ -54,7 +54,8 @@ import kotlin.reflect.KMutableProperty1
  * [HEARTBEAT_INTERVAL_MS] of active time, so the server keeps it open and a crash loses little duration.
  *
  * Time without privacy consent is not counted: losing consent while focused counts as an unfocus,
- * and regaining it while in the foreground counts as a focus.
+ * and regaining it while in the foreground counts as a focus. A session that started without
+ * consent was never reported, so it starts over once consent is given.
  */
 @Suppress("TooManyFunctions")
 internal class SessionService(
@@ -105,6 +106,9 @@ internal class SessionService(
 
     // Set while focused without privacy consent, so the next unfocus adds no time. Serial IO lane only.
     private var pausedForConsent = false
+
+    // Serial IO lane only.
+    private var startedWithoutConsent = false
 
     private val pendingDirectAttributionId = AtomicReference<String?>()
 
@@ -188,9 +192,17 @@ internal class SessionService(
                 pausedForConsent = true
             } else if (!awaitingConsent && pausedForConsent) {
                 Logging.debug("SessionService: privacy consent given, resuming the session")
+                if (pausedPastTimeout(nowMs)) endSession()?.let { operationRepo.enqueue(it) }
                 handleOnFocus(false, nowMs, elapsedMs, null)
             }
         }
+    }
+
+    /** Like a return from the background, a pause this long starts the next session. */
+    private fun pausedPastTimeout(nowMs: Long): Boolean {
+        val unfocusTime = session?.takeIf { it.isValid && !startedWithoutConsent }?.unfocusTime
+        val timeout = config?.sessionFocusTimeout
+        return unfocusTime != null && timeout != null && nowMs - unfocusTime >= timeout
     }
 
     override fun attributeNextSessionTo(notificationId: String) {
@@ -203,6 +215,11 @@ internal class SessionService(
      */
     override suspend fun backgroundRun() {
         val end = endSession() ?: return
+        // Without consent the end can't be sent, so it waits in the queue until consent is given.
+        if (config?.isAwaitingConsent == true) {
+            operationRepo.enqueue(end)
+            return
+        }
         // Android 15+ blocks network requests started after this job finishes, so send the end now
         // rather than after the queue's batching delay. Flushing is bounded to once per session.
         // On timeout the end stays queued and is sent on the next app open.
@@ -283,7 +300,7 @@ internal class SessionService(
             endSession()?.let { operationRepo.enqueue(it) }
         }
 
-        if (!session.isValid) {
+        if (!session.isValid || (startedWithoutConsent && config?.isAwaitingConsent != true)) {
             // As the old session was made inactive, we need to create a new session
             shouldFireOnSubscribe = firedOnSubscribe
             session.sessionId = UUID.randomUUID().toString()
@@ -300,6 +317,7 @@ internal class SessionService(
             val create = sessionsApiCreate(session, directAttributionId)
             session.usesSessionsApi = create != null
             session.isValid = true
+            startedWithoutConsent = config?.isAwaitingConsent == true
             Logging.debug("SessionService: New session started at ${session.startTime}")
             create?.let { operationRepo.enqueue(it) }
             sessionLifeCycleNotifier.fire { it.onSessionStarted() }
