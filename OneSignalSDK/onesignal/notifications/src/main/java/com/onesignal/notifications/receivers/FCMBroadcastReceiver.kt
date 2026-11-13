@@ -23,6 +23,7 @@ class FCMBroadcastReceiver : BroadcastReceiver() {
         }
 
         runOrderedIngressHandoff(
+            context,
             "FCMBroadcastReceiver",
             BroadcastCompletion.RECONSTRUCTIBLE_WORK_TIMEOUT_MS,
         ) { ordered, pendingResult ->

@@ -2,6 +2,7 @@ package com.onesignal.example.ui.components
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -15,11 +16,17 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.onesignal.example.ui.theme.DemoLayout
@@ -32,6 +39,9 @@ private val ButtonTextStyle
     @Composable get() = MaterialTheme.typography.bodyMedium.copy(
         fontWeight = FontWeight.SemiBold,
     )
+
+private const val MIN_TEXT_SCALE = 0.7f
+private const val TEXT_SCALE_STEP = 0.95f
 
 private fun Modifier.applyTestTag(tag: String?): Modifier =
     if (tag != null) this.testTag(tag) else this
@@ -67,6 +77,50 @@ fun PrimaryButton(
     ) {
         Text(text = text, style = ButtonTextStyle, color = Color.White)
     }
+}
+
+@Composable
+fun GridPrimaryButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    testTag: String? = null,
+) {
+    Button(
+        onClick = onClick,
+        modifier = modifier.height(DemoLayout.buttonHeight).applyTestTag(testTag),
+        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+        shape = ButtonShape,
+        elevation = ButtonDefaults.buttonElevation(
+            defaultElevation = 0.dp,
+            pressedElevation = 0.dp,
+        ),
+        contentPadding = PaddingValues(horizontal = DemoLayout.gap),
+    ) {
+        ScaleDownText(text = text, style = ButtonTextStyle, color = Color.White)
+    }
+}
+
+@Composable
+private fun ScaleDownText(text: String, style: TextStyle, color: Color) {
+    var scaledStyle by remember(text, style) { mutableStateOf(style) }
+    var readyToDraw by remember(text, style) { mutableStateOf(false) }
+    Text(
+        text = text,
+        style = scaledStyle,
+        color = color,
+        maxLines = 1,
+        softWrap = false,
+        modifier = Modifier.drawWithContent { if (readyToDraw) drawContent() },
+        onTextLayout = { result ->
+            val canShrink = scaledStyle.fontSize.value * TEXT_SCALE_STEP >= style.fontSize.value * MIN_TEXT_SCALE
+            if (result.didOverflowWidth && canShrink) {
+                scaledStyle = scaledStyle.copy(fontSize = scaledStyle.fontSize * TEXT_SCALE_STEP)
+            } else {
+                readyToDraw = true
+            }
+        },
+    )
 }
 
 @Composable

@@ -24,6 +24,8 @@ val OsCardBorder = Color(0x1A000000)
 val OsDivider = Color(0xFFE8EAED)
 val OsWarningBackground = Color(0xFFFFF8E1)
 val OsBackdrop = Color(0x8A000000)
+val OsLogBackground = Color(0xFF1E1E1E)
+val OsLogText = Color(0xFFD4D4D4)
 
 /** @deprecated Use [OsPrimary] */
 val OneSignalRed = OsPrimary

@@ -17,7 +17,7 @@ class ADMMessageHandler : ADMMessageHandlerBase("ADMMessageHandler") {
         val bundle = intent.extras ?: return
 
         // ADM can cold-start the process before initWithContext; warm dispatchers first.
-        OneSignalDispatchers.prewarm()
+        OneSignalDispatchers.prewarm(applicationContext)
         suspendifyOnIO {
             if (!OneSignal.initWithContext(context)) {
                 Logging.warn("onMessage skipped due to failed OneSignal init")
@@ -32,7 +32,7 @@ class ADMMessageHandler : ADMMessageHandlerBase("ADMMessageHandler") {
     override fun onRegistered(newRegistrationId: String) {
         Logging.info("ADM registration ID: $newRegistrationId")
 
-        OneSignalDispatchers.prewarm()
+        OneSignalDispatchers.prewarm(applicationContext)
         suspendifyOnIO {
             val registerer = OneSignal.getService<IPushRegistratorCallback>()
             registerer.fireCallback(newRegistrationId)
@@ -48,7 +48,7 @@ class ADMMessageHandler : ADMMessageHandlerBase("ADMMessageHandler") {
             )
         }
 
-        OneSignalDispatchers.prewarm()
+        OneSignalDispatchers.prewarm(applicationContext)
         suspendifyOnIO {
             val registerer = OneSignal.getService<IPushRegistratorCallback>()
             registerer.fireCallback(null)

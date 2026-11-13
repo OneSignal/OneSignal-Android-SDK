@@ -1,6 +1,7 @@
 package com.onesignal.user.internal.operations.impl.executors
 
 import android.os.Build
+import com.onesignal.OneSignalError
 import com.onesignal.common.AndroidUtils
 import com.onesignal.common.DeviceUtils
 import com.onesignal.common.IDManager
@@ -40,12 +41,15 @@ import com.onesignal.user.internal.operations.SetAliasOperation
 import com.onesignal.user.internal.operations.TransferSubscriptionOperation
 import com.onesignal.user.internal.operations.UpdateSubscriptionOperation
 import com.onesignal.user.internal.operations.reservedLoginAliasLabel
+import com.onesignal.user.internal.operations.sameSubscriptionAddress
 import com.onesignal.user.internal.properties.PropertiesModel
 import com.onesignal.user.internal.properties.PropertiesModelStore
 import com.onesignal.user.internal.subscriptions.SubscriptionModel
 import com.onesignal.user.internal.subscriptions.SubscriptionModelStore
+import com.onesignal.user.internal.subscriptions.SubscriptionStatus
 import com.onesignal.user.internal.subscriptions.SubscriptionType
 
+@Suppress("TooManyFunctions")
 internal class LoginUserOperationExecutor(
     private val _identityOperationExecutor: IdentityOperationExecutor,
     private val _application: IApplicationService,
@@ -89,15 +93,12 @@ internal class LoginUserOperationExecutor(
             return ExecutionResponse(ExecutionResult.FAIL_NORETRY)
         }
         if (shouldCreateUserDirectly(loginUserOp, alias)) {
-            // When there is no existing user to attempt to associate with the externalId provided, we go right to
-            // createUser.  If there is no externalId provided this is an insert, if there is this will be an
-            // "upsert with retrieval" as the user may already exist.
-            //
-            // Under IV, also skip the optimistic SetAliasOperation: that inline op identifies the
-            // target user by `onesignal_id = existingOnesignalId`, but IV's alias-resolution would
-            // rewrite the call to identify by the new (not-yet-registered) `external_id`, producing
-            // a 404 or idempotent success against the wrong user. createUser's identities-map path
-            // handles the merge correctly through backend upsert semantics.
+            // A server anonymous user is merged by sending its onesignal_id. Under IV, skip
+            // SetAlias: alias resolution would target the new external_id and 404 or hit the wrong user.
+            anonymousUserToMerge(loginUserOp, alias)?.let { anonymousId ->
+                val merged = createUser(loginUserOp, operations, anonymousId)
+                if (!shouldAbandonMerge(merged)) return merged
+            }
             return createUser(loginUserOp, operations)
         } else {
             // before we create a user we attempt to associate the user defined by existingOnesignalId with the
@@ -177,8 +178,10 @@ internal class LoginUserOperationExecutor(
     private suspend fun createUser(
         createUserOperation: LoginUserOperation,
         operations: List<Operation>,
+        mergeIntoOnesignalId: String? = null,
     ): ExecutionResponse {
         val identities = mutableMapOf<String, String>()
+        mergeIntoOnesignalId?.let { identities[IdentityConstants.ONESIGNAL_ID] = it }
         var subscriptions = mapOf<String, SubscriptionObject>()
         val properties =
             PropertiesObject(
@@ -208,7 +211,10 @@ internal class LoginUserOperationExecutor(
                 else -> throw Exception("Unrecognized operation: $operation")
             }
         }
-        subscriptions = LoginProfileApplier.addSubscriptions(createUserOperation, subscriptions)
+        subscriptions =
+            LoginProfileApplier.addSubscriptions(createUserOperation, subscriptions) { type, token, grouped ->
+                profileSubscription(type, token, profileEnabled(type, createUserOperation), grouped)
+            }
 
         try {
             val subscriptionList = subscriptions.toList()
@@ -253,12 +259,17 @@ internal class LoginUserOperationExecutor(
                     val subscriptionModel = _subscriptionsModelStore.get(pair.first)
                     if (subscriptionModel != null) {
                         subscriptionModel.setStringProperty(SubscriptionModel::id.name, backendSubscription.id!!, ModelChangeTags.HYDRATE)
+                        // The profile status overrode this grouped operation on the wire, so the local record follows.
+                        profileStatusForAddress(backendSubscription.type, backendSubscription.token, createUserOperation)?.let {
+                            LoginProfileApplier.applyStatus(subscriptionModel, it)
+                        }
                     } else if (LoginProfileApplier.isProfileSubscriptionKey(pair.first)) {
                         if (_identityModelStore.model.onesignalId == backendOneSignalId) {
                             LoginProfileApplier.persistSubscription(
                                 backendSubscription,
                                 LoginProfileApplier.fallbackToken(backendSubscription.type, createUserOperation),
                                 _subscriptionsModelStore,
+                                optedIn = profileEnabled(backendSubscription.type, createUserOperation),
                             )
                         }
                         when (LoginProfileApplier.subscriptionType(backendSubscription.type)) {
@@ -293,14 +304,6 @@ internal class LoginUserOperationExecutor(
                 Logging.warn("LoginUserOperationExecutor: skipped profile hydration because the current identity is not the created user")
             }
 
-            if (!_identityVerificationService.ivBehaviorActive &&
-                (!createUserOperation.email.isNullOrBlank() || !createUserOperation.sms.isNullOrBlank())
-            ) {
-                Logging.warn(
-                    "LoginUserOperationExecutor: email or SMS sent without identity verification. If that address belonged to another user it was transferred.",
-                )
-            }
-
             val wasPossiblyAnUpsert = identities.isNotEmpty()
             val followUpOperations =
                 if (wasPossiblyAnUpsert) {
@@ -316,17 +319,29 @@ internal class LoginUserOperationExecutor(
                 metadata = LoginWaitMetadata(backendOneSignalId, emailSubscriptionId, smsSubscriptionId),
             )
         } catch (ex: BackendException) {
-            Logging.error("LoginUserOperationExecutor.createUser failed: HTTP ${ex.statusCode}")
             val responseType = NetworkUtils.getResponseStatusType(ex.statusCode)
-
-            return when (responseType) {
-                NetworkUtils.ResponseStatusType.RETRYABLE ->
-                    backendExecutionResponse(ExecutionResult.FAIL_RETRY, ex)
-                NetworkUtils.ResponseStatusType.UNAUTHORIZED ->
-                    backendExecutionResponse(ExecutionResult.FAIL_UNAUTHORIZED, ex)
-                else ->
-                    backendExecutionResponse(ExecutionResult.FAIL_NORETRY, ex)
+            val response =
+                when (responseType) {
+                    NetworkUtils.ResponseStatusType.RETRYABLE ->
+                        backendExecutionResponse(ExecutionResult.FAIL_RETRY, ex)
+                    NetworkUtils.ResponseStatusType.UNAUTHORIZED ->
+                        backendExecutionResponse(ExecutionResult.FAIL_UNAUTHORIZED, ex)
+                    else ->
+                        backendExecutionResponse(ExecutionResult.FAIL_NORETRY, ex)
+                }
+            // The caller retries an abandoned merge, so this failure is not the outcome.
+            if (mergeIntoOnesignalId != null && shouldAbandonMerge(response)) {
+                Logging.debug("LoginUserOperationExecutor merge attempt failed: HTTP ${ex.statusCode}")
+                if (responseType == NetworkUtils.ResponseStatusType.CONFLICT) {
+                    // Hardcode user-1. The 409 line above reads like a failure to the app.
+                    Logging.debug(
+                        "LoginUserOperationExecutor now handling 409 response with \"code\": \"user-1\" by switching to user with \"external_id\": \"${createUserOperation.externalId}\"",
+                    )
+                }
+            } else {
+                Logging.error("LoginUserOperationExecutor.createUser failed: HTTP ${ex.statusCode}")
             }
+            return response
         }
     }
 
@@ -377,23 +392,91 @@ internal class LoginUserOperationExecutor(
             }
         val subId = if (!IDManager.isLocalId(operation.subscriptionId)) operation.subscriptionId else null
         mutableSubscriptions[operation.subscriptionId] =
-            SubscriptionObject(
-                id = subId,
+            subscriptionWithDevice(
                 subscriptionType,
                 operation.address,
                 operation.enabled,
                 operation.status.value,
-                OneSignalUtils.sdkVersion,
-                Build.MODEL,
-                Build.VERSION.RELEASE,
-                RootToolsInternalMethods.isRooted,
-                DeviceUtils.getNetType(_application.appContext),
-                DeviceUtils.getCarrierName(_application.appContext),
-                AndroidUtils.getAppVersion(_application.appContext),
+                subId,
             )
 
         return mutableSubscriptions
     }
+
+    // Create User applies a status only when one is sent, so omitting leaves an address
+    // that already exists alone. The caller states intent; the SDK never assumes it.
+    private fun profileSubscription(
+        type: SubscriptionObjectType,
+        token: String,
+        enabled: Boolean?,
+        grouped: SubscriptionObject?,
+    ): SubscriptionObject? {
+        // A grouped addEmail/addSms already carries a subscribed status. Only an explicit
+        // profile status may override it, otherwise that operation is left untouched.
+        if (grouped != null) {
+            if (enabled == null) return null
+            Logging.debug("LoginUserOperationExecutor: profile status $enabled overrides a grouped $type subscription")
+            return LoginProfileApplier.withStatus(grouped, enabled)
+        }
+        return subscriptionWithDevice(
+            type,
+            token,
+            enabled = enabled,
+            notificationTypes =
+            when (enabled) {
+                true -> SubscriptionStatus.SUBSCRIBED.value
+                false -> SubscriptionStatus.UNSUBSCRIBE.value
+                null -> null
+            },
+        )
+    }
+
+    private fun profileEnabled(
+        type: SubscriptionObjectType?,
+        operation: LoginUserOperation,
+    ): Boolean? =
+        when (LoginProfileApplier.subscriptionType(type)) {
+            SubscriptionType.EMAIL -> operation.emailEnabled
+            SubscriptionType.SMS -> operation.smsEnabled
+            else -> null
+        }
+
+    /** A status only applies to the address the caller stated it for, never a sibling of the same type. */
+    private fun profileStatusForAddress(
+        type: SubscriptionObjectType?,
+        address: String?,
+        operation: LoginUserOperation,
+    ): Boolean? {
+        val profileAddress =
+            when (LoginProfileApplier.subscriptionType(type)) {
+                SubscriptionType.EMAIL -> operation.email
+                SubscriptionType.SMS -> operation.sms
+                else -> null
+            } ?: return null
+        val matches = sameSubscriptionAddress(profileAddress, address, isEmail = type == SubscriptionObjectType.EMAIL)
+        return if (matches) profileEnabled(type, operation) else null
+    }
+
+    private fun subscriptionWithDevice(
+        type: SubscriptionObjectType,
+        token: String,
+        enabled: Boolean? = null,
+        notificationTypes: Int? = null,
+        id: String? = null,
+    ) = SubscriptionObject(
+        id = id,
+        type = type,
+        token = token,
+        enabled = enabled,
+        notificationTypes = notificationTypes,
+        sdk = OneSignalUtils.sdkVersion,
+        deviceModel = Build.MODEL,
+        deviceOS = Build.VERSION.RELEASE,
+        rooted = RootToolsInternalMethods.isRooted,
+        netType = DeviceUtils.getNetType(_application.appContext),
+        carrier = DeviceUtils.getCarrierName(_application.appContext),
+        appVersion = AndroidUtils.getAppVersion(_application.appContext),
+    )
 
     private fun createSubscriptionsFromOperation(
         operation: UpdateSubscriptionOperation,
@@ -435,6 +518,37 @@ internal class LoginUserOperationExecutor(
         return op.existingOnesignalId == null || alias == null
     }
 
+    // A profile login sends the anonymous user's ID with the new external ID, so Create User attaches
+    // the external ID to that user instead of creating a new one, like the SetAlias path does.
+    private fun anonymousUserToMerge(op: LoginUserOperation, alias: String?): String? {
+        if (!op.hasProfileFields() || _identityVerificationService.ivBehaviorActive || alias == null) return null
+        return op.existingOnesignalId?.takeUnless { IDManager.isLocalId(it) }
+    }
+
+    // Drop the anonymous id only when it can be why Create User failed.
+    // A 400 is the payload, so a second request would fail the same way.
+    private fun shouldAbandonMerge(response: ExecutionResponse): Boolean {
+        if (response.result != ExecutionResult.FAIL_NORETRY) return false
+        val status = response.httpStatusCode?.let { NetworkUtils.getResponseStatusType(it) }
+        return status == NetworkUtils.ResponseStatusType.MISSING ||
+            (status == NetworkUtils.ResponseStatusType.CONFLICT && onesignalIdConflict(response.httpResponse) != false)
+    }
+
+    /** False when a parsed error does not name onesignal_id. Null when the body has none. */
+    private fun onesignalIdConflict(body: String?): Boolean? =
+        OneSignalError.fromBackendResponse(HTTP_CONFLICT, body)
+            .details
+            .filter { it.backendCode != null || conflictingAliases(it).isNotEmpty() }
+            .takeIf { it.isNotEmpty() }
+            ?.any { namesMergedUser(it) }
+
+    // user-1 is any alias clash. Retry only when conflicting_aliases names onesignal_id.
+    private fun namesMergedUser(detail: OneSignalError.Detail): Boolean =
+        conflictingAliases(detail).containsKey(IdentityConstants.ONESIGNAL_ID)
+
+    private fun conflictingAliases(detail: OneSignalError.Detail): Map<*, *> =
+        detail.meta?.get(CONFLICTING_ALIASES) as? Map<*, *> ?: emptyMap<String, Any?>()
+
     private fun backendExecutionResponse(
         result: ExecutionResult,
         ex: BackendException,
@@ -447,6 +561,8 @@ internal class LoginUserOperationExecutor(
 
     companion object {
         const val LOGIN_USER = "login-user"
+        private const val HTTP_CONFLICT = 409
+        private const val CONFLICTING_ALIASES = "conflicting_aliases"
     }
 }
 

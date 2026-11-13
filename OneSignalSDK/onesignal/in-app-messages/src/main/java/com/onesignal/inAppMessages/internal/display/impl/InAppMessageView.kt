@@ -11,10 +11,13 @@ import android.os.Build
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
+import android.view.WindowInsets
+import android.view.WindowInsetsController
 import android.view.WindowManager
 import android.view.animation.Animation
 import android.webkit.WebView
 import android.widget.RelativeLayout
+import androidx.annotation.RequiresApi
 import androidx.cardview.widget.CardView
 import androidx.core.widget.PopupWindowCompat
 import com.onesignal.common.AndroidUtils
@@ -25,6 +28,61 @@ import com.onesignal.common.threading.withMain
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.inAppMessages.internal.InAppMessageContent
 import kotlinx.coroutines.delay
+
+internal fun copyHostSystemBarVisibility(
+    hostDecor: View,
+    popupDecor: View,
+) {
+    if (popupDecor === hostDecor) return
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+        copyHostInsetsControllerState(hostDecor, popupDecor)
+    } else {
+        copyHostSystemUiVisibility(hostDecor, popupDecor)
+    }
+}
+
+@RequiresApi(Build.VERSION_CODES.R)
+private fun copyHostInsetsControllerState(
+    hostDecor: View,
+    popupDecor: View,
+) {
+    val controller = popupDecor.windowInsetsController
+    val hostInsets = hostDecor.rootWindowInsets
+    if (controller == null || hostInsets == null) return
+    for (bars in intArrayOf(WindowInsets.Type.statusBars(), WindowInsets.Type.navigationBars())) {
+        if (hostInsets.isVisible(bars)) {
+            controller.show(bars)
+        } else {
+            controller.hide(bars)
+        }
+    }
+    val hostController = hostDecor.windowInsetsController ?: return
+    controller.systemBarsBehavior = hostController.systemBarsBehavior
+    val appearanceMask =
+        WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS or
+            WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS
+    controller.setSystemBarsAppearance(hostController.systemBarsAppearance, appearanceMask)
+}
+
+private fun copyHostSystemUiVisibility(
+    hostDecor: View,
+    popupDecor: View,
+) {
+    // Layout flags stay on the popup. The host's would pull a banner under the nav bar.
+    @Suppress("DEPRECATION")
+    val visibilityMask =
+        View.SYSTEM_UI_FLAG_LOW_PROFILE or
+            View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
+            View.SYSTEM_UI_FLAG_FULLSCREEN or
+            View.SYSTEM_UI_FLAG_IMMERSIVE or
+            View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY or
+            View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR or
+            View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
+    @Suppress("DEPRECATION")
+    popupDecor.systemUiVisibility =
+        (popupDecor.systemUiVisibility and visibilityMask.inv()) or
+        (hostDecor.systemUiVisibility and visibilityMask)
+}
 
 /**
  * Layout Documentation
@@ -166,27 +224,41 @@ internal class InAppMessageView(
         }
     }
 
-    suspend fun showInAppMessageView(currentActivity: Activity?) {
+    private suspend fun showInAppMessageView(activity: Activity) {
         /* IMPORTANT
          * The only place where currentActivity should be assigned to InAppMessageView */
-        this.currentActivity = currentActivity
-        val webViewLayoutParams =
-            RelativeLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                pageHeight,
-            )
-        webViewLayoutParams.addRule(RelativeLayout.CENTER_IN_PARENT)
-        val relativeLayoutParams = if (hasBackground) createParentRelativeLayoutParams() else null
-        showDraggableView(
-            displayPosition,
-            webViewLayoutParams,
-            relativeLayoutParams,
-            createDraggableLayoutParams(pageHeight, displayPosition, disableDragDismiss),
-        )
+        this.currentActivity = activity
+        try {
+            val webViewLayoutParams =
+                RelativeLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    pageHeight,
+                )
+            webViewLayoutParams.addRule(RelativeLayout.CENTER_IN_PARENT)
+            val relativeLayoutParams = if (hasBackground) createParentRelativeLayoutParams() else null
+            val shown =
+                showDraggableView(
+                    activity,
+                    displayPosition,
+                    webViewLayoutParams,
+                    relativeLayoutParams,
+                    createDraggableLayoutParams(pageHeight, displayPosition, disableDragDismiss),
+                )
+            if (!shown) {
+                cleanupViewsAfterDismiss()
+            }
+        } catch (e: Exception) {
+            // Dismiss so a failed show does not leave the queue stuck.
+            Logging.error("Could not show the in app message", e)
+            cleanupViewsAfterDismiss()
+        }
     }
 
     private val displayYSize: Int
-        private get() = ViewUtils.getWindowHeight(currentActivity!!)
+        get() {
+            val activity = currentActivity ?: return 0
+            return ViewUtils.getWindowHeight(activity)
+        }
 
     private fun createParentRelativeLayoutParams(): RelativeLayout.LayoutParams {
         val relativeLayoutParams =
@@ -251,25 +323,40 @@ internal class InAppMessageView(
     }
 
     private suspend fun showDraggableView(
+        activity: Activity,
         displayLocation: WebViewManager.Position,
         relativeLayoutParams: RelativeLayout.LayoutParams,
         draggableRelativeLayoutParams: RelativeLayout.LayoutParams?,
         webViewLayoutParams: DraggableRelativeLayout.Params,
-    ) {
-        withMain {
-            if (webView == null) {
-                return@withMain
-            }
+    ): Boolean {
+        val shown =
+            withMain {
+                val page = webView
+                if (page == null) {
+                    Logging.warn("In-app message not shown, WebView is missing.")
+                    return@withMain false
+                }
 
-            webView!!.layoutParams = relativeLayoutParams
-            setUpDraggableLayout(currentActivity!!, draggableRelativeLayoutParams, webViewLayoutParams)
-            setUpParentRelativeLayout(currentActivity!!)
-            createPopupWindow(parentRelativeLayout!!)
-            if (messageController != null) {
-                animateInAppMessage(displayLocation, draggableRelativeLayout!!, parentRelativeLayout!!)
+                page.layoutParams = relativeLayoutParams
+                setUpDraggableLayout(activity, draggableRelativeLayoutParams, webViewLayoutParams)
+                setUpParentRelativeLayout(activity)
+                val parent = parentRelativeLayout
+                if (parent == null) {
+                    Logging.warn("In-app message not shown, parent layout is missing.")
+                    return@withMain false
+                }
+                createPopupWindow(activity, parent)
+                val draggable = draggableRelativeLayout
+                if (messageController != null && draggable != null) {
+                    animateInAppMessage(displayLocation, draggable, parent)
+                }
+                startDismissTimerIfNeeded()
+                true
             }
-            startDismissTimerIfNeeded()
+        if (shown == null) {
+            Logging.error("Could not show the in app message, the main thread is unavailable")
         }
+        return shown == true
     }
 
     /**
@@ -277,54 +364,69 @@ internal class InAppMessageView(
      *
      * @param parentRelativeLayout root layout to attach to the pop up window
      */
-    private fun createPopupWindow(parentRelativeLayout: RelativeLayout) {
-        popupWindow =
+    private fun createPopupWindow(
+        activity: Activity,
+        parentRelativeLayout: RelativeLayout,
+    ) {
+        val window = newPopupWindow(parentRelativeLayout)
+        popupWindow = window
+        // Using panel for fullbleed IAMs and dialog for non-fullbleed. The attached dialog type
+        // does not allow content to bleed under notches but panel does.
+        val displayType =
+            if (messageContent.isFullBleed) {
+                WindowManager.LayoutParams.TYPE_APPLICATION_PANEL
+            } else {
+                WindowManager.LayoutParams.TYPE_APPLICATION_ATTACHED_DIALOG
+            }
+        PopupWindowCompat.setWindowLayoutType(window, displayType)
+        window.showAtLocation(
+            activity.window.decorView.rootView,
+            popupGravity(),
+            0,
+            0,
+        )
+        copyHostSystemBarVisibility(
+            activity.window.decorView,
+            parentRelativeLayout.rootView,
+        )
+    }
+
+    private fun newPopupWindow(parent: RelativeLayout): OSPopupWindow {
+        val window =
             OSPopupWindow(
-                parentRelativeLayout,
+                parent,
                 if (hasBackground) WindowManager.LayoutParams.MATCH_PARENT else pageWidth,
                 if (hasBackground) WindowManager.LayoutParams.MATCH_PARENT else WindowManager.LayoutParams.WRAP_CONTENT,
                 false,
                 popupWindowListener,
             )
-        popupWindow?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
-        popupWindow?.isTouchable = true
+        window.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+        window.isTouchable = true
         // Focusable allows keyboard input for HTML IAMs, but also prevents interacting under banners
-        popupWindow?.isFocusable = !displayPosition.isBanner
+        window.isFocusable = !displayPosition.isBanner
+        // Required for fullscreen under notches in portrait.
+        window.isClippingEnabled = false
+        return window
+    }
 
-        // NOTE: This is required for getting fullscreen under notches working in portrait mode
-        popupWindow?.isClippingEnabled = false
-        var gravity = 0
-        if (!hasBackground) {
-            gravity =
-                when (displayPosition) {
-                    WebViewManager.Position.TOP_BANNER -> Gravity.CENTER_HORIZONTAL or Gravity.TOP
-                    WebViewManager.Position.BOTTOM_BANNER -> Gravity.CENTER_HORIZONTAL or Gravity.BOTTOM
-                    WebViewManager.Position.CENTER_MODAL, WebViewManager.Position.FULL_SCREEN -> Gravity.CENTER_HORIZONTAL
-                }
+    private fun popupGravity(): Int {
+        if (hasBackground) {
+            return 0
         }
-
-        // Using panel for fullbleed IAMs and dialog for non-fullbleed. The attached dialog type
-        // does not allow content to bleed under notches but panel does.
-        val displayType =
-            if (messageContent.isFullBleed) WindowManager.LayoutParams.TYPE_APPLICATION_PANEL else WindowManager.LayoutParams.TYPE_APPLICATION_ATTACHED_DIALOG
-        PopupWindowCompat.setWindowLayoutType(
-            popupWindow!!,
-            displayType,
-        )
-        popupWindow?.showAtLocation(
-            currentActivity!!.window.decorView.rootView,
-            gravity,
-            0,
-            0,
-        )
+        return when (displayPosition) {
+            WebViewManager.Position.TOP_BANNER -> Gravity.CENTER_HORIZONTAL or Gravity.TOP
+            WebViewManager.Position.BOTTOM_BANNER -> Gravity.CENTER_HORIZONTAL or Gravity.BOTTOM
+            WebViewManager.Position.CENTER_MODAL, WebViewManager.Position.FULL_SCREEN -> Gravity.CENTER_HORIZONTAL
+        }
     }
 
     private fun setUpParentRelativeLayout(context: Context) {
-        parentRelativeLayout = RelativeLayout(context)
-        parentRelativeLayout!!.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
-        parentRelativeLayout!!.clipChildren = false
-        parentRelativeLayout!!.clipToPadding = false
-        parentRelativeLayout!!.addView(draggableRelativeLayout)
+        val parent = RelativeLayout(context)
+        parentRelativeLayout = parent
+        parent.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+        parent.clipChildren = false
+        parent.clipToPadding = false
+        parent.addView(draggableRelativeLayout)
     }
 
     private fun setUpDraggableLayout(
@@ -332,19 +434,18 @@ internal class InAppMessageView(
         relativeLayoutParams: RelativeLayout.LayoutParams?,
         draggableParams: DraggableRelativeLayout.Params,
     ) {
-        draggableRelativeLayout = DraggableRelativeLayout(context)
+        val draggable = DraggableRelativeLayout(context)
+        draggableRelativeLayout = draggable
         if (relativeLayoutParams != null) {
-            draggableRelativeLayout!!.setLayoutParams(
+            draggable.setLayoutParams(
                 relativeLayoutParams,
             )
         }
-        draggableRelativeLayout!!.setParams(draggableParams)
-        draggableRelativeLayout!!.setListener(
+        draggable.setParams(draggableParams)
+        draggable.setListener(
             object : DraggableRelativeLayout.DraggableListener {
                 override fun onDismiss() {
-                    if (messageController != null) {
-                        messageController!!.onMessageWillDismiss()
-                    }
+                    messageController?.onMessageWillDismiss()
 
                     suspendifyOnIO {
                         finishAfterDelay()
@@ -360,19 +461,22 @@ internal class InAppMessageView(
                 }
             },
         )
-        if (webView!!.parent != null) (webView!!.parent as ViewGroup).removeAllViews()
         val cardView = createCardView(context)
         cardView.tag = IN_APP_MESSAGE_CARD_VIEW_TAG
-        cardView.addView(webView)
-        draggableRelativeLayout!!.setPadding(
+        val page = webView
+        if (page != null) {
+            (page.parent as? ViewGroup)?.removeAllViews()
+            cardView.addView(page)
+        }
+        draggable.setPadding(
             marginPxSizeLeft,
             marginPxSizeTop,
             marginPxSizeRight,
             marginPxSizeBottom,
         )
-        draggableRelativeLayout!!.setClipChildren(false)
-        draggableRelativeLayout!!.setClipToPadding(false)
-        draggableRelativeLayout!!.addView(cardView)
+        draggable.setClipChildren(false)
+        draggable.setClipToPadding(false)
+        draggable.addView(cardView)
     }
 
     /**

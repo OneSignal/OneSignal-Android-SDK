@@ -54,9 +54,9 @@ class PrewarmEntryPointTests : FunSpec({
     test("BootUpReceiver.onReceive prewarms before dispatch") {
         val context = ApplicationProvider.getApplicationContext<Context>()
         BootUpReceiver().onReceive(context, Intent(Intent.ACTION_BOOT_COMPLETED))
-        verify(exactly = 1) { OneSignalDispatchers.prewarm() }
+        verify(exactly = 1) { OneSignalDispatchers.prewarm(any()) }
         verifyOrder {
-            OneSignalDispatchers.prewarm()
+            OneSignalDispatchers.prewarm(any())
             suspendifyOnIngress(any<suspend () -> Unit>(), any<() -> Unit>())
         }
     }
@@ -64,9 +64,9 @@ class PrewarmEntryPointTests : FunSpec({
     test("UpgradeReceiver.onReceive prewarms before dispatch") {
         val context = ApplicationProvider.getApplicationContext<Context>()
         UpgradeReceiver().onReceive(context, Intent(Intent.ACTION_MY_PACKAGE_REPLACED))
-        verify(exactly = 1) { OneSignalDispatchers.prewarm() }
+        verify(exactly = 1) { OneSignalDispatchers.prewarm(any()) }
         verifyOrder {
-            OneSignalDispatchers.prewarm()
+            OneSignalDispatchers.prewarm(any())
             suspendifyOnIngress(any<suspend () -> Unit>(), any<() -> Unit>())
         }
     }
@@ -74,9 +74,9 @@ class PrewarmEntryPointTests : FunSpec({
     test("NotificationDismissReceiver.onReceive prewarms before dispatch") {
         val context = ApplicationProvider.getApplicationContext<Context>()
         NotificationDismissReceiver().onReceive(context, Intent())
-        verify(exactly = 1) { OneSignalDispatchers.prewarm() }
+        verify(exactly = 1) { OneSignalDispatchers.prewarm(any()) }
         verifyOrder {
-            OneSignalDispatchers.prewarm()
+            OneSignalDispatchers.prewarm(any())
             suspendifyOnIngress(any<suspend () -> Unit>(), any<() -> Unit>())
         }
     }

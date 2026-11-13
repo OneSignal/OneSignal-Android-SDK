@@ -41,7 +41,7 @@ object OneSignalHmsEventBridge {
         if (firstToken.compareAndSet(true, false)) {
             Logging.info("OneSignalHmsEventBridge onNewToken - HMS token: $token Bundle: $bundle")
             // HMS can cold-start the process before initWithContext; warm dispatchers first.
-            OneSignalDispatchers.prewarm()
+            OneSignalDispatchers.prewarm(context)
             suspendifyOnIO {
                 val registerer = OneSignal.getService<IPushRegistratorCallback>()
                 registerer.fireCallback(token)
@@ -68,7 +68,7 @@ object OneSignalHmsEventBridge {
         message: RemoteMessage,
     ) {
         // HMS can cold-start the process before initWithContext; warm dispatchers first.
-        OneSignalDispatchers.prewarm()
+        OneSignalDispatchers.prewarm(context)
         suspendifyOnDefault {
             if (!OneSignal.initWithContext(context)) {
                 return@suspendifyOnDefault

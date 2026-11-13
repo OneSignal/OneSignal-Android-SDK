@@ -66,11 +66,11 @@ class SyncJobServiceTests : FunSpec({
 
         mocks.syncJobService.onStartJob(mocks.jobParameters)
 
-        verify(exactly = 1) { OneSignalDispatchers.prewarm() }
+        verify(exactly = 1) { OneSignalDispatchers.prewarm(any()) }
         // prewarm() must run before the first suspendifyOnIO dispatch, otherwise the cold-init cost
         // would already be paid on the caller (main) thread by the time the helper is entered.
         verifyOrder {
-            OneSignalDispatchers.prewarm()
+            OneSignalDispatchers.prewarm(any())
             OneSignalDispatchers.launchOnIO(any<suspend () -> Unit>())
         }
     }

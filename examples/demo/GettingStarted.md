@@ -9,7 +9,7 @@ A Jetpack Compose demo app that exercises the full OneSignal Android SDK surface
 | Android Studio | Ladybug (2024.2+) recommended |
 | JDK | 17 (bundled with Android Studio) |
 | Android SDK | API 34 (compileSdk / targetSdk) |
-| Min device / emulator | API 21 (Android 5.0) |
+| Min device / emulator | API 23 (Android 6.0) for `gms`, API 21 (Android 5.0) for `huawei` |
 | Physical device | Recommended for push notification testing |
 
 ## Quick Start
@@ -69,9 +69,11 @@ Alternatively, from the terminal:
 ./gradlew :app:installGmsDebug
 ```
 
-The app ships with a default OneSignal App ID (`77e32082-ea27-42e3-a898-c72e141824ef`).
+A OneSignal App ID is required; the build fails without one.
 
-To use your own App ID, copy `examples/demo/local.properties.example` to `examples/demo/local.properties` and set `ONESIGNAL_APP_ID=YOUR_APP_ID_HERE` (or pass `-PONESIGNAL_APP_ID=...` on the Gradle CLI). The value is read straight from `BuildConfig` on every launch — no uninstall required. See [`examples/build.md`](../build.md) for the full override contract.
+Firebase Installation ID registration is off by default. To turn it on, add a `google-services.json` with a client for `com.onesignal.sdkdemo` to `examples/demo/app/` (gitignored) and set `FIREBASE_INSTALLATION_ID_ENABLED=true`. Otherwise the `gms` build uses the legacy FCM token path.
+
+Copy `examples/demo/local.properties.example` to `examples/demo/local.properties` and set `ONESIGNAL_APP_ID=YOUR_APP_ID_HERE` (or pass `-PONESIGNAL_APP_ID=...` on the Gradle CLI). The value is read straight from `BuildConfig` on every launch — no uninstall required. See [`examples/build.md`](../build.md) for the full override contract.
 
 Once launched, you should see the following screen:
 
@@ -110,10 +112,14 @@ behavior.
 
 ### Send In-App Message
 Trigger pre-configured in-app message layouts by setting SDK triggers:
-- **Top Banner**
-- **Bottom Banner**
-- **Center Modal**
-- **Full Screen**
+- **Top**
+- **Bottom**
+- **Center**
+- **HTML**
+- **Full**
+- **Full Bleed**
+- **Carousel**
+- **Carousel Bleed**
 
 > These require matching in-app messages configured in your OneSignal dashboard.
 

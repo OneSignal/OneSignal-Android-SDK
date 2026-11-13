@@ -7,13 +7,16 @@ import android.content.res.Resources
 import android.graphics.Point
 import android.graphics.Rect
 import android.os.Build
-import android.view.View
-import android.view.Window
 import kotlin.math.roundToInt
 
 object ViewUtils {
     fun dpToPx(dp: Int): Int {
         return (dp * Resources.getSystem().displayMetrics.density).toInt()
+    }
+
+    /** Converts [px] to dp, rounding to the nearest whole dp. */
+    fun pxToDp(px: Int): Int {
+        return (px / Resources.getSystem().displayMetrics.density).roundToInt()
     }
 
     // Due to differences in accounting for keyboard, navigation bar, and status bar between
@@ -62,27 +65,19 @@ object ViewUtils {
     }
 
     fun getCutoutAndStatusBarInsets(activity: Activity): IntArray {
-        val frame = getWindowVisibleDisplayFrame(activity)
-        val contentView = activity.window.findViewById<View>(Window.ID_ANDROID_CONTENT)
-        var rightInset = 0f
-        var leftInset = 0f
-        val topInset = (frame.top - contentView.top) / Resources.getSystem().displayMetrics.density
-        val bottomInset =
-            (contentView.bottom - frame.bottom) / Resources.getSystem().displayMetrics.density
-        // API 29 is the only version where the IAM bleeds under cutouts in immersize mode
-        // All other versions will not need left and right insets.
-        if (Build.VERSION.SDK_INT == Build.VERSION_CODES.Q) {
-            val cutout = activity.windowManager.defaultDisplay.cutout
-            if (cutout != null) {
-                rightInset = cutout.safeInsetRight / Resources.getSystem().displayMetrics.density
-                leftInset = cutout.safeInsetLeft / Resources.getSystem().displayMetrics.density
-            }
+        val decorView = activity.window.decorView
+        val windowInsets =
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) decorView.rootWindowInsets else null
+        if (windowInsets == null) {
+            return SystemBarInsets.legacyCutoutAndStatusBarInsets(activity)
         }
-        return intArrayOf(
-            topInset.roundToInt(),
-            bottomInset.roundToInt(),
-            rightInset.roundToInt(),
-            leftInset.roundToInt(),
+        @Suppress("DEPRECATION")
+        return SystemBarInsets.cutoutAndStatusBarInsetsDp(
+            windowInsets,
+            SystemBarInsets.systemUiVisibilityForInsets(
+                decorView.windowSystemUiVisibility,
+                activity.window.attributes.flags,
+            ),
         )
     }
 

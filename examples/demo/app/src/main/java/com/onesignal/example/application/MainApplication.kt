@@ -22,8 +22,6 @@ import com.onesignal.example.data.network.OneSignalService
 import com.onesignal.example.util.DemoLog
 import com.onesignal.example.util.SharedPreferenceUtil
 import com.onesignal.example.util.TooltipHelper
-import com.onesignal.user.state.IUserStateObserver
-import com.onesignal.user.state.UserChangedState
 
 class MainApplication : MultiDexApplication() {
 
@@ -80,31 +78,32 @@ class MainApplication : MultiDexApplication() {
     private fun setupOneSignalListeners() {
         OneSignal.InAppMessages.addLifecycleListener(object : IInAppMessageLifecycleListener {
             override fun onWillDisplay(event: IInAppMessageWillDisplayEvent) {
-                DemoLog.d("onWillDisplayInAppMessage")
+                DemoLog.show("IAM willDisplay: ${event.message.messageId}")
             }
 
             override fun onDidDisplay(event: IInAppMessageDidDisplayEvent) {
-                DemoLog.d("onDidDisplayInAppMessage")
+                DemoLog.show("IAM didDisplay: ${event.message.messageId}")
             }
 
             override fun onWillDismiss(event: IInAppMessageWillDismissEvent) {
-                DemoLog.d("onWillDismissInAppMessage")
+                DemoLog.show("IAM willDismiss: ${event.message.messageId}")
             }
 
             override fun onDidDismiss(event: IInAppMessageDidDismissEvent) {
-                DemoLog.d("onDidDismissInAppMessage")
+                DemoLog.show("IAM didDismiss: ${event.message.messageId}")
             }
         })
 
         OneSignal.InAppMessages.addClickListener(object : IInAppMessageClickListener {
             override fun onClick(event: IInAppMessageClickEvent) {
-                DemoLog.d("IInAppMessageClickListener.onClick")
+                DemoLog.show("IAM click: ${event.message.messageId}")
             }
         })
 
         OneSignal.Notifications.addClickListener(object : INotificationClickListener {
             override fun onClick(event: INotificationClickEvent) {
-                DemoLog.d("Notification click: ${event.notification.title.orEmpty()}")
+                val notification = event.notification
+                DemoLog.show("Notification click: ${notification.notificationId} ${notification.title.orEmpty()}")
                 
                 // uncomment to see the full event object
                 // DemoLog.d("Event: ${event.toJSONObject()}")
@@ -113,9 +112,8 @@ class MainApplication : MultiDexApplication() {
 
         OneSignal.Notifications.addForegroundLifecycleListener(object : INotificationLifecycleListener {
             override fun onWillDisplay(event: INotificationWillDisplayEvent) {
-                DemoLog.d("INotificationLifecycleListener.onWillDisplay fired with event: $event")
-
                 val notification: IDisplayableNotification = event.notification
+                DemoLog.show("Notification foregroundWillDisplay: ${notification.notificationId} ${notification.title.orEmpty()}")
 
                 // Prevent OneSignal from displaying the notification immediately on return.
                 // Spin up a new thread to mimic some asynchronous behavior.
@@ -127,12 +125,6 @@ class MainApplication : MultiDexApplication() {
                     }
                     notification.display()
                 }.start()
-            }
-        })
-
-        OneSignal.User.addObserver(object : IUserStateObserver {
-            override fun onUserStateChange(state: UserChangedState) {
-                DemoLog.i("User state changed: onesignalId=${state.current.onesignalId}, externalId=${state.current.externalId}")
             }
         })
 

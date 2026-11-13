@@ -381,7 +381,7 @@ internal class OneSignalImpV2 : IOneSignal,
         }
 
         // Builds the dispatchers off the main thread, so the first suspendifyOnIO caller doesn't pay for it there.
-        OneSignalDispatchers.prewarm()
+        OneSignalDispatchers.prewarm(context)
 
         if (!gate.tryStart()) {
             Logging.log(LogLevel.DEBUG, "initWithContext: SDK already initialized or in progress")
@@ -607,7 +607,7 @@ internal class OneSignalImpV2 : IOneSignal,
         // (e.g. SyncJobService.onStartJob -> suspendifyOnIO -> initWithContext(context)) pays the
         // cold-init cost on the dispatcher used to enter [withContext] below, so warm
         // OneSignalDispatchers on a background thread before we touch [ioDispatcher].
-        OneSignalDispatchers.prewarm()
+        OneSignalDispatchers.prewarm(context)
 
         // Observing a terminal SUCCESS must never require an IO worker (see InitGate.isReady).
         if (gate.isSuccess) {

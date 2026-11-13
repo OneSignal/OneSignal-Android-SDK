@@ -17,11 +17,28 @@ public final class CompositeLoginExample {
             String sms,
             Map<String, String> tags,
             Map<String, String> aliases) {
-        return new OneSignalUserProfile.Builder()
+        return profile(email, sms, tags, aliases, null, null);
+    }
+
+    public static OneSignalUserProfile profile(
+            String email,
+            String sms,
+            Map<String, String> tags,
+            Map<String, String> aliases,
+            Boolean emailEnabled,
+            Boolean smsEnabled) {
+        OneSignalUserProfile.Builder builder = new OneSignalUserProfile.Builder()
                 .setEmail(email)
                 .setSms(sms)
                 .setTags(tags)
-                .setAliases(aliases)
-                .build();
+                .setAliases(aliases);
+        // Leaving a status unset keeps an address that already exists as it is.
+        if (emailEnabled != null) {
+            builder.setEmailEnabled(emailEnabled);
+        }
+        if (smsEnabled != null) {
+            builder.setSmsEnabled(smsEnabled);
+        }
+        return builder.build();
     }
 }

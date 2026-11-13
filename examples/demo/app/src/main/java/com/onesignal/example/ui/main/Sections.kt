@@ -2,8 +2,10 @@ package com.onesignal.example.ui.main
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -30,6 +32,7 @@ import com.onesignal.example.ui.components.CustomNotificationDialog
 import com.onesignal.example.ui.components.DemoSection
 import com.onesignal.example.ui.components.DestructiveButton
 import com.onesignal.example.ui.components.DropdownRow
+import com.onesignal.example.ui.components.GridPrimaryButton
 import com.onesignal.example.ui.components.LocalSnackbarController
 import com.onesignal.example.ui.components.CompositeLoginDialog
 import com.onesignal.example.ui.components.LoginDialog
@@ -185,7 +188,7 @@ fun UserSection(
     onUseIdentityVerificationChange: (Boolean) -> Unit,
     onLanguageChange: (String) -> Unit,
     onLogin: (String, String?) -> Unit,
-    onLoginWithProfile: (String, String?, String?, String?) -> Unit,
+    onLoginWithProfile: (String, String?, String?, String?, Boolean?, Boolean?) -> Unit,
     onLogout: () -> Unit,
     onUpdateJwt: (String, String) -> Unit,
     isLoading: Boolean = false,
@@ -274,8 +277,8 @@ fun UserSection(
     if (compositeLoginOpen) {
         CompositeLoginDialog(
             onDismiss = { compositeLoginOpen = false },
-            onConfirm = { userId, email, sms, jwt ->
-                onLoginWithProfile(userId, email, sms, jwt)
+            onConfirm = { userId, email, sms, jwt, emailEnabled, smsEnabled ->
+                onLoginWithProfile(userId, email, sms, jwt, emailEnabled, smsEnabled)
                 compositeLoginOpen = false
             },
         )
@@ -472,13 +475,22 @@ fun SendInAppMessageSection(
             sectionKey = "send_iam",
             onInfoClick = onInfoClick,
         ) {
-            InAppMessageType.entries.forEach { type ->
-                val typeTag = type.name.lowercase()
-                PrimaryButton(
-                    text = type.title,
-                    onClick = { onSendMessage(type) },
-                    testTag = "send_iam_${typeTag}_button",
-                )
+            Column(
+                modifier = Modifier.padding(horizontal = DemoLayout.pagePadding, vertical = 4.dp),
+                verticalArrangement = Arrangement.spacedBy(DemoLayout.gap),
+            ) {
+                InAppMessageType.entries.chunked(2).forEach { rowTypes ->
+                    Row(horizontalArrangement = Arrangement.spacedBy(DemoLayout.gap)) {
+                        rowTypes.forEach { type ->
+                            GridPrimaryButton(
+                                text = type.title,
+                                onClick = { onSendMessage(type) },
+                                modifier = Modifier.weight(1f),
+                                testTag = "send_iam_${type.triggerValue}_button",
+                            )
+                        }
+                    }
+                }
             }
         }
     }

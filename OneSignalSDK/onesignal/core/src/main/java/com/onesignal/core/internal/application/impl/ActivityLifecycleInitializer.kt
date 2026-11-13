@@ -17,12 +17,12 @@ import com.onesignal.internal.NeverCrashKillSwitch
  * full lifecycle regardless of when init later happens.
  *
  * This intentionally does NOT initialize the SDK or require an App ID; it only attaches lifecycle
- * observation, starts pure dispatcher warmup, and reads the cached init kill switch. App ID / consent
+ * observation, starts pure dispatcher warmup, and reads the cached rollout flag. App ID / consent
  * gating remains in the runtime `initWithContext` path.
  */
 class ActivityLifecycleInitializer : Initializer<IApplicationService> {
     override fun create(context: Context): IApplicationService {
-        OneSignalDispatchers.prewarm()
+        OneSignalDispatchers.prewarm(context)
         NeverCrashKillSwitch.evaluate(context)
         val applicationService = ApplicationService.getInstance()
         (context.applicationContext as? Application)?.let { application ->

@@ -7,8 +7,8 @@
 # (e.g. `./gradlew :app:installGmsDebug -PONESIGNAL_APP_ID=...`),
 # and the CLI takes precedence over local.properties.
 
-# Required for real testing: your OneSignal App ID. Get one at https://onesignal.com.
-# Leave unset to use the demo's shared default app.
+# Required: your OneSignal App ID. Get one at https://onesignal.com.
+# The build fails if this is unset.
 ONESIGNAL_APP_ID=
 
 # Optional: notification channel id used by the "WITH SOUND" payload.
@@ -16,3 +16,7 @@ ONESIGNAL_APP_ID=
 # VITE_ONESIGNAL_ANDROID_CHANNEL_ID default).
 # If you set your own ONESIGNAL_APP_ID, also set this from your OneSignal dashboard.
 ONESIGNAL_ANDROID_CHANNEL_ID=
+
+# Optional: turn on Firebase Installation ID registration (gms only).
+# Requires app/google-services.json with a client for com.onesignal.sdkdemo.
+FIREBASE_INSTALLATION_ID_ENABLED=false

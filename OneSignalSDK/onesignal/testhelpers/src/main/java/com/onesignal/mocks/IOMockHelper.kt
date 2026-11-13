@@ -90,7 +90,7 @@ object IOMockHelper : BeforeSpecListener, AfterSpecListener, BeforeTestListener,
         // before dispatching. We mock launch*/suspendify* below to run blocks inline, so the real
         // prewarm()'s background daemon is pure overhead in tests — stub it to a no-op so specs
         // don't spawn OneSignal-prewarm threads through that entry-point code.
-        every { OneSignalDispatchers.prewarm() } returns Unit
+        every { OneSignalDispatchers.prewarm(any()) } returns Unit
 
         // Helper function to track async work (suspendifyOnIO, launchOnIO, launchOnDefault)
         // Note: We use runBlocking with Dispatchers.Unconfined to execute synchronously and deterministically

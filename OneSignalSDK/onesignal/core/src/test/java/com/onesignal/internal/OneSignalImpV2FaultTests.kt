@@ -7,6 +7,7 @@ import androidx.test.core.app.ApplicationProvider.getApplicationContext
 import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
 import com.onesignal.IOneSignal
 import com.onesignal.OneSignalUserProfile
+import com.onesignal.common.threading.DispatcherTestHooks
 import com.onesignal.common.threading.OneSignalDispatchers
 import com.onesignal.debug.ILogListener
 import com.onesignal.debug.LogLevel
@@ -81,7 +82,7 @@ class OneSignalImpV2FaultTests : FunSpec({
     test("init dispatched onto a full IO pool ends FAILED instead of blocking every accessor forever") {
         OneSignalDispatchers.resetForTest()
         val ioExecutor = AtomicReference<ThreadPoolExecutor?>(null)
-        OneSignalDispatchers.afterExecutorCreateForTest = { lane, executor -> if (lane == "IO") ioExecutor.set(executor) }
+        DispatcherTestHooks.afterExecutorCreate = { lane, executor -> if (lane == "IO") ioExecutor.set(executor) }
 
         val release = CountDownLatch(1)
         try {
@@ -120,7 +121,7 @@ class OneSignalImpV2FaultTests : FunSpec({
     test("initWithContextSuspend on a full IO pool returns false instead of throwing") {
         OneSignalDispatchers.resetForTest()
         val ioExecutor = AtomicReference<ThreadPoolExecutor?>(null)
-        OneSignalDispatchers.afterExecutorCreateForTest = { lane, executor -> if (lane == "IO") ioExecutor.set(executor) }
+        DispatcherTestHooks.afterExecutorCreate = { lane, executor -> if (lane == "IO") ioExecutor.set(executor) }
         val release = CountDownLatch(1)
         try {
             repeat(203) { OneSignalDispatchers.launchOnIO { release.await(30, TimeUnit.SECONDS) } }

@@ -120,6 +120,7 @@
     <ID>SwallowedException:OneSignalChromeTab.kt$OneSignalChromeTab$e: Throwable</ID>
     <ID>SwallowedException:WebViewManager.kt$WebViewManager.OSJavaScriptInterface$e: JSONException</ID>
     <ID>TooGenericExceptionCaught:InAppDisplayer.kt$InAppDisplayer$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:InAppMessageView.kt$InAppMessageView$e: Exception</ID>
     <ID>TooGenericExceptionCaught:OneSignalChromeTab.kt$OneSignalChromeTab$e: Throwable</ID>
     <ID>TooManyFunctions:InAppBackendService.kt$InAppBackendService : IInAppBackendService</ID>
     <ID>TooManyFunctions:InAppMessage.kt$InAppMessage : IInAppMessage</ID>

@@ -56,7 +56,7 @@ abstract class NotificationOpenedActivityBase :
     internal open fun processIntent() {
         // Notification-open trampoline runs on the main thread and can cold-start the process;
         // warm dispatchers before the first suspendifyOnDefault dispatch.
-        OneSignalDispatchers.prewarm()
+        OneSignalDispatchers.prewarm(this)
         suspendifyOnDefault {
             try {
                 if (!OneSignal.initWithContext(applicationContext)) {

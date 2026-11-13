@@ -20,7 +20,11 @@ concurrency:
 
 jobs:
   build-android:
+    name: build-android (FID ${{ matrix.fid }})
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        fid: ['on', 'off']
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -28,7 +32,7 @@ jobs:
           submodules: recursive
 
       # Fail fast on unset var. Otherwise `demoOverride()` collapses "" to
-      # null and the build silently uses the hardcoded default app ID.
+      # null and the demo build fails with a less specific error.
       - name: Validate APPIUM_ONESIGNAL_APP_ID
         env:
           ONESIGNAL_APP_ID: ${{ vars.APPIUM_ONESIGNAL_APP_ID }}
@@ -42,6 +46,8 @@ jobs:
         uses: ./.github/actions/setup-demo
         with:
           onesignal-app-id: ${{ vars.APPIUM_ONESIGNAL_APP_ID }}
+          google-services-json: ${{ secrets.APPIUM_GOOGLE_SERVICES_JSON }}
+          google-services-enabled: ${{ matrix.fid == 'on' }}
 
       - name: Resolve OneSignal Android SDK version
         id: android-sdk-version
@@ -67,12 +73,12 @@ jobs:
         working-directory: OneSignalSDK
         env:
           SDK_VERSION: ${{ steps.android-sdk-version.outputs.version }}
-        run: ./gradlew :app:assembleGmsDebug "-PSDK_VERSION=$SDK_VERSION" --console=plain --warning-mode=summary
+        run: ./gradlew :app:assembleGmsDebug "-PSDK_VERSION=$SDK_VERSION" -PFIREBASE_INSTALLATION_ID_ENABLED=${{ matrix.fid == 'on' }} --console=plain --warning-mode=summary
 
       - name: Upload APK
         uses: actions/upload-artifact@v7
         with:
-          name: demo-apk
+          name: demo-apk${{ matrix.fid == 'off' && '-fid-off' || '' }}
           path: examples/demo/app/build/outputs/apk/gms/debug/app-gms-debug.apk
           retention-days: 1
           compression-level: 0
@@ -84,6 +90,8 @@ jobs:
     with:
       platform: android
       app-artifact: demo-apk
+      fid-off-app-artifact: demo-apk-fid-off
       app-filename: app-gms-debug.apk
       sdk-type: android
+      bundle-id: com.onesignal.sdkdemo
       build-name: android-${{ github.ref_name }}-${{ github.run_number }}

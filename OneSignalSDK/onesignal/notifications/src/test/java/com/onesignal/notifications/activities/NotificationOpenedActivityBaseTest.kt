@@ -55,7 +55,7 @@ class TestNotificationOpenedActivity : NotificationOpenedActivityBase() {
 
 @RobolectricTest
 class NotificationOpenedActivityTest : FunSpec({
-    // processIntent() now calls OneSignalDispatchers.prewarm(); IOMockHelper stubs it to a no-op so
+    // processIntent() now calls OneSignalDispatchers.prewarm(any()); IOMockHelper stubs it to a no-op so
     // setup() doesn't spawn the real OneSignal-prewarm daemon + executors that persist across the JVM.
     listener(IOMockHelper)
 
@@ -66,9 +66,9 @@ class NotificationOpenedActivityTest : FunSpec({
     test("processIntent calls prewarm before suspendifyOnDefault") {
         Robolectric.buildActivity(TestNotificationOpenedActivity::class.java).setup()
 
-        verify(atLeast = 1) { OneSignalDispatchers.prewarm() }
+        verify(atLeast = 1) { OneSignalDispatchers.prewarm(any()) }
         verifyOrder {
-            OneSignalDispatchers.prewarm()
+            OneSignalDispatchers.prewarm(any())
             suspendifyOnDefault(any<suspend () -> Unit>())
         }
     }

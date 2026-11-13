@@ -190,8 +190,12 @@ jobs:
         uses: ./.github/actions/project-setup
       - name: "[Build] Demo app (minified GMS + Huawei release)"
         working-directory: OneSignalSDK
+        # Separate invocations: the Huawei plugin applies to every variant when any Huawei
+        # task is requested, and its config only matches the huawei applicationId.
+        # The demo only needs to compile here, so any app ID works.
         run: |
-          ./gradlew :app:assembleGmsRelease :app:assembleHuaweiRelease --console=plain
+          ./gradlew :app:assembleGmsRelease -PONESIGNAL_APP_ID=00000000-0000-0000-0000-000000000000 --console=plain
+          ./gradlew :app:assembleHuaweiRelease -PONESIGNAL_APP_ID=00000000-0000-0000-0000-000000000000 --console=plain
 
   # Keep the existing required check stable while the workloads run independently.
   build:
