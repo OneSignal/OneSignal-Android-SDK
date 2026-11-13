@@ -343,34 +343,44 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
         emailEnabled: Boolean? = null,
         smsEnabled: Boolean? = null,
     ) {
+        val externalId = externalUserId.trim()
+        if (externalId.isEmpty()) return
+        val token = jwtToken?.trim()?.ifEmpty { null }
         _isLoading.value = true
         viewModelScope.launch(Dispatchers.IO) {
+            val sameUser = externalId == OneSignal.User.externalId
             val result =
-                repository.loginUserWithProfile(externalUserId, email, sms, jwtToken, emailEnabled, smsEnabled)
+                repository.loginUserWithProfile(externalId, email, sms, token, emailEnabled, smsEnabled)
             withContext(Dispatchers.Main) {
                 if (result.isSuccess) {
-                    SharedPreferenceUtil.cacheUserExternalUserId(getApplication(), externalUserId)
+                    SharedPreferenceUtil.cacheUserExternalUserId(getApplication(), externalId)
                     // A blank token field leaves any token already stored for this user.
-                    if (jwtToken != null) {
-                        SharedPreferenceUtil.cacheJwtToken(getApplication(), externalUserId, jwtToken)
-                        JwtAskStore.answered(externalUserId)
+                    if (token != null) {
+                        SharedPreferenceUtil.cacheJwtToken(getApplication(), externalId, token)
+                        JwtAskStore.answered(externalId)
                     }
-                    _externalUserId.value = externalUserId
+                    _externalUserId.value = externalId
                     resetLanguagePicker()
-                    aliasesList.clear()
-                    emailsList.clear()
-                    smsNumbersList.clear()
-                    triggersList.clear()
-                    refreshAliases()
-                    refreshEmails()
-                    refreshSmsNumbers()
-                    refreshTriggers()
-                    loadExistingTags()
                     refreshPushSubscription()
+                    if (!sameUser) {
+                        resetUserFetch()
+                        aliasesList.clear()
+                        emailsList.clear()
+                        smsNumbersList.clear()
+                        triggersList.clear()
+                        refreshAliases()
+                        refreshEmails()
+                        refreshSmsNumbers()
+                        refreshTriggers()
+                        loadExistingTags()
+                    }
+                    // Any user-state event already fired while the SDK call waited on the backend,
+                    // so nothing else refetches now.
+                    fetchUserDataFromApi()
                 } else {
                     DemoLog.e("Composite login failed: ${result.error}")
+                    _isLoading.value = false
                 }
-                _isLoading.value = false
             }
         }
     }

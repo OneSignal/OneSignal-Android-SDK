@@ -158,7 +158,7 @@ The demo is 100% Jetpack Compose (no XML layouts). Dependencies are pulled via t
 
 The Android demo **overrides the shared guide's "no repository wrapper" rule**. Instead it uses:
 
-- `MainApplication.kt` — initializes the SDK before any UI renders, restores cached consent + IAM-paused + location-shared state, and registers `IInAppMessageLifecycleListener`, `IInAppMessageClickListener`, `INotificationClickListener`, and `INotificationLifecycleListener` (with `event.preventDefault()` so async display can be exercised).
+- `MainApplication.kt` — initializes the SDK before any UI renders, restores cached consent + IAM-paused + location-shared state, and registers `IInAppMessageLifecycleListener`, `IInAppMessageClickListener`, `INotificationClickListener`, `INotificationLifecycleListener` (with `event.preventDefault()` so async display can be exercised), and `IUserJwtInvalidatedListener`.
 - `MainViewModel : AndroidViewModel` — central state with `LiveData<T>` for every UI value. Implements `IPushSubscriptionObserver`, `IPermissionObserver`, and `IUserStateObserver`. The JWT invalidated listener lives in `MainApplication`. Holds a monotonic `private var fetchRequestSequence = 0L` that maps to the shared guide's `requestSequence` for stale-result protection in `fetchUserDataFromApi`.
 - `OneSignalRepository.kt` — only some methods are `suspend` + `withContext(Dispatchers.IO)`; many are synchronous wrappers and the ViewModel wraps calls in `viewModelScope.launch(Dispatchers.IO)` itself.
 - `OneSignalService.kt` (`object`) — REST API client described in the shared guide's Prompt 1.4.
@@ -199,7 +199,7 @@ Inline only — no full-screen overlay. The four list sections (Aliases, Emails,
 - `MainScreen` owns layout + the tooltip dialog only (`var showTooltipDialog by remember { mutableStateOf<String?>(null) }` + `TooltipDialog`). Each section's `onInfoClick` callback sets the tooltip key.
 - Sections own action dialog state via `var *Open by remember { mutableStateOf(false) }` and render shared dialog composables (from `ui/components/Dialogs.kt`) inside the section. Dialog confirm handlers call SDK methods through callbacks passed from `MainScreen`, then close the dialog; for snackbar-emitting actions they also call `LocalSnackbarController.current.show(...)`.
 - `MainViewModel` must not hold any action dialog visibility flags or input drafts.
-- Shared composables in `ui/components/Dialogs.kt`: `SingleInputDialog`, `MultiSelectRemoveDialog`, `LoginDialog`, `OutcomeDialog`, `TrackEventDialog`, `CustomNotificationDialog`, `TooltipDialog` use `AlertDialog`. `PairInputDialog` and `MultiPairInputDialog` use `Dialog` + `Surface` (for the wider two-column layout).
+- Shared composables in `ui/components/Dialogs.kt`: `SingleInputDialog`, `MultiSelectRemoveDialog`, `LoginDialog`, `UpdateJwtDialog`, `OutcomeDialog`, `TrackEventDialog`, `CustomNotificationDialog`, `TooltipDialog` use `AlertDialog`. `PairInputDialog` and `MultiPairInputDialog` use `Dialog` + `Surface` (for the wider two-column layout).
 - Dialog state naming: `OutcomeSection` and `CustomEventsSection` use `var open by remember { mutableStateOf(false) }` (singular `open`) because each owns a single dialog. Other sections name their flags per dialog (`loginOpen`, `addOpen`, etc.).
 
 ### Accessibility (Appium)
@@ -257,6 +257,8 @@ Some Identity Verification behavior still differs between the demos because the 
 - After a relaunch with a token still owed, the iOS SDK asks again on the first parked request. The Android SDK doesn't, until SDK-5476.
 - The iOS SDK replays a pending ask to a listener added later. The Android SDK doesn't.
 - If a 401 for an old token lands after PROVIDE JWT, the Android SDK deletes the new token and asks again until SDK-5474. The iOS SDK keeps the new token.
+
+One difference is in the demos, not the SDKs. The User section shows its snackbar for an ask that is already pending when the section first appears. The iOS demo shows its toast only for an ask that arrives while its User section is on screen.
 
 ### Notification service extension
 
@@ -377,7 +379,8 @@ examples/
             │   │   │   ├── main/              # MainActivity, MainScreen, Sections, MainViewModel
             │   │   │   ├── secondary/SecondaryActivity.kt
             │   │   │   └── theme/             # Theme.kt, DemoLayout.kt
-            │   │   └── util/                  # SharedPreferenceUtil, TooltipHelper, DemoLog
+            │   │   └── util/                  # SharedPreferenceUtil, TooltipHelper, DemoLog,
+            │   │                              # JwtAskStore
             │   └── res/
             │       ├── values/{strings,colors,styles}.xml
             │       ├── raw/                   # vine_boom.wav
