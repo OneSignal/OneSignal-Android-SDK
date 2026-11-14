@@ -52,6 +52,10 @@ import kotlin.reflect.KMutableProperty1
  *
  * While focused, a session that [SessionModel.usesSessionsApi] reports its duration every
  * [HEARTBEAT_INTERVAL_MS] of active time, so the server keeps it open and a crash loses little duration.
+ *
+ * Time without privacy consent is not counted: losing consent while focused counts as an unfocus,
+ * and regaining it while in the foreground counts as a focus. A session that started without
+ * consent was never reported, so it starts over once consent is given.
  */
 @Suppress("TooManyFunctions")
 internal class SessionService(
@@ -100,6 +104,12 @@ internal class SessionService(
     // True if app has been foregrounded at least once since the app started
     private var hasFocused = false
 
+    // Set while focused without privacy consent, so the next unfocus adds no time. Serial IO lane only.
+    private var pausedForConsent = false
+
+    // Serial IO lane only.
+    private var startedWithoutConsent = false
+
     private val pendingDirectAttributionId = AtomicReference<String?>()
 
     override fun bootstrap() {
@@ -109,6 +119,7 @@ internal class SessionService(
 
     override fun start() {
         applicationService.addApplicationLifecycleHandler(this)
+        configModelStore.subscribe(ConsentChangeHandler())
         identityModelStore.subscribe(PinnedLocalIdTranslator(IdentityConstants.ONESIGNAL_ID, SessionModel::onesignalId))
         // Login before the anonymous user is created carries the local push subscription over to
         // the new user, so its backend ID belongs to that user, not the one pinned on this session.
@@ -152,6 +163,48 @@ internal class SessionService(
         }
     }
 
+    private inner class ConsentChangeHandler : ISingletonModelStoreChangeHandler<ConfigModel> {
+        override fun onModelReplaced(
+            model: ConfigModel,
+            tag: String,
+        ) = onConsentChanged()
+
+        override fun onModelUpdated(
+            args: ModelChangedArgs,
+            tag: String,
+        ) {
+            if (args.property == ConfigModel::consentRequired.name || args.property == ConfigModel::consentGiven.name) {
+                onConsentChanged()
+            }
+        }
+    }
+
+    private fun onConsentChanged() {
+        val nowMs = time.currentTimeMillis
+        val elapsedMs = time.elapsedRealtimeMillis
+        runOnSerialIO {
+            // A focus that has not arrived yet checks consent itself.
+            if (session == null || !hasFocused || !applicationService.isInForeground) return@runOnSerialIO
+            val awaitingConsent = config?.isAwaitingConsent == true
+            if (awaitingConsent && !pausedForConsent) {
+                Logging.debug("SessionService: privacy consent revoked, pausing the session")
+                handleOnUnfocused(nowMs, elapsedMs)
+                pausedForConsent = true
+            } else if (!awaitingConsent && pausedForConsent) {
+                Logging.debug("SessionService: privacy consent given, resuming the session")
+                if (pausedPastTimeout(nowMs)) endSession()?.let { operationRepo.enqueue(it) }
+                handleOnFocus(false, nowMs, elapsedMs, null)
+            }
+        }
+    }
+
+    /** Like a return from the background, a pause this long starts the next session. */
+    private fun pausedPastTimeout(nowMs: Long): Boolean {
+        val unfocusTime = session?.takeIf { it.isValid && !startedWithoutConsent }?.unfocusTime
+        val timeout = config?.sessionFocusTimeout
+        return unfocusTime != null && timeout != null && nowMs - unfocusTime >= timeout
+    }
+
     override fun attributeNextSessionTo(notificationId: String) {
         pendingDirectAttributionId.set(notificationId)
     }
@@ -162,6 +215,11 @@ internal class SessionService(
      */
     override suspend fun backgroundRun() {
         val end = endSession() ?: return
+        // Without consent the end can't be sent, so it waits in the queue until consent is given.
+        if (config?.isAwaitingConsent == true) {
+            operationRepo.enqueue(end)
+            return
+        }
         // Android 15+ blocks network requests started after this job finishes, so send the end now
         // rather than after the queue's batching delay. Flushing is bounded to once per session.
         // On timeout the end stays queued and is sent on the next app open.
@@ -242,7 +300,7 @@ internal class SessionService(
             endSession()?.let { operationRepo.enqueue(it) }
         }
 
-        if (!session.isValid) {
+        if (!session.isValid || (startedWithoutConsent && config?.isAwaitingConsent != true)) {
             // As the old session was made inactive, we need to create a new session
             shouldFireOnSubscribe = firedOnSubscribe
             session.sessionId = UUID.randomUUID().toString()
@@ -259,6 +317,7 @@ internal class SessionService(
             val create = sessionsApiCreate(session, directAttributionId)
             session.usesSessionsApi = create != null
             session.isValid = true
+            startedWithoutConsent = config?.isAwaitingConsent == true
             Logging.debug("SessionService: New session started at ${session.startTime}")
             create?.let { operationRepo.enqueue(it) }
             sessionLifeCycleNotifier.fire { it.onSessionStarted() }
@@ -269,7 +328,8 @@ internal class SessionService(
             session.focusElapsedRealtime = focusElapsedMs
             sessionLifeCycleNotifier.fire { it.onSessionActive() }
         }
-        if (session.usesSessionsApi) heartbeat.start(session) else heartbeat.stop()
+        pausedForConsent = config?.isAwaitingConsent == true
+        if (session.usesSessionsApi && !pausedForConsent) heartbeat.start(session) else heartbeat.stop()
     }
 
     /**
@@ -348,6 +408,10 @@ internal class SessionService(
             return
         }
         heartbeat.stop()
+        if (pausedForConsent) {
+            pausedForConsent = false
+            return
+        }
         // capture the amount of time the app was focused
         val dt =
             if (session.usesSessionsApi) {

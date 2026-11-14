@@ -77,11 +77,11 @@ private class Mocks(
     val configModelStore = MockHelper.configModelStore { it.pushSubscriptionId = SUBSCRIPTION_ID }
 
     val identityChangeHandler = slot<ISingletonModelStoreChangeHandler<IdentityModel>>()
-    val configChangeHandler = slot<ISingletonModelStoreChangeHandler<ConfigModel>>()
+    val configChangeHandlers = mutableListOf<ISingletonModelStoreChangeHandler<ConfigModel>>()
 
     init {
         every { identityModelStore.subscribe(capture(identityChangeHandler)) } just runs
-        every { configModelStore.subscribe(capture(configChangeHandler)) } just runs
+        every { configModelStore.subscribe(capture(configChangeHandlers)) } just runs
     }
 
     /** Mirrors the user-create executor replacing a local ID with the backend ID in place. */
@@ -99,10 +99,25 @@ private class Mocks(
         val model = configModelStore.model
         val localId = model.pushSubscriptionId
         model.pushSubscriptionId = backendId
-        configChangeHandler.captured.onModelUpdated(
-            ModelChangedArgs(model, ConfigModel::pushSubscriptionId.name, ConfigModel::pushSubscriptionId.name, localId, backendId),
-            ModelChangeTags.NORMAL,
-        )
+        notifyConfigChanged(ConfigModel::pushSubscriptionId.name, localId, backendId)
+    }
+
+    /** Mirrors `OneSignal.consentGiven` with consent required. */
+    fun setConsentGiven(given: Boolean) {
+        val model = configModelStore.model
+        model.consentRequired = true
+        val oldValue = model.consentGiven
+        model.consentGiven = given
+        notifyConfigChanged(ConfigModel::consentGiven.name, oldValue, given)
+    }
+
+    private fun notifyConfigChanged(
+        property: String,
+        oldValue: Any?,
+        newValue: Any?,
+    ) {
+        val args = ModelChangedArgs(configModelStore.model, property, property, oldValue, newValue)
+        configChangeHandlers.forEach { it.onModelUpdated(args, ModelChangeTags.NORMAL) }
     }
 
     val enqueued = mutableListOf<Operation>()
@@ -118,9 +133,11 @@ private class Mocks(
     }
 
     var entryState = AppEntryAction.APP_OPEN
+    var isInForeground = true
     val applicationService: IApplicationService =
         MockHelper.applicationService().also {
             every { it.entryState } answers { entryState }
+            every { it.isInForeground } answers { isInForeground }
         }
 
     val sessionService =
@@ -1265,6 +1282,184 @@ class SessionServiceTests : FunSpec({
         reloaded.subscriptionId shouldBe Mocks.SUBSCRIPTION_ID
         reloaded.lastHeartbeatDuration shouldBe 654L
         reloaded.lastHeartbeatTime shouldBe 987L
+    }
+
+    test("revoking consent while focused adds the visit so far and stops the heartbeat") {
+        // Given
+        val mocks = Mocks(sessionsApiEnabled = true)
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        val sessionModelStore = mocks.sessionModelStore { it.isValid = false }
+        sessionService.onFocus(false)
+        mocks.advanceTime(10 * MINUTE_MS)
+
+        // When
+        mocks.setConsentGiven(false)
+        mocks.advanceTime(2 * HEARTBEAT_MS)
+
+        // Then
+        sessionModelStore.model.activeDuration shouldBe 10 * MINUTE_MS
+        mocks.heartbeats shouldBe emptyList()
+    }
+
+    test("time without consent is not counted when consent is given again within the session timeout") {
+        // Given
+        val mocks = Mocks(sessionsApiEnabled = true)
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        mocks.sessionModelStore { it.isValid = false }
+        sessionService.onFocus(false)
+        mocks.advanceTime(10 * MINUTE_MS)
+        mocks.setConsentGiven(false)
+        mocks.currentTime += 10_000L
+        mocks.elapsedRealtime += 10_000L
+
+        // When
+        mocks.setConsentGiven(true)
+        mocks.advanceTime(20 * MINUTE_MS - 1)
+
+        // Then
+        mocks.heartbeats shouldBe emptyList()
+
+        // When
+        mocks.advanceTime(1)
+
+        // Then
+        mocks.heartbeats.single().activeDuration shouldBe HEARTBEAT_MS
+    }
+
+    test("consent given after a pause past the session timeout ends the session and starts the next") {
+        // Given
+        val mocks = Mocks(sessionsApiEnabled = true)
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        val sessionModelStore = mocks.sessionModelStore { it.isValid = false }
+        sessionService.onFocus(false)
+        val firstSessionId = sessionModelStore.model.localSessionId
+        mocks.advanceTime(10 * MINUTE_MS)
+        mocks.setConsentGiven(false)
+        mocks.currentTime += 60 * MINUTE_MS
+
+        // When
+        mocks.setConsentGiven(true)
+
+        // Then
+        val end = mocks.enqueued.filterIsInstance<UpdateSessionOperation>().single { it.isEnd }
+        end.sessionId shouldBe firstSessionId
+        end.activeDuration shouldBe 10 * MINUTE_MS
+        val next = mocks.enqueued.filterIsInstance<CreateSessionOperation>().last()
+        next.localSessionId shouldNotBe firstSessionId
+        next.startTime shouldBe mocks.currentTime
+    }
+
+    test("a session that started without consent starts over when consent is given") {
+        // Given
+        val mocks = Mocks(sessionsApiEnabled = true)
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        val sessionModelStore = mocks.sessionModelStore { it.isValid = false }
+        sessionService.subscribe(mocks.spyCallback)
+        mocks.setConsentGiven(false)
+        sessionService.onFocus(false)
+        val unreportedSessionId = sessionModelStore.model.localSessionId
+        mocks.currentTime += 5_000L
+
+        // When
+        mocks.setConsentGiven(true)
+
+        // Then
+        val next = mocks.enqueued.filterIsInstance<CreateSessionOperation>().last()
+        next.localSessionId shouldNotBe unreportedSessionId
+        next.startTime shouldBe mocks.currentTime
+        verify(exactly = 2) { mocks.spyCallback.onSessionStarted() }
+        verify(exactly = 0) { mocks.spyCallback.onSessionEnded(any(), any()) }
+    }
+
+    test("background run without consent queues the end without waiting for it") {
+        // Given
+        val mocks = Mocks(sessionsApiEnabled = true)
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        mocks.sessionModelStore { it.isValid = false }
+        sessionService.onFocus(false)
+        mocks.advanceTime(10 * MINUTE_MS)
+        mocks.setConsentGiven(false)
+        mocks.isInForeground = false
+        sessionService.onUnfocused()
+
+        // When
+        sessionService.backgroundRun()
+
+        // Then
+        mocks.enqueued.filterIsInstance<UpdateSessionOperation>().single { it.isEnd }.activeDuration shouldBe 10 * MINUTE_MS
+        coVerify(exactly = 0) { mocks.operationRepo.enqueueAndWait(any(), any()) }
+    }
+
+    test("focus without consent adds no time and sends no heartbeat") {
+        // Given
+        val mocks = Mocks(sessionsApiEnabled = true)
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        val sessionModelStore = mocks.sessionModelStore { it.isValid = false }
+        mocks.setConsentGiven(false)
+
+        // When
+        sessionService.onFocus(false)
+        mocks.advanceTime(2 * HEARTBEAT_MS)
+        sessionService.onUnfocused()
+
+        // Then
+        sessionModelStore.model.activeDuration shouldBe 0L
+        mocks.heartbeats shouldBe emptyList()
+    }
+
+    test("consent given in the background waits for the next focus") {
+        // Given
+        val mocks = Mocks(sessionsApiEnabled = true)
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        val sessionModelStore = mocks.sessionModelStore { it.isValid = false }
+        sessionService.onFocus(false)
+        mocks.advanceTime(10 * MINUTE_MS)
+        mocks.setConsentGiven(false)
+        mocks.isInForeground = false
+        sessionService.onUnfocused()
+
+        // When
+        mocks.setConsentGiven(true)
+        mocks.advanceTime(2 * HEARTBEAT_MS)
+
+        // Then
+        sessionModelStore.model.activeDuration shouldBe 10 * MINUTE_MS
+        mocks.heartbeats shouldBe emptyList()
+    }
+
+    test("legacy session counts only time with consent") {
+        // Given
+        val mocks = Mocks()
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        val sessionModelStore = mocks.sessionModelStore { it.isValid = false }
+        sessionService.onFocus(false)
+        mocks.currentTime += 10 * MINUTE_MS
+        mocks.setConsentGiven(false)
+        mocks.currentTime += 10_000L
+
+        // When
+        mocks.setConsentGiven(true)
+        mocks.currentTime += 20 * MINUTE_MS
+        sessionService.onUnfocused()
+
+        // Then
+        sessionModelStore.model.activeDuration shouldBe 30 * MINUTE_MS
     }
 
     test("onFocus dispatches the session-mutation body through runOnSerialIO (SDK-4508)") {

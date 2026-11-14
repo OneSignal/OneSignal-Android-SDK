@@ -296,15 +296,26 @@ class SessionOperationQueueTests : FunSpec({
         policy.onEnqueue(queue, item(update(sessionId = "local-b"))).accept shouldBe false
     }
 
-    test("session operations are not stored before privacy consent") {
+    test("a session that starts without privacy consent is not stored") {
         val mocks = SessionQueueMocks()
         mocks.configModelStore.model.consentRequired = true
         mocks.configModelStore.model.consentGiven = false
 
-        mocks.enqueueAll(create(), update())
+        mocks.enqueueAll(create(), update(sessionId = "local-s1"))
 
         mocks.queued() shouldBe emptyList()
         mocks.operationModelStore.list() shouldBe emptyList()
+    }
+
+    test("an update for a session created with consent waits in the queue without consent") {
+        var awaitingConsent = false
+        val policy = SessionQueuePolicy(awaitingConsent = { awaitingConsent })
+        val queue = mutableListOf<OperationRepo.OperationQueueItem>()
+        policy.onEnqueue(queue, item(create())).accept shouldBe true
+
+        awaitingConsent = true
+
+        policy.onEnqueue(queue, item(update(sessionId = "local-s1", endTime = 2_000L))).accept shouldBe true
     }
 
     test("an update for a session whose create was rejected is rejected") {
