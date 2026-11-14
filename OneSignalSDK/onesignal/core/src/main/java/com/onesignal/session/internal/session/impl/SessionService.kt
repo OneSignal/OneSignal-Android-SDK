@@ -36,6 +36,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import java.util.UUID
+import java.util.concurrent.TimeUnit.MILLISECONDS
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.reflect.KMutableProperty1
 
@@ -52,6 +53,7 @@ import kotlin.reflect.KMutableProperty1
  *
  * While focused, a session that [SessionModel.usesSessionsApi] reports its duration every
  * [HEARTBEAT_INTERVAL_MS] of active time, so the server keeps it open and a crash loses little duration.
+ * It also reports its duration on each unfocus, so a session killed in the background isn't short.
  *
  * Time without privacy consent is not counted: losing consent while focused counts as an unfocus,
  * and regaining it while in the foreground counts as a focus. A session that started without
@@ -395,7 +397,23 @@ internal class SessionService(
         val unfocusElapsedMs = time.elapsedRealtimeMillis
         runOnSerialIO {
             handleOnUnfocused(unfocusTimeMs, unfocusElapsedMs)
+            sendCheckpoint()
         }
+    }
+
+    private fun sendCheckpoint() {
+        val session =
+            this.session
+                ?.takeIf { it.isValid && it.usesSessionsApi && config?.isAwaitingConsent != true }
+                // The backend gets whole seconds, so a smaller change would repeat the last report.
+                ?.takeIf { MILLISECONDS.toSeconds(it.activeDuration) > MILLISECONDS.toSeconds(it.lastHeartbeatDuration) }
+                ?: return
+        val duration = session.activeDuration
+        session.lastHeartbeatDuration = duration
+        Logging.debug("SessionService: checkpoint with activeDuration: $duration")
+        // Android 15+ blocks network requests once a backgrounded app is cached, which can happen within
+        // the queue's batching delay, so send now. Each flush needs a new focus and a longer duration.
+        updateSessionOperation(session, config?.appId, duration)?.let { operationRepo.enqueue(it, flush = true) }
     }
 
     private fun handleOnUnfocused(

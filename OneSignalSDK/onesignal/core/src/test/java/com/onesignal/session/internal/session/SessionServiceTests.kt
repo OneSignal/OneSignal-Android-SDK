@@ -121,9 +121,13 @@ private class Mocks(
     }
 
     val enqueued = mutableListOf<Operation>()
+    val flushed = mutableListOf<Operation>()
     val operationRepo: IOperationRepo =
         mockk<IOperationRepo>().also {
-            every { it.enqueue(capture(enqueued), any()) } just runs
+            every { it.enqueue(any(), any()) } answers {
+                enqueued += firstArg<Operation>()
+                if (secondArg()) flushed += firstArg<Operation>()
+            }
             coEvery { it.enqueueAndWait(capture(enqueued), any()) } returns true
         }
 
@@ -155,7 +159,9 @@ private class Mocks(
 
     fun launchInHeartbeatScope(block: suspend () -> Unit): Job = heartbeatScope.launch { block() }.also { heartbeatJob = it }
 
-    val heartbeats get() = enqueued.filterIsInstance<UpdateSessionOperation>().filter { !it.isEnd }
+    private val durationUpdates get() = enqueued.filterIsInstance<UpdateSessionOperation>().filter { !it.isEnd }
+    val heartbeats get() = durationUpdates.filter { it !in flushed }
+    val checkpoints get() = durationUpdates.filter { it in flushed }
 
     fun advanceTime(ms: Long) {
         heartbeatScope.advanceTimeBy(ms)
@@ -1033,7 +1039,7 @@ class SessionServiceTests : FunSpec({
         mocks.heartbeats.map { it.activeDuration } shouldBe listOf(HEARTBEAT_MS, 2 * HEARTBEAT_MS)
     }
 
-    test("heartbeat pauses in the background and counts only foreground time") {
+    test("heartbeat pauses in the background and is due a full interval of foreground time after the checkpoint") {
         // Given
         val mocks = Mocks(sessionsApiEnabled = true)
         val sessionService = mocks.sessionService
@@ -1052,10 +1058,122 @@ class SessionServiceTests : FunSpec({
 
         // When
         sessionService.onFocus(false)
-        mocks.advanceTime(10 * MINUTE_MS)
+        mocks.advanceTime(HEARTBEAT_MS - 1)
 
         // Then
+        mocks.heartbeats shouldBe emptyList()
+
+        // When
+        mocks.advanceTime(1)
+
+        // Then
+        mocks.heartbeats.single().activeDuration shouldBe 20 * MINUTE_MS + HEARTBEAT_MS
+    }
+
+    test("unfocus sends a flushed checkpoint with the cumulative duration and no end time") {
+        // Given
+        val mocks = Mocks(sessionsApiEnabled = true)
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        val sessionModelStore = mocks.sessionModelStore { it.isValid = false }
+        sessionService.onFocus(false)
+        mocks.advanceTime(10 * MINUTE_MS)
+
+        // When
+        sessionService.onUnfocused()
+
+        // Then
+        val checkpoint = mocks.checkpoints.single()
+        checkpoint.sessionId shouldBe sessionModelStore.model.localSessionId
+        checkpoint.onesignalId shouldBe Mocks.ONESIGNAL_ID
+        checkpoint.subscriptionId shouldBe Mocks.SUBSCRIPTION_ID
+        checkpoint.activeDuration shouldBe 10 * MINUTE_MS
+        checkpoint.endTime shouldBe null
+        sessionModelStore.model.isValid shouldBe true
+
+        // When
+        sessionService.onFocus(false)
+        mocks.advanceTime(5 * MINUTE_MS)
+        sessionService.onUnfocused()
+
+        // Then
+        mocks.checkpoints.map { it.activeDuration } shouldBe listOf(10 * MINUTE_MS, 15 * MINUTE_MS)
+        mocks.enqueued.filterIsInstance<CreateSessionOperation>().size shouldBe 1
+    }
+
+    test("unfocus sends no checkpoint when the duration has not grown by a whole second") {
+        // Given
+        val mocks = Mocks(sessionsApiEnabled = true)
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        mocks.sessionModelStore { it.isValid = false }
+        sessionService.onFocus(false)
+        mocks.advanceTime(HEARTBEAT_MS)
         mocks.heartbeats.single().activeDuration shouldBe HEARTBEAT_MS
+
+        // When
+        mocks.advanceTime(999)
+        sessionService.onUnfocused()
+        sessionService.onFocus(false)
+        sessionService.onUnfocused()
+
+        // Then
+        mocks.checkpoints shouldBe emptyList()
+    }
+
+    test("unfocus sends no checkpoint when the session uses the legacy path") {
+        // Given
+        val mocks = Mocks(sessionsApiEnabled = false)
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        mocks.sessionModelStore { it.isValid = false }
+        sessionService.onFocus(false)
+        mocks.currentTime += 10 * MINUTE_MS
+
+        // When
+        sessionService.onUnfocused()
+
+        // Then
+        mocks.enqueued shouldBe emptyList()
+    }
+
+    test("session killed in the background ends with the checkpoint's duration") {
+        // Given
+        val mocks = Mocks(sessionsApiEnabled = true)
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        mocks.sessionModelStore { it.isValid = false }
+        sessionService.onFocus(false)
+        mocks.advanceTime(10 * MINUTE_MS)
+        mocks.currentTime += 10 * MINUTE_MS
+        val unfocusTime = mocks.currentTime
+        sessionService.onUnfocused()
+        mocks.currentTime += 60 * MINUTE_MS
+
+        // When
+        val restarted =
+            SessionService(
+                MockHelper.applicationService(),
+                mocks.configModelStore,
+                mocks.sessionModelStore(),
+                mocks.time,
+                mocks.featureManager,
+                mocks.identityModelStore,
+                mocks.operationRepo,
+            ).also { it.launchHeartbeat = { _ -> mockk(relaxed = true) } }
+        mocks.enqueued.clear()
+        restarted.bootstrap()
+        restarted.start()
+        restarted.onFocus(false)
+
+        // Then
+        val end = mocks.enqueued.filterIsInstance<UpdateSessionOperation>().single()
+        end.activeDuration shouldBe 10 * MINUTE_MS
+        end.endTime shouldBe unfocusTime
     }
 
     test("new session restarts the heartbeat interval") {
@@ -1195,7 +1313,7 @@ class SessionServiceTests : FunSpec({
     test("heartbeat that fails stops without an uncaught exception and restarts on the next focus") {
         // Given
         val mocks = Mocks(sessionsApiEnabled = true)
-        every { mocks.operationRepo.enqueue(ofType<UpdateSessionOperation>(), any()) } throws RuntimeException("enqueue failed")
+        every { mocks.operationRepo.enqueue(ofType<UpdateSessionOperation>(), false) } throws RuntimeException("enqueue failed")
         val sessionService = mocks.sessionService
         sessionService.bootstrap()
         sessionService.start()
@@ -1206,7 +1324,7 @@ class SessionServiceTests : FunSpec({
         mocks.advanceTime(2 * HEARTBEAT_MS)
 
         // Then
-        verify(exactly = 1) { mocks.operationRepo.enqueue(ofType<UpdateSessionOperation>(), any()) }
+        verify(exactly = 1) { mocks.operationRepo.enqueue(ofType<UpdateSessionOperation>(), false) }
         val failed = mocks.heartbeatJob!!
         failed.isCompleted shouldBe true
         failed.isCancelled shouldBe false
@@ -1217,7 +1335,7 @@ class SessionServiceTests : FunSpec({
         mocks.advanceTime(HEARTBEAT_MS)
 
         // Then
-        verify(exactly = 2) { mocks.operationRepo.enqueue(ofType<UpdateSessionOperation>(), any()) }
+        verify(exactly = 2) { mocks.operationRepo.enqueue(ofType<UpdateSessionOperation>(), false) }
     }
 
     test("heartbeat does not run when the session uses the legacy path") {
@@ -1379,7 +1497,7 @@ class SessionServiceTests : FunSpec({
         verify(exactly = 0) { mocks.spyCallback.onSessionEnded(any(), any()) }
     }
 
-    test("background run without consent queues the end without waiting for it") {
+    test("unfocus without consent sends no checkpoint, and background run queues the end without waiting for it") {
         // Given
         val mocks = Mocks(sessionsApiEnabled = true)
         val sessionService = mocks.sessionService
@@ -1397,6 +1515,7 @@ class SessionServiceTests : FunSpec({
 
         // Then
         mocks.enqueued.filterIsInstance<UpdateSessionOperation>().single { it.isEnd }.activeDuration shouldBe 10 * MINUTE_MS
+        mocks.checkpoints shouldBe emptyList()
         coVerify(exactly = 0) { mocks.operationRepo.enqueueAndWait(any(), any()) }
     }
 
@@ -1417,6 +1536,7 @@ class SessionServiceTests : FunSpec({
         // Then
         sessionModelStore.model.activeDuration shouldBe 0L
         mocks.heartbeats shouldBe emptyList()
+        mocks.checkpoints shouldBe emptyList()
     }
 
     test("consent given in the background waits for the next focus") {
