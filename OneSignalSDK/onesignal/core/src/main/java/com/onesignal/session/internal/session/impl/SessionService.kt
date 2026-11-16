@@ -114,6 +114,9 @@ internal class SessionService(
 
     private val pendingDirectAttributionId = AtomicReference<String?>()
 
+    // Serial IO lane only.
+    private var lastCheckpointFlushElapsed: Long? = null
+
     override fun bootstrap() {
         session = sessionModelStore.model
         config = configModelStore.model
@@ -397,11 +400,11 @@ internal class SessionService(
         val unfocusElapsedMs = time.elapsedRealtimeMillis
         runOnSerialIO {
             handleOnUnfocused(unfocusTimeMs, unfocusElapsedMs)
-            sendCheckpoint()
+            sendCheckpoint(unfocusElapsedMs)
         }
     }
 
-    private fun sendCheckpoint() {
+    private fun sendCheckpoint(unfocusElapsedMs: Long) {
         val session =
             this.session
                 ?.takeIf { it.isValid && it.usesSessionsApi && config?.isAwaitingConsent != true }
@@ -411,9 +414,14 @@ internal class SessionService(
         val duration = session.activeDuration
         session.lastHeartbeatDuration = duration
         Logging.debug("SessionService: checkpoint with activeDuration: $duration")
+        val checkpoint = updateSessionOperation(session, config?.appId, duration) ?: return
         // Android 15+ blocks network requests once a backgrounded app is cached, which can happen within
-        // the queue's batching delay, so send now. Each flush needs a new focus and a longer duration.
-        updateSessionOperation(session, config?.appId, duration)?.let { operationRepo.enqueue(it, flush = true) }
+        // the queue's batching delay, so send now. An activity that handles rotation itself unfocuses
+        // and refocuses on each one, so flush no more often than the queue would send anyway.
+        val lastFlush = lastCheckpointFlushElapsed
+        val flush = lastFlush == null || unfocusElapsedMs - lastFlush !in 0 until (config?.opRepoExecutionInterval ?: 0L)
+        if (flush) lastCheckpointFlushElapsed = unfocusElapsedMs
+        operationRepo.enqueue(checkpoint, flush)
     }
 
     private fun handleOnUnfocused(
