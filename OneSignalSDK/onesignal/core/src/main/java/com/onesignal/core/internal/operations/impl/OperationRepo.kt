@@ -250,7 +250,7 @@ internal class OperationRepo(
     ) {
         val accepted =
             synchronized(queue) {
-                val result = sessionQueuePolicy.onEnqueue(queue, queueItem)
+                val result = sessionQueuePolicy.onEnqueue(queue, queueItem, flush)
                 dropAndWake(result.removed)
                 result.accept
             }

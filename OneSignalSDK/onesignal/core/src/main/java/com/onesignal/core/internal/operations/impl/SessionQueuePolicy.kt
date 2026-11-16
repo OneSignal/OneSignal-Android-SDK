@@ -40,6 +40,7 @@ internal class SessionQueuePolicy(
     fun onEnqueue(
         queue: MutableList<OperationRepo.OperationQueueItem>,
         incoming: OperationRepo.OperationQueueItem,
+        flush: Boolean = false,
     ): EnqueueResult {
         val op = incoming.operation
         if (!op.isSessionOperation) return EnqueueResult(accept = true)
@@ -51,8 +52,8 @@ internal class SessionQueuePolicy(
                     Logging.debug("SessionQueuePolicy: privacy consent not given, dropping $op")
                     EnqueueResult(accept = false)
                 }
-                op is UpdateSessionOperation -> admitUpdate(queue, incoming, op)
-                else -> admit(queue, incoming)
+                op is UpdateSessionOperation -> admitUpdate(queue, incoming, op, flush)
+                else -> admit(queue, incoming, flush)
             }
         // Its updates could never be sent.
         if (!result.accept && op is CreateSessionOperation) updateState(op.localSessionId, queue) { it.isClosed = true }
@@ -63,6 +64,7 @@ internal class SessionQueuePolicy(
         queue: MutableList<OperationRepo.OperationQueueItem>,
         incoming: OperationRepo.OperationQueueItem,
         op: UpdateSessionOperation,
+        flush: Boolean,
     ): EnqueueResult {
         val state = stateFor(op.sessionId)
         state?.serverSessionId?.let { op.translateIds(mapOf(op.sessionId to it)) }
@@ -77,12 +79,13 @@ internal class SessionQueuePolicy(
             return EnqueueResult(accept = false)
         }
         state?.let { op.useCreateIds(it.onesignalId, it.subscriptionId) }
-        return admit(queue, incoming)
+        return admit(queue, incoming, flush)
     }
 
     private fun admit(
         queue: MutableList<OperationRepo.OperationQueueItem>,
         incoming: OperationRepo.OperationQueueItem,
+        flush: Boolean,
     ): EnqueueResult {
         val op = incoming.operation
         val removed = mutableListOf<OperationRepo.OperationQueueItem>()
@@ -93,8 +96,9 @@ internal class SessionQueuePolicy(
                 val replaced = it.operation as UpdateSessionOperation
                 op.activeDuration = maxOf(op.activeDuration, replaced.activeDuration)
                 incoming.retries = maxOf(incoming.retries, it.retries)
-                // An end is sent while the background job waits for it, so it doesn't wait out a heartbeat's backoff.
-                if (!op.isEnd) incoming.retryAt = maxOf(incoming.retryAt, it.retryAt)
+                // An end or a flushed update must send before the app loses network access in the background,
+                // so it doesn't wait out a heartbeat's backoff.
+                if (!op.isEnd && !flush) incoming.retryAt = maxOf(incoming.retryAt, it.retryAt)
                 val waiters = synchronized(it) { it.waiters.toList().also { _ -> it.waiters.clear() } }
                 incoming.attachOrWake(waiters)
             }
