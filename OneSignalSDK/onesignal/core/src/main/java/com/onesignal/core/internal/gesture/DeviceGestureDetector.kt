@@ -23,9 +23,8 @@ import com.onesignal.logger.ObservabilityEvent
  * [NO_SUBSCRIPTION_CLIP_TEXT] instead, so someone following the docs can tell the gesture worked.
  *
  * A cycle is an unfocus/focus pair whose background phase lasts at least
- * [MIN_BACKGROUND_DWELL_MS]; the floor filters the synthetic pair
- * [com.onesignal.core.internal.application.impl.ApplicationService.onOrientationChanged]
- * fires when an activity declaring orientation in `configChanges` rotates. The window is the
+ * [MIN_BACKGROUND_DWELL_MS]; the floor filters synthetic pairs no human app switch produces.
+ * The window is the
  * only rate rule; six cycles fit inside it at round trips of five seconds or faster.
  *
  * [FeatureFlag.SDK_DEVICE_GESTURE_DISABLED] turns the gesture off. Absent means enabled, so a
@@ -80,9 +79,9 @@ internal class DeviceGestureDetector(
                 when {
                     // Cold start or first focus after start(); nothing to pair with.
                     backgroundedAt == null -> false
-                    // Faster than any human app switch; rotation produces synthetic pairs like this.
+                    // Faster than any human app switch.
                     now - backgroundedAt < MIN_BACKGROUND_DWELL_MS -> {
-                        progress = "ignored a ${now - backgroundedAt}ms background blip (rotation filter)"
+                        progress = "ignored a ${now - backgroundedAt}ms background blip"
                         false
                     }
                     else -> {
