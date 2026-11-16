@@ -1,0 +1,129 @@
+package com.onesignal.internal
+
+import android.content.Context
+import androidx.test.core.app.ApplicationProvider.getApplicationContext
+import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
+import com.onesignal.core.internal.config.CONFIG_NAME_SPACE
+import com.onesignal.core.internal.config.ConfigModel
+import com.onesignal.core.internal.preferences.PreferenceOneSignalKeys
+import com.onesignal.core.internal.preferences.PreferenceStores
+import com.onesignal.debug.LogLevel
+import com.onesignal.debug.internal.logging.Logging
+import io.kotest.core.spec.style.FunSpec
+import io.kotest.matchers.shouldBe
+import io.kotest.matchers.types.shouldBeInstanceOf
+import io.kotest.matchers.types.shouldBeSameInstanceAs
+import org.json.JSONArray
+
+@RobolectricTest
+class OneSignalChoiceTests : FunSpec({
+    val configKey = PreferenceOneSignalKeys.MODEL_STORE_PREFIX + CONFIG_NAME_SPACE
+
+    fun prefs() = getApplicationContext<Context>().getSharedPreferences(PreferenceStores.ONESIGNAL, Context.MODE_PRIVATE)
+
+    fun cacheNeverCrashFlag() {
+        val config = ConfigModel().apply { sdkRemoteFeatureFlags = listOf(NeverCrashKillSwitch.FLAG_KEY) }
+        prefs().edit().putString(configKey, JSONArray().put(config.toJSON()).toString()).commit()
+    }
+
+    fun resetChoice() {
+        listOf("chosen", "pendingConsentRequired", "pendingConsentGiven", "pendingDisableGmsMissingPrompt")
+            .forEach { OneSignalChoice::class.java.getDeclaredField(it).apply { isAccessible = true }.set(OneSignalChoice, null) }
+    }
+
+    beforeEach {
+        Logging.logLevel = LogLevel.NONE
+        prefs().edit().clear().commit()
+        NeverCrashKillSwitch.resetForTest()
+        resetChoice()
+    }
+
+    afterEach {
+        Logging.logLevel = LogLevel.NONE
+        Logging.visualLogLevel = LogLevel.NONE
+        NeverCrashKillSwitch.resetForTest()
+        resetChoice()
+    }
+
+    test("settings touched before init leave the implementation unchosen, so the flag still decides") {
+        cacheNeverCrashFlag()
+
+        OneSignalChoice.debug
+        OneSignalChoice.isInitialized shouldBe false
+        OneSignalChoice.consentRequired shouldBe false
+        OneSignalChoice.consentRequired = true
+        OneSignalChoice.consentGiven = true
+        OneSignalChoice.disableGMSMissingPrompt = true
+
+        OneSignalChoice.resolve(getApplicationContext()).shouldBeInstanceOf<OneSignalImpV2>()
+    }
+
+    test("suspend consent accessors before init leave the implementation unchosen") {
+        cacheNeverCrashFlag()
+
+        OneSignalChoice.setConsentRequired(true)
+        OneSignalChoice.setConsentGiven(true)
+        OneSignalChoice.setDisableGMSMissingPrompt(true)
+        OneSignalChoice.getConsentRequired() shouldBe true
+        OneSignalChoice.getConsentGiven() shouldBe true
+        OneSignalChoice.getDisableGMSMissingPrompt() shouldBe true
+
+        OneSignalChoice.resolve(getApplicationContext()).shouldBeInstanceOf<OneSignalImpV2>()
+    }
+
+    test("consent stashed before the implementation exists is applied to it") {
+        cacheNeverCrashFlag()
+        OneSignalChoice.consentRequired = true
+        OneSignalChoice.consentGiven = true
+        OneSignalChoice.disableGMSMissingPrompt = true
+
+        val impl = OneSignalChoice.resolve(getApplicationContext())
+
+        impl.consentRequired shouldBe true
+        impl.consentGiven shouldBe true
+        impl.disableGMSMissingPrompt shouldBe true
+    }
+
+    test("a setting written after the implementation exists reaches it instead of the stash") {
+        cacheNeverCrashFlag()
+        val impl = OneSignalChoice.resolve(getApplicationContext())
+
+        OneSignalChoice.consentGiven = true
+
+        impl.consentGiven shouldBe true
+        OneSignalChoice.consentGiven shouldBe true
+    }
+
+    test("log levels set before the choice survive building the implementation") {
+        cacheNeverCrashFlag()
+        Logging.logLevel = LogLevel.VERBOSE
+        Logging.visualLogLevel = LogLevel.ERROR
+
+        OneSignalChoice.resolve(getApplicationContext())
+
+        Logging.logLevel shouldBe LogLevel.VERBOSE
+        Logging.visualLogLevel shouldBe LogLevel.ERROR
+    }
+
+    test("the first implementation is kept for the rest of the process") {
+        cacheNeverCrashFlag()
+
+        val first = OneSignalChoice.resolve(getApplicationContext())
+
+        OneSignalChoice.resolve() shouldBeSameInstanceAs first
+        OneSignalChoice.resolve(getApplicationContext()) shouldBeSameInstanceAs first
+    }
+
+    test("resolving without a context before the flag is read keeps legacy for the process") {
+        cacheNeverCrashFlag()
+
+        val first = OneSignalChoice.resolve()
+
+        first.shouldBeInstanceOf<OneSignalImp>()
+        OneSignalChoice.resolve(getApplicationContext()) shouldBeSameInstanceAs first
+    }
+
+    test("without the cached flag a context resolves to the legacy implementation") {
+        OneSignalChoice.resolve(getApplicationContext()).shouldBeInstanceOf<OneSignalImp>()
+    }
+})

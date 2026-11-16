@@ -1,5 +1,6 @@
 package com.onesignal.internal
 
+import com.onesignal.common.threading.StartupTimeline
 import com.onesignal.debug.internal.logging.Logging
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.runBlocking
@@ -77,6 +78,7 @@ internal class InitGate {
             attempt++
             state = InitState.IN_PROGRESS
             completion = CompletableDeferred()
+            StartupTimeline.initAttempt()
             true
         }
 
@@ -85,13 +87,21 @@ internal class InitGate {
     }
 
     // State and signal change together, so a waiter can't wake up holding the next attempt's signal.
+    @Suppress("TooGenericExceptionCaught", "SwallowedException")
     fun complete(terminal: InitState) {
         require(terminal == InitState.SUCCESS || terminal == InitState.FAILED) {
             "complete requires a terminal state, got $terminal"
         }
+        StartupTimeline.initEnded(terminal.name.lowercase())
         synchronized(lock) {
             state = terminal
             completion.complete(Unit)
+        }
+        // Reported after completing, so a thread still blocked in [isReady] is counted up to now.
+        // Must not throw: log listeners are customer code, and a throw here would fail a finished init.
+        try {
+            if (StartupTimeline.claimReport()) Logging.info("OneSignal: ${StartupTimeline.summary()}")
+        } catch (_: Throwable) {
         }
         // Also on FAILED: remote logging is usually up by then, and init may never succeed.
         earlyCalls.logAndClear()
@@ -119,7 +129,7 @@ internal class InitGate {
             if (state == InitState.IN_PROGRESS && !isOnInitThread) {
                 try {
                     // Dispatcher-less: resumes on the caller's own event loop, never on a busy IO worker.
-                    runBlocking { await(operation) }
+                    StartupTimeline.mainWaitingForInit { runBlocking { await(operation) } }
                 } catch (e: InterruptedException) {
                     Thread.currentThread().interrupt()
                     InitState.IN_PROGRESS

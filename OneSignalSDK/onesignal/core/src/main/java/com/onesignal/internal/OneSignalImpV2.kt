@@ -18,6 +18,7 @@ import com.onesignal.common.services.IServiceProvider
 import com.onesignal.common.services.ServiceBuilder
 import com.onesignal.common.services.ServiceProvider
 import com.onesignal.common.threading.OneSignalDispatchers
+import com.onesignal.common.threading.StartupTimeline
 import com.onesignal.common.threading.suspendifyOnIO
 import com.onesignal.core.CoreModule
 import com.onesignal.core.internal.application.IApplicationService
@@ -408,10 +409,14 @@ internal class OneSignalImpV2 : IOneSignal,
 
         // Dispatch init asynchronously so this method never blocks the caller. Callers that
         // need to wait (accessors, login, logout) block on the gate.
+        // Resolve IO first: lazy pools build it on the caller, which is main_lane_build_ms, not init's queue wait.
+        OneSignalDispatchers.IO
+        StartupTimeline.initQueued()
         val started = AtomicBoolean(false)
         OneSignalDispatchers
             .launchOnIO {
                 started.set(true)
+                StartupTimeline.initStarted()
                 gate.runInit { internalInit(context, appId) }
             }.invokeOnCompletion { cause ->
                 // A full IO pool rejects the dispatch and cancels the job before it runs; left alone the
@@ -624,10 +629,14 @@ internal class OneSignalImpV2 : IOneSignal,
 
         // Only the caller that actually runs init needs the IO dispatcher, to keep its disk
         // and network work off the calling thread.
+        // Resolved before initQueued, for the same reason as in the synchronous initWithContext.
+        val dispatcher = ioDispatcher
+        StartupTimeline.initQueued()
         var started = false
         try {
-            return withContext(ioDispatcher) {
+            return withContext(dispatcher) {
                 started = true
+                StartupTimeline.initStarted()
                 gate.runInit { internalInit(context, appId) }
             }
         } catch (e: CancellationException) {
