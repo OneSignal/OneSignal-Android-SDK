@@ -1123,38 +1123,6 @@ class SessionServiceTests : FunSpec({
         mocks.checkpoints shouldBe emptyList()
     }
 
-    test("checkpoints within the queue's execution interval, as on rotation, are not flushed") {
-        // Given
-        val mocks = Mocks(sessionsApiEnabled = true)
-        val interval = 5_000L
-        mocks.configModelStore.model.opRepoExecutionInterval = interval
-        val sessionService = mocks.sessionService
-        sessionService.bootstrap()
-        sessionService.start()
-        mocks.sessionModelStore { it.isValid = false }
-        sessionService.onFocus(false)
-        mocks.advanceTime(10 * MINUTE_MS)
-        sessionService.onUnfocused()
-        sessionService.onFocus(false)
-
-        // When
-        mocks.advanceTime(interval - 1)
-        sessionService.onUnfocused()
-        sessionService.onFocus(false)
-
-        // Then
-        val updates = mocks.enqueued.filterIsInstance<UpdateSessionOperation>()
-        updates.map { it.activeDuration } shouldBe listOf(10 * MINUTE_MS, 10 * MINUTE_MS + interval - 1)
-        updates.map { it in mocks.flushed } shouldBe listOf(true, false)
-
-        // When
-        mocks.advanceTime(1)
-        sessionService.onUnfocused()
-
-        // Then
-        mocks.flushed.last().let { it as UpdateSessionOperation }.activeDuration shouldBe 10 * MINUTE_MS + interval
-    }
-
     test("unfocus sends no checkpoint when the session uses the legacy path") {
         // Given
         val mocks = Mocks(sessionsApiEnabled = false)

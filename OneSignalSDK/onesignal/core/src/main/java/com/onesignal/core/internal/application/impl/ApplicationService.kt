@@ -502,6 +502,8 @@ class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, On
      * phones orientation is changed from manual detection using the onConfigurationChanged callback
      * This fix was originally implemented for In App Messages not being re-shown when orientation
      * was changed on wrapper SDK apps
+     *
+     * The app stays in the foreground, so only activity handlers are notified, not focus handlers.
      */
     private fun onOrientationChanged(
         orientation: Int,
@@ -519,15 +521,12 @@ class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, On
         }
 
         // Remove view
-        handleLostFocus()
         activityLifecycleNotifier.fire { it.onActivityStopped(activity) }
 
         // Show view
         activityLifecycleNotifier.fire { it.onActivityAvailable(activity) }
 
         activity.window.decorView.viewTreeObserver.addOnGlobalLayoutListener(this)
-
-        handleFocus()
     }
 
     private fun handleLostFocus() {

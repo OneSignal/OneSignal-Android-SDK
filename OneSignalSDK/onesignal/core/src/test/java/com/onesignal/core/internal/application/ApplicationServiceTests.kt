@@ -3,6 +3,8 @@ package com.onesignal.core.internal.application
 import android.app.Activity
 import android.app.Application
 import android.content.Context
+import android.content.pm.ActivityInfo
+import android.content.res.Configuration
 import androidx.test.core.app.ApplicationProvider
 import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
 import com.onesignal.common.threading.WaiterWithValue
@@ -12,11 +14,13 @@ import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import io.mockk.clearMocks
 import io.mockk.every
 import io.mockk.spyk
 import io.mockk.verify
 import kotlinx.coroutines.delay
 import org.robolectric.Robolectric
+import org.robolectric.Shadows.shadowOf
 
 @RobolectricTest
 class ApplicationServiceTests : FunSpec({
@@ -567,6 +571,39 @@ class ApplicationServiceTests : FunSpec({
         applicationService.current shouldBe notifActivity
         applicationService.entryState shouldBe AppEntryAction.NOTIFICATION_CLICK
         verify(exactly = 1) { handler.onFocus(false) }
+    }
+
+    test("rotation handled by the activity re-shows views without losing focus") {
+        // Given
+        val controller = Robolectric.buildActivity(Activity::class.java)
+        controller.setup()
+        val activity = controller.get()
+        shadowOf(activity.packageManager).addOrUpdateActivity(
+            ActivityInfo().apply {
+                name = activity.componentName.className
+                packageName = activity.packageName
+                configChanges = ActivityInfo.CONFIG_ORIENTATION
+            },
+        )
+        val application = ApplicationProvider.getApplicationContext<Application>()
+        val applicationService = ApplicationService()
+        applicationService.start(activity)
+        val focusHandler = spyk<IApplicationLifecycleHandler>()
+        val activityHandler = spyk<IActivityLifecycleHandler>()
+        applicationService.addApplicationLifecycleHandler(focusHandler)
+        applicationService.addActivityLifecycleHandler(activityHandler)
+        clearMocks(focusHandler, activityHandler)
+
+        // When
+        application.onConfigurationChanged(Configuration().apply { orientation = Configuration.ORIENTATION_LANDSCAPE })
+
+        // Then
+        verify(exactly = 1) { activityHandler.onActivityStopped(activity) }
+        verify(exactly = 1) { activityHandler.onActivityAvailable(activity) }
+        verify(exactly = 0) { focusHandler.onUnfocused() }
+        verify(exactly = 0) { focusHandler.onFocus(any()) }
+        applicationService.isInForeground shouldBe true
+        applicationService.entryState shouldBe AppEntryAction.APP_OPEN
     }
 
     test("configuration change recreation does not inflate the reference count") {
