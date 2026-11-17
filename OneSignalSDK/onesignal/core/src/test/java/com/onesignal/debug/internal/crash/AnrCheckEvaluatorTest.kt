@@ -263,7 +263,7 @@ class AnrCheckEvaluatorTest : FunSpec({
     }
 
     test("buildAnrCrashData emits a canonical header and tab-at prefixed frames") {
-        val crash = buildAnrCrashData("main", blockedStack, 6_000L)
+        val crash = buildAnrCrashData("main", blockedStack, 6_000L, attributed = true)
 
         crash.threadName shouldBe "main"
         crash.exceptionType shouldBe "ApplicationNotRespondingException"
@@ -274,7 +274,7 @@ class AnrCheckEvaluatorTest : FunSpec({
     }
 
     test("buildBackgroundBlockCrashData emits a canonical header and tab-at prefixed frames") {
-        val crash = buildBackgroundBlockCrashData("main", blockedStack, 11_000L)
+        val crash = buildBackgroundBlockCrashData("main", blockedStack, 11_000L, attributed = true)
 
         crash.threadName shouldBe "main"
         crash.exceptionType shouldBe "BackgroundMainThreadBlockException"
@@ -289,8 +289,8 @@ class AnrCheckEvaluatorTest : FunSpec({
     }
 
     test("every ANR record frame line is parseable by a `^\\s*at ` consumer") {
-        val fatal = buildAnrCrashData("main", blockedStack, 6_000L)
-        val nonFatal = buildBackgroundBlockCrashData("main", blockedStack, 11_000L)
+        val fatal = buildAnrCrashData("main", blockedStack, 6_000L, attributed = true)
+        val nonFatal = buildBackgroundBlockCrashData("main", blockedStack, 11_000L, attributed = true)
         val frameRegex = Regex("^\\s*at .+")
 
         listOf(fatal, nonFatal).forEach { crash ->

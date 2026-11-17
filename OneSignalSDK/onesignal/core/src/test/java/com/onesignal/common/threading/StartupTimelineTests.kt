@@ -204,10 +204,10 @@ class StartupTimelineTests : FunSpec({
         StartupTimeline.initQueued()
         val timeline = StartupTimeline.anrSummary()!!
 
-        buildAnrCrashData("main", emptyArray(), 6_000L, timeline).exceptionMessage shouldBe
+        buildAnrCrashData("main", emptyArray(), 6_000L, timeline, attributed = true).exceptionMessage shouldBe
             "Application Not Responding: Main thread blocked for 6000ms | $timeline"
-        buildBackgroundBlockCrashData("main", emptyArray(), 11_000L, timeline).exceptionMessage shouldEndWith " | $timeline"
-        buildAnrCrashData("main", emptyArray(), 6_000L).exceptionMessage shouldNotContain "startup_timeline"
+        buildBackgroundBlockCrashData("main", emptyArray(), 11_000L, timeline, attributed = true).exceptionMessage shouldEndWith " | $timeline"
+        buildAnrCrashData("main", emptyArray(), 6_000L, attributed = true).exceptionMessage shouldNotContain "startup_timeline"
     }
 
     test("an ANR 30 seconds or more after init ended carries no timeline") {

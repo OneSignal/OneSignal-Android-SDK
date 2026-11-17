@@ -40,7 +40,6 @@ internal class AndroidLogCrashHandler(
         initialized = false
     }
 
-    @Suppress("TooGenericExceptionCaught")
     override fun uncaughtException(thread: Thread, throwable: Throwable) {
         synchronized(seenThrowables) {
             if (seenThrowables.contains(throwable)) {
@@ -50,38 +49,68 @@ internal class AndroidLogCrashHandler(
             seenThrowables.add(throwable)
         }
 
+        try {
+            capture(thread, throwable)
+        } finally {
+            // Must run even if capture blew up, or the host's own reporter loses the crash.
+            existingHandler?.uncaughtException(thread, throwable)
+        }
+    }
+
+    @Suppress("TooGenericExceptionCaught")
+    private fun capture(thread: Thread, throwable: Throwable) {
         val isAnr =
             throwable.javaClass.simpleName.contains("ApplicationNotResponding", ignoreCase = true) ||
                 throwable.message?.contains("Application Not Responding", ignoreCase = true) == true
 
-        if (!isAnr && !isOneSignalAtFault(throwable)) {
+        val atFault =
+            try {
+                attributionOf(throwable, isAnr)
+            } catch (t: Throwable) {
+                // Walking the graph allocates while the process is dying. Unproven is the safe answer.
+                logger.debug("AndroidLogCrashHandler: attribution failed (${t.javaClass.simpleName}), treating as unproven")
+                false
+            }
+
+        if (!isAnr && !atFault) {
             logger.debug("AndroidLogCrashHandler: crash not OneSignal-related, delegating")
-            existingHandler?.uncaughtException(thread, throwable)
             return
         }
 
-        logger.info("AndroidLogCrashHandler: OneSignal-related crash detected, saving report")
+        logger.info("AndroidLogCrashHandler: saving report (anr=$isAnr attributed=$atFault)")
         try {
             // Synchronous by contract — process is about to die; write must finish first.
-            crashReporter.saveCrash(throwable.toCrashData(thread))
+            crashReporter.saveCrash(throwable.toCrashData(thread, attributed = atFault))
         } catch (t: Throwable) {
             logger.error("AndroidLogCrashHandler: failed to save crash report: ${t.message}")
         }
-        existingHandler?.uncaughtException(thread, throwable)
     }
 }
 
-internal fun Throwable.toCrashData(thread: Thread): CrashData =
+/**
+ * An ANR throwable's cause chain is a snapshot of every live thread, not a causal wrapper, so
+ * walking it matches our own watchdog thread and would call every third-party ANR ours. Only the
+ * blocked thread's own stack is evidence. Non-ANR crashes still need the walk: framework wrappers
+ * bury the real frames in a cause.
+ */
+internal fun attributionOf(throwable: Throwable, isAnr: Boolean): Boolean =
+    if (isAnr) isOneSignalAtFault(throwable.stackTrace) else isOneSignalAtFault(throwable)
+
+internal fun Throwable.toCrashData(thread: Thread, attributed: Boolean): CrashData =
     CrashData(
         threadName = thread.name,
         exceptionType = this::class.java.name,
         exceptionMessage = message ?: "",
         stacktrace = stackTraceToString(),
+        attributed = attributed,
     )
+
+// Trailing dot is load-bearing: without it a third-party `com.onesignalicious` package reads as ours.
+private const val ONESIGNAL_PACKAGE_PREFIX = "com.onesignal."
 
 /** True when any frame originates from OneSignal SDK code. */
 internal fun isOneSignalAtFault(stackTrace: Array<StackTraceElement>): Boolean =
-    stackTrace.any { it.className.startsWith("com.onesignal") }
+    stackTrace.any { it.className.startsWith(ONESIGNAL_PACKAGE_PREFIX) }
 
 /**
  * True when OneSignal appears anywhere in the throwable graph: framework wrappers bury the real
