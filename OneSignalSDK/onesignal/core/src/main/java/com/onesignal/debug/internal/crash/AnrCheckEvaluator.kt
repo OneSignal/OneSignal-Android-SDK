@@ -1,5 +1,6 @@
 package com.onesignal.debug.internal.crash
 
+import com.onesignal.debug.internal.logging.logger.android.isOneSignalAtFault
 import com.onesignal.logger.CrashData
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
@@ -222,7 +223,6 @@ internal fun buildAnrCrashData(
     stackTrace: Array<StackTraceElement>,
     unresponsiveDurationMs: Long,
     startupTimeline: String? = null,
-    attributed: Boolean,
 ): CrashData {
     val message = "Application Not Responding: Main thread blocked for ${unresponsiveDurationMs}ms" + timelineSuffix(startupTimeline)
     return CrashData(
@@ -230,7 +230,7 @@ internal fun buildAnrCrashData(
         exceptionType = ANR_EXCEPTION_TYPE,
         exceptionMessage = message,
         stacktrace = formatJvmStacktrace(ANR_EXCEPTION_TYPE, message, stackTrace),
-        attributed = attributed,
+        attributed = isOneSignalAtFault(stackTrace),
     )
 }
 
@@ -246,7 +246,6 @@ internal fun buildBackgroundBlockCrashData(
     stackTrace: Array<StackTraceElement>,
     unresponsiveDurationMs: Long,
     startupTimeline: String? = null,
-    attributed: Boolean,
 ): CrashData {
     val message =
         "Background main-thread block for ${unresponsiveDurationMs}ms | ${buildBlockFingerprint(stackTrace)}" +
@@ -256,6 +255,6 @@ internal fun buildBackgroundBlockCrashData(
         exceptionType = BACKGROUND_BLOCK_EXCEPTION_TYPE,
         exceptionMessage = message,
         stacktrace = formatJvmStacktrace(BACKGROUND_BLOCK_EXCEPTION_TYPE, message, stackTrace),
-        attributed = attributed,
+        attributed = isOneSignalAtFault(stackTrace),
     )
 }

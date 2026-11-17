@@ -263,7 +263,7 @@ class AnrCheckEvaluatorTest : FunSpec({
     }
 
     test("buildAnrCrashData emits a canonical header and tab-at prefixed frames") {
-        val crash = buildAnrCrashData("main", blockedStack, 6_000L, attributed = true)
+        val crash = buildAnrCrashData("main", blockedStack, 6_000L)
 
         crash.threadName shouldBe "main"
         crash.exceptionType shouldBe "ApplicationNotRespondingException"
@@ -274,7 +274,7 @@ class AnrCheckEvaluatorTest : FunSpec({
     }
 
     test("buildBackgroundBlockCrashData emits a canonical header and tab-at prefixed frames") {
-        val crash = buildBackgroundBlockCrashData("main", blockedStack, 11_000L, attributed = true)
+        val crash = buildBackgroundBlockCrashData("main", blockedStack, 11_000L)
 
         crash.threadName shouldBe "main"
         crash.exceptionType shouldBe "BackgroundMainThreadBlockException"
@@ -288,16 +288,18 @@ class AnrCheckEvaluatorTest : FunSpec({
             "\tat com.onesignal.core.Foo.bar(Foo.kt:42)$nl"
     }
 
-    test("both ANR builders carry the caller's attribution verdict") {
-        buildAnrCrashData("main", blockedStack, 6_000L, attributed = true).attributed shouldBe true
-        buildAnrCrashData("main", blockedStack, 6_000L, attributed = false).attributed shouldBe false
-        buildBackgroundBlockCrashData("main", blockedStack, 11_000L, attributed = true).attributed shouldBe true
-        buildBackgroundBlockCrashData("main", blockedStack, 11_000L, attributed = false).attributed shouldBe false
+    test("both ANR builders derive attribution from the stack they are given") {
+        val foreign = arrayOf(StackTraceElement("com.hostapp.ui.MainActivity", "onCreate", "MainActivity.kt", 1))
+
+        buildAnrCrashData("main", blockedStack, 6_000L).attributed shouldBe true
+        buildBackgroundBlockCrashData("main", blockedStack, 11_000L).attributed shouldBe true
+        buildAnrCrashData("main", foreign, 6_000L).attributed shouldBe false
+        buildBackgroundBlockCrashData("main", foreign, 11_000L).attributed shouldBe false
     }
 
     test("every ANR record frame line is parseable by a `^\\s*at ` consumer") {
-        val fatal = buildAnrCrashData("main", blockedStack, 6_000L, attributed = true)
-        val nonFatal = buildBackgroundBlockCrashData("main", blockedStack, 11_000L, attributed = true)
+        val fatal = buildAnrCrashData("main", blockedStack, 6_000L)
+        val nonFatal = buildBackgroundBlockCrashData("main", blockedStack, 11_000L)
         val frameRegex = Regex("^\\s*at .+")
 
         listOf(fatal, nonFatal).forEach { crash ->

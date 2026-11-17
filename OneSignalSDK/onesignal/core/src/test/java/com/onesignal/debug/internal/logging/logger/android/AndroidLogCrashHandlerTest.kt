@@ -140,6 +140,34 @@ class AndroidLogCrashHandlerTest : FunSpec({
         logger.lines.single { it.contains("saving report") } shouldContain "anr=true attributed=false"
     }
 
+    test("a throwable that cannot be walked is treated as unproven, not proven") {
+        // Attribution allocates while the process is dying. If the walk dies we must not guess
+        // "ours". The root carries no OneSignal frame, so the walk has to reach the cause.
+        val logger = RecordingLogger()
+        val reporter = RecordingReporter()
+        val handler = AndroidLogCrashHandler(reporter, logger)
+        val hostile = object : RuntimeException("boom") {
+            override val cause: Throwable? get() = throw OutOfMemoryError("walking the graph")
+        }
+        hostile.stackTrace = stackOf("com.hostapp.ui.MainActivity")
+
+        handler.uncaughtException(Thread.currentThread(), hostile)
+
+        logger.lines.any { it.contains("attribution failed") } shouldBe true
+        reporter.saved.shouldBeEmpty()
+    }
+
+    test("the same throwable instance is only captured once") {
+        val reporter = RecordingReporter()
+        val handler = AndroidLogCrashHandler(reporter, RecordingLogger())
+        val crash = throwableFrom("com.onesignal.Thing")
+
+        handler.uncaughtException(Thread.currentThread(), crash)
+        handler.uncaughtException(Thread.currentThread(), crash)
+
+        reporter.saved.size shouldBe 1
+    }
+
     test("the host handler still runs when capture itself blows up") {
         // The logger throws outside the save try/catch, so only the finally keeps delegation alive.
         val delegated = mutableListOf<Throwable>()

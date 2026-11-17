@@ -152,15 +152,7 @@ internal class AndroidLogAnrDetector(
                 logger.debug("$TAG: ANR not OneSignal-related, skipping report")
                 return
             }
-            crashReporter.saveCrash(
-                buildAnrCrashData(
-                    mainThread.name,
-                    stackTrace,
-                    unresponsiveDurationMs,
-                    StartupTimeline.anrSummary(),
-                    attributed = true,
-                ),
-            )
+            crashReporter.saveCrash(buildAnrCrashData(mainThread.name, stackTrace, unresponsiveDurationMs, StartupTimeline.anrSummary()))
             logger.info("$TAG: ANR report saved")
         } catch (t: Throwable) {
             logger.error("$TAG: failed to report ANR: ${t.message}")
@@ -178,13 +170,7 @@ internal class AndroidLogAnrDetector(
                 return
             }
             crashReporter.saveNonFatal(
-                buildBackgroundBlockCrashData(
-                    mainThread.name,
-                    stackTrace,
-                    unresponsiveDurationMs,
-                    StartupTimeline.anrSummary(),
-                    attributed = true,
-                ),
+                buildBackgroundBlockCrashData(mainThread.name, stackTrace, unresponsiveDurationMs, StartupTimeline.anrSummary()),
             )
             logger.info("$TAG: background block warning recorded")
         } catch (t: Throwable) {
