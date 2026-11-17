@@ -392,6 +392,26 @@ class LoggerPlatformProviderTest : FunSpec({
         result shouldBeOneOf listOf("foreground", "background", "unknown")
     }
 
+    test("appState returns unknown, not background, when ActivityManager is unavailable") {
+        // Given
+        val mockContext = mockk<Context>(relaxed = true)
+        every { mockContext.getSystemService(Context.ACTIVITY_SERVICE) } returns null
+        val config = LoggerPlatformProviderConfig(
+            crashStoragePath = "/test/path",
+            appPackageId = "com.test",
+            appVersion = "1.0",
+            context = mockContext,
+            getIsInForeground = null
+        )
+        val provider = LoggerPlatformProvider(config) { emptyFeatureManager() }
+
+        // When
+        val result = provider.appState
+
+        // Then - "background" would make the ANR detector downgrade a foreground ANR
+        result shouldBe "unknown"
+    }
+
     test("appState returns unknown when context is null and getIsInForeground is null") {
         // Given
         val config = LoggerPlatformProviderConfig(

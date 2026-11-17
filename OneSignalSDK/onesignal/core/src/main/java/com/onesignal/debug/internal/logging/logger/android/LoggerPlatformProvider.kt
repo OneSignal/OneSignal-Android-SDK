@@ -35,6 +35,9 @@ internal class LoggerPlatformProvider(
     companion object {
         // First class load. Same monotonic clock as Process.getStartUptimeMillis() (API 24).
         private val processStartUptimeMs = SystemClock.uptimeMillis()
+
+        /** Never "background": consumers downgrade on that, so it must mean a resolved state. */
+        private const val APP_STATE_UNKNOWN = "unknown"
     }
     override val appPackageId: String = config.appPackageId
     override val appVersion: String = config.appVersion
@@ -105,17 +108,21 @@ internal class LoggerPlatformProvider(
                         val runningAppProcesses = activityManager?.runningAppProcesses
                         val currentProcess = runningAppProcesses?.find { it.pid == android.os.Process.myPid() }
                         when (currentProcess?.importance) {
+                            // Absent importance means the lookup failed, not that we are
+                            // backgrounded. Callers downgrade on "background", so reporting it
+                            // here would silently demote a foreground ANR to a warning.
+                            null -> APP_STATE_UNKNOWN
                             ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND,
                             ActivityManager.RunningAppProcessInfo.IMPORTANCE_VISIBLE -> "foreground"
                             else -> "background"
                         }
                     } catch (e: Exception) {
-                        "unknown"
+                        APP_STATE_UNKNOWN
                     }
-                } ?: "unknown"
+                } ?: APP_STATE_UNKNOWN
             }
         } catch (e: Exception) {
-            "unknown"
+            APP_STATE_UNKNOWN
         }
 
     override val processUptime: Long
