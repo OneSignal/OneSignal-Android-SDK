@@ -8,6 +8,7 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 import io.kotest.matchers.string.shouldNotContain
 import kotlinx.coroutines.runBlocking
+import java.util.concurrent.CopyOnWriteArrayList
 
 class OneSignalImpV2Tests : FunSpec({
     beforeAny {
@@ -34,7 +35,8 @@ class OneSignalImpV2Tests : FunSpec({
 
     test("a null JWT token is logged and ignored instead of throwing") {
         val os = OneSignalImpV2()
-        val entries = mutableListOf<String>()
+        // The suspend overload logs from an IO thread.
+        val entries = CopyOnWriteArrayList<String>()
         val listener = ILogListener { entries.add(it.entry) }
         Logging.addListener(listener)
         Logging.logLevel = LogLevel.NONE

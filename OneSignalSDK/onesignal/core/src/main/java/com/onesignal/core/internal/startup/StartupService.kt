@@ -11,12 +11,15 @@ internal class StartupService(
     private val failures = mutableMapOf<IBootstrapService, Exception>()
 
     // Marked before the call, so a service that subscribes and then throws is not run again. A later
-    // attempt rethrows rather than skipping it: reaching SUCCESS without it hides a dead subscriber.
+    // attempt still brings the rest up, then fails: reaching SUCCESS without one hides a dead subscriber.
     @Suppress("TooGenericExceptionCaught")
     fun bootstrap() {
+        var earlier: Exception? = null
         services.getAllServices<IBootstrapService>().forEach {
-            failures[it]?.let { cause ->
-                throw IllegalStateException("OneSignal: ${it.javaClass.simpleName} bootstrap failed earlier and is not retried", cause)
+            val failed = failures[it]
+            if (failed != null) {
+                earlier = earlier ?: failed
+                return@forEach
             }
             if (it in bootstrapped) return@forEach
             bootstrapped += it
@@ -28,6 +31,7 @@ internal class StartupService(
                 throw e
             }
         }
+        earlier?.let { throw IllegalStateException("OneSignal: a bootstrap service failed on an earlier attempt and is not retried", it) }
     }
 
     // schedule to start all startable services using OneSignal dispatcher

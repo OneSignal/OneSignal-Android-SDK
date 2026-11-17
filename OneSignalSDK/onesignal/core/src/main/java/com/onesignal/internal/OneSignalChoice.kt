@@ -82,12 +82,13 @@ internal object OneSignalChoice {
             }
         }
         // Logged after publishing, so a listener that re-enters the SDK finds the implementation.
-        if (isNew) NeverCrashKillSwitch.logChoice()
+        NeverCrashKillSwitch.logChoice(isNew)
         return published
     }
 
+    // Internal so a test can install a stand-in. Production writes it only under [choiceLock].
     @Volatile
-    private var chosen: IOneSignal? = null
+    internal var chosen: IOneSignal? = null
 
     private val choiceLock = Any()
 

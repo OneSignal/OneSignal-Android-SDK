@@ -7,6 +7,7 @@ import com.onesignal.core.internal.config.CONFIG_NAME_SPACE
 import com.onesignal.core.internal.config.ConfigModel
 import com.onesignal.core.internal.preferences.PreferenceOneSignalKeys
 import com.onesignal.core.internal.preferences.PreferenceStores
+import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.features.FeatureFlag
 import org.json.JSONArray
@@ -28,7 +29,7 @@ internal object NeverCrashKillSwitch {
         private set
 
     @Volatile
-    private var pendingChoiceLog: String? = null
+    private var pendingChoiceLog: Pair<LogLevel, String>? = null
 
     private val evaluateLock = Any()
 
@@ -53,21 +54,24 @@ internal object NeverCrashKillSwitch {
     fun create(): IOneSignal =
         when {
             !evaluated -> {
-                pendingChoiceLog = "OneSignal: rollout flag not evaluated before first use, keeping the legacy init behavior"
+                pendingChoiceLog =
+                    LogLevel.WARN to "OneSignal: rollout flag not evaluated before first use, keeping the legacy init behavior"
                 OneSignalImp()
             }
             !useLegacy -> {
-                pendingChoiceLog = "OneSignal: $FLAG_KEY is on, using the never-crash init behavior"
+                pendingChoiceLog = LogLevel.DEBUG to "OneSignal: $FLAG_KEY is on, using the never-crash init behavior"
                 OneSignalImpV2()
             }
             else -> OneSignalImp()
         }
 
-    /** Why [create] chose what it did. Call once the choice is published. */
-    fun logChoice() {
-        val message = pendingChoiceLog ?: return
+    // Severity is captured at the decision, not here: evaluate() on another thread could flip useLegacy
+    // first and drop the "pinned to legacy" line to DEBUG. Always called, so a discarded choice clears.
+    fun logChoice(publish: Boolean) {
+        val (level, message) = pendingChoiceLog ?: return
         pendingChoiceLog = null
-        if (useLegacy) Logging.warn(message) else Logging.debug(message)
+        if (!publish) return
+        if (level == LogLevel.WARN) Logging.warn(message) else Logging.debug(message)
     }
 
     internal fun isEnabledByCachedFlags(context: Context): Boolean {

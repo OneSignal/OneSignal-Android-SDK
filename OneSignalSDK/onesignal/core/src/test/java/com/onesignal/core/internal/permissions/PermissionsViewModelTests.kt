@@ -53,8 +53,6 @@ class PermissionsViewModelTests : FunSpec({
         every { (fakeOneSignal as IServiceProvider).getService(RequestPermissionService::class.java) } returns mockRequestService
         every { (fakeOneSignal as IServiceProvider).getService(IPreferencesService::class.java) } returns mockPrefService
         ChoiceTestHook.publish(fakeOneSignal)
-        every { OneSignal.getService<RequestPermissionService>() } returns mockRequestService
-        every { OneSignal.getService<IPreferencesService>() } returns mockPrefService
         every { mockRequestService.resultHandler } returns PermissionsResultHandler(mockRequestService, mockPrefService)
         Logging.logLevel = LogLevel.NONE
     }

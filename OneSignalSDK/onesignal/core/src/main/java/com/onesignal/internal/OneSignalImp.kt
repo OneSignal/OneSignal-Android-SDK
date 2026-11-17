@@ -518,7 +518,7 @@ internal class OneSignalImp : IOneSignal,
         externalId: String?,
         token: String?,
     ) {
-        // Thrown first: this parameter used to get the Kotlin intrinsic check, which ran before the body.
+        // Must throw ahead of the body and the externalId check: that is the order the public API had.
         if (token == null) throw nullParameter("updateUserJwt", "token")
         Logging.log(LogLevel.DEBUG, "updateUserJwt(externalId: $externalId, token: ...${token.takeLast(8)})")
         if (externalId == null) throw nullParameter("updateUserJwt", "externalId")
@@ -925,8 +925,17 @@ internal class OneSignalImp : IOneSignal,
     override suspend fun updateUserJwtSuspend(
         externalId: String?,
         token: String?,
-    ) = withContext(ioDispatcher) {
+    ) {
+        // Ahead of the dispatch, where the intrinsic check used to run: after it, a cancelled scope
+        // would surface CancellationException instead and the stack would not name the caller.
         if (token == null) throw nullParameter("updateUserJwtSuspend", "token")
+        updateUserJwtOnIo(externalId, token)
+    }
+
+    private suspend fun updateUserJwtOnIo(
+        externalId: String?,
+        token: String,
+    ) = withContext(ioDispatcher) {
         Logging.log(LogLevel.DEBUG, "updateUserJwtSuspend(externalId: $externalId, token: ...${token.takeLast(8)})")
         if (externalId == null) throw nullParameter("updateUserJwtSuspend", "externalId")
 

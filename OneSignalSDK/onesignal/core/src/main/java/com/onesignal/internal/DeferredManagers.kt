@@ -106,7 +106,7 @@ internal open class DeferredManager<T : Any>(
         QueueAction.QUEUED
     }
 
-    // [enqueue] returns false when the queue is full; the call then takes the unqueued path and is logged as ignored.
+    // A full queue returns FORWARD, so the call takes the unqueued path and is logged as ignored.
     private fun forwardOrQueue(
         member: String,
         call: (T) -> Unit,

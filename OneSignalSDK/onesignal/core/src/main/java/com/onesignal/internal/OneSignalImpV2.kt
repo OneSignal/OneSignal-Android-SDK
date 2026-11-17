@@ -434,8 +434,10 @@ internal class OneSignalImpV2 : IOneSignal,
                     if (!started.get()) failUnscheduledInit(cause)
                 }
         } catch (e: Throwable) {
-            if (!started.get()) failUnscheduledInit(e)
-            return false
+            // A throw after the coroutine started belongs to a running init, not to scheduling it.
+            val running = started.get()
+            if (!running) failUnscheduledInit(e)
+            return running
         }
         return true
     }

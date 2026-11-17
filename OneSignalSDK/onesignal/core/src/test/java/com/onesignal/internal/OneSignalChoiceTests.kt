@@ -30,7 +30,8 @@ class OneSignalChoiceTests : FunSpec({
     }
 
     fun resetChoice() {
-        listOf("chosen", "pendingConsentRequired", "pendingConsentGiven", "pendingDisableGmsMissingPrompt")
+        OneSignalChoice.chosen = null
+        listOf("pendingConsentRequired", "pendingConsentGiven", "pendingDisableGmsMissingPrompt")
             .forEach { OneSignalChoice::class.java.getDeclaredField(it).apply { isAccessible = true }.set(OneSignalChoice, null) }
     }
 
@@ -139,9 +140,29 @@ class OneSignalChoiceTests : FunSpec({
             }
 
         // One implementation for the process: anything registered on a second one would be lost.
+        seen.size shouldBe 1
         seen.forEach { it shouldBeSameInstanceAs impl }
         OneSignalChoice.resolve() shouldBeSameInstanceAs impl
         impl.shouldBeInstanceOf<OneSignalImpV2>()
+    }
+
+    test("a listener that re-enters while the choice is still being made keeps the first implementation") {
+        // Unreadable cache: evaluate() warns while choiceLock is held and nothing is published yet,
+        // which is the only path that reaches the re-check guarding against a second implementation.
+        prefs().edit().putString(configKey, "{not json").commit()
+        val seen = CopyOnWriteArrayList<IOneSignal>()
+        val listener = ILogListener { seen += OneSignalChoice.resolve() }
+        Logging.addListener(listener)
+        val impl =
+            try {
+                OneSignalChoice.resolve(getApplicationContext())
+            } finally {
+                Logging.removeListener(listener)
+            }
+
+        seen.isEmpty() shouldBe false
+        seen.forEach { it shouldBeSameInstanceAs impl }
+        OneSignalChoice.resolve() shouldBeSameInstanceAs impl
     }
 
     test("without the cached flag a context resolves to the legacy implementation") {
