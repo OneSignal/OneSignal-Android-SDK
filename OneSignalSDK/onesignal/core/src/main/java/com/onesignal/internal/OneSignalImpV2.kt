@@ -409,20 +409,36 @@ internal class OneSignalImpV2 : IOneSignal,
 
         // Dispatch init asynchronously so this method never blocks the caller. Callers that
         // need to wait (accessors, login, logout) block on the gate.
-        // Resolve IO first: lazy pools build it on the caller, which is main_lane_build_ms, not init's queue wait.
-        OneSignalDispatchers.IO
-        StartupTimeline.initQueued()
+        return scheduleInit(context, appId)
+    }
+
+    // The gate is IN_PROGRESS by now, so nothing may escape: a throw here would strand every accessor on it.
+    @Suppress("TooGenericExceptionCaught")
+    private fun scheduleInit(
+        context: Context,
+        appId: String?,
+    ): Boolean {
         val started = AtomicBoolean(false)
-        OneSignalDispatchers
-            .launchOnIO {
-                started.set(true)
-                StartupTimeline.initStarted()
-                gate.runInit { internalInit(context, appId) }
-            }.invokeOnCompletion { cause ->
-                // A full IO pool rejects the dispatch and cancels the job before it runs; left alone the
-                // attempt stays IN_PROGRESS and every accessor blocks forever.
-                if (!started.get()) failUnscheduledInit(cause)
-            }
+        try {
+            // Resolve IO first: lazy pools build it on the caller, which is main_lane_build_ms, not init's queue wait.
+            OneSignalDispatchers.IO
+            StartupTimeline.initQueued()
+            OneSignalDispatchers
+                .launchOnIO {
+                    started.set(true)
+                    StartupTimeline.initStarted()
+                    gate.runInit { internalInit(context, appId) }
+                }.invokeOnCompletion { cause ->
+                    // A full IO pool rejects the dispatch and cancels the job before it runs; left alone the
+                    // attempt stays IN_PROGRESS and every accessor blocks forever.
+                    if (!started.get()) failUnscheduledInit(cause)
+                }
+        } catch (e: Throwable) {
+            // A throw after the coroutine started belongs to a running init, not to scheduling it.
+            val running = started.get()
+            if (!running) failUnscheduledInit(e)
+            return running
+        }
         return true
     }
 
@@ -518,12 +534,13 @@ internal class OneSignalImpV2 : IOneSignal,
 
     override fun updateUserJwt(
         externalId: String?,
-        token: String,
+        token: String?,
     ) {
-        Logging.log(LogLevel.DEBUG, "updateUserJwt(externalId: $externalId, token: ...${token.takeLast(8)})")
+        Logging.log(LogLevel.DEBUG, "updateUserJwt(externalId: $externalId, token: ...${token?.takeLast(8)})")
 
         val id = requireExternalId(externalId, SdkOperation.UPDATE_USER_JWT)
-        if (id == null || !gate.isReady(SdkOperation.UPDATE_USER_JWT)) return
+        if (token == null) logNullArgument(SdkOperation.UPDATE_USER_JWT.label, "token")
+        if (id == null || token == null || !gate.isReady(SdkOperation.UPDATE_USER_JWT)) return
         if (isMissing(id, "updateUserJwt: externalId") || isMissing(token, "updateUserJwt: token")) return
 
         jwtTokenStore.putJwt(id, token)
@@ -718,12 +735,13 @@ internal class OneSignalImpV2 : IOneSignal,
 
     override suspend fun updateUserJwtSuspend(
         externalId: String?,
-        token: String,
+        token: String?,
     ) = withContext(ioDispatcher) {
-        Logging.log(LogLevel.DEBUG, "updateUserJwtSuspend(externalId: $externalId, token: ...${token.takeLast(8)})")
+        Logging.log(LogLevel.DEBUG, "updateUserJwtSuspend(externalId: $externalId, token: ...${token?.takeLast(8)})")
 
         val id = requireExternalId(externalId, SdkOperation.UPDATE_USER_JWT)
-        if (id == null || !gate.awaitReady(SdkOperation.UPDATE_USER_JWT)) return@withContext
+        if (token == null) logNullArgument(SdkOperation.UPDATE_USER_JWT.label, "token")
+        if (id == null || token == null || !gate.awaitReady(SdkOperation.UPDATE_USER_JWT)) return@withContext
         if (isMissing(id, "updateUserJwt: externalId") || isMissing(token, "updateUserJwt: token")) return@withContext
 
         jwtTokenStore.putJwt(id, token)

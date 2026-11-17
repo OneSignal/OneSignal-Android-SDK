@@ -84,25 +84,30 @@ class StartupServiceTests : FunSpec({
         verify(exactly = 0) { mockBootstrapService2.bootstrap() }
     }
 
-    test("a bootstrap retried after a failure skips the services that already bootstrapped") {
+    test("a bootstrap retried after a failure keeps failing instead of reporting success") {
         val events = CopyOnWriteArrayList<OneSignalLogEvent>()
         val listener = ILogListener { events += it }
         Logging.addListener(listener)
         val done = mockk<IBootstrapService>(relaxed = true)
         val flaky = mockk<IBootstrapService>()
-        every { flaky.bootstrap() } throws Exception("first attempt") andThen Unit
-        val startupService = StartupService(setupServiceProvider(listOf(done, flaky), listOf()))
+        val after = mockk<IBootstrapService>(relaxed = true)
+        val firstFailure = Exception("first attempt")
+        every { flaky.bootstrap() } throws firstFailure andThen Unit
+        val startupService = StartupService(setupServiceProvider(listOf(done, flaky, after), listOf()))
 
         try {
-            shouldThrowUnit<Exception> { startupService.bootstrap() }
-            startupService.bootstrap()
-            startupService.bootstrap()
+            shouldThrowUnit<Exception> { startupService.bootstrap() } shouldBe firstFailure
+            // Not rerun, but the attempt must not succeed with this service half bootstrapped.
+            shouldThrowUnit<IllegalStateException> { startupService.bootstrap() }.cause shouldBe firstFailure
+            shouldThrowUnit<IllegalStateException> { startupService.bootstrap() }.cause shouldBe firstFailure
         } finally {
             Logging.removeListener(listener)
         }
 
         verify(exactly = 1) { done.bootstrap() }
         verify(exactly = 1) { flaky.bootstrap() }
+        // The retry must still bring up what the first attempt never reached.
+        verify(exactly = 1) { after.bootstrap() }
         events.count {
             it.level == LogLevel.WARN && it.entry.contains("bootstrap failed and will not be retried")
         } shouldBe 1

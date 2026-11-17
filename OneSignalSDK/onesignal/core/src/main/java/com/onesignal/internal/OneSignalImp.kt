@@ -516,8 +516,10 @@ internal class OneSignalImp : IOneSignal,
 
     override fun updateUserJwt(
         externalId: String?,
-        token: String,
+        token: String?,
     ) {
+        // Must throw ahead of the body and the externalId check: that is the order the public API had.
+        if (token == null) throw nullParameter("updateUserJwt", "token")
         Logging.log(LogLevel.DEBUG, "updateUserJwt(externalId: $externalId, token: ...${token.takeLast(8)})")
         if (externalId == null) throw nullParameter("updateUserJwt", "externalId")
 
@@ -921,6 +923,16 @@ internal class OneSignalImp : IOneSignal,
         wait.httpStatusCode?.let { "Login did not complete (HTTP $it)." } ?: "Login did not complete."
 
     override suspend fun updateUserJwtSuspend(
+        externalId: String?,
+        token: String?,
+    ) {
+        // Ahead of the dispatch, where the intrinsic check used to run: after it, a cancelled scope
+        // would surface CancellationException instead and the stack would not name the caller.
+        if (token == null) throw nullParameter("updateUserJwtSuspend", "token")
+        updateUserJwtOnIo(externalId, token)
+    }
+
+    private suspend fun updateUserJwtOnIo(
         externalId: String?,
         token: String,
     ) = withContext(ioDispatcher) {

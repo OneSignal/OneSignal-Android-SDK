@@ -38,6 +38,9 @@ internal open class DeferredManager<T : Any>(
 ) {
     private class Pending<T>(val member: String, val target: Any?, val call: (T) -> Unit)
 
+    // NONE is a call the queue fully handled, such as a removal cancelling its own queued add.
+    private enum class QueueAction { QUEUED, FORWARD, NONE }
+
     private val pending = mutableListOf<Pending<T>>()
     private var replayed = false
 
@@ -57,7 +60,14 @@ internal open class DeferredManager<T : Any>(
         member: String,
         target: Any,
         call: (T) -> Unit,
-    ) = forwardOrQueue(member, call) { pending.size < MAX_PENDING && pending.add(Pending(member, target, call)) }
+    ) = forwardOrQueue(member, call) {
+        if (pending.size < MAX_PENDING) {
+            pending.add(Pending(member, target, call))
+            QueueAction.QUEUED
+        } else {
+            QueueAction.FORWARD
+        }
+    }
 
     // Before replay the real manager holds nothing, so a removal only has to cancel the queued add.
     // Once that add is in the batch in flight, the removal is queued behind it. A remove with no
@@ -69,13 +79,17 @@ internal open class DeferredManager<T : Any>(
         call: (T) -> Unit,
     ) = forwardOrQueue(member, call) {
         val index = pending.indexOfLast { it.member == addMember && it.target === target }
-        if (index >= 0) {
-            pending.removeAt(index)
-            true
-        } else if (replaying) {
-            pending.size < MAX_PENDING && pending.add(Pending(member, target, call))
-        } else {
-            true
+        when {
+            index >= 0 -> {
+                pending.removeAt(index)
+                QueueAction.NONE
+            }
+            !replaying -> QueueAction.NONE
+            pending.size < MAX_PENDING -> {
+                pending.add(Pending(member, target, call))
+                QueueAction.QUEUED
+            }
+            else -> QueueAction.FORWARD
         }
     }
 
@@ -89,25 +103,25 @@ internal open class DeferredManager<T : Any>(
         pending.removeAll { it.member == member }
         pending.add(Pending(member, null, call))
         onQueued()
-        true
+        QueueAction.QUEUED
     }
 
-    // [enqueue] returns false when the queue is full; the call then takes the unqueued path and is logged as ignored.
+    // A full queue returns FORWARD, so the call takes the unqueued path and is logged as ignored.
     private fun forwardOrQueue(
         member: String,
         call: (T) -> Unit,
-        enqueue: () -> Boolean,
+        enqueue: () -> QueueAction,
     ) {
-        val (queued, target) =
+        val (action, target) =
             synchronized(pending) {
                 val applying = replaying && Thread.currentThread() === replayThread
                 val finished = replayed && !replaying
-                if (applying || finished) false to (replayedTo ?: source.peek()) else enqueue() to null
+                if (applying || finished) QueueAction.FORWARD to (replayedTo ?: source.peek()) else enqueue() to null
             }
-        when {
-            queued -> source.logQueued(member)
-            target != null -> call(target)
-            else -> source.get(member)?.let(call)
+        when (action) {
+            QueueAction.QUEUED -> source.logQueued(member)
+            QueueAction.NONE -> Unit
+            QueueAction.FORWARD -> if (target != null) call(target) else source.get(member)?.let(call)
         }
     }
 

@@ -3,98 +3,87 @@ package com.onesignal.internal
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider.getApplicationContext
 import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
-import com.onesignal.common.AndroidUtils
-import com.onesignal.core.internal.config.CONFIG_NAME_SPACE
-import com.onesignal.core.internal.config.ConfigModel
-import com.onesignal.core.internal.preferences.PreferenceOneSignalKeys
-import com.onesignal.core.internal.preferences.PreferenceStores
+import com.onesignal.core.internal.features.FeatureManager
+import com.onesignal.core.internal.features.PrefsStartupFlagsStore
+import com.onesignal.core.internal.features.StartupFlagsCache
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
-import io.mockk.every
-import io.mockk.mockkObject
-import io.mockk.unmockkObject
-import org.json.JSONArray
 
 @RobolectricTest
 class NeverCrashKillSwitchTests : FunSpec({
-    val configKey = PreferenceOneSignalKeys.MODEL_STORE_PREFIX + CONFIG_NAME_SPACE
+    fun context() = getApplicationContext<Context>()
 
-    fun prefs() = getApplicationContext<Context>().getSharedPreferences(PreferenceStores.ONESIGNAL, Context.MODE_PRIVATE)
-
-    // Written through the real model serializer, so a change to the stored format fails here.
-    fun cacheFlags(vararg keys: String) {
-        val config = ConfigModel().apply { sdkRemoteFeatureFlags = keys.toList() }
-        prefs().edit().putString(configKey, JSONArray().put(config.toJSON()).toString()).commit()
-    }
+    // Written through the production mirror, so a change to the stored format fails here.
+    fun mirrorFlags(vararg keys: String) = StartupFlagsCache.write(context()) { keys.toList() }
 
     beforeEach {
         Logging.logLevel = LogLevel.NONE
-        prefs().edit().clear().commit()
+        FeatureManager.resetStartupFlagsForTest()
         NeverCrashKillSwitch.resetForTest()
     }
 
-    afterEach { NeverCrashKillSwitch.resetForTest() }
+    afterEach {
+        FeatureManager.resetStartupFlagsForTest()
+        NeverCrashKillSwitch.resetForTest()
+    }
 
-    test("the cached flag selects the never-crash implementation") {
-        cacheFlags("other_flag", NeverCrashKillSwitch.FLAG_KEY)
+    test("the mirrored flag selects the never-crash implementation") {
+        mirrorFlags("other_flag", NeverCrashKillSwitch.FLAG_KEY)
 
-        NeverCrashKillSwitch.evaluate(getApplicationContext())
+        NeverCrashKillSwitch.evaluate(context())
 
         NeverCrashKillSwitch.useLegacy shouldBe false
         NeverCrashKillSwitch.create().shouldBeInstanceOf<OneSignalImpV2>()
     }
 
-    test("the cached flag matches regardless of wire casing") {
-        cacheFlags(NeverCrashKillSwitch.FLAG_KEY.uppercase())
+    test("the mirrored flag matches regardless of wire casing") {
+        mirrorFlags(NeverCrashKillSwitch.FLAG_KEY.uppercase())
 
-        NeverCrashKillSwitch.evaluate(getApplicationContext())
+        NeverCrashKillSwitch.evaluate(context())
 
         NeverCrashKillSwitch.useLegacy shouldBe false
     }
 
     test("without the flag the legacy implementation is used") {
-        cacheFlags("other_flag")
+        mirrorFlags("other_flag")
 
-        NeverCrashKillSwitch.evaluate(getApplicationContext())
+        NeverCrashKillSwitch.evaluate(context())
 
         NeverCrashKillSwitch.useLegacy shouldBe true
         NeverCrashKillSwitch.create().shouldBeInstanceOf<OneSignalImp>()
     }
 
-    test("a fresh install with nothing cached uses the legacy implementation") {
-        NeverCrashKillSwitch.evaluate(getApplicationContext())
+    test("a fresh install with nothing mirrored uses the legacy implementation") {
+        NeverCrashKillSwitch.evaluate(context())
 
         NeverCrashKillSwitch.useLegacy shouldBe true
     }
 
-    test("an unreadable cached config keeps the legacy implementation without throwing") {
-        prefs().edit().putString(configKey, "{not json").commit()
+    test("an unreadable store keeps the legacy implementation without throwing") {
+        mirrorFlags(NeverCrashKillSwitch.FLAG_KEY)
+        FeatureManager.resetStartupFlagsForTest()
+        PrefsStartupFlagsStore.commitFailed = true
 
-        NeverCrashKillSwitch.evaluate(getApplicationContext())
+        NeverCrashKillSwitch.evaluate(context())
 
         NeverCrashKillSwitch.evaluated shouldBe true
         NeverCrashKillSwitch.useLegacy shouldBe true
     }
 
-    test("a locked device keeps the legacy implementation") {
-        cacheFlags(NeverCrashKillSwitch.FLAG_KEY)
-        mockkObject(AndroidUtils)
-        try {
-            every { AndroidUtils.isAndroidUserUnlocked(any()) } returns false
+    // The store is device protected, so unlike the old config-model read this works before first unlock.
+    test("a locked device still reads the mirrored flag") {
+        mirrorFlags(NeverCrashKillSwitch.FLAG_KEY)
 
-            NeverCrashKillSwitch.evaluate(getApplicationContext())
+        NeverCrashKillSwitch.evaluate(context())
 
-            NeverCrashKillSwitch.useLegacy shouldBe true
-        } finally {
-            unmockkObject(AndroidUtils)
-        }
+        NeverCrashKillSwitch.useLegacy shouldBe false
     }
 
     test("first use before the flag is evaluated uses the legacy implementation") {
-        cacheFlags(NeverCrashKillSwitch.FLAG_KEY)
+        mirrorFlags(NeverCrashKillSwitch.FLAG_KEY)
 
         NeverCrashKillSwitch.create().shouldBeInstanceOf<OneSignalImp>()
 
@@ -102,11 +91,12 @@ class NeverCrashKillSwitchTests : FunSpec({
     }
 
     test("a later evaluate does not flip a decision already made") {
-        cacheFlags(NeverCrashKillSwitch.FLAG_KEY)
-        NeverCrashKillSwitch.evaluate(getApplicationContext())
-        prefs().edit().clear().commit()
+        mirrorFlags(NeverCrashKillSwitch.FLAG_KEY)
+        NeverCrashKillSwitch.evaluate(context())
+        FeatureManager.resetStartupFlagsForTest()
+        mirrorFlags()
 
-        NeverCrashKillSwitch.evaluate(getApplicationContext())
+        NeverCrashKillSwitch.evaluate(context())
 
         NeverCrashKillSwitch.useLegacy shouldBe false
     }

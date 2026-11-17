@@ -27,6 +27,8 @@ internal object OneSignalChoice {
         set(value) =
             setBeforeChoice(value, { pendingDisableGmsMissingPrompt = it }) { it.disableGMSMissingPrompt = value }
 
+    // The re-read is not redundant despite the volatile: it waits out an in-flight [resolve] rather
+    // than answering from the stash. Same value either way, since resolve copies the stash first.
     suspend fun getConsentRequired(): Boolean {
         val ready = chosen ?: synchronized(choiceLock) { chosen }
         return if (ready != null) ready.getConsentRequired() else pendingConsentRequired == true
@@ -57,10 +59,13 @@ internal object OneSignalChoice {
     // The startup provider usually evaluated already. Otherwise only a Context passed to init can.
     fun resolve(context: Context? = null): IOneSignal {
         chosen?.let { return it }
-        return synchronized(choiceLock) {
+        val published: IOneSignal
+        val isNew: Boolean
+        synchronized(choiceLock) {
             val current = chosen
             if (current != null) {
-                current
+                published = current
+                isNew = false
             } else {
                 if (context != null) NeverCrashKillSwitch.evaluate(context)
                 // Construction resets log levels. Put back whatever was set before the choice.
@@ -72,14 +77,20 @@ internal object OneSignalChoice {
                 pendingConsentRequired?.let { impl.consentRequired = it }
                 pendingConsentGiven?.let { impl.consentGiven = it }
                 pendingDisableGmsMissingPrompt?.let { impl.disableGMSMissingPrompt = it }
-                chosen = impl
-                impl
+                // choiceLock is reentrant: a log listener that called back in may have published first.
+                val raced = chosen
+                published = raced ?: impl.also { chosen = it }
+                isNew = raced == null
             }
         }
+        // Logged after publishing, so a listener that re-enters the SDK finds the implementation.
+        NeverCrashKillSwitch.logChoice(isNew)
+        return published
     }
 
+    // Internal so a test can install a stand-in. Production writes it only under [choiceLock].
     @Volatile
-    private var chosen: IOneSignal? = null
+    internal var chosen: IOneSignal? = null
 
     private val choiceLock = Any()
 

@@ -7,6 +7,8 @@ import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 import io.kotest.matchers.string.shouldNotContain
+import kotlinx.coroutines.runBlocking
+import java.util.concurrent.CopyOnWriteArrayList
 
 class OneSignalImpV2Tests : FunSpec({
     beforeAny {
@@ -29,6 +31,24 @@ class OneSignalImpV2Tests : FunSpec({
         os.updateUserJwt(null, "token")
 
         os.isInitialized shouldBe false
+    }
+
+    test("a null JWT token is logged and ignored instead of throwing") {
+        val os = OneSignalImpV2()
+        // The suspend overload logs from an IO thread.
+        val entries = CopyOnWriteArrayList<String>()
+        val listener = ILogListener { entries.add(it.entry) }
+        Logging.addListener(listener)
+        Logging.logLevel = LogLevel.NONE
+        try {
+            markInitialized(os)
+            os.updateUserJwt("user", null)
+            runBlocking { os.updateUserJwtSuspend("user", null) }
+
+            entries.count { "updateUserJwt: token is null" in it } shouldBe 2
+        } finally {
+            Logging.removeListener(listener)
+        }
     }
 
     test("a null context or externalId is logged, and the log says the SDK is not initialized") {

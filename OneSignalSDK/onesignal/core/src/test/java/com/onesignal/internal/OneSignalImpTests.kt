@@ -457,6 +457,10 @@ class OneSignalImpTests : FunSpec({
             "Parameter specified as non-null is null: method com.onesignal.OneSignal.login, parameter externalId"
         shouldThrowUnit<NullPointerException> { os.updateUserJwt(null, "token") }.message shouldBe
             "Parameter specified as non-null is null: method com.onesignal.OneSignal.updateUserJwt, parameter externalId"
+        shouldThrowUnit<NullPointerException> { os.updateUserJwt("user", null) }.message shouldBe
+            "Parameter specified as non-null is null: method com.onesignal.OneSignal.updateUserJwt, parameter token"
+        shouldThrowUnit<NullPointerException> { runBlocking { os.updateUserJwtSuspend("user", null) } }.message shouldBe
+            "Parameter specified as non-null is null: method com.onesignal.OneSignal.updateUserJwtSuspend, parameter token"
         os.isInitialized shouldBe false
     }
 })
