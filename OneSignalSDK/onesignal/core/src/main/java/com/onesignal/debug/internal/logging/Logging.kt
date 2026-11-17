@@ -179,6 +179,7 @@ object Logging {
         }
     }
 
+    @Suppress("TooGenericExceptionCaught")
     private fun callLogListeners(
         level: LogLevel,
         message: String,
@@ -191,7 +192,14 @@ object Logging {
             logEntry += "\n" + android.util.Log.getStackTraceString(throwable)
         }
         for (listener in logListeners) {
-            listener.onLogEvent(OneSignalLogEvent(level, logEntry))
+            try {
+                listener.onLogEvent(OneSignalLogEvent(level, logEntry))
+            } catch (e: Exception) {
+                // One host listener must not abort the others or the remote sink that runs after them.
+                android.util.Log.e(TAG, "Error in app's OneSignal log listener", e)
+            } catch (e: LinkageError) {
+                android.util.Log.e(TAG, "Error in app's OneSignal log listener", e)
+            }
         }
     }
 

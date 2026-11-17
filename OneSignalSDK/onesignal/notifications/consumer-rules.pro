@@ -65,3 +65,7 @@
 -keep class androidx.work.impl.WorkDatabase_Impl {
     <init>();
 }
+
+# Remote telemetry groups failures by exception class name, so this one must not be renamed.
+# keepnames still allows shrinking when the notifications module is unused.
+-keepnames class com.onesignal.notifications.internal.common.WorkManagerUnavailableException
