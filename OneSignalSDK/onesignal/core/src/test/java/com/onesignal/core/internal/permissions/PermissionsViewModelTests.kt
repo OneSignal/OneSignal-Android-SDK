@@ -12,7 +12,7 @@ import com.onesignal.core.internal.preferences.PreferenceOneSignalKeys
 import com.onesignal.core.internal.preferences.PreferenceStores
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
-import com.onesignal.internal.OneSignalChoice
+import com.onesignal.mocks.ChoiceTestHook
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
@@ -46,19 +46,13 @@ class PermissionsViewModelTests : FunSpec({
     // so both can reach the real implementation. Publishing this one keeps them off a real init.
     val fakeOneSignal = mockk<IOneSignal>(relaxed = true, moreInterfaces = arrayOf(IServiceProvider::class))
 
-    fun publishChoice(impl: IOneSignal?) =
-        OneSignalChoice::class.java
-            .getDeclaredField("chosen")
-            .apply { isAccessible = true }
-            .set(OneSignalChoice, impl)
-
     beforeTest {
         Dispatchers.setMain(testDispatcher)
         mockkObject(OneSignal)
         coEvery { fakeOneSignal.initWithContext(any()) } returns true
         every { (fakeOneSignal as IServiceProvider).getService(RequestPermissionService::class.java) } returns mockRequestService
         every { (fakeOneSignal as IServiceProvider).getService(IPreferencesService::class.java) } returns mockPrefService
-        publishChoice(fakeOneSignal)
+        ChoiceTestHook.publish(fakeOneSignal)
         every { OneSignal.getService<RequestPermissionService>() } returns mockRequestService
         every { OneSignal.getService<IPreferencesService>() } returns mockPrefService
         every { mockRequestService.resultHandler } returns PermissionsResultHandler(mockRequestService, mockPrefService)
@@ -67,7 +61,7 @@ class PermissionsViewModelTests : FunSpec({
 
     afterTest {
         Dispatchers.resetMain()
-        publishChoice(null)
+        ChoiceTestHook.publish(null)
         unmockkAll()
     }
 
