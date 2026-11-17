@@ -88,13 +88,16 @@ internal class AndroidLogCrashHandler(
 }
 
 /**
- * An ANR throwable's cause chain is a snapshot of every live thread, not a causal wrapper, so
- * walking it matches our own watchdog thread and would call every third-party ANR ours. Only the
- * blocked thread's own stack is evidence. Non-ANR crashes still need the walk: framework wrappers
- * bury the real frames in a cause.
+ * Only the blocked thread is evidence for an ANR. Its cause chain is a snapshot of every live
+ * thread, so walking it would match our own watchdog and call every third-party ANR ours.
+ * Watchdog errors carry an empty root stack and hang the blocked thread off the first cause.
+ * Non-ANR crashes still need the walk, since framework wrappers bury real frames in a cause.
  */
-internal fun attributionOf(throwable: Throwable, isAnr: Boolean): Boolean =
-    if (isAnr) isOneSignalAtFault(throwable.stackTrace) else isOneSignalAtFault(throwable)
+internal fun attributionOf(throwable: Throwable, isAnr: Boolean): Boolean {
+    if (!isAnr) return isOneSignalAtFault(throwable)
+    val blocked = throwable.stackTrace.takeIf { it.isNotEmpty() } ?: throwable.cause?.stackTrace
+    return blocked != null && isOneSignalAtFault(blocked)
+}
 
 internal fun Throwable.toCrashData(thread: Thread, attributed: Boolean): CrashData =
     CrashData(
@@ -106,7 +109,7 @@ internal fun Throwable.toCrashData(thread: Thread, attributed: Boolean): CrashDa
     )
 
 // Trailing dot is load-bearing: without it a third-party `com.onesignalicious` package reads as ours.
-private const val ONESIGNAL_PACKAGE_PREFIX = "com.onesignal."
+internal const val ONESIGNAL_PACKAGE_PREFIX = "com.onesignal."
 
 /** True when any frame originates from OneSignal SDK code. */
 internal fun isOneSignalAtFault(stackTrace: Array<StackTraceElement>): Boolean =

@@ -57,6 +57,27 @@ class AndroidLogCrashHandlerTest : FunSpec({
         }
     }
 
+    /**
+     * ANR-WatchDog's real shape: `ANRError.fillInStackTrace` empties the root stack, and the
+     * blocked main thread is the first cause, with the other live threads chained below it.
+     */
+    fun anrWatchDogError(
+        mainThreadClasses: Array<String>,
+        otherThreadClasses: Array<String>,
+    ): Throwable {
+        val watchdogThread = RuntimeException("OneSignal-Log-ANR-Watchdog (state = TIMED_WAITING)").apply {
+            stackTrace = stackOf(*otherThreadClasses)
+        }
+        val mainThread = RuntimeException("main (state = RUNNABLE)").apply {
+            stackTrace = stackOf(*mainThreadClasses)
+            initCause(watchdogThread)
+        }
+        return RuntimeException("Application Not Responding for at least 5000 ms.").apply {
+            stackTrace = emptyArray()
+            initCause(mainThread)
+        }
+    }
+
     test("an ANR blocked in third-party code is captured but not reported as ours") {
         val reporter = RecordingReporter()
         val handler = AndroidLogCrashHandler(reporter, RecordingLogger())
@@ -78,6 +99,37 @@ class AndroidLogCrashHandlerTest : FunSpec({
         handler.uncaughtException(
             Thread.currentThread(),
             anrWithThreadDump(
+                mainThreadClasses = arrayOf("com.hostapp.ui.MainActivity", "android.os.Looper"),
+                otherThreadClasses = arrayOf("com.onesignal.debug.internal.logging.logger.android.AndroidLogAnrDetector"),
+            ),
+        )
+
+        reporter.saved.single().attributed shouldBe false
+    }
+
+    test("a watchdog ANR blocked in OneSignal code is reported as ours despite an empty root stack") {
+        val reporter = RecordingReporter()
+        val handler = AndroidLogCrashHandler(reporter, RecordingLogger())
+
+        handler.uncaughtException(
+            Thread.currentThread(),
+            anrWatchDogError(
+                mainThreadClasses = arrayOf("com.onesignal.core.Thing", "android.os.Looper"),
+                otherThreadClasses = arrayOf("com.onesignal.debug.internal.logging.logger.android.AndroidLogAnrDetector"),
+            ),
+        )
+
+        reporter.saved.single().attributed shouldBe true
+    }
+
+    test("a watchdog ANR blocked in third-party code is not reported as ours") {
+        // Our watchdog is chained below main. Reading past the first cause would claim this one.
+        val reporter = RecordingReporter()
+        val handler = AndroidLogCrashHandler(reporter, RecordingLogger())
+
+        handler.uncaughtException(
+            Thread.currentThread(),
+            anrWatchDogError(
                 mainThreadClasses = arrayOf("com.hostapp.ui.MainActivity", "android.os.Looper"),
                 otherThreadClasses = arrayOf("com.onesignal.debug.internal.logging.logger.android.AndroidLogAnrDetector"),
             ),
