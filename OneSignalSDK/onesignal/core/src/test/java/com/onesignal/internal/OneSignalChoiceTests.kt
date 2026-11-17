@@ -3,10 +3,12 @@ package com.onesignal.internal
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider.getApplicationContext
 import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
+import com.onesignal.IOneSignal
 import com.onesignal.core.internal.config.CONFIG_NAME_SPACE
 import com.onesignal.core.internal.config.ConfigModel
 import com.onesignal.core.internal.preferences.PreferenceOneSignalKeys
 import com.onesignal.core.internal.preferences.PreferenceStores
+import com.onesignal.debug.ILogListener
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import io.kotest.core.spec.style.FunSpec
@@ -14,6 +16,7 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.kotest.matchers.types.shouldBeSameInstanceAs
 import org.json.JSONArray
+import java.util.concurrent.CopyOnWriteArrayList
 
 @RobolectricTest
 class OneSignalChoiceTests : FunSpec({
@@ -121,6 +124,24 @@ class OneSignalChoiceTests : FunSpec({
 
         first.shouldBeInstanceOf<OneSignalImp>()
         OneSignalChoice.resolve(getApplicationContext()) shouldBeSameInstanceAs first
+    }
+
+    test("a log listener that re-enters during the choice gets the published implementation") {
+        cacheNeverCrashFlag()
+        val seen = CopyOnWriteArrayList<IOneSignal>()
+        val listener = ILogListener { seen += OneSignalChoice.resolve() }
+        Logging.addListener(listener)
+        val impl =
+            try {
+                OneSignalChoice.resolve(getApplicationContext())
+            } finally {
+                Logging.removeListener(listener)
+            }
+
+        // One implementation for the process: anything registered on a second one would be lost.
+        seen.forEach { it shouldBeSameInstanceAs impl }
+        OneSignalChoice.resolve() shouldBeSameInstanceAs impl
+        impl.shouldBeInstanceOf<OneSignalImpV2>()
     }
 
     test("without the cached flag a context resolves to the legacy implementation") {

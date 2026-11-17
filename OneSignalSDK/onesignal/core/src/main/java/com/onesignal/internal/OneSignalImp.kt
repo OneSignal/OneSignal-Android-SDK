@@ -516,8 +516,10 @@ internal class OneSignalImp : IOneSignal,
 
     override fun updateUserJwt(
         externalId: String?,
-        token: String,
+        token: String?,
     ) {
+        // Thrown first: this parameter used to get the Kotlin intrinsic check, which ran before the body.
+        if (token == null) throw nullParameter("updateUserJwt", "token")
         Logging.log(LogLevel.DEBUG, "updateUserJwt(externalId: $externalId, token: ...${token.takeLast(8)})")
         if (externalId == null) throw nullParameter("updateUserJwt", "externalId")
 
@@ -922,8 +924,9 @@ internal class OneSignalImp : IOneSignal,
 
     override suspend fun updateUserJwtSuspend(
         externalId: String?,
-        token: String,
+        token: String?,
     ) = withContext(ioDispatcher) {
+        if (token == null) throw nullParameter("updateUserJwtSuspend", "token")
         Logging.log(LogLevel.DEBUG, "updateUserJwtSuspend(externalId: $externalId, token: ...${token.takeLast(8)})")
         if (externalId == null) throw nullParameter("updateUserJwtSuspend", "externalId")
 

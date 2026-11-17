@@ -382,7 +382,7 @@ class DeferredManagersTests : FunSpec({
         source.ignored shouldBe emptyList()
     }
 
-    test("a remove of a listener that was never added returns without waiting on init") {
+    test("a remove of a listener that was never added returns without waiting on init, and is not logged") {
         val real = mockk<INotificationsManager>(relaxed = true)
         val source = FakeSource(real)
         val deferred = DeferredNotificationsManager(source)
@@ -390,8 +390,22 @@ class DeferredManagersTests : FunSpec({
         deferred.removeClickListener(mockk())
 
         source.ignored shouldBe emptyList()
-        source.queued shouldBe listOf("removeClickListener")
+        // Nothing was queued, so claiming it is queued until init would be wrong.
+        source.queued shouldBe emptyList()
         verify(exactly = 0) { real.removeClickListener(any()) }
+    }
+
+    test("a remove that cancels its own queued add is not logged as queued") {
+        val real = mockk<INotificationsManager>(relaxed = true)
+        val source = FakeSource(real)
+        val deferred = DeferredNotificationsManager(source)
+        val listener = mockk<INotificationClickListener>()
+
+        deferred.addClickListener(listener)
+        deferred.removeClickListener(listener)
+
+        source.queued shouldBe listOf("addClickListener")
+        source.ignored shouldBe emptyList()
     }
 
     test("a full queue still applies removals and setting changes") {

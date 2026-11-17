@@ -144,7 +144,7 @@ interface IOneSignal {
      */
     fun updateUserJwt(
         externalId: String?,
-        token: String,
+        token: String?,
     )
 
     /**
@@ -278,6 +278,6 @@ interface IOneSignal {
      */
     suspend fun updateUserJwtSuspend(
         externalId: String?,
-        token: String,
+        token: String?,
     )
 }

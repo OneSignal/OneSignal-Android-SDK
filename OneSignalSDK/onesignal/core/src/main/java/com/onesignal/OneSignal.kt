@@ -350,12 +350,12 @@ object OneSignal {
      * wakes the operation queue so any deferred ops can dispatch with the fresh token.
      *
      * @param externalId The external ID the JWT belongs to. Required: null or empty is ignored and logged. While the SDK is not initialized, the log says so. The legacy SDK throws NullPointerException for a null externalId.
-     * @param token The new JWT bearer token issued by your backend. Must be non-empty; empty values are ignored and logged.
+     * @param token The new JWT bearer token issued by your backend. Required: null or empty is ignored and logged. The legacy SDK throws NullPointerException for a null token.
      */
     @JvmStatic
     fun updateUserJwt(
         externalId: String?,
-        token: String,
+        token: String?,
     ) = OneSignalChoice.resolve().updateUserJwt(externalId, token)
 
     /**
@@ -452,12 +452,12 @@ object OneSignal {
      * thread. Suspend-safe version of [updateUserJwt].
      *
      * @param externalId The external ID the JWT belongs to. Required: null or empty is ignored and logged. While the SDK is not initialized, the log says so. The legacy SDK throws NullPointerException for a null externalId.
-     * @param token The new JWT bearer token issued by your backend. Must be non-empty; empty values are ignored and logged.
+     * @param token The new JWT bearer token issued by your backend. Required: null or empty is ignored and logged. The legacy SDK throws NullPointerException for a null token.
      */
     @JvmStatic
     suspend fun updateUserJwtSuspend(
         externalId: String?,
-        token: String,
+        token: String?,
     ) {
         OneSignalChoice.resolve().updateUserJwtSuspend(externalId, token)
     }

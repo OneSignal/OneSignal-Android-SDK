@@ -84,19 +84,21 @@ class StartupServiceTests : FunSpec({
         verify(exactly = 0) { mockBootstrapService2.bootstrap() }
     }
 
-    test("a bootstrap retried after a failure skips the services that already bootstrapped") {
+    test("a bootstrap retried after a failure keeps failing instead of reporting success") {
         val events = CopyOnWriteArrayList<OneSignalLogEvent>()
         val listener = ILogListener { events += it }
         Logging.addListener(listener)
         val done = mockk<IBootstrapService>(relaxed = true)
         val flaky = mockk<IBootstrapService>()
-        every { flaky.bootstrap() } throws Exception("first attempt") andThen Unit
+        val firstFailure = Exception("first attempt")
+        every { flaky.bootstrap() } throws firstFailure andThen Unit
         val startupService = StartupService(setupServiceProvider(listOf(done, flaky), listOf()))
 
         try {
-            shouldThrowUnit<Exception> { startupService.bootstrap() }
-            startupService.bootstrap()
-            startupService.bootstrap()
+            shouldThrowUnit<Exception> { startupService.bootstrap() } shouldBe firstFailure
+            // Not rerun, but the attempt must not succeed with this service half bootstrapped.
+            shouldThrowUnit<IllegalStateException> { startupService.bootstrap() }.cause shouldBe firstFailure
+            shouldThrowUnit<IllegalStateException> { startupService.bootstrap() }.cause shouldBe firstFailure
         } finally {
             Logging.removeListener(listener)
         }

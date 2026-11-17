@@ -57,10 +57,13 @@ internal object OneSignalChoice {
     // The startup provider usually evaluated already. Otherwise only a Context passed to init can.
     fun resolve(context: Context? = null): IOneSignal {
         chosen?.let { return it }
-        return synchronized(choiceLock) {
+        val published: IOneSignal
+        val isNew: Boolean
+        synchronized(choiceLock) {
             val current = chosen
             if (current != null) {
-                current
+                published = current
+                isNew = false
             } else {
                 if (context != null) NeverCrashKillSwitch.evaluate(context)
                 // Construction resets log levels. Put back whatever was set before the choice.
@@ -72,10 +75,15 @@ internal object OneSignalChoice {
                 pendingConsentRequired?.let { impl.consentRequired = it }
                 pendingConsentGiven?.let { impl.consentGiven = it }
                 pendingDisableGmsMissingPrompt?.let { impl.disableGMSMissingPrompt = it }
-                chosen = impl
-                impl
+                // choiceLock is reentrant: a log listener that called back in may have published first.
+                val raced = chosen
+                published = raced ?: impl.also { chosen = it }
+                isNew = raced == null
             }
         }
+        // Logged after publishing, so a listener that re-enters the SDK finds the implementation.
+        if (isNew) NeverCrashKillSwitch.logChoice()
+        return published
     }
 
     @Volatile

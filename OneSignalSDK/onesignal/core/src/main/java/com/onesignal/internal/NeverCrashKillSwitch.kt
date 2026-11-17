@@ -19,9 +19,6 @@ internal object NeverCrashKillSwitch {
     // Absent means the legacy implementation, so the rollout stays off until Turbine sends the flag.
     val FLAG_KEY: String = FeatureFlag.SDK_NEVER_CRASH_ENABLED.key
 
-    // Local testing only: true forces the legacy implementation, false the new one, null reads the flag.
-    private val localOverride: Boolean? = null
-
     @Volatile
     var useLegacy: Boolean = true
         private set
@@ -29,6 +26,9 @@ internal object NeverCrashKillSwitch {
     @Volatile
     var evaluated: Boolean = false
         private set
+
+    @Volatile
+    private var pendingChoiceLog: String? = null
 
     private val evaluateLock = Any()
 
@@ -39,7 +39,7 @@ internal object NeverCrashKillSwitch {
         if (evaluated) return
         synchronized(evaluateLock) {
             if (evaluated) return
-            useLegacy = localOverride ?: try {
+            useLegacy = try {
                 !isEnabledByCachedFlags(context)
             } catch (t: Throwable) {
                 Logging.warn("OneSignal: could not read cached feature flags, keeping the legacy init behavior", t)
@@ -49,18 +49,26 @@ internal object NeverCrashKillSwitch {
         }
     }
 
+    // Silent: a log listener firing here would re-enter the caller before the choice is published.
     fun create(): IOneSignal =
         when {
             !evaluated -> {
-                Logging.warn("OneSignal: rollout flag not evaluated before first use, keeping the legacy init behavior")
+                pendingChoiceLog = "OneSignal: rollout flag not evaluated before first use, keeping the legacy init behavior"
                 OneSignalImp()
             }
             !useLegacy -> {
-                Logging.debug("OneSignal: $FLAG_KEY is on, using the never-crash init behavior")
+                pendingChoiceLog = "OneSignal: $FLAG_KEY is on, using the never-crash init behavior"
                 OneSignalImpV2()
             }
             else -> OneSignalImp()
         }
+
+    /** Why [create] chose what it did. Call once the choice is published. */
+    fun logChoice() {
+        val message = pendingChoiceLog ?: return
+        pendingChoiceLog = null
+        if (useLegacy) Logging.warn(message) else Logging.debug(message)
+    }
 
     internal fun isEnabledByCachedFlags(context: Context): Boolean {
         // Credential-encrypted prefs throw on access before the user unlocks the device.
@@ -80,5 +88,6 @@ internal object NeverCrashKillSwitch {
     internal fun resetForTest() {
         useLegacy = true
         evaluated = false
+        pendingChoiceLog = null
     }
 }
