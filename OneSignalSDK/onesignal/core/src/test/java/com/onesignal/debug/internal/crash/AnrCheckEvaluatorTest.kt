@@ -288,6 +288,13 @@ class AnrCheckEvaluatorTest : FunSpec({
             "\tat com.onesignal.core.Foo.bar(Foo.kt:42)$nl"
     }
 
+    test("both ANR builders carry the caller's attribution verdict") {
+        buildAnrCrashData("main", blockedStack, 6_000L, attributed = true).attributed shouldBe true
+        buildAnrCrashData("main", blockedStack, 6_000L, attributed = false).attributed shouldBe false
+        buildBackgroundBlockCrashData("main", blockedStack, 11_000L, attributed = true).attributed shouldBe true
+        buildBackgroundBlockCrashData("main", blockedStack, 11_000L, attributed = false).attributed shouldBe false
+    }
+
     test("every ANR record frame line is parseable by a `^\\s*at ` consumer") {
         val fatal = buildAnrCrashData("main", blockedStack, 6_000L, attributed = true)
         val nonFatal = buildBackgroundBlockCrashData("main", blockedStack, 11_000L, attributed = true)
