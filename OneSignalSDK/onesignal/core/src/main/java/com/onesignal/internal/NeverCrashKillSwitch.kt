@@ -2,19 +2,14 @@ package com.onesignal.internal
 
 import android.content.Context
 import com.onesignal.IOneSignal
-import com.onesignal.common.AndroidUtils
-import com.onesignal.core.internal.config.CONFIG_NAME_SPACE
-import com.onesignal.core.internal.config.ConfigModel
-import com.onesignal.core.internal.preferences.PreferenceOneSignalKeys
-import com.onesignal.core.internal.preferences.PreferenceStores
+import com.onesignal.core.internal.features.FeatureManager
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.features.FeatureFlag
-import org.json.JSONArray
 
 /**
- * Chooses the [IOneSignal] implementation once per process, from the feature flags cached by the
- * previous run, so a remote change applies on the next cold start. Any failure keeps the legacy behavior.
+ * Chooses the [IOneSignal] implementation once per process, from the startup flags the previous run
+ * mirrored, so a remote change applies on the next cold start. Any failure keeps the legacy behavior.
  */
 internal object NeverCrashKillSwitch {
     // Absent means the legacy implementation, so the rollout stays off until Turbine sends the flag.
@@ -41,9 +36,11 @@ internal object NeverCrashKillSwitch {
         synchronized(evaluateLock) {
             if (evaluated) return
             useLegacy = try {
-                !isEnabledByCachedFlags(context)
+                // The same latched snapshot the dispatcher pool choice reads: a small prefs file in
+                // device-protected storage, so this does not load the OneSignal store on main.
+                !FeatureManager.startupFlags { context }.isEnabled(FeatureFlag.SDK_NEVER_CRASH_ENABLED)
             } catch (t: Throwable) {
-                Logging.warn("OneSignal: could not read cached feature flags, keeping the legacy init behavior", t)
+                Logging.warn("OneSignal: could not read the startup flags, keeping the legacy init behavior", t)
                 true
             }
             evaluated = true
@@ -72,21 +69,6 @@ internal object NeverCrashKillSwitch {
         pendingChoiceLog = null
         if (!publish) return
         if (level == LogLevel.WARN) Logging.warn(message) else Logging.debug(message)
-    }
-
-    internal fun isEnabledByCachedFlags(context: Context): Boolean {
-        // Credential-encrypted prefs throw on access before the user unlocks the device.
-        val keys = if (AndroidUtils.isAndroidUserUnlocked(context)) cachedFeatureKeys(context) else null
-        return keys?.any { it.equals(FLAG_KEY, ignoreCase = true) } == true
-    }
-
-    private fun cachedFeatureKeys(context: Context): List<String>? {
-        val stored =
-            context
-                .getSharedPreferences(PreferenceStores.ONESIGNAL, Context.MODE_PRIVATE)
-                .getString(PreferenceOneSignalKeys.MODEL_STORE_PREFIX + CONFIG_NAME_SPACE, null)
-        val keys = stored?.let { JSONArray(it).optJSONObject(0)?.optJSONArray(ConfigModel::sdkRemoteFeatureFlags.name) }
-        return keys?.let { array -> (0 until array.length()).map { array.optString(it) } }
     }
 
     internal fun resetForTest() {

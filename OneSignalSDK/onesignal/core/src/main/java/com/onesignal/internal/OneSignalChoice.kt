@@ -27,6 +27,8 @@ internal object OneSignalChoice {
         set(value) =
             setBeforeChoice(value, { pendingDisableGmsMissingPrompt = it }) { it.disableGMSMissingPrompt = value }
 
+    // The re-read is not redundant despite the volatile: it waits out an in-flight [resolve] rather
+    // than answering from the stash. Same value either way, since resolve copies the stash first.
     suspend fun getConsentRequired(): Boolean {
         val ready = chosen ?: synchronized(choiceLock) { chosen }
         return if (ready != null) ready.getConsentRequired() else pendingConsentRequired == true
