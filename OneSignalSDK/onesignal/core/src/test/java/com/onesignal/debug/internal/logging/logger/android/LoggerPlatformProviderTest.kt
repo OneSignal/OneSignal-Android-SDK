@@ -1,8 +1,10 @@
 package com.onesignal.debug.internal.logging.logger.android
 
+import android.app.ActivityManager
 import android.content.Context
 import android.content.SharedPreferences
 import android.os.Build
+import android.os.Process
 import androidx.test.core.app.ApplicationProvider
 import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
 import com.onesignal.common.OneSignalUtils
@@ -392,10 +394,48 @@ class LoggerPlatformProviderTest : FunSpec({
         result shouldBeOneOf listOf("foreground", "background", "unknown")
     }
 
-    test("appState returns unknown, not background, when ActivityManager is unavailable") {
+    // "background" on any of these would make the ANR detector downgrade a foreground ANR
+    // to a non-fatal warning, so each unresolvable path must report "unknown" instead.
+    listOf(
+        "the ACTIVITY_SERVICE is unavailable" to { _: Int -> null },
+        "runningAppProcesses is null" to { _: Int -> mockk<ActivityManager>(relaxed = true).also { every { it.runningAppProcesses } returns null } },
+        "runningAppProcesses omits our own pid" to { ourPid: Int ->
+            mockk<ActivityManager>(relaxed = true).also {
+                every { it.runningAppProcesses } returns
+                    listOf(ActivityManager.RunningAppProcessInfo("other.process", ourPid + 1, emptyArray()))
+            }
+        },
+    ).forEach { (scenario, activityManager) ->
+        test("appState returns unknown, not background, when $scenario") {
+            // Given
+            val mockContext = mockk<Context>(relaxed = true)
+            every { mockContext.getSystemService(Context.ACTIVITY_SERVICE) } returns activityManager(Process.myPid())
+            val config = LoggerPlatformProviderConfig(
+                crashStoragePath = "/test/path",
+                appPackageId = "com.test",
+                appVersion = "1.0",
+                context = mockContext,
+                getIsInForeground = null
+            )
+            val provider = LoggerPlatformProvider(config) { emptyFeatureManager() }
+
+            // When
+            val result = provider.appState
+
+            // Then
+            result shouldBe "unknown"
+        }
+    }
+
+    test("appState still returns background when importance resolves to a backgrounded process") {
         // Given
+        val backgrounded = ActivityManager.RunningAppProcessInfo("com.test", Process.myPid(), emptyArray()).apply {
+            importance = ActivityManager.RunningAppProcessInfo.IMPORTANCE_CACHED
+        }
+        val activityManager = mockk<ActivityManager>(relaxed = true)
+        every { activityManager.runningAppProcesses } returns listOf(backgrounded)
         val mockContext = mockk<Context>(relaxed = true)
-        every { mockContext.getSystemService(Context.ACTIVITY_SERVICE) } returns null
+        every { mockContext.getSystemService(Context.ACTIVITY_SERVICE) } returns activityManager
         val config = LoggerPlatformProviderConfig(
             crashStoragePath = "/test/path",
             appPackageId = "com.test",
@@ -408,8 +448,8 @@ class LoggerPlatformProviderTest : FunSpec({
         // When
         val result = provider.appState
 
-        // Then - "background" would make the ANR detector downgrade a foreground ANR
-        result shouldBe "unknown"
+        // Then - a resolved non-foreground importance is still a real "background"
+        result shouldBe "background"
     }
 
     test("appState returns unknown when context is null and getIsInForeground is null") {

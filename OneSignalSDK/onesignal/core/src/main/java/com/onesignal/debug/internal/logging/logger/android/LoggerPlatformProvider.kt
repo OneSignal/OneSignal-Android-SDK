@@ -36,7 +36,6 @@ internal class LoggerPlatformProvider(
         // First class load. Same monotonic clock as Process.getStartUptimeMillis() (API 24).
         private val processStartUptimeMs = SystemClock.uptimeMillis()
 
-        /** Never "background": consumers downgrade on that, so it must mean a resolved state. */
         private const val APP_STATE_UNKNOWN = "unknown"
     }
     override val appPackageId: String = config.appPackageId
