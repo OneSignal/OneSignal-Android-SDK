@@ -88,9 +88,8 @@ internal object OneSignalChoice {
         return published
     }
 
-    // Internal so a test can install a stand-in. Production writes it only under [choiceLock].
     @Volatile
-    internal var chosen: IOneSignal? = null
+    private var chosen: IOneSignal? = null
 
     private val choiceLock = Any()
 

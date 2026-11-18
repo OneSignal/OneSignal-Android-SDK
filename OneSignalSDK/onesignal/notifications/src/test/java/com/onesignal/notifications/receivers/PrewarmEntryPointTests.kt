@@ -7,6 +7,7 @@ import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
 import com.onesignal.OneSignal
 import com.onesignal.common.threading.OneSignalDispatchers
 import com.onesignal.common.threading.suspendifyOnIngress
+import com.onesignal.mocks.ChoiceTestHook
 import com.onesignal.mocks.IOMockHelper
 import com.onesignal.notifications.internal.ingress.NotificationIngress
 import io.kotest.core.spec.style.FunSpec
@@ -37,7 +38,9 @@ class PrewarmEntryPointTests : FunSpec({
         // zero, while keeping IOMockHelper's stubbed answers (answers = false).
         clearMocks(OneSignalDispatchers, answers = false)
         mockkObject(OneSignal)
+        ChoiceTestHook.install()
         coEvery { OneSignal.initWithContext(any()) } returns false
+        ChoiceTestHook.initResult = { false }
         mockkObject(NotificationIngress)
         coEvery { NotificationIngress.enqueueRestore(any()) } returns Unit
         coEvery { NotificationIngress.persistDismiss(any(), any()) } returns Unit
@@ -47,7 +50,9 @@ class PrewarmEntryPointTests : FunSpec({
         // Tear down only the mock this spec owns. OneSignalDispatchers and the ThreadUtils statics
         // are owned by IOMockHelper and torn down in its afterSpec — unmockkAll() here would strip
         // them mid-spec and break the remaining tests.
+        ChoiceTestHook.clear()
         unmockkObject(OneSignal)
+        ChoiceTestHook.install()
         unmockkObject(NotificationIngress)
     }
 

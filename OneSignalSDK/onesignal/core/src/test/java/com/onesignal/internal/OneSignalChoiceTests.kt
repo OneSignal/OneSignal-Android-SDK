@@ -9,6 +9,7 @@ import com.onesignal.core.internal.features.StartupFlagsCache
 import com.onesignal.debug.ILogListener
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
+import com.onesignal.mocks.ChoiceTestHook
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
@@ -22,7 +23,7 @@ class OneSignalChoiceTests : FunSpec({
     fun cacheNeverCrashFlag() = StartupFlagsCache.write(context()) { listOf(NeverCrashKillSwitch.FLAG_KEY) }
 
     fun resetChoice() {
-        OneSignalChoice.chosen = null
+        ChoiceTestHook.clear()
         listOf("pendingConsentRequired", "pendingConsentGiven", "pendingDisableGmsMissingPrompt")
             .forEach { OneSignalChoice::class.java.getDeclaredField(it).apply { isAccessible = true }.set(OneSignalChoice, null) }
     }
