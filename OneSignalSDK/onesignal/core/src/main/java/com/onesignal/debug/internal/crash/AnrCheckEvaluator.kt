@@ -1,5 +1,7 @@
 package com.onesignal.debug.internal.crash
 
+import com.onesignal.debug.internal.logging.logger.android.ONESIGNAL_PACKAGE_PREFIX
+import com.onesignal.debug.internal.logging.logger.android.isOneSignalAtFault
 import com.onesignal.logger.CrashData
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
@@ -183,7 +185,7 @@ internal fun classifyBlock(
 /** Compact fingerprint for a main-thread stack: top frame plus the first OneSignal frame. */
 internal fun buildBlockFingerprint(stackTrace: Array<StackTraceElement>): String {
     val topFrame = stackTrace.firstOrNull()?.toString() ?: "unknown"
-    val oneSignalFrame = stackTrace.firstOrNull { it.className.startsWith("com.onesignal") }?.toString() ?: "none"
+    val oneSignalFrame = stackTrace.firstOrNull { it.className.startsWith(ONESIGNAL_PACKAGE_PREFIX) }?.toString() ?: "none"
     return "top=$topFrame|onesignal=$oneSignalFrame"
 }
 
@@ -229,6 +231,7 @@ internal fun buildAnrCrashData(
         exceptionType = ANR_EXCEPTION_TYPE,
         exceptionMessage = message,
         stacktrace = formatJvmStacktrace(ANR_EXCEPTION_TYPE, message, stackTrace),
+        attributed = isOneSignalAtFault(stackTrace),
     )
 }
 
@@ -253,5 +256,6 @@ internal fun buildBackgroundBlockCrashData(
         exceptionType = BACKGROUND_BLOCK_EXCEPTION_TYPE,
         exceptionMessage = message,
         stacktrace = formatJvmStacktrace(BACKGROUND_BLOCK_EXCEPTION_TYPE, message, stackTrace),
+        attributed = isOneSignalAtFault(stackTrace),
     )
 }
