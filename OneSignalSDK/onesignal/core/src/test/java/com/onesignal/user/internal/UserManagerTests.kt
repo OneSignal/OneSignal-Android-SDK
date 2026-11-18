@@ -124,6 +124,75 @@ class UserManagerTests : FunSpec({
         identityModelStore.model.containsKey("\u0000") shouldBe false
     }
 
+    test("null identity strings are logged and ignored instead of crashing") {
+        Logging.logLevel = LogLevel.NONE
+        val mockSubscriptionManager = mockk<ISubscriptionManager>(relaxed = true)
+        val identityModelStore = MockHelper.identityModelStore()
+        val propertiesModelStore = MockHelper.propertiesModelStore()
+        val languageContext = mockk<ILanguageContext>(relaxed = true)
+        val userManager =
+            UserManager(mockSubscriptionManager, identityModelStore, propertiesModelStore, MockHelper.customEventController(), languageContext)
+
+        shouldNotThrow<Throwable> {
+            userManager.setLanguage(null)
+            userManager.addAlias(null, null)
+            userManager.addAlias("label", null)
+            userManager.addAliases(null)
+            userManager.removeAlias(null)
+            userManager.removeAliases(null)
+            userManager.addEmail(null)
+            userManager.removeEmail(null)
+            userManager.addSms(null)
+            userManager.removeSms(null)
+            userManager.addTag(null, "value")
+            userManager.addTag("key", null)
+            userManager.addTags(null)
+            userManager.removeTag(null)
+            userManager.removeTags(null)
+            userManager.trackEvent(null)
+        }
+
+        identityModelStore.model.externalId shouldBe null
+        identityModelStore.model.containsKey("label") shouldBe false
+        propertiesModelStore.model.tags["key"] shouldBe null
+        verify(exactly = 0) { languageContext.language = any() }
+        verify(exactly = 0) { mockSubscriptionManager.addEmailSubscription(any()) }
+        verify(exactly = 0) { mockSubscriptionManager.addSmsSubscription(any()) }
+    }
+
+    test("a tag map or alias map holding a null value is ignored") {
+        Logging.logLevel = LogLevel.NONE
+        val mockSubscriptionManager = mockk<ISubscriptionManager>(relaxed = true)
+        val identityModelStore = MockHelper.identityModelStore()
+        val propertiesModelStore = MockHelper.propertiesModelStore()
+        val userManager =
+            UserManager(mockSubscriptionManager, identityModelStore, propertiesModelStore, MockHelper.customEventController(), MockHelper.languageContext())
+
+        // What an untyped JS or JNI caller actually supplies.
+        val tagsWithNullValue = mapOf("tag-key" to null) as Map<String, String>
+        val aliasesWithNullValue = mapOf("alias-label" to null) as Map<String, String>
+
+        shouldNotThrow<Throwable> {
+            userManager.addTags(tagsWithNullValue)
+            userManager.addAliases(aliasesWithNullValue)
+        }
+
+        propertiesModelStore.model.tags["tag-key"] shouldBe null
+        identityModelStore.model.containsKey("alias-label") shouldBe false
+    }
+
+    test("an empty tag value is still stored") {
+        Logging.logLevel = LogLevel.NONE
+        val mockSubscriptionManager = mockk<ISubscriptionManager>(relaxed = true)
+        val propertiesModelStore = MockHelper.propertiesModelStore()
+        val userManager =
+            UserManager(mockSubscriptionManager, MockHelper.identityModelStore(), propertiesModelStore, MockHelper.customEventController(), MockHelper.languageContext())
+
+        userManager.addTag("empty-value-key", "")
+
+        propertiesModelStore.model.tags["empty-value-key"] shouldBe ""
+    }
+
     test("tags are backed by the properties model") {
         // Given
         val mockSubscriptionManager = mockk<ISubscriptionManager>()

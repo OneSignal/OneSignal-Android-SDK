@@ -8,18 +8,18 @@ internal class DummyInAppMessagesManager : IInAppMessagesManager {
     override var paused: Boolean = true
 
     override fun addTrigger(
-        key: String,
-        value: String,
+        key: String?,
+        value: String?,
     ) {
     }
 
-    override fun addTriggers(triggers: Map<String, String>) {
+    override fun addTriggers(triggers: Map<String, String>?) {
     }
 
-    override fun removeTrigger(key: String) {
+    override fun removeTrigger(key: String?) {
     }
 
-    override fun removeTriggers(keys: Collection<String>) {
+    override fun removeTriggers(keys: Collection<String>?) {
     }
 
     override fun clearTriggers() {

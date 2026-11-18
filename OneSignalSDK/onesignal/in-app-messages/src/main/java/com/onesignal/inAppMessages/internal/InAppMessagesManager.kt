@@ -687,7 +687,7 @@ internal class InAppMessagesManager(
         Logging.debug("InAppMessagesManager.persistInAppMessage: $message with msg array data: $redisplayedInAppMessages")
     }
 
-    override fun addTriggers(triggers: Map<String, String>) {
+    override fun addTriggers(triggers: Map<String, String>?) {
         Logging.debug("InAppMessagesManager.addTriggers(triggers: $triggers)")
 
         if (hasMissingEntries(triggers, "addTriggers", allowEmptyValue = true)) return
@@ -696,12 +696,18 @@ internal class InAppMessagesManager(
     }
 
     override fun addTrigger(
-        key: String,
-        value: String,
+        key: String?,
+        value: String?,
     ) {
         Logging.debug("InAppMessagesManager.addTrigger(key: $key, value: $value)")
 
         if (isMissing(key, "addTrigger: key")) return
+
+        // An empty trigger value is allowed, so only null is rejected here.
+        if (value == null) {
+            Logging.error("addTrigger: value is required")
+            return
+        }
 
         // Track triggers added early on cold start (before first fetch completes) for redisplay logic
         synchronized(earlySessionTriggers) {
@@ -725,7 +731,7 @@ internal class InAppMessagesManager(
         }
     }
 
-    override fun removeTriggers(keys: Collection<String>) {
+    override fun removeTriggers(keys: Collection<String>?) {
         Logging.debug("InAppMessagesManager.removeTriggers(keys: $keys)")
 
         if (isMissingAny(keys, "removeTriggers: key")) return
@@ -733,7 +739,7 @@ internal class InAppMessagesManager(
         keys.forEach { removeTrigger(it) }
     }
 
-    override fun removeTrigger(key: String) {
+    override fun removeTrigger(key: String?) {
         Logging.debug("InAppMessagesManager.removeTrigger(key: $key)")
 
         if (isMissing(key, "removeTrigger: key")) return

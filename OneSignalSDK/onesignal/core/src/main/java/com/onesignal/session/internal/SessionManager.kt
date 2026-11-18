@@ -10,7 +10,7 @@ import com.onesignal.session.internal.outcomes.IOutcomeEventsController
 internal open class SessionManager(
     private val _outcomeController: IOutcomeEventsController,
 ) : ISessionManager {
-    override fun addOutcome(name: String) {
+    override fun addOutcome(name: String?) {
         Logging.log(LogLevel.DEBUG, "sendOutcome(name: $name)")
 
         if (isMissing(name, "addOutcome: name")) return
@@ -20,7 +20,7 @@ internal open class SessionManager(
         }
     }
 
-    override fun addUniqueOutcome(name: String) {
+    override fun addUniqueOutcome(name: String?) {
         Logging.log(LogLevel.DEBUG, "sendUniqueOutcome(name: $name)")
 
         if (isMissing(name, "addUniqueOutcome: name")) return
@@ -31,7 +31,7 @@ internal open class SessionManager(
     }
 
     override fun addOutcomeWithValue(
-        name: String,
+        name: String?,
         value: Float,
     ) {
         Logging.log(LogLevel.DEBUG, "sendOutcomeWithValue(name: $name, value: $value)")

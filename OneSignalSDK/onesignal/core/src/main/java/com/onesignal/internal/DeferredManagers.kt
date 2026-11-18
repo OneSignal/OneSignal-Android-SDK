@@ -190,37 +190,37 @@ internal class DeferredUserManager(
     override val onesignalId: String get() = source.get("onesignalId")?.onesignalId ?: ""
     override val externalId: String get() = source.get("externalId")?.externalId ?: ""
 
-    override fun setLanguage(value: String) = source.get("setLanguage")?.setLanguage(value) ?: Unit
+    override fun setLanguage(value: String?) = source.get("setLanguage")?.setLanguage(value) ?: Unit
 
     override fun addAlias(
-        label: String,
-        id: String,
+        label: String?,
+        id: String?,
     ) = source.get("addAlias")?.addAlias(label, id) ?: Unit
 
-    override fun addAliases(aliases: Map<String, String>) = source.get("addAliases")?.addAliases(aliases) ?: Unit
+    override fun addAliases(aliases: Map<String, String>?) = source.get("addAliases")?.addAliases(aliases) ?: Unit
 
-    override fun removeAlias(label: String) = source.get("removeAlias")?.removeAlias(label) ?: Unit
+    override fun removeAlias(label: String?) = source.get("removeAlias")?.removeAlias(label) ?: Unit
 
-    override fun removeAliases(labels: Collection<String>) = source.get("removeAliases")?.removeAliases(labels) ?: Unit
+    override fun removeAliases(labels: Collection<String>?) = source.get("removeAliases")?.removeAliases(labels) ?: Unit
 
-    override fun addEmail(email: String) = source.get("addEmail")?.addEmail(email) ?: Unit
+    override fun addEmail(email: String?) = source.get("addEmail")?.addEmail(email) ?: Unit
 
-    override fun removeEmail(email: String) = source.get("removeEmail")?.removeEmail(email) ?: Unit
+    override fun removeEmail(email: String?) = source.get("removeEmail")?.removeEmail(email) ?: Unit
 
-    override fun addSms(sms: String) = source.get("addSms")?.addSms(sms) ?: Unit
+    override fun addSms(sms: String?) = source.get("addSms")?.addSms(sms) ?: Unit
 
-    override fun removeSms(sms: String) = source.get("removeSms")?.removeSms(sms) ?: Unit
+    override fun removeSms(sms: String?) = source.get("removeSms")?.removeSms(sms) ?: Unit
 
     override fun addTag(
-        key: String,
-        value: String,
+        key: String?,
+        value: String?,
     ) = source.get("addTag")?.addTag(key, value) ?: Unit
 
-    override fun addTags(tags: Map<String, String>) = source.get("addTags")?.addTags(tags) ?: Unit
+    override fun addTags(tags: Map<String, String>?) = source.get("addTags")?.addTags(tags) ?: Unit
 
-    override fun removeTag(key: String) = source.get("removeTag")?.removeTag(key) ?: Unit
+    override fun removeTag(key: String?) = source.get("removeTag")?.removeTag(key) ?: Unit
 
-    override fun removeTags(keys: Collection<String>) = source.get("removeTags")?.removeTags(keys) ?: Unit
+    override fun removeTags(keys: Collection<String>?) = source.get("removeTags")?.removeTags(keys) ?: Unit
 
     override fun getTags(): Map<String, String> = source.get("getTags")?.getTags() ?: emptyMap()
 
@@ -229,7 +229,7 @@ internal class DeferredUserManager(
     override fun removeObserver(observer: IUserStateObserver) = unregisterOrCancel("removeObserver", "addObserver", observer) { it.removeObserver(observer) }
 
     override fun trackEvent(
-        name: String,
+        name: String?,
         properties: Map<String, Any?>?,
     ) = source.get("trackEvent")?.trackEvent(name, properties) ?: Unit
 
@@ -318,15 +318,15 @@ internal class DeferredInAppMessagesManager(
         }
 
     override fun addTrigger(
-        key: String,
-        value: String,
+        key: String?,
+        value: String?,
     ) = source.get("addTrigger")?.addTrigger(key, value) ?: Unit
 
-    override fun addTriggers(triggers: Map<String, String>) = source.get("addTriggers")?.addTriggers(triggers) ?: Unit
+    override fun addTriggers(triggers: Map<String, String>?) = source.get("addTriggers")?.addTriggers(triggers) ?: Unit
 
-    override fun removeTrigger(key: String) = source.get("removeTrigger")?.removeTrigger(key) ?: Unit
+    override fun removeTrigger(key: String?) = source.get("removeTrigger")?.removeTrigger(key) ?: Unit
 
-    override fun removeTriggers(keys: Collection<String>) = source.get("removeTriggers")?.removeTriggers(keys) ?: Unit
+    override fun removeTriggers(keys: Collection<String>?) = source.get("removeTriggers")?.removeTriggers(keys) ?: Unit
 
     override fun clearTriggers() = source.get("clearTriggers")?.clearTriggers() ?: Unit
 
@@ -345,12 +345,12 @@ internal class DeferredInAppMessagesManager(
 internal class DeferredSessionManager(
     source: ManagerSource<ISessionManager>,
 ) : DeferredManager<ISessionManager>(source), ISessionManager {
-    override fun addOutcome(name: String) = source.get("addOutcome")?.addOutcome(name) ?: Unit
+    override fun addOutcome(name: String?) = source.get("addOutcome")?.addOutcome(name) ?: Unit
 
-    override fun addUniqueOutcome(name: String) = source.get("addUniqueOutcome")?.addUniqueOutcome(name) ?: Unit
+    override fun addUniqueOutcome(name: String?) = source.get("addUniqueOutcome")?.addUniqueOutcome(name) ?: Unit
 
     override fun addOutcomeWithValue(
-        name: String,
+        name: String?,
         value: Float,
     ) = source.get("addOutcomeWithValue")?.addOutcomeWithValue(name, value) ?: Unit
 }

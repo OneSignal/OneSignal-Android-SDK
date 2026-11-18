@@ -16,15 +16,15 @@ internal class MisconfiguredIAMManager : IInAppMessagesManager {
         set(value) = throw EXCEPTION
 
     override fun addTrigger(
-        key: String,
-        value: String,
+        key: String?,
+        value: String?,
     ) = throw EXCEPTION
 
-    override fun addTriggers(triggers: Map<String, String>) = throw EXCEPTION
+    override fun addTriggers(triggers: Map<String, String>?) = throw EXCEPTION
 
-    override fun removeTrigger(key: String) = throw EXCEPTION
+    override fun removeTrigger(key: String?) = throw EXCEPTION
 
-    override fun removeTriggers(keys: Collection<String>) = throw EXCEPTION
+    override fun removeTriggers(keys: Collection<String>?) = throw EXCEPTION
 
     override fun clearTriggers() = throw EXCEPTION
 

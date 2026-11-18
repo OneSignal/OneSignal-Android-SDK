@@ -875,7 +875,7 @@ internal class OneSignalImp : IOneSignal,
 
             awaitInitForLogin()?.let { return@withContext it }
 
-            if (isMissing(externalId, "login: externalId") || externalId == null) {
+            if (isMissing(externalId, "login: externalId")) {
                 return@withContext OneSignalResult.failure(
                     ErrorCode.INVALID_ARGUMENT,
                     "login: externalId is required",

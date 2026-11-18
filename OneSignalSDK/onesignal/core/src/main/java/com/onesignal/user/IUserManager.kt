@@ -44,20 +44,21 @@ interface IUserManager {
      *
      * See [Supported Languages | OneSignal](https://documentation.onesignal.com/docs/en/multi-language-messaging#supported-languages).
      *
-     * @param value A supported language code, or an empty string to use the device default.
+     * @param value A supported language code, or an empty string to use the device default. Null is ignored and logged.
      */
-    fun setLanguage(value: String)
+    fun setLanguage(value: String?)
 
     /**
      * Set an alias for the current user.  If this alias already exists it will be overwritten.
      *
-     * @param label The alias label that you want to set against the current user.
+     * @param label The alias label that you want to set against the current user. Null or empty is ignored and logged.
      * @param id The alias id that should be set against the current user. This must be a unique value
      * within the alias label across your entire user base so it can uniquely identify this user.
+     * Null or empty is ignored and logged.
      */
     fun addAlias(
-        label: String,
-        id: String,
+        label: String?,
+        id: String?,
     )
 
     /**
@@ -65,51 +66,56 @@ interface IUserManager {
      *
      * @param aliases A map of the alias label -> alias id that should be set against the user. Each
      * alias id must be a unique value within the alias label across your entire user base so it can
-     * uniquely identify this user.
+     * uniquely identify this user. A null map, or any null or empty label or id, is ignored and logged.
      */
-    fun addAliases(aliases: Map<String, String>)
+    fun addAliases(aliases: Map<String, String>?)
 
     /**
      * Remove an alias from the current user.
      *
-     * @param label The alias label that should no longer be set for the current user.
+     * @param label The alias label that should no longer be set for the current user. Null or empty is ignored and logged.
      */
-    fun removeAlias(label: String)
+    fun removeAlias(label: String?)
 
     /**
      * Remove multiple aliases from the current user.
      *
      * @param labels The collection of alias labels, all of which will be removed from the current user.
+     * A null collection, or any null or empty label, is ignored and logged.
      */
-    fun removeAliases(labels: Collection<String>)
+    fun removeAliases(labels: Collection<String>?)
 
     /**
      * Add a new email subscription to the current user.
      *
-     * @param email The email address that the current user has subscribed for.
+     * @param email The email address that the current user has subscribed for. Null or an invalid
+     * address is ignored and logged.
      */
-    fun addEmail(email: String)
+    fun addEmail(email: String?)
 
     /**
      * Remove an email subscription from the current user.
      *
      * @param email The email address that the current user was subscribed for, and should no longer be.
+     * Null or an invalid address is ignored and logged.
      */
-    fun removeEmail(email: String)
+    fun removeEmail(email: String?)
 
     /**
      * Add a new SMS subscription to the current user.
      *
      * @param sms The phone number that the current user has subscribed for, in [E.164](https://documentation.onesignal.com/docs/sms-faq#what-is-the-e164-format) format.
+     * Null or an invalid number is ignored and logged.
      */
-    fun addSms(sms: String)
+    fun addSms(sms: String?)
 
     /**
      * Remove an SMS subscription from the current user.
      *
      * @param sms The sms address that the current user was subscribed for, and should no longer be.
+     * Null or an invalid number is ignored and logged.
      */
-    fun removeSms(sms: String)
+    fun removeSms(sms: String?)
 
     /**
      * Add a tag for the current user.  Tags are key:value pairs used as building blocks
@@ -117,12 +123,12 @@ interface IUserManager {
      *
      * If the tag key already exists, it will be replaced with the value provided here.
      *
-     * @param key The key of the data tag.
-     * @param value THe new value of the data tag.
+     * @param key The key of the data tag. Null or empty is ignored and logged.
+     * @param value THe new value of the data tag. An empty value is allowed; null is ignored and logged.
      */
     fun addTag(
-        key: String,
-        value: String,
+        key: String?,
+        value: String?,
     )
 
     /**
@@ -131,23 +137,25 @@ interface IUserManager {
      *
      * If the tag key already exists, it will be replaced with the value provided here.
      *
-     * @param tags A map of tags, all of which will be added/updated for the current user.
+     * @param tags A map of tags, all of which will be added/updated for the current user. A null map,
+     * any null or empty key, or any null value, is ignored and logged. An empty value is allowed.
      */
-    fun addTags(tags: Map<String, String>)
+    fun addTags(tags: Map<String, String>?)
 
     /**
      * Remove the data tag with the provided key from the current user.
      *
-     * @param key The key of the data tag.
+     * @param key The key of the data tag. Null or empty is ignored and logged.
      */
-    fun removeTag(key: String)
+    fun removeTag(key: String?)
 
     /**
      * Remove multiple tags from the current user.
      *
      * @param keys The collection of keys, all of which will be removed from the current user.
+     * A null collection, or any null or empty key, is ignored and logged.
      */
-    fun removeTags(keys: Collection<String>)
+    fun removeTags(keys: Collection<String>?)
 
     /**
      * Return a copy of all local tags from the current user.
@@ -171,11 +179,11 @@ interface IUserManager {
     /**
      * Tracks a custom event performed by the current user
      *
-     * @param name for the custom event
+     * @param name for the custom event. Null or empty is ignored and logged.
      * @param properties an optional property dictionary, must be serializable into a JSON Object
      */
     fun trackEvent(
-        name: String,
+        name: String?,
         properties: Map<String, Any?>? = null,
     )
 }

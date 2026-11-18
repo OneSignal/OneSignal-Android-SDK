@@ -23,12 +23,12 @@ interface IInAppMessagesManager {
      * triggers are not persisted to the backend. They only exist on the local device and are applicable
      * to the current user.
      *
-     * @param key The key of the trigger that is to be set.
-     * @param value The value of the trigger.
+     * @param key The key of the trigger that is to be set. Null or empty is ignored and logged.
+     * @param value The value of the trigger. An empty value is allowed; null is ignored and logged.
      */
     fun addTrigger(
-        key: String,
-        value: String,
+        key: String?,
+        value: String?,
     )
 
     /**
@@ -39,23 +39,25 @@ interface IInAppMessagesManager {
      * triggers are not persisted to the backend. They only exist on the local device and are applicable
      * to the current user.
      *
-     * @param triggers The map of triggers that are to be added to the current user.
+     * @param triggers The map of triggers that are to be added to the current user. A null map,
+     * any null or empty key, or any null value, is ignored and logged. An empty value is allowed.
      */
-    fun addTriggers(triggers: Map<String, String>)
+    fun addTriggers(triggers: Map<String, String>?)
 
     /**
      * Remove the trigger with the provided key from the current user.
      *
-     * @param key The key of the trigger.
+     * @param key The key of the trigger. Null or empty is ignored and logged.
      */
-    fun removeTrigger(key: String)
+    fun removeTrigger(key: String?)
 
     /**
      * Remove multiple triggers from the current user.
      *
      * @param keys The collection of keys, all of which will be removed from the current user.
+     * A null collection, or any null or empty key, is ignored and logged.
      */
-    fun removeTriggers(keys: Collection<String>)
+    fun removeTriggers(keys: Collection<String>?)
 
     /**
      * Clear all triggers from the current user.

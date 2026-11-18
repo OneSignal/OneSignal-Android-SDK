@@ -1,16 +1,20 @@
 package com.onesignal.common
 
 import com.onesignal.debug.internal.logging.Logging
+import kotlin.contracts.ExperimentalContracts
+import kotlin.contracts.contract
 
 internal fun hasNullByte(value: String?): Boolean = value != null && '\u0000' in value
 
 /**
  * Returns true and logs an error naming [api] when [value] is null, empty, or contains a null byte.
  */
+@OptIn(ExperimentalContracts::class)
 fun isMissing(
     value: String?,
     api: String,
 ): Boolean {
+    contract { returns(false) implies (value != null) }
     // NUL cannot be stored in a text column, so it never counts as a usable value.
     val error =
         when {
@@ -23,25 +27,40 @@ fun isMissing(
 }
 
 /**
- * Returns true when any of [values] is missing, per [isMissing].
+ * Returns true when [values] is null, or any of it is missing, per [isMissing].
  */
+@OptIn(ExperimentalContracts::class)
 fun isMissingAny(
-    values: Collection<String>,
+    values: Collection<String>?,
     api: String,
-): Boolean = values.any { isMissing(it, api) }
+): Boolean {
+    contract { returns(false) implies (values != null) }
+    if (values == null) {
+        Logging.error("$api is required")
+        return true
+    }
+    return values.any { isMissing(it, api) }
+}
 
 /**
- * Returns true when any key in [values] is missing, or any value is missing. With [allowEmptyValue],
- * only null values count as missing.
+ * Returns true when [values] is null, any key in it is missing, or any value is missing. With
+ * [allowEmptyValue], only null values count as missing.
  */
+@OptIn(ExperimentalContracts::class)
 fun hasMissingEntries(
-    values: Map<String, String>,
+    values: Map<String, String>?,
     api: String,
     allowEmptyValue: Boolean,
-): Boolean =
-    values.any { (key, item) ->
+): Boolean {
+    contract { returns(false) implies (values != null) }
+    if (values == null) {
+        Logging.error("$api is required")
+        return true
+    }
+    return values.any { (key, item) ->
         isMissing(key, "$api: key") || isMissingValue(item as String?, "$api: value", allowEmptyValue)
     }
+}
 
 private fun isMissingValue(
     value: String?,

@@ -56,7 +56,11 @@ internal open class UserManager(
     private val _propertiesModel: PropertiesModel
         get() = _propertiesModelStore.model
 
-    override fun setLanguage(value: String) {
+    override fun setLanguage(value: String?) {
+        if (value == null) {
+            Logging.error("setLanguage: value is required")
+            return
+        }
         // Empty string is the reset to the device language. LanguageContext applies that.
         _languageContext.language = value
     }
@@ -66,8 +70,8 @@ internal open class UserManager(
     }
 
     override fun addAlias(
-        label: String,
-        id: String,
+        label: String?,
+        id: String?,
     ) {
         Logging.log(LogLevel.DEBUG, "setAlias(label: $label, id: $id)")
 
@@ -83,7 +87,7 @@ internal open class UserManager(
         _identityModel[label] = id
     }
 
-    override fun addAliases(aliases: Map<String, String>) {
+    override fun addAliases(aliases: Map<String, String>?) {
         Logging.log(LogLevel.DEBUG, "addAliases(aliases: $aliases")
 
         if (hasMissingEntries(aliases, "addAliases", allowEmptyValue = false)) return
@@ -100,7 +104,7 @@ internal open class UserManager(
         }
     }
 
-    override fun removeAlias(label: String) {
+    override fun removeAlias(label: String?) {
         Logging.log(LogLevel.DEBUG, "removeAlias(label: $label)")
 
         if (isMissing(label, "removeAlias: label")) return
@@ -113,7 +117,7 @@ internal open class UserManager(
         _identityModel.remove(label)
     }
 
-    override fun removeAliases(labels: Collection<String>) {
+    override fun removeAliases(labels: Collection<String>?) {
         Logging.log(LogLevel.DEBUG, "removeAliases(labels: $labels)")
 
         if (isMissingAny(labels, "removeAliases: label")) return
@@ -130,10 +134,10 @@ internal open class UserManager(
         }
     }
 
-    override fun addEmail(email: String) {
+    override fun addEmail(email: String?) {
         Logging.log(LogLevel.DEBUG, "addEmail(email: $email)")
 
-        if (!OneSignalUtils.isValidEmail(email)) {
+        if (email == null || !OneSignalUtils.isValidEmail(email)) {
             Logging.log(LogLevel.ERROR, "Cannot add invalid email address as subscription: $email")
             return
         }
@@ -141,10 +145,10 @@ internal open class UserManager(
         _subscriptionManager.addEmailSubscription(email)
     }
 
-    override fun removeEmail(email: String) {
+    override fun removeEmail(email: String?) {
         Logging.log(LogLevel.DEBUG, "removeEmail(email: $email)")
 
-        if (!OneSignalUtils.isValidEmail(email)) {
+        if (email == null || !OneSignalUtils.isValidEmail(email)) {
             Logging.log(LogLevel.ERROR, "Cannot remove invalid email address as subscription: $email")
             return
         }
@@ -152,10 +156,10 @@ internal open class UserManager(
         _subscriptionManager.removeEmailSubscription(email)
     }
 
-    override fun addSms(sms: String) {
+    override fun addSms(sms: String?) {
         Logging.log(LogLevel.DEBUG, "addSms(sms: $sms)")
 
-        if (!OneSignalUtils.isValidPhoneNumber(sms)) {
+        if (sms == null || !OneSignalUtils.isValidPhoneNumber(sms)) {
             Logging.log(LogLevel.ERROR, "Cannot add invalid sms number as subscription: $sms")
             return
         }
@@ -163,10 +167,10 @@ internal open class UserManager(
         _subscriptionManager.addSmsSubscription(sms)
     }
 
-    override fun removeSms(sms: String) {
+    override fun removeSms(sms: String?) {
         Logging.log(LogLevel.DEBUG, "removeSms(sms: $sms)")
 
-        if (!OneSignalUtils.isValidPhoneNumber(sms)) {
+        if (sms == null || !OneSignalUtils.isValidPhoneNumber(sms)) {
             Logging.log(LogLevel.ERROR, "Cannot remove invalid sms number as subscription: $sms")
             return
         }
@@ -175,17 +179,23 @@ internal open class UserManager(
     }
 
     override fun addTag(
-        key: String,
-        value: String,
+        key: String?,
+        value: String?,
     ) {
         Logging.log(LogLevel.DEBUG, "setTag(key: $key, value: $value)")
 
         if (isMissing(key, "addTag: key")) return
 
+        // An empty tag value is allowed, so only null is rejected here.
+        if (value == null) {
+            Logging.error("addTag: value is required")
+            return
+        }
+
         _propertiesModel.tags[key] = value
     }
 
-    override fun addTags(tags: Map<String, String>) {
+    override fun addTags(tags: Map<String, String>?) {
         Logging.log(LogLevel.DEBUG, "setTags(tags: $tags)")
 
         if (hasMissingEntries(tags, "addTags", allowEmptyValue = true)) return
@@ -195,7 +205,7 @@ internal open class UserManager(
         }
     }
 
-    override fun removeTag(key: String) {
+    override fun removeTag(key: String?) {
         Logging.log(LogLevel.DEBUG, "removeTag(key: $key)")
 
         if (isMissing(key, "removeTag: key")) return
@@ -203,7 +213,7 @@ internal open class UserManager(
         _propertiesModel.tags.remove(key)
     }
 
-    override fun removeTags(keys: Collection<String>) {
+    override fun removeTags(keys: Collection<String>?) {
         Logging.log(LogLevel.DEBUG, "removeTags(keys: $keys)")
 
         if (isMissingAny(keys, "removeTags: key")) return
@@ -226,7 +236,7 @@ internal open class UserManager(
     }
 
     override fun trackEvent(
-        name: String,
+        name: String?,
         properties: Map<String, Any?>?,
     ) {
         if (isMissing(name, "trackEvent: name")) return
