@@ -320,4 +320,30 @@ class AppIdHelperTests : FunSpec({
         configModel.sdkRemoteFeatureFlags shouldBe listOf("sdk_sessions_v2_api_cutover")
         configModel.sdkRemoteFeatureFlagMetadata shouldBe "{}"
     }
+
+    test("applyResolvedAppId resets the heartbeat interval when the appId changes") {
+        // Given
+        val configModel = ConfigModel()
+        configModel.appId = testAppId
+        configModel.sessionHeartbeatInterval = 60_000L
+
+        // When
+        applyResolvedAppId(configModel, differentAppId)
+
+        // Then
+        configModel.sessionHeartbeatInterval shouldBe ConfigModel.DEFAULT_SESSION_HEARTBEAT_INTERVAL_MS
+    }
+
+    test("applyResolvedAppId keeps the heartbeat interval for the same appId") {
+        // Given
+        val configModel = ConfigModel()
+        configModel.appId = testAppId
+        configModel.sessionHeartbeatInterval = 60_000L
+
+        // When
+        applyResolvedAppId(configModel, testAppId)
+
+        // Then
+        configModel.sessionHeartbeatInterval shouldBe 60_000L
+    }
 })

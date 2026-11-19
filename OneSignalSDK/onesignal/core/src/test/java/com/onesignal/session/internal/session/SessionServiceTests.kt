@@ -111,6 +111,11 @@ private class Mocks(
         notifyConfigChanged(ConfigModel::consentGiven.name, oldValue, given)
     }
 
+    /** Mirrors a params fetch replacing the config model in place. */
+    fun replaceConfig() {
+        configChangeHandlers.forEach { it.onModelReplaced(configModelStore.model, ModelChangeTags.HYDRATE) }
+    }
+
     private fun notifyConfigChanged(
         property: String,
         oldValue: Any?,
@@ -1021,6 +1026,108 @@ class SessionServiceTests : FunSpec({
         heartbeat.subscriptionId shouldBe Mocks.SUBSCRIPTION_ID
         heartbeat.activeDuration shouldBe HEARTBEAT_MS
         heartbeat.endTime shouldBe null
+    }
+
+    test("heartbeat uses the configured interval") {
+        // Given
+        val mocks = Mocks(sessionsApiEnabled = true)
+        mocks.configModelStore.model.sessionHeartbeatInterval = 5 * MINUTE_MS
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        mocks.sessionModelStore { it.isValid = false }
+        sessionService.onFocus(false)
+
+        // When
+        mocks.advanceTime(5 * MINUTE_MS - 1)
+
+        // Then
+        mocks.heartbeats shouldBe emptyList()
+
+        // When
+        mocks.advanceTime(5 * MINUTE_MS + 1)
+
+        // Then
+        mocks.heartbeats.map { it.activeDuration } shouldBe listOf(5 * MINUTE_MS, 10 * MINUTE_MS)
+    }
+
+    test("heartbeat falls back to 30 minutes when the stored interval is not positive") {
+        // Given
+        val mocks = Mocks(sessionsApiEnabled = true)
+        mocks.configModelStore.model.sessionHeartbeatInterval = 0L
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        mocks.sessionModelStore { it.isValid = false }
+        sessionService.onFocus(false)
+
+        // When
+        mocks.advanceTime(HEARTBEAT_MS)
+
+        // Then
+        mocks.heartbeats.map { it.activeDuration } shouldBe listOf(HEARTBEAT_MS)
+    }
+
+    test("heartbeat applies an interval changed mid-session after the current wait") {
+        // Given
+        val mocks = Mocks(sessionsApiEnabled = true)
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        mocks.sessionModelStore { it.isValid = false }
+        sessionService.onFocus(false)
+        mocks.advanceTime(MINUTE_MS)
+
+        // When
+        mocks.configModelStore.model.sessionHeartbeatInterval = 5 * MINUTE_MS
+        mocks.advanceTime(HEARTBEAT_MS + 10 * MINUTE_MS - MINUTE_MS)
+
+        // Then
+        mocks.heartbeats.map { it.activeDuration } shouldBe listOf(HEARTBEAT_MS, HEARTBEAT_MS + 5 * MINUTE_MS, HEARTBEAT_MS + 10 * MINUTE_MS)
+    }
+
+    test("a params fetch re-arms a running heartbeat with the new interval") {
+        // Given
+        val mocks = Mocks(sessionsApiEnabled = true)
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        mocks.sessionModelStore { it.isValid = false }
+        sessionService.onFocus(false)
+        mocks.advanceTime(MINUTE_MS)
+
+        // When
+        mocks.configModelStore.model.sessionHeartbeatInterval = 5 * MINUTE_MS
+        mocks.replaceConfig()
+        mocks.advanceTime(4 * MINUTE_MS - 1)
+
+        // Then
+        mocks.heartbeats shouldBe emptyList()
+
+        // When
+        mocks.advanceTime(1)
+
+        // Then
+        mocks.heartbeats.map { it.activeDuration } shouldBe listOf(5 * MINUTE_MS)
+    }
+
+    test("a params fetch does not start a stopped heartbeat") {
+        // Given
+        val mocks = Mocks(sessionsApiEnabled = true)
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        mocks.sessionModelStore { it.isValid = false }
+        sessionService.onFocus(false)
+        mocks.isInForeground = false
+        sessionService.onUnfocused()
+
+        // When
+        mocks.replaceConfig()
+        mocks.advanceTime(2 * HEARTBEAT_MS)
+
+        // Then
+        mocks.heartbeats shouldBe emptyList()
     }
 
     test("heartbeat sends again every 30 minutes in the foreground") {

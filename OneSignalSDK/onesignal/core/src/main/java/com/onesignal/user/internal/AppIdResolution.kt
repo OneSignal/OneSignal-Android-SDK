@@ -13,8 +13,9 @@ data class AppIdResolution(
 )
 
 /**
- * Sets [appId] on [configModel]. Cached remote feature flags belong to the previous app, so they
- * are dropped when the app changes; otherwise they apply until the new app's flags are fetched.
+ * Sets [appId] on [configModel]. Cached remote feature flags and the session heartbeat interval
+ * belong to the previous app, so they are reset when the app changes; otherwise they apply until
+ * the new app's flags and params are fetched.
  */
 fun applyResolvedAppId(
     configModel: ConfigModel,
@@ -23,6 +24,7 @@ fun applyResolvedAppId(
     if (configModel.hasProperty(ConfigModel::appId.name) && configModel.appId != appId) {
         configModel.sdkRemoteFeatureFlags = emptyList()
         configModel.sdkRemoteFeatureFlagMetadata = null
+        configModel.sessionHeartbeatInterval = ConfigModel.DEFAULT_SESSION_HEARTBEAT_INTERVAL_MS
     }
     configModel.appId = appId
 }

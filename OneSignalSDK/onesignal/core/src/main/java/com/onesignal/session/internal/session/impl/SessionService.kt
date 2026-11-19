@@ -52,7 +52,7 @@ import kotlin.reflect.KMutableProperty1
  * The time threshold for a session to expire is a configuration option: [ConfigModel.sessionFocusTimeout].
  *
  * While focused, a session that [SessionModel.usesSessionsApi] reports its duration every
- * [HEARTBEAT_INTERVAL_MS] of active time, so the server keeps it open and a crash loses little duration.
+ * [ConfigModel.sessionHeartbeatInterval] of active time, so the server keeps it open and a crash loses little duration.
  * It also reports its duration on each unfocus, so a session killed in the background isn't short.
  *
  * Time without privacy consent is not counted: losing consent while focused counts as an unfocus,
@@ -122,6 +122,7 @@ internal class SessionService(
     override fun start() {
         applicationService.addApplicationLifecycleHandler(this)
         configModelStore.subscribe(ConsentChangeHandler())
+        configModelStore.subscribe(HeartbeatIntervalChangeHandler())
         identityModelStore.subscribe(PinnedLocalIdTranslator(IdentityConstants.ONESIGNAL_ID, SessionModel::onesignalId))
         // Login before the anonymous user is created carries the local push subscription over to
         // the new user, so its backend ID belongs to that user, not the one pinned on this session.
@@ -163,6 +164,22 @@ internal class SessionService(
                 if (pinnedId.get(session) == localId && appliesTo(session)) pinnedId.set(session, backendId)
             }
         }
+    }
+
+    /**
+     * A heartbeat armed before the params fetch, such as on first launch, would otherwise wait out
+     * the stale interval before picking up the fetched one.
+     */
+    private inner class HeartbeatIntervalChangeHandler : ISingletonModelStoreChangeHandler<ConfigModel> {
+        override fun onModelReplaced(
+            model: ConfigModel,
+            tag: String,
+        ) = runOnSerialIO { heartbeat.restartIfRunning() }
+
+        override fun onModelUpdated(
+            args: ModelChangedArgs,
+            tag: String,
+        ) = Unit
     }
 
     private inner class ConsentChangeHandler : ISingletonModelStoreChangeHandler<ConfigModel> {
@@ -346,13 +363,15 @@ internal class SessionService(
         return createSessionOperation(session, config?.appId, identityModelStore.model.externalId, directAttributionId)
     }
 
-    /** Sends the session's cumulative duration every [HEARTBEAT_INTERVAL_MS] of active time while focused. */
+    /** Sends the session's cumulative duration every [ConfigModel.sessionHeartbeatInterval] of active time while focused. */
     private inner class Heartbeat {
         private var job: Job? = null
+        private var session: SessionModel? = null
 
         @Suppress("TooGenericExceptionCaught")
         fun start(session: SessionModel) {
             stop()
+            this.session = session
             job =
                 launchHeartbeat {
                     // The serial IO scope has no exception handler, so an escaping failure would crash
@@ -369,9 +388,12 @@ internal class SessionService(
 
         private suspend fun tickForever(session: SessionModel) {
             while (true) {
+                // A non-positive interval would loop without suspending.
+                val heartbeatIntervalMs =
+                    config?.sessionHeartbeatInterval?.takeIf { it > 0 } ?: ConfigModel.DEFAULT_SESSION_HEARTBEAT_INTERVAL_MS
                 val focusDuration = session.focusDurationAt(time.elapsedRealtimeMillis)
                 val duration = session.activeDuration + focusDuration
-                val remaining = session.lastHeartbeatDuration + HEARTBEAT_INTERVAL_MS - duration
+                val remaining = session.lastHeartbeatDuration + heartbeatIntervalMs - duration
                 if (remaining > 0) {
                     // Rechecked after waking since delay and elapsedRealtime can disagree.
                     delay(remaining)
@@ -388,6 +410,13 @@ internal class SessionService(
         fun stop() {
             job?.cancel()
             job = null
+            session = null
+        }
+
+        /** Re-arms the current wait so a new interval applies now, without starting a stopped heartbeat. */
+        fun restartIfRunning() {
+            val session = session ?: return
+            if (job?.isActive == true) start(session)
         }
     }
 
@@ -457,9 +486,6 @@ internal class SessionService(
     companion object {
         // Covers the post-create delay when the create is still queued, plus the request itself.
         private const val END_SESSION_SEND_TIMEOUT_MS = 30_000L
-
-        // Hardcoded until the interval is remotely configured.
-        internal const val HEARTBEAT_INTERVAL_MS = 30 * 60 * 1000L
     }
 }
 

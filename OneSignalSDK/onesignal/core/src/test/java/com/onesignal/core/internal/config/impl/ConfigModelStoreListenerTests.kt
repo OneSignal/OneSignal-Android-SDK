@@ -3,6 +3,7 @@ package com.onesignal.core.internal.config.impl
 import com.onesignal.core.internal.backend.IParamsBackendService
 import com.onesignal.core.internal.backend.ParamsObject
 import com.onesignal.core.internal.backend.RemoteLoggingParamsObject
+import com.onesignal.core.internal.config.ConfigModel
 import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.debug.LogLevel
 import com.onesignal.mocks.IOMockHelper
@@ -27,10 +28,12 @@ class ConfigModelStoreListenerTests : FunSpec({
 
     suspend fun runFetchWith(
         store: ConfigModelStore,
-        remoteLoggingParams: RemoteLoggingParamsObject,
+        remoteLoggingParams: RemoteLoggingParamsObject = RemoteLoggingParamsObject(),
+        sessionHeartbeatInterval: Long? = null,
     ) {
         val params = mockk<ParamsObject>(relaxed = true)
         every { params.remoteLoggingParams } returns remoteLoggingParams
+        every { params.sessionHeartbeatInterval } returns sessionHeartbeatInterval
 
         val paramsBackend = mockk<IParamsBackendService>()
         coEvery { paramsBackend.fetchParams(any(), any()) } returns params
@@ -57,6 +60,25 @@ class ConfigModelStoreListenerTests : FunSpec({
 
         store.model.remoteLoggingParams.logLevel shouldBe null
         store.model.remoteLoggingParams.isEnabled shouldBe false
+    }
+
+    test("a fetch that sends a heartbeat interval applies it") {
+        val store = ConfigModelStore(MockPreferencesService())
+        store.model.appId = "test-app-id"
+
+        runFetchWith(store, sessionHeartbeatInterval = 60_000L)
+
+        store.model.sessionHeartbeatInterval shouldBe 60_000L
+    }
+
+    test("a fetch that omits the heartbeat interval resets the cached interval to the default") {
+        val store = ConfigModelStore(MockPreferencesService())
+        store.model.appId = "test-app-id"
+        store.model.sessionHeartbeatInterval = 60_000L
+
+        runFetchWith(store, sessionHeartbeatInterval = null)
+
+        store.model.sessionHeartbeatInterval shouldBe ConfigModel.DEFAULT_SESSION_HEARTBEAT_INTERVAL_MS
     }
 
     test("a fetch that sends a log level applies it") {

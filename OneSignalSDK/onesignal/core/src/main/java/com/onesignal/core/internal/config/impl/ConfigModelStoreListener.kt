@@ -105,6 +105,9 @@ internal class ConfigModelStoreListener(
                     params.influenceParams.isIndirectEnabled?.let { config.influenceParams.isIndirectEnabled = it }
                     params.influenceParams.isUnattributedEnabled?.let { config.influenceParams.isUnattributedEnabled = it }
 
+                    // An absent or invalid interval falls back to the default instead of keeping a stale one.
+                    config.sessionHeartbeatInterval = params.sessionHeartbeatInterval ?: ConfigModel.DEFAULT_SESSION_HEARTBEAT_INTERVAL_MS
+
                     // Unlike the fields above, an absent log_level is a revocation rather than a
                     // decline to change: keeping the old level would outlive the kill switch.
                     config.remoteLoggingParams.logLevel = params.remoteLoggingParams.logLevel
