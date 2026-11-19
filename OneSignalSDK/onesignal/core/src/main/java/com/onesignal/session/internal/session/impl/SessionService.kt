@@ -369,7 +369,9 @@ internal class SessionService(
 
         private suspend fun tickForever(session: SessionModel) {
             while (true) {
-                val heartbeatIntervalMs = config?.sessionHeartbeatInterval ?: ConfigModel.DEFAULT_SESSION_HEARTBEAT_INTERVAL_MS
+                // A non-positive interval would loop without suspending.
+                val heartbeatIntervalMs =
+                    config?.sessionHeartbeatInterval?.takeIf { it > 0 } ?: ConfigModel.DEFAULT_SESSION_HEARTBEAT_INTERVAL_MS
                 val focusDuration = session.focusDurationAt(time.elapsedRealtimeMillis)
                 val duration = session.activeDuration + focusDuration
                 val remaining = session.lastHeartbeatDuration + heartbeatIntervalMs - duration

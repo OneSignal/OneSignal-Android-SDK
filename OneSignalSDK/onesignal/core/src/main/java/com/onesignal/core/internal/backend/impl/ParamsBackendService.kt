@@ -86,13 +86,13 @@ internal class ParamsBackendService(
                 )
         }
 
-        var sessionHeartbeatInterval: Long? = null
-        responseJson.expandJSONObject("sessions") {
-            sessionHeartbeatInterval =
-                it.optLong("heartbeat_interval_seconds", 0L)
-                    .takeIf { seconds -> seconds > 0 }
-                    ?.let { seconds -> TimeUnit.SECONDS.toMillis(seconds) }
-        }
+        // optJSONObject, not expandJSONObject: a null or non-object value must not abort the whole parse.
+        val sessionHeartbeatInterval =
+            responseJson.optJSONObject("sessions")
+                ?.optLong("heartbeat_interval_seconds", 0L)
+                ?.takeIf { it > 0 }
+                ?.coerceIn(MIN_HEARTBEAT_INTERVAL_SECONDS, MAX_HEARTBEAT_INTERVAL_SECONDS)
+                ?.let { TimeUnit.SECONDS.toMillis(it) }
 
         return ParamsObject(
             googleProjectNumber = responseJson.safeString("android_sender_id"),
@@ -159,5 +159,11 @@ internal class ParamsBackendService(
             isIndirectEnabled,
             isUnattributedEnabled,
         )
+    }
+
+    companion object {
+        // Bounds a misconfigured value so it can neither flood requests nor stop heartbeats.
+        private const val MIN_HEARTBEAT_INTERVAL_SECONDS = 60L
+        private const val MAX_HEARTBEAT_INTERVAL_SECONDS = 24 * 60 * 60L
     }
 }

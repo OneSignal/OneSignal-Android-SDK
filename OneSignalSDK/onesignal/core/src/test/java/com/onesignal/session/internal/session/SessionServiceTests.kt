@@ -1046,6 +1046,41 @@ class SessionServiceTests : FunSpec({
         mocks.heartbeats.map { it.activeDuration } shouldBe listOf(5 * MINUTE_MS, 10 * MINUTE_MS)
     }
 
+    test("heartbeat falls back to 30 minutes when the stored interval is not positive") {
+        // Given
+        val mocks = Mocks(sessionsApiEnabled = true)
+        mocks.configModelStore.model.sessionHeartbeatInterval = 0L
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        mocks.sessionModelStore { it.isValid = false }
+        sessionService.onFocus(false)
+
+        // When
+        mocks.advanceTime(HEARTBEAT_MS)
+
+        // Then
+        mocks.heartbeats.map { it.activeDuration } shouldBe listOf(HEARTBEAT_MS)
+    }
+
+    test("heartbeat applies an interval changed mid-session after the current wait") {
+        // Given
+        val mocks = Mocks(sessionsApiEnabled = true)
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        mocks.sessionModelStore { it.isValid = false }
+        sessionService.onFocus(false)
+        mocks.advanceTime(MINUTE_MS)
+
+        // When
+        mocks.configModelStore.model.sessionHeartbeatInterval = 5 * MINUTE_MS
+        mocks.advanceTime(HEARTBEAT_MS + 10 * MINUTE_MS - MINUTE_MS)
+
+        // Then
+        mocks.heartbeats.map { it.activeDuration } shouldBe listOf(HEARTBEAT_MS, HEARTBEAT_MS + 5 * MINUTE_MS, HEARTBEAT_MS + 10 * MINUTE_MS)
+    }
+
     test("heartbeat sends again every 30 minutes in the foreground") {
         // Given
         val mocks = Mocks(sessionsApiEnabled = true)
