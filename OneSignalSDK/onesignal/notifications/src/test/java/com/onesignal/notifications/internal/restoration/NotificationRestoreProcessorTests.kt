@@ -7,6 +7,7 @@ import androidx.work.WorkerParameters
 import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
 import com.onesignal.OneSignal
 import com.onesignal.core.internal.application.IApplicationService
+import com.onesignal.mocks.ChoiceTestHook
 import com.onesignal.notifications.internal.badges.IBadgeCountUpdater
 import com.onesignal.notifications.internal.common.NotificationHelper
 import com.onesignal.notifications.internal.data.INotificationRepository
@@ -68,8 +69,10 @@ class NotificationRestoreProcessorTests : FunSpec({
         val processor = mockk<INotificationRestoreProcessor>()
         coEvery { processor.process() } returns false
         mockkObject(OneSignal)
+        ChoiceTestHook.install()
         mockkObject(NotificationHelper)
         coEvery { OneSignal.initWithContext(any()) } returns true
+        ChoiceTestHook.initResult = { true }
         every { OneSignal.getService<INotificationRestoreProcessor>() } returns processor
         every { NotificationHelper.areNotificationsEnabled(any(), any()) } returns true
         val params = mockk<WorkerParameters>(relaxed = true)
@@ -84,7 +87,9 @@ class NotificationRestoreProcessorTests : FunSpec({
                 .javaClass shouldBe ListenableWorker.Result.failure().javaClass
         } finally {
             unmockkObject(NotificationHelper)
+            ChoiceTestHook.clear()
             unmockkObject(OneSignal)
+            ChoiceTestHook.install()
         }
     }
 })

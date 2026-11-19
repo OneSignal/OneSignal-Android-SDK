@@ -5,12 +5,14 @@ package com.onesignal.notifications
  */
 interface INotificationsManager {
     /**
-     * Whether this app has push notification permission.
+     * Whether this app has push notification permission. Before `initWithContext` succeeds this is
+     * `false` because the permission is not yet known, not because it was denied.
      */
     val permission: Boolean
 
     /**
-     * Whether this app can request push notification permission.
+     * Whether this app can request push notification permission. Before `initWithContext` succeeds
+     * this is `false` because it is not yet known.
      */
     val canRequestPermission: Boolean
 

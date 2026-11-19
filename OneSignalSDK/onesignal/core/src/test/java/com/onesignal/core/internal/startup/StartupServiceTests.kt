@@ -2,7 +2,9 @@ package com.onesignal.core.internal.startup
 
 import com.onesignal.common.services.ServiceBuilder
 import com.onesignal.common.services.ServiceProvider
+import com.onesignal.debug.ILogListener
 import com.onesignal.debug.LogLevel
+import com.onesignal.debug.OneSignalLogEvent
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.mocks.IOMockHelper
 import com.onesignal.mocks.IOMockHelper.awaitIO
@@ -14,6 +16,7 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.spyk
 import io.mockk.verify
+import java.util.concurrent.CopyOnWriteArrayList
 
 class StartupServiceTests : FunSpec({
     fun setupServiceProvider(
@@ -79,6 +82,35 @@ class StartupServiceTests : FunSpec({
         actualException shouldBe exception
         verify(exactly = 1) { mockBootstrapService1.bootstrap() }
         verify(exactly = 0) { mockBootstrapService2.bootstrap() }
+    }
+
+    test("a bootstrap retried after a failure keeps failing instead of reporting success") {
+        val events = CopyOnWriteArrayList<OneSignalLogEvent>()
+        val listener = ILogListener { events += it }
+        Logging.addListener(listener)
+        val done = mockk<IBootstrapService>(relaxed = true)
+        val flaky = mockk<IBootstrapService>()
+        val after = mockk<IBootstrapService>(relaxed = true)
+        val firstFailure = Exception("first attempt")
+        every { flaky.bootstrap() } throws firstFailure andThen Unit
+        val startupService = StartupService(setupServiceProvider(listOf(done, flaky, after), listOf()))
+
+        try {
+            shouldThrowUnit<Exception> { startupService.bootstrap() } shouldBe firstFailure
+            // Not rerun, but the attempt must not succeed with this service half bootstrapped.
+            shouldThrowUnit<IllegalStateException> { startupService.bootstrap() }.cause shouldBe firstFailure
+            shouldThrowUnit<IllegalStateException> { startupService.bootstrap() }.cause shouldBe firstFailure
+        } finally {
+            Logging.removeListener(listener)
+        }
+
+        verify(exactly = 1) { done.bootstrap() }
+        verify(exactly = 1) { flaky.bootstrap() }
+        // The retry must still bring up what the first attempt never reached.
+        verify(exactly = 1) { after.bootstrap() }
+        events.count {
+            it.level == LogLevel.WARN && it.entry.contains("bootstrap failed and will not be retried")
+        } shouldBe 1
     }
 
     test("startup will call all IStartableService dependencies successfully after a short delay") {

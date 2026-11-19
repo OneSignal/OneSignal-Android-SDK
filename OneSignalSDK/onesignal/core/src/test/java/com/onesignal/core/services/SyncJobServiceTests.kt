@@ -1,11 +1,14 @@
 package com.onesignal.core.services
 
 import android.app.job.JobParameters
+import com.onesignal.IOneSignal
 import com.onesignal.OneSignal
+import com.onesignal.common.services.IServiceProvider
 import com.onesignal.common.threading.OneSignalDispatchers
 import com.onesignal.core.internal.background.IBackgroundManager
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
+import com.onesignal.mocks.ChoiceTestHook
 import com.onesignal.mocks.IOMockHelper
 import com.onesignal.mocks.IOMockHelper.awaitIO
 import io.kotest.core.spec.style.FunSpec
@@ -35,13 +38,22 @@ private class Mocks {
 class SyncJobServiceTests : FunSpec({
     lateinit var mocks: Mocks
 
+    // OneSignal.getService is inline and the object mock does not reliably intercept the suspend
+    // initWithContext, so both reach the real implementation. This stands in for it.
+    val fakeOneSignal = mockk<IOneSignal>(relaxed = true, moreInterfaces = arrayOf(IServiceProvider::class))
+    var initAnswer: () -> Boolean = { false }
+
     listener(IOMockHelper)
 
     beforeAny {
         Logging.logLevel = LogLevel.NONE
         mocks = Mocks() // fresh instance for each test
+        initAnswer = { false }
         every { mocks.syncJobService.jobFinished(any(), any()) } just runs
         mockkObject(OneSignal)
+        coEvery { fakeOneSignal.initWithContext(any()) } answers { initAnswer() }
+        every { (fakeOneSignal as IServiceProvider).getService(IBackgroundManager::class.java) } returns mocks.mockBackgroundManager
+        ChoiceTestHook.publish(fakeOneSignal)
         every { OneSignal.getService<IBackgroundManager>() } returns mocks.mockBackgroundManager
         // IOMockHelper owns the OneSignalDispatchers object mock (incl. the prewarm() stub) for the
         // whole spec; every onStartJob below calls prewarm(). Clear only its recorded calls so the
@@ -50,6 +62,7 @@ class SyncJobServiceTests : FunSpec({
     }
 
     afterAny {
+        ChoiceTestHook.publish(null)
         // Tear down only the mock this spec owns. OneSignalDispatchers and the ThreadUtils statics
         // are owned by IOMockHelper and torn down in its afterSpec — unmockkAll() here would strip
         // them after the first test and break the remaining ones.
@@ -63,6 +76,7 @@ class SyncJobServiceTests : FunSpec({
 
     test("onStartJob calls prewarm before launchOnIO") {
         coEvery { OneSignal.initWithContext(any()) } returns false
+        initAnswer = { false }
 
         mocks.syncJobService.onStartJob(mocks.jobParameters)
 
@@ -80,6 +94,7 @@ class SyncJobServiceTests : FunSpec({
         val syncJobService = mocks.syncJobService
         val jobParameters = mocks.jobParameters
         coEvery { OneSignal.initWithContext(any()) } returns false
+        initAnswer = { false }
 
         // When
         val result = syncJobService.onStartJob(jobParameters)
@@ -94,6 +109,7 @@ class SyncJobServiceTests : FunSpec({
         val syncJobService = mocks.syncJobService
         val jobParameters = mocks.jobParameters
         coEvery { OneSignal.initWithContext(any()) } returns true
+        initAnswer = { true }
         every { mockBackgroundManager.needsJobReschedule } returns false
 
         // When
@@ -111,6 +127,7 @@ class SyncJobServiceTests : FunSpec({
         val syncJobService = mocks.syncJobService
         val jobParameters = mocks.jobParameters
         coEvery { OneSignal.initWithContext(any()) } returns false
+        initAnswer = { false }
 
         // When
         syncJobService.onStartJob(jobParameters)
@@ -124,6 +141,7 @@ class SyncJobServiceTests : FunSpec({
         val syncJobService = mocks.syncJobService
         val jobParameters = mocks.jobParameters
         coEvery { OneSignal.initWithContext(any()) } returns true
+        initAnswer = { true }
         every { mocks.mockBackgroundManager.needsJobReschedule } returns false
 
         // When
@@ -140,6 +158,7 @@ class SyncJobServiceTests : FunSpec({
         val syncJobService = mocks.syncJobService
         val jobParameters = mocks.jobParameters
         coEvery { OneSignal.initWithContext(any()) } returns true
+        initAnswer = { true }
         every { mockBackgroundManager.needsJobReschedule } returns true
 
         // When
@@ -157,6 +176,7 @@ class SyncJobServiceTests : FunSpec({
         val syncJobService = mocks.syncJobService
         val jobParameters = mocks.jobParameters
         coEvery { OneSignal.initWithContext(any()) } returns true
+        initAnswer = { true }
         every { mockBackgroundManager.needsJobReschedule } returns true
 
         // When
@@ -201,6 +221,7 @@ class SyncJobServiceTests : FunSpec({
 
     test("onStopJob does not reschedule a run that already completed") {
         coEvery { OneSignal.initWithContext(any()) } returns false
+        initAnswer = { false }
         mocks.syncJobService.onStartJob(mocks.jobParameters)
 
         mocks.syncJobService.onStopJob(mocks.jobParameters) shouldBe false
@@ -208,6 +229,7 @@ class SyncJobServiceTests : FunSpec({
 
     test("onStartJob reschedules when runBackgroundServices throws") {
         coEvery { OneSignal.initWithContext(any()) } returns true
+        initAnswer = { true }
         coEvery { mocks.mockBackgroundManager.runBackgroundServices() } throws RuntimeException("boom")
 
         mocks.syncJobService.onStartJob(mocks.jobParameters)
@@ -224,6 +246,7 @@ class SyncJobServiceTests : FunSpec({
             mockk<Job>(relaxed = true)
         }
         coEvery { OneSignal.initWithContext(any()) } throws CancellationException("stopped")
+        initAnswer = { throw CancellationException("stopped") }
 
         mocks.syncJobService.onStartJob(mocks.jobParameters)
         mocks.syncJobService.onStopJob(mocks.jobParameters) shouldBe true

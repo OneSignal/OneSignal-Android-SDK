@@ -12,6 +12,7 @@ import androidx.work.WorkerParameters
 import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
 import com.google.common.util.concurrent.SettableFuture
 import com.onesignal.OneSignal
+import com.onesignal.mocks.ChoiceTestHook
 import com.onesignal.notifications.internal.bundle.INotificationBundleProcessor
 import com.onesignal.notifications.internal.common.OSWorkManagerHelper
 import com.onesignal.notifications.internal.restoration.impl.NotificationRestoreWorkManager
@@ -45,12 +46,16 @@ class NotificationIngressTests : FunSpec({
         NotificationIngress.resetForTest(context)
         bundleProcessor = mockk(relaxed = true)
         mockkObject(OneSignal)
+        ChoiceTestHook.install()
         coEvery { OneSignal.initWithContext(any()) } returns true
+        ChoiceTestHook.initResult = { true }
         every { OneSignal.getService<INotificationBundleProcessor>() } returns bundleProcessor
     }
 
     afterAny {
+        ChoiceTestHook.clear()
         unmockkObject(OneSignal)
+        ChoiceTestHook.install()
         unmockkObject(OSWorkManagerHelper)
     }
 
@@ -328,6 +333,7 @@ class NotificationIngressTests : FunSpec({
 
     test("initialization failure stops retrying after the bounded limit") {
         coEvery { OneSignal.initWithContext(any()) } returns false
+        ChoiceTestHook.initResult = { false }
         val workerParameters = mockk<WorkerParameters>(relaxed = true)
         every { workerParameters.runAttemptCount } returns NotificationIngressDrainWorker.MAX_INIT_ATTEMPTS - 1
 

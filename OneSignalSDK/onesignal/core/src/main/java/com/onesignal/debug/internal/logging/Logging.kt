@@ -179,27 +179,36 @@ object Logging {
         }
     }
 
+    // A listener that calls back into the SDK logs again on this thread; delivering that line to the
+    // listeners too would recurse until the stack overflows.
+    private val dispatchingToListeners = ThreadLocal<Boolean>()
+
     @Suppress("TooGenericExceptionCaught")
     private fun callLogListeners(
         level: LogLevel,
         message: String,
         throwable: Throwable?,
     ) {
-        if (logListeners.isEmpty()) return
+        if (logListeners.isEmpty() || dispatchingToListeners.get() == true) return
 
         var logEntry = message
         if (throwable != null) {
             logEntry += "\n" + android.util.Log.getStackTraceString(throwable)
         }
-        for (listener in logListeners) {
-            try {
-                listener.onLogEvent(OneSignalLogEvent(level, logEntry))
-            } catch (e: Exception) {
-                // One host listener must not abort the others or the remote sink that runs after them.
-                android.util.Log.e(TAG, "Error in app's OneSignal log listener", e)
-            } catch (e: LinkageError) {
-                android.util.Log.e(TAG, "Error in app's OneSignal log listener", e)
+        dispatchingToListeners.set(true)
+        try {
+            for (listener in logListeners) {
+                try {
+                    listener.onLogEvent(OneSignalLogEvent(level, logEntry))
+                } catch (e: Exception) {
+                    // One host listener must not abort the others or the remote sink that runs after them.
+                    android.util.Log.e(TAG, "Error in app's OneSignal log listener", e)
+                } catch (e: LinkageError) {
+                    android.util.Log.e(TAG, "Error in app's OneSignal log listener", e)
+                }
             }
+        } finally {
+            dispatchingToListeners.set(false)
         }
     }
 

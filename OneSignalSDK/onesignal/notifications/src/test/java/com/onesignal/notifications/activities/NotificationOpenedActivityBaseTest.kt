@@ -1,6 +1,5 @@
 package com.onesignal.notifications.activities
 
-import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
@@ -10,6 +9,7 @@ import com.onesignal.OneSignal
 import com.onesignal.common.services.IServiceProvider
 import com.onesignal.common.threading.OneSignalDispatchers
 import com.onesignal.common.threading.suspendifyOnDefault
+import com.onesignal.mocks.ChoiceTestHook
 import com.onesignal.mocks.IOMockHelper
 import com.onesignal.notifications.internal.open.INotificationOpenedProcessor
 import io.kotest.core.spec.style.FunSpec
@@ -97,9 +97,11 @@ class NotificationOpenedActivityTest : FunSpec({
         val processor = mockk<INotificationOpenedProcessor>(relaxed = true)
         every { serviceProvider.getService(INotificationOpenedProcessor::class.java) } returns processor
         mockkObject(OneSignal)
+        ChoiceTestHook.install()
         try {
             every { OneSignal.services } returns serviceProvider
-            coEvery { OneSignal.initWithContext(any<Context>()) } returns true
+            coEvery { OneSignal.initWithContext(any()) } returns true
+            ChoiceTestHook.initResult = { true }
 
             var capturedBlock: (suspend () -> Unit)? = null
             every { suspendifyOnDefault(any()) } answers { capturedBlock = firstArg() }
@@ -116,7 +118,9 @@ class NotificationOpenedActivityTest : FunSpec({
             coVerify(exactly = 1) { processor.processFromContext(activity, any()) }
             activity.isFinishing shouldBe true
         } finally {
+            ChoiceTestHook.clear()
             unmockkObject(OneSignal)
+            ChoiceTestHook.install()
         }
     }
 
@@ -126,9 +130,11 @@ class NotificationOpenedActivityTest : FunSpec({
         val processor = mockk<INotificationOpenedProcessor>(relaxed = true)
         every { serviceProvider.getService(INotificationOpenedProcessor::class.java) } returns processor
         mockkObject(OneSignal)
+        ChoiceTestHook.install()
         try {
             every { OneSignal.services } returns serviceProvider
-            coEvery { OneSignal.initWithContext(any<Context>()) } returns false
+            coEvery { OneSignal.initWithContext(any()) } returns false
+            ChoiceTestHook.initResult = { false }
 
             var capturedBlock: (suspend () -> Unit)? = null
             every { suspendifyOnDefault(any()) } answers { capturedBlock = firstArg() }
@@ -142,7 +148,9 @@ class NotificationOpenedActivityTest : FunSpec({
             coVerify(exactly = 0) { processor.processFromContext(any(), any()) }
             activity.isFinishing shouldBe true
         } finally {
+            ChoiceTestHook.clear()
             unmockkObject(OneSignal)
+            ChoiceTestHook.install()
         }
     }
 
@@ -154,9 +162,11 @@ class NotificationOpenedActivityTest : FunSpec({
         every { serviceProvider.getService(INotificationOpenedProcessor::class.java) } returns processor
         coEvery { processor.processFromContext(any(), any()) } throws RuntimeException("boom")
         mockkObject(OneSignal)
+        ChoiceTestHook.install()
         try {
             every { OneSignal.services } returns serviceProvider
-            coEvery { OneSignal.initWithContext(any<Context>()) } returns true
+            coEvery { OneSignal.initWithContext(any()) } returns true
+            ChoiceTestHook.initResult = { true }
 
             var capturedBlock: (suspend () -> Unit)? = null
             every { suspendifyOnDefault(any()) } answers { capturedBlock = firstArg() }
@@ -170,7 +180,9 @@ class NotificationOpenedActivityTest : FunSpec({
             coVerify(exactly = 1) { processor.processFromContext(activity, any()) }
             activity.isFinishing shouldBe true
         } finally {
+            ChoiceTestHook.clear()
             unmockkObject(OneSignal)
+            ChoiceTestHook.install()
         }
     }
 })

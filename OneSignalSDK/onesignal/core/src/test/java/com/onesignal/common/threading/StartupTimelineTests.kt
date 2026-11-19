@@ -1,13 +1,17 @@
 package com.onesignal.common.threading
 
 import android.os.Looper
+import androidx.test.core.app.ApplicationProvider.getApplicationContext
 import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
 import com.onesignal.debug.ILogListener
 import com.onesignal.debug.internal.crash.buildAnrCrashData
 import com.onesignal.debug.internal.crash.buildBackgroundBlockCrashData
 import com.onesignal.debug.internal.logging.Logging
+import com.onesignal.internal.InitGate
 import com.onesignal.internal.InitState
 import com.onesignal.internal.OneSignalImp
+import com.onesignal.internal.OneSignalImpV2
+import com.onesignal.internal.SdkOperation
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
@@ -198,6 +202,85 @@ class StartupTimelineTests : FunSpec({
         StartupTimeline.summary() shouldContain "init_result=success"
         StartupTimeline.claimReport() shouldBe true
         StartupTimeline.claimReport() shouldBe false
+    }
+
+    test("a never-crash init attempt is timed from the gate and reported once") {
+        StartupTimeline.poolsChosen("lazy", "test")
+        val gate = InitGate()
+        val lines = CopyOnWriteArrayList<String>()
+        val listener = ILogListener { if (it.entry.contains("startup_timeline")) lines += it.entry }
+        Logging.addListener(listener)
+        try {
+            gate.tryStart() shouldBe true
+            advance(150)
+            gate.complete(InitState.SUCCESS)
+        } finally {
+            Logging.removeListener(listener)
+        }
+
+        lines.size shouldBe 1
+        lines[0] shouldContain "init_attempts=1"
+        lines[0] shouldContain "init_result=success"
+        lines[0] shouldNotContain "init_ended_ms=-"
+    }
+
+    test("a never-crash init records the queue and start of its dispatched work") {
+        StartupTimeline.poolsChosen("lazy", "test")
+        val os = OneSignalImpV2()
+
+        os.initWithContext(getApplicationContext(), "appId") shouldBe true
+        awaitUntil { os.isInitialized }
+
+        val summary = StartupTimeline.summary()
+        summary shouldNotContain "init_queued_ms=-"
+        summary shouldNotContain "init_started_ms=-"
+        summary shouldContain "init_result=success"
+    }
+
+    test("a retry after a failed never-crash init is timed as its own attempt") {
+        StartupTimeline.poolsChosen("lazy", "test")
+        val gate = InitGate()
+        gate.tryStart()
+        StartupTimeline.initQueued()
+        StartupTimeline.initStarted()
+        gate.complete(InitState.FAILED)
+        val failed = StartupTimeline.summary()
+        failed shouldContain "init_result=failed"
+        failed shouldNotContain "init_ended_ms=-"
+
+        advance(1_000)
+        gate.tryStart() shouldBe true
+
+        StartupTimeline.summary() shouldContain "init_attempts=2 init_queued_ms=- init_started_ms=- init_ended_ms=- init_result=pending"
+    }
+
+    test("main blocked in the init gate is counted as waiting for init") {
+        val gate = InitGate()
+        gate.tryStart()
+
+        thread {
+            // Completes even if the wait is never counted, so a regression fails here instead of hanging.
+            runCatching { awaitUntil { StartupTimeline.summary().contains("main_wait_ongoing=true") } }
+            advance(300)
+            gate.complete(InitState.SUCCESS)
+        }
+        gate.isReady(SdkOperation.LOGIN) shouldBe true
+
+        val summary = StartupTimeline.summary()
+        field(summary, "main_waits") shouldBe 1
+        (field(summary, "main_wait_ms") >= 300) shouldBe true
+    }
+
+    test("an ANR 30 seconds or more after a never-crash init ended carries no timeline") {
+        val gate = InitGate()
+        gate.tryStart()
+        gate.complete(InitState.SUCCESS)
+
+        advance(29_999)
+        (StartupTimeline.anrSummary() != null) shouldBe true
+
+        advance(1)
+        StartupTimeline.anrSummary() shouldBe null
     }
 
     test("ANR records carry the timeline during startup, after the existing message") {
