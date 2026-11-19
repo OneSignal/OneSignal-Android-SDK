@@ -201,8 +201,10 @@ object Logging {
                 try {
                     listener.onLogEvent(OneSignalLogEvent(level, logEntry))
                 } catch (e: Exception) {
-                    // The SDK line being logged may be on a path that promises not to throw.
-                    logToLogcat(LogLevel.ERROR, "A OneSignal log listener threw", e)
+                    // One host listener must not abort the others or the remote sink that runs after them.
+                    android.util.Log.e(TAG, "Error in app's OneSignal log listener", e)
+                } catch (e: LinkageError) {
+                    android.util.Log.e(TAG, "Error in app's OneSignal log listener", e)
                 }
             }
         } finally {

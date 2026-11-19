@@ -288,6 +288,15 @@ class AnrCheckEvaluatorTest : FunSpec({
             "\tat com.onesignal.core.Foo.bar(Foo.kt:42)$nl"
     }
 
+    test("both ANR builders derive attribution from the stack they are given") {
+        val foreign = arrayOf(StackTraceElement("com.hostapp.ui.MainActivity", "onCreate", "MainActivity.kt", 1))
+
+        buildAnrCrashData("main", blockedStack, 6_000L).attributed shouldBe true
+        buildBackgroundBlockCrashData("main", blockedStack, 11_000L).attributed shouldBe true
+        buildAnrCrashData("main", foreign, 6_000L).attributed shouldBe false
+        buildBackgroundBlockCrashData("main", foreign, 11_000L).attributed shouldBe false
+    }
+
     test("every ANR record frame line is parseable by a `^\\s*at ` consumer") {
         val fatal = buildAnrCrashData("main", blockedStack, 6_000L)
         val nonFatal = buildBackgroundBlockCrashData("main", blockedStack, 11_000L)
