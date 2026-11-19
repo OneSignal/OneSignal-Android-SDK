@@ -9,6 +9,7 @@ import com.onesignal.IOneSignal
 import com.onesignal.OneSignalUserProfile
 import com.onesignal.common.threading.DispatcherTestHooks
 import com.onesignal.common.threading.OneSignalDispatchers
+import com.onesignal.core.internal.application.impl.ApplicationService
 import com.onesignal.debug.ILogListener
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
@@ -24,7 +25,11 @@ import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.ints.shouldBeLessThanOrEqual
 import io.kotest.matchers.shouldBe
+import io.mockk.every
+import io.mockk.mockk
 import io.mockk.mockkClass
+import io.mockk.mockkObject
+import io.mockk.unmockkObject
 import kotlinx.coroutines.runBlocking
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedQueue
@@ -155,17 +160,19 @@ class OneSignalImpV2FaultTests : FunSpec({
 
     test("a LinkageError while starting the application service marks init FAILED") {
         val os = quietOneSignal()
-        val listener =
-            ILogListener {
-                if (it.entry.contains("ApplicationService.init")) throw NoClassDefFoundError("missing")
-            }
-        Logging.addListener(listener)
+        // Thrown from the service itself: Logging swallows a LinkageError raised by a log listener.
+        // The container builds this through getInstanceOrNull, so that is where the stand-in goes.
+        mockkObject(ApplicationService)
         try {
+            val failing = mockk<ApplicationService>(relaxed = true)
+            every { failing.start(any()) } throws NoClassDefFoundError("missing")
+            every { ApplicationService.getInstanceOrNull() } returns failing
+
             onDaemonThread { os.initWithContext(getApplicationContext(), "appId") } shouldBe false
             os.gate.state shouldBe InitState.FAILED
             onDaemonThread { os.user.onesignalId } shouldBe ""
         } finally {
-            Logging.removeListener(listener)
+            unmockkObject(ApplicationService)
         }
     }
 
