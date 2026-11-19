@@ -52,7 +52,7 @@ import kotlin.reflect.KMutableProperty1
  * The time threshold for a session to expire is a configuration option: [ConfigModel.sessionFocusTimeout].
  *
  * While focused, a session that [SessionModel.usesSessionsApi] reports its duration every
- * [HEARTBEAT_INTERVAL_MS] of active time, so the server keeps it open and a crash loses little duration.
+ * [ConfigModel.sessionHeartbeatInterval] of active time, so the server keeps it open and a crash loses little duration.
  * It also reports its duration on each unfocus, so a session killed in the background isn't short.
  *
  * Time without privacy consent is not counted: losing consent while focused counts as an unfocus,
@@ -346,7 +346,7 @@ internal class SessionService(
         return createSessionOperation(session, config?.appId, identityModelStore.model.externalId, directAttributionId)
     }
 
-    /** Sends the session's cumulative duration every [HEARTBEAT_INTERVAL_MS] of active time while focused. */
+    /** Sends the session's cumulative duration every [ConfigModel.sessionHeartbeatInterval] of active time while focused. */
     private inner class Heartbeat {
         private var job: Job? = null
 
@@ -369,9 +369,10 @@ internal class SessionService(
 
         private suspend fun tickForever(session: SessionModel) {
             while (true) {
+                val heartbeatIntervalMs = config?.sessionHeartbeatInterval ?: ConfigModel.DEFAULT_SESSION_HEARTBEAT_INTERVAL_MS
                 val focusDuration = session.focusDurationAt(time.elapsedRealtimeMillis)
                 val duration = session.activeDuration + focusDuration
-                val remaining = session.lastHeartbeatDuration + HEARTBEAT_INTERVAL_MS - duration
+                val remaining = session.lastHeartbeatDuration + heartbeatIntervalMs - duration
                 if (remaining > 0) {
                     // Rechecked after waking since delay and elapsedRealtime can disagree.
                     delay(remaining)
@@ -457,9 +458,6 @@ internal class SessionService(
     companion object {
         // Covers the post-create delay when the create is still queued, plus the request itself.
         private const val END_SESSION_SEND_TIMEOUT_MS = 30_000L
-
-        // Hardcoded until the interval is remotely configured.
-        internal const val HEARTBEAT_INTERVAL_MS = 30 * 60 * 1000L
     }
 }
 

@@ -92,6 +92,32 @@ class ParamsBackendServiceTests : FunSpec({
         params.remoteLoggingParams.isEnabled shouldBe true
     }
 
+    test("sessions.heartbeat_interval_seconds parses to milliseconds") {
+        val http = mockk<IHttpClient>()
+        coEvery { http.get(any(), any()) } returns HttpResponse(200, """{"sessions":{"heartbeat_interval_seconds":1800}}""")
+
+        val params = ParamsBackendService(http).fetchParams("appId", null)
+
+        params.sessionHeartbeatInterval shouldBe 1_800_000L
+    }
+
+    test("a missing, non-positive, or non-numeric heartbeat_interval_seconds parses as null") {
+        listOf(
+            """{}""",
+            """{"sessions":{}}""",
+            """{"sessions":{"heartbeat_interval_seconds":0}}""",
+            """{"sessions":{"heartbeat_interval_seconds":-60}}""",
+            """{"sessions":{"heartbeat_interval_seconds":"abc"}}""",
+        ).forEach { body ->
+            val http = mockk<IHttpClient>()
+            coEvery { http.get(any(), any()) } returns HttpResponse(200, body)
+
+            val params = ParamsBackendService(http).fetchParams("appId", null)
+
+            params.sessionHeartbeatInterval shouldBe null
+        }
+    }
+
     test("valid JSON payload is parsed and returns a populated ParamsObject") {
         val http = mockk<IHttpClient>()
         coEvery { http.get(any(), any()) } returns

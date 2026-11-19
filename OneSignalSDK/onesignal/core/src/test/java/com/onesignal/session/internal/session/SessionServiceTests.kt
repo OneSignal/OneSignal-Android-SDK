@@ -1023,6 +1023,29 @@ class SessionServiceTests : FunSpec({
         heartbeat.endTime shouldBe null
     }
 
+    test("heartbeat uses the configured interval") {
+        // Given
+        val mocks = Mocks(sessionsApiEnabled = true)
+        mocks.configModelStore.model.sessionHeartbeatInterval = 5 * MINUTE_MS
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        mocks.sessionModelStore { it.isValid = false }
+        sessionService.onFocus(false)
+
+        // When
+        mocks.advanceTime(5 * MINUTE_MS - 1)
+
+        // Then
+        mocks.heartbeats shouldBe emptyList()
+
+        // When
+        mocks.advanceTime(5 * MINUTE_MS + 1)
+
+        // Then
+        mocks.heartbeats.map { it.activeDuration } shouldBe listOf(5 * MINUTE_MS, 10 * MINUTE_MS)
+    }
+
     test("heartbeat sends again every 30 minutes in the foreground") {
         // Given
         val mocks = Mocks(sessionsApiEnabled = true)

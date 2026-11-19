@@ -139,6 +139,15 @@ class ConfigModel : Model() {
         }
 
     /**
+     * Milliseconds of focused time between session heartbeats.
+     */
+    var sessionHeartbeatInterval: Long
+        get() = getLongProperty(::sessionHeartbeatInterval.name) { DEFAULT_SESSION_HEARTBEAT_INTERVAL_MS }
+        set(value) {
+            setLongProperty(::sessionHeartbeatInterval.name, value)
+        }
+
+    /**
      * The minimum number of milliseconds required to pass before executing another operation on
      * the queue.
      */
@@ -421,6 +430,7 @@ class ConfigModel : Model() {
 
     companion object {
         const val DEFAULT_TIMEOUT_MS = 60_000L
+        const val DEFAULT_SESSION_HEARTBEAT_INTERVAL_MS = 30 * 60 * 1000L
     }
 }
 

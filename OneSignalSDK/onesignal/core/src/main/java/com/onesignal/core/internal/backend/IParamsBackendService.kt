@@ -35,6 +35,7 @@ internal class ParamsObject(
     var locationShared: Boolean? = null,
     var requiresUserPrivacyConsent: Boolean? = null,
     var opRepoExecutionInterval: Long? = null,
+    var sessionHeartbeatInterval: Long? = null,
     var influenceParams: InfluenceParamsObject,
     var fcmParams: FCMParamsObject,
     val remoteLoggingParams: RemoteLoggingParamsObject,

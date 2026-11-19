@@ -19,6 +19,7 @@ import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import org.json.JSONException
 import org.json.JSONObject
+import java.util.concurrent.TimeUnit
 
 internal class ParamsBackendService(
     private val _http: IHttpClient,
@@ -85,6 +86,14 @@ internal class ParamsBackendService(
                 )
         }
 
+        var sessionHeartbeatInterval: Long? = null
+        responseJson.expandJSONObject("sessions") {
+            sessionHeartbeatInterval =
+                it.optLong("heartbeat_interval_seconds", 0L)
+                    .takeIf { seconds -> seconds > 0 }
+                    ?.let { seconds -> TimeUnit.SECONDS.toMillis(seconds) }
+        }
+
         return ParamsObject(
             googleProjectNumber = responseJson.safeString("android_sender_id"),
             enterprise = responseJson.safeBool("enterp"),
@@ -100,6 +109,7 @@ internal class ParamsBackendService(
             requiresUserPrivacyConsent = responseJson.safeBool("requires_user_privacy_consent"),
             // TODO: New
             opRepoExecutionInterval = responseJson.safeLong("oprepo_execution_interval"),
+            sessionHeartbeatInterval = sessionHeartbeatInterval,
             influenceParams = influenceParams ?: InfluenceParamsObject(),
             fcmParams = fcmParams ?: FCMParamsObject(),
             remoteLoggingParams = remoteLoggingParams ?: RemoteLoggingParamsObject(),
