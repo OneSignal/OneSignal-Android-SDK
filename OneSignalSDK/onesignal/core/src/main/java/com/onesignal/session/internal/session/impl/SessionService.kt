@@ -122,6 +122,7 @@ internal class SessionService(
     override fun start() {
         applicationService.addApplicationLifecycleHandler(this)
         configModelStore.subscribe(ConsentChangeHandler())
+        configModelStore.subscribe(HeartbeatIntervalChangeHandler())
         identityModelStore.subscribe(PinnedLocalIdTranslator(IdentityConstants.ONESIGNAL_ID, SessionModel::onesignalId))
         // Login before the anonymous user is created carries the local push subscription over to
         // the new user, so its backend ID belongs to that user, not the one pinned on this session.
@@ -163,6 +164,22 @@ internal class SessionService(
                 if (pinnedId.get(session) == localId && appliesTo(session)) pinnedId.set(session, backendId)
             }
         }
+    }
+
+    /**
+     * A heartbeat armed before the params fetch, such as on first launch, would otherwise wait out
+     * the stale interval before picking up the fetched one.
+     */
+    private inner class HeartbeatIntervalChangeHandler : ISingletonModelStoreChangeHandler<ConfigModel> {
+        override fun onModelReplaced(
+            model: ConfigModel,
+            tag: String,
+        ) = runOnSerialIO { heartbeat.restartIfRunning() }
+
+        override fun onModelUpdated(
+            args: ModelChangedArgs,
+            tag: String,
+        ) = Unit
     }
 
     private inner class ConsentChangeHandler : ISingletonModelStoreChangeHandler<ConfigModel> {
@@ -349,10 +366,12 @@ internal class SessionService(
     /** Sends the session's cumulative duration every [ConfigModel.sessionHeartbeatInterval] of active time while focused. */
     private inner class Heartbeat {
         private var job: Job? = null
+        private var session: SessionModel? = null
 
         @Suppress("TooGenericExceptionCaught")
         fun start(session: SessionModel) {
             stop()
+            this.session = session
             job =
                 launchHeartbeat {
                     // The serial IO scope has no exception handler, so an escaping failure would crash
@@ -391,6 +410,13 @@ internal class SessionService(
         fun stop() {
             job?.cancel()
             job = null
+            session = null
+        }
+
+        /** Re-arms the current wait so a new interval applies now, without starting a stopped heartbeat. */
+        fun restartIfRunning() {
+            val session = session ?: return
+            if (job?.isActive == true) start(session)
         }
     }
 
