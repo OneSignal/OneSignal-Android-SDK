@@ -148,6 +148,17 @@ class SessionModel : Model() {
         }
 
     /**
+     * The external ID of the user this session follows, null while anonymous. A login after an
+     * anonymous session's create was sent sets it without moving the session, so a later switch
+     * splits.
+     */
+    var externalId: String?
+        get() = getOptStringProperty(::externalId.name)
+        set(value) {
+            setOptStringProperty(::externalId.name, value)
+        }
+
+    /**
      * True while this session's create hasn't been enqueued. An anonymous user's session holds its
      * create so a login before the first background can move the session to that user.
      */
