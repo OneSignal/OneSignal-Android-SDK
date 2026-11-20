@@ -2373,10 +2373,9 @@ class LoginUserOperationExecutorTests : FunSpec({
     test("create user logs a missing local model at ERROR only for the current push subscription") {
         // Given: the config names localSubscriptionId1 as the device's push subscription, but the
         // store has no model for either queued key (a user switch replaced them after the ops were
-        // queued, or the keys are stale ops from an older SDK). SDK-5676: 5.11.0 logged every missing
-        // model at ERROR, and stuck queues draining after the upgrade produced over a million rows of
-        // stale or replaced keys in two days. Only the current push subscription is worth an ERROR, because
-        // the config now points at a subscription id the store cannot hydrate.
+        // queued, or the keys are stale ops from an older SDK). Logging every missing model at ERROR
+        // floods remote telemetry when a long-stuck queue drains. Only the current push subscription
+        // is worth an ERROR, because the config now points at a subscription id the store cannot hydrate.
         val mockUserBackendService = mockk<IUserBackendService>()
         coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } returns
             CreateUserResponse(
@@ -2447,10 +2446,10 @@ class LoginUserOperationExecutorTests : FunSpec({
 
     test("create user logs other missing model keys once at DEBUG, not once per key at ERROR") {
         // Given: neither queued key is the device's current push subscription and neither has a
-        // model in the store. This is the SDK-5676 production shape: a batch of queued create ops
-        // whose models a later logout or login already replaced. The translation still has to be
-        // recorded for every key so ops that reference them get rewritten, but nothing is wrong
-        // on the device, so the batch gets one DEBUG line instead of an ERROR per key.
+        // model in the store, as in a batch of queued create ops whose models a later logout or
+        // login already replaced. The translation still has to be recorded for every key so ops
+        // that reference them get rewritten, but nothing is wrong on the device, so the batch gets
+        // one DEBUG line instead of an ERROR per key.
         val mockUserBackendService = mockk<IUserBackendService>()
         coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } returns
             CreateUserResponse(
