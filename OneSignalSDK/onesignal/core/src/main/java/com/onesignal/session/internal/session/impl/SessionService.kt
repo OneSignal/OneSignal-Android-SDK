@@ -111,6 +111,9 @@ internal class SessionService(
     // True if app has been foregrounded at least once since the app started
     private var hasFocused = false
 
+    // Serial IO lane only.
+    private var isFocused = false
+
     // Set while focused without privacy consent, so the next unfocus adds no time. Serial IO lane only.
     private var pausedForConsent = false
 
@@ -270,7 +273,9 @@ internal class SessionService(
         // Read and reset before clearing isValid: after that, a focus on the serial IO lane can start
         // the next session and write these fields while this runs on the background thread.
         val usesSessionsApi = session.usesSessionsApi
-        val end = if (usesSessionsApi && releaseHeldCreate(session)) endSessionOperation(session) else null
+        val end =
+            if (usesSessionsApi && !session.isSplitPending && releaseHeldCreate(session)) endSessionOperation(session) else null
+        session.isSplitPending = false
         if (session.isCreateHeld) {
             Logging.debug("SessionService: session ${session.sessionId} ended with its create held, not reporting it")
             session.isCreateHeld = false
@@ -331,24 +336,12 @@ internal class SessionService(
         if (!session.isValid || (startedWithoutConsent && config?.isAwaitingConsent != true)) {
             // As the old session was made inactive, we need to create a new session
             shouldFireOnSubscribe = firedOnSubscribe
-            session.sessionId = UUID.randomUUID().toString()
-            session.startTime = focusTimeMs
-            session.focusTime = session.startTime
-            session.focusElapsedRealtime = focusElapsedMs
-            session.unfocusTime = null
-            session.onesignalId =
-                identityModelStore.model
-                    .takeIf { it.hasProperty(IdentityConstants.ONESIGNAL_ID) }
-                    ?.onesignalId
-            session.subscriptionId = config?.pushSubscriptionId
-            session.appId = config?.appId
-            session.localSessionId = IDManager.createLocalId()
-            val create = startSessionsApi(session, directAttributionId)
+            startNextSession(session, focusTimeMs, focusElapsedMs, directAttributionId)
             session.isValid = true
-            startedWithoutConsent = config?.isAwaitingConsent == true
-            Logging.debug("SessionService: New session started at ${session.startTime}")
-            create?.let { operationRepo.enqueue(it) }
             sessionLifeCycleNotifier.fire { it.onSessionStarted() }
+        } else if (session.isSplitPending) {
+            startNextSession(session, focusTimeMs, focusElapsedMs, null)
+            sessionLifeCycleNotifier.fire { it.onSessionActive() }
         } else {
             // existing session: just remember the focus time so we can calculate the active time
             // when onUnfocused is called.
@@ -356,8 +349,73 @@ internal class SessionService(
             session.focusElapsedRealtime = focusElapsedMs
             sessionLifeCycleNotifier.fire { it.onSessionActive() }
         }
+        isFocused = true
         pausedForConsent = config?.isAwaitingConsent == true
         if (session.usesSessionsApi && !pausedForConsent) heartbeat.start(session) else heartbeat.stop()
+    }
+
+    private fun startNextSession(
+        session: SessionModel,
+        startTimeMs: Long,
+        startElapsedMs: Long,
+        directAttributionId: String?,
+    ) {
+        session.sessionId = UUID.randomUUID().toString()
+        session.startTime = startTimeMs
+        session.focusTime = startTimeMs
+        session.focusElapsedRealtime = startElapsedMs
+        session.unfocusTime = null
+        session.isSplitPending = false
+        session.onesignalId =
+            identityModelStore.model
+                .takeIf { it.hasProperty(IdentityConstants.ONESIGNAL_ID) }
+                ?.onesignalId
+        session.subscriptionId = config?.pushSubscriptionId
+        session.appId = config?.appId
+        session.localSessionId = IDManager.createLocalId()
+        val create = startSessionsApi(session, directAttributionId)
+        startedWithoutConsent = config?.isAwaitingConsent == true
+        Logging.debug("SessionService: New session started at ${session.startTime}")
+        create?.let { operationRepo.enqueue(it) }
+    }
+
+    /**
+     * Ends the current sessions API session at a user switch and starts the next one for the new
+     * user. The app session goes on, so no legacy session callbacks fire. In the background, the
+     * next one starts on the next focus.
+     */
+    internal fun splitSession() {
+        val nowMs = time.currentTimeMillis
+        val elapsedMs = time.elapsedRealtimeMillis
+        runOnSerialIO { handleSplit(nowMs, elapsedMs) }
+    }
+
+    private fun handleSplit(
+        nowMs: Long,
+        elapsedMs: Long,
+    ) {
+        val session = this.session?.takeIf { it.isValid && it.usesSessionsApi && !it.isSplitPending } ?: return
+        val counting = isFocused && !pausedForConsent
+        val end =
+            when {
+                !releaseHeldCreate(session) -> null
+                counting -> {
+                    val duration = session.activeDuration + session.focusDurationAt(elapsedMs)
+                    updateSessionOperation(session, maxOf(duration, session.lastHeartbeatDuration), endTime = nowMs)
+                }
+                else -> endSessionOperation(session)
+            }
+        Logging.debug("SessionService: splitting session ${session.sessionId} at a user switch")
+        end?.let { operationRepo.enqueue(it) }
+        session.activeDuration = 0L
+        session.lastHeartbeatDuration = 0L
+        session.lastHeartbeatTime = null
+        if (counting) {
+            startNextSession(session, nowMs, elapsedMs, null)
+            heartbeat.start(session)
+        } else {
+            session.isSplitPending = true
+        }
     }
 
     /**
@@ -514,6 +572,7 @@ internal class SessionService(
             return
         }
         heartbeat.stop()
+        isFocused = false
         if (pausedForConsent) {
             pausedForConsent = false
             return

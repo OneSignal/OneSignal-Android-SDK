@@ -157,6 +157,16 @@ class SessionModel : Model() {
         }
 
     /**
+     * True after a user switch in the background sent this session's end. The app session goes on,
+     * and the next sessions API session starts on the next focus.
+     */
+    var isSplitPending: Boolean
+        get() = getBooleanProperty(::isSplitPending.name) { false }
+        set(value) {
+            setBooleanProperty(::isSplitPending.name, value)
+        }
+
+    /**
      * Identifies this session's sessions API requests. A new local ID for each session.
      */
     var localSessionId: String
