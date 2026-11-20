@@ -382,7 +382,7 @@ internal class SessionService(
 
     /**
      * Ends the current sessions API session at a user switch and starts the next one for the new
-     * user. The app session goes on, so no legacy session callbacks fire. In the background, the
+     * user. The app session goes on, so onSessionStarted and onSessionEnded don't fire. In the background, the
      * next one starts on the next focus.
      */
     internal fun splitSession() {
@@ -413,7 +413,7 @@ internal class SessionService(
         session.lastHeartbeatTime = null
         if (counting) {
             startNextSession(session, nowMs, elapsedMs, null)
-            heartbeat.start(session)
+            if (session.usesSessionsApi) heartbeat.start(session) else heartbeat.stop()
         } else {
             session.isSplitPending = true
         }
