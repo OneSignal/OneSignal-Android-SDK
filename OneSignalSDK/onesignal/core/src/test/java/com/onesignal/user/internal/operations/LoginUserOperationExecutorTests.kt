@@ -1218,9 +1218,31 @@ class LoginUserOperationExecutorTests : FunSpec({
         matchingBackendSubscription(remaining, "local-email", local) shouldBe null
     }
 
+    test("composite login sends the api method and identity-only login does not") {
+        val profileBackend = mockk<IUserBackendService>()
+        coEvery { profileBackend.createUser(any(), any(), any(), any(), any(), any()) } returns
+            CreateUserResponse(mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId), PropertiesObject(), listOf())
+        profileExecutor(profileBackend).execute(
+            listOf(LoginUserOperation(appId, localOneSignalId, "externalId", null, OneSignalUserProfile())),
+        )
+        coVerify(exactly = 1) {
+            profileBackend.createUser(any(), any(), any(), any(), any(), LOGIN_WITH_PROFILE_METHOD)
+        }
+
+        val identityBackend = mockk<IUserBackendService>()
+        coEvery { identityBackend.createUser(any(), any(), any(), any()) } returns
+            CreateUserResponse(mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId), PropertiesObject(), listOf())
+        profileExecutor(identityBackend).execute(
+            listOf(LoginUserOperation(appId, localOneSignalId, "externalId", null)),
+        )
+        coVerify(exactly = 1) {
+            identityBackend.createUser(any(), any(), any(), any(), any(), null)
+        }
+    }
+
     test("composite login succeeds when the backend omits an unchanged email subscription") {
         val mockUserBackendService = mockk<IUserBackendService>()
-        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } returns
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any(), any(), any()) } returns
             CreateUserResponse(mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId), PropertiesObject(), listOf())
 
         val response =
@@ -1234,7 +1256,7 @@ class LoginUserOperationExecutorTests : FunSpec({
 
     test("composite login with email only sends an Email subscription") {
         val mockUserBackendService = mockk<IUserBackendService>()
-        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } returns
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any(), any(), any()) } returns
             CreateUserResponse(
                 mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId),
                 PropertiesObject(),
@@ -1250,7 +1272,7 @@ class LoginUserOperationExecutorTests : FunSpec({
         response.metadata shouldBe LoginWaitMetadata(remoteOneSignalId, "email-sub")
         val subs = slot<List<SubscriptionObject>>()
         coVerify(exactly = 1) {
-            mockUserBackendService.createUser(appId, mapOf(IdentityConstants.EXTERNAL_ID to "externalId"), capture(subs), any())
+            mockUserBackendService.createUser(appId, mapOf(IdentityConstants.EXTERNAL_ID to "externalId"), capture(subs), any(), any(), any())
         }
         assertProfileSubscription(subs.captured.single { it.type == SubscriptionObjectType.EMAIL }, "a@b.com")
         subs.captured.none { it.type == SubscriptionObjectType.SMS } shouldBe true
@@ -1258,7 +1280,7 @@ class LoginUserOperationExecutorTests : FunSpec({
 
     test("composite login stores an email unsubscribed when enabled is false") {
         val mockUserBackendService = mockk<IUserBackendService>()
-        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } returns
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any(), any(), any()) } returns
             CreateUserResponse(
                 mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId),
                 PropertiesObject(),
@@ -1283,7 +1305,7 @@ class LoginUserOperationExecutorTests : FunSpec({
         response.result shouldBe ExecutionResult.SUCCESS
         val subs = slot<List<SubscriptionObject>>()
         coVerify(exactly = 1) {
-            mockUserBackendService.createUser(appId, mapOf(IdentityConstants.EXTERNAL_ID to "externalId"), capture(subs), any())
+            mockUserBackendService.createUser(appId, mapOf(IdentityConstants.EXTERNAL_ID to "externalId"), capture(subs), any(), any(), any())
         }
         assertProfileSubscription(
             subs.captured.single { it.type == SubscriptionObjectType.EMAIL },
@@ -1299,7 +1321,7 @@ class LoginUserOperationExecutorTests : FunSpec({
 
     test("composite login sends an email subscribed when enabled is true") {
         val mockUserBackendService = mockk<IUserBackendService>()
-        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } returns
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any(), any(), any()) } returns
             CreateUserResponse(
                 mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId),
                 PropertiesObject(),
@@ -1320,7 +1342,7 @@ class LoginUserOperationExecutorTests : FunSpec({
 
         val subs = slot<List<SubscriptionObject>>()
         coVerify(exactly = 1) {
-            mockUserBackendService.createUser(appId, mapOf(IdentityConstants.EXTERNAL_ID to "externalId"), capture(subs), any())
+            mockUserBackendService.createUser(appId, mapOf(IdentityConstants.EXTERNAL_ID to "externalId"), capture(subs), any(), any(), any())
         }
         assertProfileSubscription(
             subs.captured.single { it.type == SubscriptionObjectType.EMAIL },
@@ -1332,7 +1354,7 @@ class LoginUserOperationExecutorTests : FunSpec({
 
     test("composite login sends an SMS subscribed when enabled is true") {
         val mockUserBackendService = mockk<IUserBackendService>()
-        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } returns
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any(), any(), any()) } returns
             CreateUserResponse(
                 mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId),
                 PropertiesObject(),
@@ -1353,7 +1375,7 @@ class LoginUserOperationExecutorTests : FunSpec({
 
         val subs = slot<List<SubscriptionObject>>()
         coVerify(exactly = 1) {
-            mockUserBackendService.createUser(appId, mapOf(IdentityConstants.EXTERNAL_ID to "externalId"), capture(subs), any())
+            mockUserBackendService.createUser(appId, mapOf(IdentityConstants.EXTERNAL_ID to "externalId"), capture(subs), any(), any(), any())
         }
         assertProfileSubscription(
             subs.captured.single { it.type == SubscriptionObjectType.SMS },
@@ -1365,7 +1387,7 @@ class LoginUserOperationExecutorTests : FunSpec({
 
     test("composite login stores an SMS unsubscribed when enabled is false") {
         val mockUserBackendService = mockk<IUserBackendService>()
-        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } returns
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any(), any(), any()) } returns
             CreateUserResponse(
                 mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId),
                 PropertiesObject(),
@@ -1388,7 +1410,7 @@ class LoginUserOperationExecutorTests : FunSpec({
 
         val subs = slot<List<SubscriptionObject>>()
         coVerify(exactly = 1) {
-            mockUserBackendService.createUser(appId, mapOf(IdentityConstants.EXTERNAL_ID to "externalId"), capture(subs), any())
+            mockUserBackendService.createUser(appId, mapOf(IdentityConstants.EXTERNAL_ID to "externalId"), capture(subs), any(), any(), any())
         }
         assertProfileSubscription(
             subs.captured.single { it.type == SubscriptionObjectType.SMS },
@@ -1404,7 +1426,7 @@ class LoginUserOperationExecutorTests : FunSpec({
 
     test("composite login applies the profile status to a grouped subscription for the same address") {
         val mockUserBackendService = mockk<IUserBackendService>()
-        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } returns
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any(), any(), any()) } returns
             CreateUserResponse(mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId), PropertiesObject(), listOf())
 
         profileExecutor(mockUserBackendService).execute(
@@ -1431,7 +1453,7 @@ class LoginUserOperationExecutorTests : FunSpec({
 
         val subs = slot<List<SubscriptionObject>>()
         coVerify(exactly = 1) {
-            mockUserBackendService.createUser(appId, mapOf(IdentityConstants.EXTERNAL_ID to "externalId"), capture(subs), any())
+            mockUserBackendService.createUser(appId, mapOf(IdentityConstants.EXTERNAL_ID to "externalId"), capture(subs), any(), any(), any())
         }
         subs.captured.single { it.type == SubscriptionObjectType.EMAIL }.let {
             it.token shouldBe "a@b.com"
@@ -1442,7 +1464,7 @@ class LoginUserOperationExecutorTests : FunSpec({
 
     test("composite login applies the profile status to the local record of a grouped subscription") {
         val mockUserBackendService = mockk<IUserBackendService>()
-        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } returns
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any(), any(), any()) } returns
             CreateUserResponse(
                 mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId),
                 PropertiesObject(),
@@ -1492,7 +1514,7 @@ class LoginUserOperationExecutorTests : FunSpec({
 
     test("composite login overrides a grouped email that differs only by case") {
         val mockUserBackendService = mockk<IUserBackendService>()
-        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } returns
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any(), any(), any()) } returns
             CreateUserResponse(mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId), PropertiesObject(), listOf())
 
         profileExecutor(mockUserBackendService).execute(
@@ -1519,7 +1541,7 @@ class LoginUserOperationExecutorTests : FunSpec({
 
         val subs = slot<List<SubscriptionObject>>()
         coVerify(exactly = 1) {
-            mockUserBackendService.createUser(appId, mapOf(IdentityConstants.EXTERNAL_ID to "externalId"), capture(subs), any())
+            mockUserBackendService.createUser(appId, mapOf(IdentityConstants.EXTERNAL_ID to "externalId"), capture(subs), any(), any(), any())
         }
         subs.captured.single { it.type == SubscriptionObjectType.EMAIL }.let {
             it.enabled shouldBe false
@@ -1529,7 +1551,7 @@ class LoginUserOperationExecutorTests : FunSpec({
 
     test("composite login leaves a grouped subscription for a different address alone") {
         val mockUserBackendService = mockk<IUserBackendService>()
-        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } returns
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any(), any(), any()) } returns
             CreateUserResponse(
                 mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId),
                 PropertiesObject(),
@@ -1581,7 +1603,7 @@ class LoginUserOperationExecutorTests : FunSpec({
 
     test("composite login sends no status for an email or SMS when the flag is unset") {
         val mockUserBackendService = mockk<IUserBackendService>()
-        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } returns
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any(), any(), any()) } returns
             CreateUserResponse(mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId), PropertiesObject(), listOf())
 
         profileExecutor(mockUserBackendService).execute(
@@ -1598,7 +1620,7 @@ class LoginUserOperationExecutorTests : FunSpec({
 
         val subs = slot<List<SubscriptionObject>>()
         coVerify(exactly = 1) {
-            mockUserBackendService.createUser(appId, mapOf(IdentityConstants.EXTERNAL_ID to "externalId"), capture(subs), any())
+            mockUserBackendService.createUser(appId, mapOf(IdentityConstants.EXTERNAL_ID to "externalId"), capture(subs), any(), any(), any())
         }
         assertProfileSubscription(subs.captured.single { it.type == SubscriptionObjectType.EMAIL }, "a@b.com")
         assertProfileSubscription(subs.captured.single { it.type == SubscriptionObjectType.SMS }, "+15555550100")
@@ -1606,7 +1628,7 @@ class LoginUserOperationExecutorTests : FunSpec({
 
     test("composite login with phone only sends an SMS subscription") {
         val mockUserBackendService = mockk<IUserBackendService>()
-        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } returns
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any(), any(), any()) } returns
             CreateUserResponse(
                 mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId),
                 PropertiesObject(),
@@ -1621,7 +1643,7 @@ class LoginUserOperationExecutorTests : FunSpec({
         response.result shouldBe ExecutionResult.SUCCESS
         val subs = slot<List<SubscriptionObject>>()
         coVerify(exactly = 1) {
-            mockUserBackendService.createUser(appId, mapOf(IdentityConstants.EXTERNAL_ID to "externalId"), capture(subs), any())
+            mockUserBackendService.createUser(appId, mapOf(IdentityConstants.EXTERNAL_ID to "externalId"), capture(subs), any(), any(), any())
         }
         assertProfileSubscription(subs.captured.single { it.type == SubscriptionObjectType.SMS }, "+15555550100")
         subs.captured.none { it.type == SubscriptionObjectType.EMAIL } shouldBe true
@@ -1629,7 +1651,7 @@ class LoginUserOperationExecutorTests : FunSpec({
 
     test("composite login with tags only forwards them on createUser") {
         val mockUserBackendService = mockk<IUserBackendService>()
-        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } returns
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any(), any(), any()) } returns
             CreateUserResponse(mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId), PropertiesObject(), listOf())
 
         val response =
@@ -1646,13 +1668,15 @@ class LoginUserOperationExecutorTests : FunSpec({
                 withArg { props ->
                     props.tags shouldBe mapOf("plan" to "pro")
                 },
+                any(),
+                any(),
             )
         }
     }
 
     test("composite login with aliases includes them on identity and skips reserved labels") {
         val mockUserBackendService = mockk<IUserBackendService>()
-        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } returns
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any(), any(), any()) } returns
             CreateUserResponse(mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId), PropertiesObject(), listOf())
 
         val response =
@@ -1685,13 +1709,15 @@ class LoginUserOperationExecutorTests : FunSpec({
                 ),
                 any(),
                 any(),
+                any(),
+                any(),
             )
         }
     }
 
     test("composite login alias conflict fails without retry") {
         val mockUserBackendService = mockk<IUserBackendService>()
-        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } throws BackendException(409, "CONFLICT")
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any(), any(), any()) } throws BackendException(409, "CONFLICT")
 
         val response =
             profileExecutor(mockUserBackendService).execute(
@@ -1705,7 +1731,7 @@ class LoginUserOperationExecutorTests : FunSpec({
 
     test("composite login malformed email fails without retry") {
         val mockUserBackendService = mockk<IUserBackendService>()
-        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } throws BackendException(400, "INVALID EMAIL")
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any(), any(), any()) } throws BackendException(400, "INVALID EMAIL")
 
         val response =
             profileExecutor(mockUserBackendService).execute(
@@ -1719,7 +1745,7 @@ class LoginUserOperationExecutorTests : FunSpec({
 
     test("composite login 404 fails without retry") {
         val mockUserBackendService = mockk<IUserBackendService>()
-        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } throws BackendException(404, "NOT FOUND")
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any(), any(), any()) } throws BackendException(404, "NOT FOUND")
 
         val response =
             profileExecutor(mockUserBackendService).execute(
@@ -1732,7 +1758,7 @@ class LoginUserOperationExecutorTests : FunSpec({
 
     test("IV composite login missing the claimed email is unauthorized") {
         val mockUserBackendService = mockk<IUserBackendService>()
-        coEvery { mockUserBackendService.createUser(any(), any(), any(), any(), any()) } throws BackendException(401, "UNAUTHORIZED")
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any(), any(), any()) } throws BackendException(401, "UNAUTHORIZED")
 
         val response =
             profileExecutor(mockUserBackendService, ivActive = true).execute(
@@ -1746,7 +1772,7 @@ class LoginUserOperationExecutorTests : FunSpec({
 
     test("composite login does not take another email when the profile address is absent") {
         val mockUserBackendService = mockk<IUserBackendService>()
-        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } returns
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any(), any(), any()) } returns
             CreateUserResponse(
                 mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId),
                 PropertiesObject(),
@@ -1764,7 +1790,7 @@ class LoginUserOperationExecutorTests : FunSpec({
 
     test("composite login matches an email subscription case-insensitively") {
         val mockUserBackendService = mockk<IUserBackendService>()
-        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } returns
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any(), any(), any()) } returns
             CreateUserResponse(
                 mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId),
                 PropertiesObject(),
@@ -1785,7 +1811,7 @@ class LoginUserOperationExecutorTests : FunSpec({
 
     test("composite login skips hydration when current identity is a different user") {
         val mockUserBackendService = mockk<IUserBackendService>()
-        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } returns
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any(), any(), any()) } returns
             CreateUserResponse(
                 mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId),
                 PropertiesObject(),
@@ -1819,7 +1845,7 @@ class LoginUserOperationExecutorTests : FunSpec({
 
     test("composite login hydrates aliases tags and email subscription on success") {
         val mockUserBackendService = mockk<IUserBackendService>()
-        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } returns
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any(), any(), any()) } returns
             CreateUserResponse(
                 mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId),
                 PropertiesObject(),
@@ -1858,7 +1884,7 @@ class LoginUserOperationExecutorTests : FunSpec({
 
     test("composite login hydrates the backend tag set, not just the tags it sent") {
         val mockUserBackendService = mockk<IUserBackendService>()
-        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } returns
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any(), any(), any()) } returns
             CreateUserResponse(
                 mapOf(
                     IdentityConstants.ONESIGNAL_ID to remoteOneSignalId,
@@ -1898,7 +1924,7 @@ class LoginUserOperationExecutorTests : FunSpec({
 
     test("composite login lets the backend value win over a stale local tag") {
         val mockUserBackendService = mockk<IUserBackendService>()
-        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } returns
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any(), any(), any()) } returns
             CreateUserResponse(
                 mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId),
                 PropertiesObject(tags = mapOf("tag1" to "value1")),
@@ -1921,7 +1947,7 @@ class LoginUserOperationExecutorTests : FunSpec({
 
     test("composite login with existingOnesignalId still createUsers so the profile is sent") {
         val mockUserBackendService = mockk<IUserBackendService>()
-        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } returns
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any(), any(), any()) } returns
             CreateUserResponse(
                 mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId),
                 PropertiesObject(),
@@ -1935,13 +1961,13 @@ class LoginUserOperationExecutorTests : FunSpec({
             )
 
         response.result shouldBe ExecutionResult.SUCCESS
-        coVerify(exactly = 1) { mockUserBackendService.createUser(any(), any(), any(), any()) }
+        coVerify(exactly = 1) { mockUserBackendService.createUser(any(), any(), any(), any(), any(), any()) }
         coVerify(exactly = 0) { identityExecutor.execute(any()) }
     }
 
     test("composite login from an anonymous user sends its onesignal_id so the user is merged") {
         val mockUserBackendService = mockk<IUserBackendService>()
-        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } returns
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any(), any(), any()) } returns
             CreateUserResponse(mapOf(IdentityConstants.ONESIGNAL_ID to "existing-osid"), PropertiesObject(), listOf())
 
         val response =
@@ -1957,6 +1983,8 @@ class LoginUserOperationExecutorTests : FunSpec({
                 mapOf(IdentityConstants.EXTERNAL_ID to "externalId", IdentityConstants.ONESIGNAL_ID to "existing-osid"),
                 any(),
                 any(),
+                any(),
+                any(),
             )
         }
     }
@@ -1965,12 +1993,12 @@ class LoginUserOperationExecutorTests : FunSpec({
         val mockUserBackendService = mockk<IUserBackendService>()
         val mergeIdentities = mapOf(IdentityConstants.EXTERNAL_ID to "externalId", IdentityConstants.ONESIGNAL_ID to "existing-osid")
         val plainIdentities = mapOf(IdentityConstants.EXTERNAL_ID to "externalId")
-        coEvery { mockUserBackendService.createUser(appId, mergeIdentities, any(), any()) } throws
+        coEvery { mockUserBackendService.createUser(appId, mergeIdentities, any(), any(), any(), any()) } throws
             BackendException(
                 409,
                 """{"errors":[{"code":"user-1","meta":{"conflicting_aliases":{"external_id":"externalId","onesignal_id":"existing-osid"}}}]}""",
             )
-        coEvery { mockUserBackendService.createUser(appId, plainIdentities, any(), any()) } returns
+        coEvery { mockUserBackendService.createUser(appId, plainIdentities, any(), any(), any(), any()) } returns
             CreateUserResponse(mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId), PropertiesObject(), listOf())
 
         val response =
@@ -1980,17 +2008,17 @@ class LoginUserOperationExecutorTests : FunSpec({
 
         response.result shouldBe ExecutionResult.SUCCESS
         response.idTranslations shouldBe mapOf(localOneSignalId to remoteOneSignalId)
-        coVerify(exactly = 1) { mockUserBackendService.createUser(appId, mergeIdentities, any(), any()) }
-        coVerify(exactly = 1) { mockUserBackendService.createUser(appId, plainIdentities, any(), any()) }
+        coVerify(exactly = 1) { mockUserBackendService.createUser(appId, mergeIdentities, any(), any(), any(), any()) }
+        coVerify(exactly = 1) { mockUserBackendService.createUser(appId, plainIdentities, any(), any(), any(), any()) }
     }
 
     test("composite login retries without onesignal_id when the merge attempt is not a conflict") {
         val mockUserBackendService = mockk<IUserBackendService>()
         val mergeIdentities = mapOf(IdentityConstants.EXTERNAL_ID to "externalId", IdentityConstants.ONESIGNAL_ID to "existing-osid")
         val plainIdentities = mapOf(IdentityConstants.EXTERNAL_ID to "externalId")
-        coEvery { mockUserBackendService.createUser(appId, mergeIdentities, any(), any()) } throws
+        coEvery { mockUserBackendService.createUser(appId, mergeIdentities, any(), any(), any(), any()) } throws
             BackendException(404, """{"errors":[{"code":"user-0","title":"User not found"}]}""")
-        coEvery { mockUserBackendService.createUser(appId, plainIdentities, any(), any()) } returns
+        coEvery { mockUserBackendService.createUser(appId, plainIdentities, any(), any(), any(), any()) } returns
             CreateUserResponse(mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId), PropertiesObject(), listOf())
 
         val response =
@@ -2000,13 +2028,13 @@ class LoginUserOperationExecutorTests : FunSpec({
 
         response.result shouldBe ExecutionResult.SUCCESS
         response.idTranslations shouldBe mapOf(localOneSignalId to remoteOneSignalId)
-        coVerify(exactly = 1) { mockUserBackendService.createUser(appId, mergeIdentities, any(), any()) }
-        coVerify(exactly = 1) { mockUserBackendService.createUser(appId, plainIdentities, any(), any()) }
+        coVerify(exactly = 1) { mockUserBackendService.createUser(appId, mergeIdentities, any(), any(), any(), any()) }
+        coVerify(exactly = 1) { mockUserBackendService.createUser(appId, plainIdentities, any(), any(), any(), any()) }
     }
 
     test("composite login does not retry a merge when the 409 is an alias conflict") {
         val mockUserBackendService = mockk<IUserBackendService>()
-        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } throws
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any(), any(), any()) } throws
             BackendException(
                 409,
                 """{"errors":[{"code":"user-1","meta":{"conflicting_aliases":{"facebook":"bob","external_id":"externalId"}}}]}""",
@@ -2019,12 +2047,12 @@ class LoginUserOperationExecutorTests : FunSpec({
 
         response.result shouldBe ExecutionResult.FAIL_NORETRY
         response.httpStatusCode shouldBe 409
-        coVerify(exactly = 1) { mockUserBackendService.createUser(any(), any(), any(), any()) }
+        coVerify(exactly = 1) { mockUserBackendService.createUser(any(), any(), any(), any(), any(), any()) }
     }
 
     test("composite login does not retry a merge when the payload is invalid") {
         val mockUserBackendService = mockk<IUserBackendService>()
-        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } throws BackendException(400, "INVALID EMAIL")
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any(), any(), any()) } throws BackendException(400, "INVALID EMAIL")
 
         val response =
             profileExecutor(mockUserBackendService).execute(
@@ -2041,12 +2069,12 @@ class LoginUserOperationExecutorTests : FunSpec({
 
         response.result shouldBe ExecutionResult.FAIL_NORETRY
         response.httpStatusCode shouldBe 400
-        coVerify(exactly = 1) { mockUserBackendService.createUser(any(), any(), any(), any()) }
+        coVerify(exactly = 1) { mockUserBackendService.createUser(any(), any(), any(), any(), any(), any()) }
     }
 
     test("composite login does not retry a merge when the 409 is user-2") {
         val mockUserBackendService = mockk<IUserBackendService>()
-        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } throws
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any(), any(), any()) } throws
             BackendException(409, """{"errors":[{"code":"user-2","title":"One or more Aliases claimed by another User"}]}""")
 
         val response =
@@ -2056,15 +2084,15 @@ class LoginUserOperationExecutorTests : FunSpec({
 
         response.result shouldBe ExecutionResult.FAIL_NORETRY
         response.httpStatusCode shouldBe 409
-        coVerify(exactly = 1) { mockUserBackendService.createUser(any(), any(), any(), any()) }
+        coVerify(exactly = 1) { mockUserBackendService.createUser(any(), any(), any(), any(), any(), any()) }
     }
 
     test("composite login retries without onesignal_id when the 409 body cannot be read") {
         val mockUserBackendService = mockk<IUserBackendService>()
         val mergeIdentities = mapOf(IdentityConstants.EXTERNAL_ID to "externalId", IdentityConstants.ONESIGNAL_ID to "existing-osid")
         val plainIdentities = mapOf(IdentityConstants.EXTERNAL_ID to "externalId")
-        coEvery { mockUserBackendService.createUser(appId, mergeIdentities, any(), any()) } throws BackendException(409, "CONFLICT")
-        coEvery { mockUserBackendService.createUser(appId, plainIdentities, any(), any()) } returns
+        coEvery { mockUserBackendService.createUser(appId, mergeIdentities, any(), any(), any(), any()) } throws BackendException(409, "CONFLICT")
+        coEvery { mockUserBackendService.createUser(appId, plainIdentities, any(), any(), any(), any()) } returns
             CreateUserResponse(mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId), PropertiesObject(), listOf())
 
         val response =
@@ -2073,14 +2101,14 @@ class LoginUserOperationExecutorTests : FunSpec({
             )
 
         response.result shouldBe ExecutionResult.SUCCESS
-        coVerify(exactly = 1) { mockUserBackendService.createUser(appId, mergeIdentities, any(), any()) }
-        coVerify(exactly = 1) { mockUserBackendService.createUser(appId, plainIdentities, any(), any()) }
+        coVerify(exactly = 1) { mockUserBackendService.createUser(appId, mergeIdentities, any(), any(), any(), any()) }
+        coVerify(exactly = 1) { mockUserBackendService.createUser(appId, plainIdentities, any(), any(), any(), any()) }
     }
 
     test("composite login does not merge when the anonymous user is still local, or under IV") {
         for ((existingId, ivActive) in listOf(IDManager.createLocalId() to false, "existing-osid" to true)) {
             val mockUserBackendService = mockk<IUserBackendService>()
-            coEvery { mockUserBackendService.createUser(any(), any(), any(), any(), any()) } returns
+            coEvery { mockUserBackendService.createUser(any(), any(), any(), any(), any(), any()) } returns
                 CreateUserResponse(mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId), PropertiesObject(), listOf())
 
             profileExecutor(mockUserBackendService, ivActive = ivActive).execute(
@@ -2088,7 +2116,7 @@ class LoginUserOperationExecutorTests : FunSpec({
             )
 
             coVerify(exactly = 1) {
-                mockUserBackendService.createUser(appId, mapOf(IdentityConstants.EXTERNAL_ID to "externalId"), any(), any(), any())
+                mockUserBackendService.createUser(appId, mapOf(IdentityConstants.EXTERNAL_ID to "externalId"), any(), any(), any(), any())
             }
         }
     }
@@ -2104,7 +2132,7 @@ class LoginUserOperationExecutorTests : FunSpec({
             )
 
         response.result shouldBe ExecutionResult.SUCCESS_STARTING_ONLY
-        coVerify(exactly = 0) { mockUserBackendService.createUser(any(), any(), any(), any()) }
+        coVerify(exactly = 0) { mockUserBackendService.createUser(any(), any(), any(), any(), any(), any()) }
         coVerify(exactly = 1) { identityExecutor.execute(any()) }
     }
 
@@ -2166,7 +2194,7 @@ class LoginUserOperationExecutorTests : FunSpec({
 
     test("composite login hydrating a status does not enqueue a subscription operation") {
         val mockUserBackendService = mockk<IUserBackendService>()
-        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } returns
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any(), any(), any()) } returns
             CreateUserResponse(
                 mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId),
                 PropertiesObject(),
@@ -2211,7 +2239,7 @@ class LoginUserOperationExecutorTests : FunSpec({
 
     test("composite login resubscribes an email that is unsubscribed in the local store") {
         val mockUserBackendService = mockk<IUserBackendService>()
-        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } returns
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any(), any(), any()) } returns
             CreateUserResponse(
                 mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId),
                 PropertiesObject(),
@@ -2249,7 +2277,7 @@ class LoginUserOperationExecutorTests : FunSpec({
 
     test("composite login leaves a local email status alone when the flag is unset") {
         val mockUserBackendService = mockk<IUserBackendService>()
-        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } returns
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any(), any(), any()) } returns
             CreateUserResponse(
                 mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId),
                 PropertiesObject(),
@@ -2279,7 +2307,7 @@ class LoginUserOperationExecutorTests : FunSpec({
 
     test("composite login ignores an SMS status when no SMS was given") {
         val mockUserBackendService = mockk<IUserBackendService>()
-        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } returns
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any(), any(), any()) } returns
             CreateUserResponse(mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId), PropertiesObject(), listOf())
 
         profileExecutor(mockUserBackendService).execute(
@@ -2296,7 +2324,7 @@ class LoginUserOperationExecutorTests : FunSpec({
 
         val subs = slot<List<SubscriptionObject>>()
         coVerify(exactly = 1) {
-            mockUserBackendService.createUser(appId, mapOf(IdentityConstants.EXTERNAL_ID to "externalId"), capture(subs), any())
+            mockUserBackendService.createUser(appId, mapOf(IdentityConstants.EXTERNAL_ID to "externalId"), capture(subs), any(), any(), any())
         }
         subs.captured.none { it.type == SubscriptionObjectType.SMS } shouldBe true
         assertProfileSubscription(subs.captured.single { it.type == SubscriptionObjectType.EMAIL }, "a@b.com")
@@ -2304,7 +2332,7 @@ class LoginUserOperationExecutorTests : FunSpec({
 
     test("composite login applies an unsubscribe to an email already in the local store") {
         val mockUserBackendService = mockk<IUserBackendService>()
-        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } returns
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any(), any(), any()) } returns
             CreateUserResponse(
                 mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId),
                 PropertiesObject(),
@@ -2368,6 +2396,19 @@ class LoginUserOperationExecutorTests : FunSpec({
         restored.tags shouldBe mapOf("plan" to "pro")
         restored.aliases shouldBe mapOf("facebook" to "bob")
         restored.existingOnesignalId shouldBe "existing-osid"
+        restored.profileLogin shouldBe true
+    }
+
+    test("mergeProfileFrom keeps the composite marker from either login") {
+        val identity = LoginUserOperation(appId, localOneSignalId, "externalId", null)
+        val composite = LoginUserOperation(appId, localOneSignalId, "externalId", null, OneSignalUserProfile())
+
+        identity.profileLogin shouldBe false
+        composite.profileLogin shouldBe true
+
+        identity.mergeProfileFrom(composite)
+
+        identity.profileLogin shouldBe true
     }
 
     test("create user logs a missing local model at ERROR only for the current push subscription") {

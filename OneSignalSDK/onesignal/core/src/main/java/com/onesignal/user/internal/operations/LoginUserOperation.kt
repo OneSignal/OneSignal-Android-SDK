@@ -85,6 +85,13 @@ class LoginUserOperation() : Operation(LoginUserOperationExecutor.LOGIN_USER) {
             setOptStringProperty(PROFILE_ALIASES, encodeMap(value))
         }
 
+    /** True when this op was built from the composite login overload. Survives a retry. */
+    internal var profileLogin: Boolean
+        get() = getOptBooleanProperty(PROFILE_LOGIN) == true
+        set(value) {
+            setOptBooleanProperty(PROFILE_LOGIN, value)
+        }
+
     override val createComparisonKey: String get() = "$appId.User.$onesignalId"
     override val modifyComparisonKey: String = ""
     override val groupComparisonType: GroupComparisonType = GroupComparisonType.CREATE
@@ -103,6 +110,7 @@ class LoginUserOperation() : Operation(LoginUserOperationExecutor.LOGIN_USER) {
         this.externalId = externalId
         this.existingOnesignalId = existingOneSignalId
         if (profile != null) {
+            profileLogin = true
             this.email = profile.email?.takeIf { it.isNotBlank() }
             this.sms = profile.sms?.takeIf { it.isNotBlank() }
             this.emailEnabled = profile.emailEnabled
@@ -136,6 +144,7 @@ class LoginUserOperation() : Operation(LoginUserOperationExecutor.LOGIN_USER) {
         }
         if (other.tags.isNotEmpty()) tags = tags + other.tags
         if (other.aliases.isNotEmpty()) aliases = aliases + other.aliases
+        if (other.profileLogin) profileLogin = true
     }
 
     override fun toString(): String {
@@ -170,6 +179,9 @@ private const val PROFILE_SMS = "profileSms"
 private const val PROFILE_SMS_ENABLED = "profileSmsEnabled"
 private const val PROFILE_TAGS = "profileTags"
 private const val PROFILE_ALIASES = "profileAliases"
+private const val PROFILE_LOGIN = "profileLogin"
+
+internal const val LOGIN_WITH_PROFILE_METHOD = "login_with_profile"
 
 private fun encodeMap(map: Map<String, String>): String? {
     if (map.isEmpty()) return null

@@ -22,4 +22,9 @@ data class OptionalHeaders(
      * `Authorization: Bearer <jwt>` on the request.
      */
     val jwt: String? = null,
+    /**
+     * Public method that produced this request. Sent as `OneSignal-API-Method`.
+     * Null sends no header.
+     */
+    val apiMethod: String? = null,
 )

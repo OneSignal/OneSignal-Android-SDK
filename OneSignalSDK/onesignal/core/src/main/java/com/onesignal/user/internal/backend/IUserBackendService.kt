@@ -25,6 +25,7 @@ interface IUserBackendService {
         subscriptions: List<SubscriptionObject>,
         properties: PropertiesObject,
         jwt: String? = null,
+        apiMethod: String? = null,
     ): CreateUserResponse
     // TODO: Change to send only the push subscription, optimally
 

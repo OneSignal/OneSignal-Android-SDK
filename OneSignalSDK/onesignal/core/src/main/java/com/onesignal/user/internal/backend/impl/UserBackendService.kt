@@ -23,6 +23,7 @@ internal class UserBackendService(
         subscriptions: List<SubscriptionObject>,
         properties: PropertiesObject,
         jwt: String?,
+        apiMethod: String?,
     ): CreateUserResponse {
         val requestJSON = JSONObject()
 
@@ -41,7 +42,7 @@ internal class UserBackendService(
 
         requestJSON.put("refresh_device_metadata", true)
 
-        val response = _httpClient.post("apps/$appId/users", requestJSON, OptionalHeaders(jwt = jwt))
+        val response = _httpClient.post("apps/$appId/users", requestJSON, OptionalHeaders(jwt = jwt, apiMethod = apiMethod))
 
         if (!response.isSuccess) {
             throw BackendException(response.statusCode, response.payload, response.retryAfterSeconds)
