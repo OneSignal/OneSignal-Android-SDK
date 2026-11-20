@@ -2148,6 +2148,27 @@ class SessionServiceTests : FunSpec({
         heartbeat.activeDuration shouldBe HEARTBEAT_MS
     }
 
+    test("split while focused sends no heartbeat when the next session falls back to legacy") {
+        // Given
+        val mocks = Mocks(sessionsApiEnabled = true)
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        val sessionModelStore = mocks.sessionModelStore { it.isValid = false }
+        sessionService.onFocus(false)
+        mocks.advanceTime(5 * MINUTE_MS)
+        mocks.sessionsApiEnabled = false
+
+        // When
+        mocks.switchUser("onesignal-id-b", "external-id-b")
+        sessionService.splitSession()
+        mocks.advanceTime(2 * HEARTBEAT_MS)
+
+        // Then
+        sessionModelStore.model.usesSessionsApi shouldBe false
+        mocks.heartbeats shouldBe emptyList()
+    }
+
     test("split in the background ends the session now and starts the next one on the next focus") {
         // Given
         val mocks = Mocks(sessionsApiEnabled = true)
