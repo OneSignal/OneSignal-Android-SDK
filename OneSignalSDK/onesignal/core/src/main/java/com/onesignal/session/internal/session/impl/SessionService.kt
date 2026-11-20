@@ -336,11 +336,13 @@ internal class SessionService(
         if (!session.isValid || (startedWithoutConsent && config?.isAwaitingConsent != true)) {
             // As the old session was made inactive, we need to create a new session
             shouldFireOnSubscribe = firedOnSubscribe
+            session.sessionId = UUID.randomUUID().toString()
+            session.startTime = focusTimeMs
             startNextSession(session, focusTimeMs, focusElapsedMs, directAttributionId)
             session.isValid = true
             sessionLifeCycleNotifier.fire { it.onSessionStarted() }
         } else if (session.isSplitPending) {
-            startNextSession(session, focusTimeMs, focusElapsedMs, null)
+            startNextSession(session, focusTimeMs, focusElapsedMs, directAttributionId)
             sessionLifeCycleNotifier.fire { it.onSessionActive() }
         } else {
             // existing session: just remember the focus time so we can calculate the active time
@@ -360,8 +362,7 @@ internal class SessionService(
         startElapsedMs: Long,
         directAttributionId: String?,
     ) {
-        session.sessionId = UUID.randomUUID().toString()
-        session.startTime = startTimeMs
+        session.sessionsApiStartTime = startTimeMs
         session.focusTime = startTimeMs
         session.focusElapsedRealtime = startElapsedMs
         session.unfocusTime = null
@@ -375,7 +376,7 @@ internal class SessionService(
         session.localSessionId = IDManager.createLocalId()
         val create = startSessionsApi(session, directAttributionId)
         startedWithoutConsent = config?.isAwaitingConsent == true
-        Logging.debug("SessionService: New session started at ${session.startTime}")
+        Logging.debug("SessionService: New session started at $startTimeMs")
         create?.let { operationRepo.enqueue(it) }
     }
 
@@ -618,7 +619,7 @@ private fun createSessionOperation(
             localSessionId = session.localSessionId,
             onesignalId = onesignalId,
             subscriptionId = subscriptionId,
-            startTime = session.startTime,
+            startTime = session.sessionsApiStartTime,
             externalId = externalId,
             directAttributionId = directAttributionId,
         )

@@ -1957,6 +1957,7 @@ class SessionServiceTests : FunSpec({
         sessionService.onFocus(false)
         val firstLocalSessionId = sessionModelStore.model.localSessionId
         val firstSessionId = sessionModelStore.model.sessionId
+        val appStartTime = sessionModelStore.model.startTime
         mocks.advanceTime(10 * MINUTE_MS)
         mocks.currentTime += 10 * MINUTE_MS
         mocks.enqueued.clear()
@@ -1979,7 +1980,8 @@ class SessionServiceTests : FunSpec({
         create.externalId shouldBe "external-id-b"
         create.startTime shouldBe mocks.currentTime
         create.directAttributionId shouldBe null
-        sessionModelStore.model.sessionId shouldNotBe firstSessionId
+        sessionModelStore.model.sessionId shouldBe firstSessionId
+        sessionModelStore.model.startTime shouldBe appStartTime
         sessionModelStore.model.activeDuration shouldBe 0L
         verify(exactly = 1) { mocks.spyCallback.onSessionStarted() }
         verify(exactly = 0) { mocks.spyCallback.onSessionEnded(any(), any()) }
@@ -2052,6 +2054,7 @@ class SessionServiceTests : FunSpec({
         sessionService.subscribe(mocks.spyCallback)
         sessionService.onFocus(false)
         val firstLocalSessionId = sessionModelStore.model.localSessionId
+        val appStartTime = sessionModelStore.model.startTime
         mocks.advanceTime(10 * MINUTE_MS)
         mocks.currentTime += 10 * MINUTE_MS
         val unfocusTime = mocks.currentTime
@@ -2081,9 +2084,35 @@ class SessionServiceTests : FunSpec({
         create.startTime shouldBe mocks.currentTime
         create.localSessionId shouldNotBe firstLocalSessionId
         sessionModelStore.model.isSplitPending shouldBe false
+        sessionModelStore.model.startTime shouldBe appStartTime
         verify(exactly = 1) { mocks.spyCallback.onSessionStarted() }
         verify(exactly = 1) { mocks.spyCallback.onSessionActive() }
         verify(exactly = 0) { mocks.spyCallback.onSessionEnded(any(), any()) }
+    }
+
+    test("notification open after a split in the background attributes the next session") {
+        // Given
+        val mocks = Mocks(sessionsApiEnabled = true)
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        mocks.sessionModelStore { it.isValid = false }
+        sessionService.onFocus(false)
+        mocks.advanceTime(10 * MINUTE_MS)
+        sessionService.onUnfocused()
+        mocks.switchUser("onesignal-id-b", "external-id-b")
+        sessionService.splitSession()
+        mocks.enqueued.clear()
+
+        // When
+        sessionService.attributeNextSessionTo("notification-id")
+        mocks.entryState = AppEntryAction.NOTIFICATION_CLICK
+        sessionService.onFocus(false)
+
+        // Then
+        val create = mocks.enqueued.single().shouldBeInstanceOf<CreateSessionOperation>()
+        create.onesignalId shouldBe "onesignal-id-b"
+        create.directAttributionId shouldBe "notification-id"
     }
 
     test("session timing out after a split in the background sends no second end") {
