@@ -1,11 +1,11 @@
 package com.onesignal.notifications.activities
 
-import android.content.Context
 import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
 import com.onesignal.NotificationOpenedActivityHMS
 import com.onesignal.OneSignal
 import com.onesignal.common.services.IServiceProvider
 import com.onesignal.common.threading.suspendifyOnDefault
+import com.onesignal.mocks.ChoiceTestHook
 import com.onesignal.mocks.IOMockHelper
 import com.onesignal.notifications.internal.open.INotificationOpenedProcessorHMS
 import io.kotest.core.spec.style.FunSpec
@@ -42,12 +42,16 @@ class NotificationOpenedActivityHMSTest : FunSpec({
         every { serviceProvider.getService(INotificationOpenedProcessorHMS::class.java) } returns processor
 
         mockkObject(OneSignal)
+        ChoiceTestHook.install()
         every { OneSignal.services } returns serviceProvider
-        coEvery { OneSignal.initWithContext(any<Context>()) } returns true
+        coEvery { OneSignal.initWithContext(any()) } returns true
+        ChoiceTestHook.initResult = { true }
     }
 
     afterAny {
+        ChoiceTestHook.clear()
         unmockkObject(OneSignal)
+        ChoiceTestHook.install()
     }
 
     test("does not finish the HMS trampoline until after HMS open processing runs") {
@@ -68,7 +72,8 @@ class NotificationOpenedActivityHMSTest : FunSpec({
     }
 
     test("always finishes the HMS trampoline even when initialization fails") {
-        coEvery { OneSignal.initWithContext(any<Context>()) } returns false
+        coEvery { OneSignal.initWithContext(any()) } returns false
+        ChoiceTestHook.initResult = { false }
 
         var capturedBlock: (suspend () -> Unit)? = null
         every { suspendifyOnDefault(any()) } answers { capturedBlock = firstArg() }

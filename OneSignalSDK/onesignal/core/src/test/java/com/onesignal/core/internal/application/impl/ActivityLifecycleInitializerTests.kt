@@ -3,6 +3,7 @@ package com.onesignal.core.internal.application.impl
 import android.app.Application
 import android.content.Context
 import com.onesignal.common.threading.OneSignalDispatchers
+import com.onesignal.internal.NeverCrashKillSwitch
 import io.kotest.core.spec.style.FunSpec
 import io.mockk.every
 import io.mockk.mockk
@@ -24,13 +25,14 @@ import io.mockk.verifyOrder
  */
 class ActivityLifecycleInitializerTests : FunSpec({
     beforeTest {
-        mockkObject(OneSignalDispatchers)
+        mockkObject(OneSignalDispatchers, NeverCrashKillSwitch)
         every { OneSignalDispatchers.prewarm(any()) } returns Unit
+        every { NeverCrashKillSwitch.evaluate(any()) } returns Unit
         resetSharedApplicationService()
     }
 
     afterTest {
-        unmockkObject(OneSignalDispatchers)
+        unmockkObject(OneSignalDispatchers, NeverCrashKillSwitch)
         resetSharedApplicationService()
     }
 

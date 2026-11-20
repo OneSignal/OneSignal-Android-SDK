@@ -2,7 +2,9 @@ package com.onesignal.core.internal.permissions
 
 import android.app.Activity
 import android.content.pm.PackageManager
+import com.onesignal.IOneSignal
 import com.onesignal.OneSignal
+import com.onesignal.common.services.IServiceProvider
 import com.onesignal.core.internal.permissions.impl.PermissionsResultHandler
 import com.onesignal.core.internal.permissions.impl.RequestPermissionService
 import com.onesignal.core.internal.preferences.IPreferencesService
@@ -10,6 +12,7 @@ import com.onesignal.core.internal.preferences.PreferenceOneSignalKeys
 import com.onesignal.core.internal.preferences.PreferenceStores
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
+import com.onesignal.mocks.ChoiceTestHook
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
@@ -39,17 +42,24 @@ class PermissionsViewModelTests : FunSpec({
 
     val testDispatcher = StandardTestDispatcher()
 
+    // OneSignal.getService is inline and initWithContext is not always intercepted on the object mock,
+    // so both can reach the real implementation. Publishing this one keeps them off a real init.
+    val fakeOneSignal = mockk<IOneSignal>(relaxed = true, moreInterfaces = arrayOf(IServiceProvider::class))
+
     beforeTest {
         Dispatchers.setMain(testDispatcher)
         mockkObject(OneSignal)
-        every { OneSignal.getService<RequestPermissionService>() } returns mockRequestService
-        every { OneSignal.getService<IPreferencesService>() } returns mockPrefService
+        coEvery { fakeOneSignal.initWithContext(any()) } returns true
+        every { (fakeOneSignal as IServiceProvider).getService(RequestPermissionService::class.java) } returns mockRequestService
+        every { (fakeOneSignal as IServiceProvider).getService(IPreferencesService::class.java) } returns mockPrefService
+        ChoiceTestHook.publish(fakeOneSignal)
         every { mockRequestService.resultHandler } returns PermissionsResultHandler(mockRequestService, mockPrefService)
         Logging.logLevel = LogLevel.NONE
     }
 
     afterTest {
         Dispatchers.resetMain()
+        ChoiceTestHook.publish(null)
         unmockkAll()
     }
 
@@ -71,6 +81,7 @@ class PermissionsViewModelTests : FunSpec({
         val viewModel = PermissionsViewModel()
         val activity = mockk<Activity>(relaxed = true)
         coEvery { OneSignal.initWithContext(activity) } returns false
+        coEvery { fakeOneSignal.initWithContext(any()) } returns false
 
         runBlocking {
             val result = viewModel.initialize(activity, permissionType, androidPermission)
