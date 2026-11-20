@@ -205,22 +205,22 @@ object OneSignalService {
     }
     
     /**
-     * Fetch user data from OneSignal API.
-     * Note: This endpoint does not require authentication.
+     * Fetch user data from OneSignal API. Sends [jwt] as the bearer token when it is not null.
      * 
      * @param aliasLabel The alias type to look up by (e.g. "onesignal_id" or "external_id")
      * @param aliasValue The alias value
-     * @return UserData object containing aliases, tags, emails, and SMS numbers, or null on error
+     * @return [UserFetchResult.Success] with aliases, tags, emails, and SMS numbers, or
+     * [UserFetchResult.Failure] with the reason
      */
-    suspend fun fetchUser(aliasLabel: String, aliasValue: String, jwt: String? = null): UserData? = withContext(Dispatchers.IO) {
+    suspend fun fetchUser(aliasLabel: String, aliasValue: String, jwt: String? = null): UserFetchResult = withContext(Dispatchers.IO) {
         if (aliasValue.isEmpty()) {
             DemoLog.w("Cannot fetch user - aliasValue is empty")
-            return@withContext null
+            return@withContext UserFetchResult.Failure("bad request")
         }
         
         if (appId.isEmpty()) {
             DemoLog.w("Cannot fetch user - appId not set")
-            return@withContext null
+            return@withContext UserFetchResult.Failure("app ID not set")
         }
 
         try {
@@ -251,21 +251,21 @@ object OneSignalService {
                 try {
                     val userData = parseUserResponse(response)
                     DemoLog.d("Parsed user data: aliases=${userData.aliases.size}, tags=${userData.tags.size}, emails=${userData.emails.size}, sms=${userData.smsNumbers.size}")
-                    return@withContext userData
+                    return@withContext UserFetchResult.Success(userData)
                 } catch (e: Exception) {
                     DemoLog.e("Error parsing user response", e)
-                    return@withContext null
+                    return@withContext UserFetchResult.Failure("unreadable body")
                 }
             } else {
                 val errorResponse = connection.errorStream?.bufferedReader()?.use { it.readText() } ?: "Unknown error"
                 DemoLog.e("Failed to fetch user (HTTP $responseCode): $errorResponse")
-                return@withContext null
+                return@withContext UserFetchResult.Failure("HTTP $responseCode")
             }
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
             DemoLog.e("Error fetching user", e)
-            return@withContext null
+            return@withContext UserFetchResult.Failure(e.message ?: e.javaClass.simpleName)
         }
     }
     
@@ -326,6 +326,15 @@ object OneSignalService {
             externalId = externalId
         )
     }
+}
+
+/**
+ * Outcome of a demo /users fetch. The User section shows the failure reason so a 401 under
+ * Identity Verification doesn't look like an empty user.
+ */
+sealed class UserFetchResult {
+    data class Success(val userData: UserData) : UserFetchResult()
+    data class Failure(val reason: String) : UserFetchResult()
 }
 
 /**
