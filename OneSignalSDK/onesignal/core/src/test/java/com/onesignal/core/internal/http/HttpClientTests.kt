@@ -4,6 +4,7 @@ import com.onesignal.common.OneSignalUtils
 import com.onesignal.core.internal.device.IFidEnv
 import com.onesignal.core.internal.device.impl.HTTP_FID_ENV_HEADER_KEY
 import com.onesignal.core.internal.device.impl.InstallIdService
+import com.onesignal.core.internal.http.impl.HTTP_API_METHOD_HEADER_KEY
 import com.onesignal.core.internal.http.impl.HttpClient
 import com.onesignal.core.internal.http.impl.OptionalHeaders
 import com.onesignal.core.internal.time.ITime
@@ -337,6 +338,16 @@ class HttpClientTests : FunSpec({
         for (connection in mocks.factory.connections) {
             connection.getRequestProperty("Authorization") shouldBe "Bearer abc.def.ghi"
         }
+    }
+
+    test("API method header is set only when OptionalHeaders.apiMethod is provided") {
+        val mocks = Mocks()
+
+        mocks.httpClient.post("URL", JSONObject(), OptionalHeaders(apiMethod = "login_with_profile"))
+        mocks.httpClient.post("URL", JSONObject())
+
+        mocks.factory.connections[0].getRequestProperty(HTTP_API_METHOD_HEADER_KEY) shouldBe "login_with_profile"
+        mocks.factory.connections[1].getRequestProperty(HTTP_API_METHOD_HEADER_KEY) shouldBe null
     }
 
     test("Authorization header is NOT set when OptionalHeaders.jwt is null") {

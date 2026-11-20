@@ -32,6 +32,7 @@ import kotlin.math.ceil
 import kotlin.math.min
 
 internal const val HTTP_SDK_VERSION_HEADER_KEY = "SDK-Version"
+internal const val HTTP_API_METHOD_HEADER_KEY = "OneSignal-API-Method"
 internal val HTTP_SDK_VERSION_HEADER_VALUE = "onesignal/android/${OneSignalUtils.sdkVersion}"
 
 internal class HttpClient(
@@ -205,6 +206,10 @@ internal class HttpClient(
 
                     if (headers?.jwt != null) {
                         con.setRequestProperty("Authorization", "Bearer ${headers.jwt}")
+                    }
+
+                    if (headers?.apiMethod != null) {
+                        con.setRequestProperty(HTTP_API_METHOD_HEADER_KEY, headers.apiMethod)
                     }
 
                     logHTTPSent(con.requestMethod, con.url, jsonBody, con.requestProperties)

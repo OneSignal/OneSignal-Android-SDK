@@ -6,6 +6,7 @@ import com.onesignal.core.internal.http.IHttpClient
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.user.internal.backend.impl.UserBackendService
+import com.onesignal.user.internal.operations.LOGIN_WITH_PROFILE_METHOD
 import io.kotest.assertions.throwables.shouldThrowUnit
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
@@ -72,6 +73,35 @@ class UserBackendServiceTests : FunSpec({
                     it.has("subscriptions") shouldBe false
                 },
                 any(),
+            )
+        }
+    }
+
+    test("create user forwards the api method header and omits it when unset") {
+        val osId = "11111111-1111-1111-1111-111111111111"
+        val spyHttpClient = mockk<IHttpClient>()
+        coEvery { spyHttpClient.post(any(), any(), any()) } returns
+            HttpResponse(202, "{identity:{onesignal_id: \"$osId\"}, properties:{}}")
+        val userBackendService = UserBackendService(spyHttpClient)
+        val identities = mapOf("external_id" to "user")
+        val properties = PropertiesObject()
+        val subscriptions = listOf<SubscriptionObject>()
+
+        userBackendService.createUser("appId", identities, subscriptions, properties, apiMethod = LOGIN_WITH_PROFILE_METHOD)
+        userBackendService.createUser("appId", identities, subscriptions, properties)
+
+        coVerify(exactly = 1) {
+            spyHttpClient.post(
+                "apps/appId/users",
+                any(),
+                withArg { it.apiMethod shouldBe LOGIN_WITH_PROFILE_METHOD },
+            )
+        }
+        coVerify(exactly = 1) {
+            spyHttpClient.post(
+                "apps/appId/users",
+                any(),
+                withArg { it.apiMethod shouldBe null },
             )
         }
     }
