@@ -243,6 +243,7 @@ internal class LoginUserOperationExecutor(
             val backendSubscriptions = response.subscriptions.toMutableSet()
             var emailSubscriptionId: String? = null
             var smsSubscriptionId: String? = null
+            val missingModelKeys = mutableListOf<String>()
 
             for (pair in subscriptionList) {
                 val backendSubscription = matchingBackendSubscription(backendSubscriptions, pair.first, pair.second)
@@ -252,7 +253,8 @@ internal class LoginUserOperationExecutor(
                         idTranslations[pair.first] = backendSubscription.id!!
                     }
 
-                    if (_configModelStore.model.pushSubscriptionId == pair.first) {
+                    val isCurrentPushSubscription = _configModelStore.model.pushSubscriptionId == pair.first
+                    if (isCurrentPushSubscription) {
                         _configModelStore.model.pushSubscriptionId = backendSubscription.id
                     }
 
@@ -277,8 +279,15 @@ internal class LoginUserOperationExecutor(
                             SubscriptionType.SMS -> smsSubscriptionId = backendSubscription.id
                             else -> {}
                         }
+                    } else if (isCurrentPushSubscription) {
+                        // The config now names a push subscription the store cannot hydrate.
+                        Logging.error(
+                            "LoginUserOperationExecutor.createUser response is missing a local subscription model for ${pair.first} (current push subscription)",
+                        )
                     } else {
-                        Logging.error("LoginUserOperationExecutor.createUser response is missing a local subscription model for ${pair.first}")
+                        // Not the current push subscription, so no device state depends on it. The
+                        // translation above still rewrites any op that references the key.
+                        missingModelKeys.add(pair.first)
                     }
                 } else if (!LoginProfileApplier.isProfileSubscriptionKey(pair.first)) {
                     Logging.error("LoginUserOperationExecutor.createUser response is missing subscription data for ${pair.first}")
@@ -286,6 +295,12 @@ internal class LoginUserOperationExecutor(
 
                 // Remove the processed backend subscription
                 backendSubscriptions.remove(backendSubscription)
+            }
+
+            if (missingModelKeys.isNotEmpty()) {
+                Logging.debug(
+                    "LoginUserOperationExecutor.createUser response matched ${missingModelKeys.size} subscription(s) with no local model: $missingModelKeys",
+                )
             }
 
             // Forward the create-user RYW data to ConsistencyManager so InAppMessagesManager
