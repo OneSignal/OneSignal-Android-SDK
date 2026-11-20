@@ -4,6 +4,7 @@ import com.onesignal.common.IDManager
 import com.onesignal.common.events.EventProducer
 import com.onesignal.common.modeling.ISingletonModelStoreChangeHandler
 import com.onesignal.common.modeling.Model
+import com.onesignal.common.modeling.ModelChangeTags
 import com.onesignal.common.modeling.ModelChangedArgs
 import com.onesignal.common.threading.OneSignalDispatchers
 import com.onesignal.common.threading.runOnSerialIO
@@ -27,6 +28,7 @@ import com.onesignal.session.internal.session.SessionModelStore
 import com.onesignal.session.internal.session.operations.CreateSessionOperation
 import com.onesignal.session.internal.session.operations.UpdateSessionOperation
 import com.onesignal.user.internal.backend.IdentityConstants
+import com.onesignal.user.internal.identity.IdentityModel
 import com.onesignal.user.internal.identity.IdentityModelStore
 import com.onesignal.user.internal.jwt.JwtRequirement
 import kotlinx.coroutines.CancellationException
@@ -59,6 +61,9 @@ import kotlin.reflect.KMutableProperty1
  * An anonymous user's session holds its create until the first unfocus, a heartbeat, or the session
  * end, so a login before then can move the session to that user. Under identity verification it
  * stays held while anonymous, since an anonymous user is never created.
+ *
+ * On a user switch, a held create moves to the new user. Otherwise a switch from a logged-in user
+ * splits the session, and an anonymous user's login keeps it so it isn't counted twice.
  *
  * Time without privacy consent is not counted: losing consent while focused counts as an unfocus,
  * and regaining it while in the foreground counts as a focus. A session that started without
@@ -132,15 +137,42 @@ internal class SessionService(
         configModelStore.subscribe(ConsentChangeHandler())
         configModelStore.subscribe(HeartbeatIntervalChangeHandler())
         identityModelStore.subscribe(PinnedLocalIdTranslator(IdentityConstants.ONESIGNAL_ID, SessionModel::onesignalId))
-        // Login before the anonymous user is created carries the local push subscription over to
-        // the new user, so its backend ID belongs to that user, not the one pinned on this session.
-        configModelStore.subscribe(
-            PinnedLocalIdTranslator(ConfigModel::pushSubscriptionId.name, SessionModel::subscriptionId) { session ->
-                val identityModel = identityModelStore.model
-                val currentOnesignalId = if (identityModel.hasProperty(IdentityConstants.ONESIGNAL_ID)) identityModel.onesignalId else null
-                session.onesignalId == currentOnesignalId
-            },
-        )
+        identityModelStore.subscribe(UserSwitchHandler())
+        configModelStore.subscribe(PinnedLocalIdTranslator(ConfigModel::pushSubscriptionId.name, SessionModel::subscriptionId))
+    }
+
+    private inner class UserSwitchHandler : ISingletonModelStoreChangeHandler<IdentityModel> {
+        override fun onModelReplaced(
+            model: IdentityModel,
+            tag: String,
+        ) {
+            // A user refresh replaces the model for the same user.
+            if (tag == ModelChangeTags.HYDRATE) return
+            val onesignalId = model.takeIf { it.hasProperty(IdentityConstants.ONESIGNAL_ID) }?.onesignalId
+            val externalId = model.externalId
+            val subscriptionId = config?.pushSubscriptionId
+            val nowMs = time.currentTimeMillis
+            val elapsedMs = time.elapsedRealtimeMillis
+            runOnSerialIO {
+                val session = session?.takeIf { it.isValid && it.usesSessionsApi && !it.isSplitPending } ?: return@runOnSerialIO
+                when {
+                    session.isCreateHeld -> {
+                        Logging.debug("SessionService: moving session ${session.sessionId} with its held create to the new user")
+                        session.onesignalId = onesignalId
+                        session.subscriptionId = subscriptionId
+                        session.externalId = externalId
+                        if (externalId != null) releaseHeldCreate(session)
+                    }
+                    session.externalId == null -> session.externalId = externalId
+                    else -> handleSplit(nowMs, elapsedMs)
+                }
+            }
+        }
+
+        override fun onModelUpdated(
+            args: ModelChangedArgs,
+            tag: String,
+        ) = Unit
     }
 
     /**
@@ -151,7 +183,6 @@ internal class SessionService(
     private inner class PinnedLocalIdTranslator<TModel : Model>(
         private val sourceProperty: String,
         private val pinnedId: KMutableProperty1<SessionModel, String?>,
-        private val appliesTo: (SessionModel) -> Boolean = { true },
     ) : ISingletonModelStoreChangeHandler<TModel> {
         override fun onModelReplaced(
             model: TModel,
@@ -169,7 +200,7 @@ internal class SessionService(
 
             runOnSerialIO {
                 val session = this@SessionService.session ?: return@runOnSerialIO
-                if (pinnedId.get(session) == localId && appliesTo(session)) pinnedId.set(session, backendId)
+                if (pinnedId.get(session) == localId) pinnedId.set(session, backendId)
             }
         }
     }
@@ -374,6 +405,7 @@ internal class SessionService(
         session.subscriptionId = config?.pushSubscriptionId
         session.appId = config?.appId
         session.localSessionId = IDManager.createLocalId()
+        session.externalId = identityModelStore.model.externalId
         val create = startSessionsApi(session, directAttributionId)
         startedWithoutConsent = config?.isAwaitingConsent == true
         Logging.debug("SessionService: New session started at $startTimeMs")
@@ -385,17 +417,11 @@ internal class SessionService(
      * user. The app session goes on, so onSessionStarted and onSessionEnded don't fire. In the background, the
      * next one starts on the next focus.
      */
-    internal fun splitSession() {
-        val nowMs = time.currentTimeMillis
-        val elapsedMs = time.elapsedRealtimeMillis
-        runOnSerialIO { handleSplit(nowMs, elapsedMs) }
-    }
-
     private fun handleSplit(
         nowMs: Long,
         elapsedMs: Long,
     ) {
-        val session = this.session?.takeIf { it.isValid && it.usesSessionsApi && !it.isSplitPending } ?: return
+        val session = this.session ?: return
         val counting = isFocused && !pausedForConsent
         val end =
             when {
