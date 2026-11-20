@@ -128,6 +128,16 @@ class SessionModel : Model() {
         }
 
     /**
+     * The app ID when this session started. Pinned like [onesignalId], since an app ID change keeps
+     * this model.
+     */
+    var appId: String?
+        get() = getOptStringProperty(::appId.name)
+        set(value) {
+            setOptStringProperty(::appId.name, value)
+        }
+
+    /**
      * True while this session's create hasn't been enqueued. An anonymous user's session holds its
      * create so a login before the first background can move the session to that user.
      */

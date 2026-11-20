@@ -449,6 +449,28 @@ class SessionServiceTests : FunSpec({
         sessionModelStore.model.subscriptionId shouldBe Mocks.SUBSCRIPTION_ID
     }
 
+    test("session operations keep the app ID the session started with") {
+        // Given
+        val mocks = Mocks(sessionsApiEnabled = true)
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        mocks.sessionModelStore { it.isValid = false }
+        sessionService.onFocus(false)
+
+        // When
+        mocks.configModelStore.model.appId = "other-app-id"
+        mocks.advanceTime(10 * MINUTE_MS)
+        sessionService.onUnfocused()
+        sessionService.backgroundRun()
+
+        // Then
+        mocks.enqueued.filterIsInstance<CreateSessionOperation>().single().appId shouldBe MockHelper.DEFAULT_APP_ID
+        val updates = mocks.enqueued.filterIsInstance<UpdateSessionOperation>()
+        updates.map { it.isEnd } shouldBe listOf(false, true)
+        updates.forEach { it.appId shouldBe MockHelper.DEFAULT_APP_ID }
+    }
+
     test("pinned local IDs are replaced with backend IDs when the user is created") {
         // Given
         val mocks = Mocks()
@@ -798,6 +820,7 @@ class SessionServiceTests : FunSpec({
             it.startTime = 100L
             it.onesignalId = Mocks.ONESIGNAL_ID
             it.subscriptionId = Mocks.SUBSCRIPTION_ID
+            it.appId = MockHelper.DEFAULT_APP_ID
             it.focusTime = 500L
         }
         val sessionService = mocks.sessionService
@@ -817,9 +840,10 @@ class SessionServiceTests : FunSpec({
         end.endTime shouldBe 500L
     }
 
-    test("anonymous session under identity verification keeps its create held and reports nothing") {
+    test("anonymous session under identity verification keeps its create held while its user is local") {
         // Given
         val mocks = Mocks(sessionsApiEnabled = true, externalId = null)
+        mocks.identityModelStore.model.onesignalId = "local-user"
         mocks.configModelStore.model.useIdentityVerification = JwtRequirement.REQUIRED
         val sessionService = mocks.sessionService
         sessionService.bootstrap()
@@ -836,6 +860,29 @@ class SessionServiceTests : FunSpec({
         mocks.enqueued shouldBe emptyList()
         sessionModelStore.model.isValid shouldBe false
         sessionModelStore.model.isCreateHeld shouldBe false
+    }
+
+    test("anonymous session under identity verification with backend IDs sends its create on the first unfocus") {
+        // Given
+        val mocks = Mocks(sessionsApiEnabled = true, externalId = null)
+        mocks.configModelStore.model.useIdentityVerification = JwtRequirement.REQUIRED
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        mocks.sessionModelStore { it.isValid = false }
+        sessionService.onFocus(false)
+        mocks.enqueued shouldBe emptyList()
+
+        mocks.advanceTime(10 * MINUTE_MS)
+
+        // When
+        sessionService.onUnfocused()
+
+        // Then
+        val create = mocks.enqueued[0].shouldBeInstanceOf<CreateSessionOperation>()
+        create.onesignalId shouldBe Mocks.ONESIGNAL_ID
+        create.externalId shouldBe null
+        mocks.enqueued[1] shouldBe mocks.checkpoints.single()
     }
 
     test("identified session under identity verification sends its create on focus") {
@@ -1054,6 +1101,7 @@ class SessionServiceTests : FunSpec({
             it.usesSessionsApi = true
             it.onesignalId = Mocks.ONESIGNAL_ID
             it.subscriptionId = Mocks.SUBSCRIPTION_ID
+            it.appId = MockHelper.DEFAULT_APP_ID
             it.focusTime = 500L
             it.unfocusTime = 900L
             it.activeDuration = 400L
@@ -1084,6 +1132,7 @@ class SessionServiceTests : FunSpec({
             it.usesSessionsApi = true
             it.onesignalId = Mocks.ONESIGNAL_ID
             it.subscriptionId = Mocks.SUBSCRIPTION_ID
+            it.appId = MockHelper.DEFAULT_APP_ID
             it.unfocusTime = 300L
             it.focusTime = 500L
         }

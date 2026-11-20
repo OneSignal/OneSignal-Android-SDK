@@ -270,7 +270,7 @@ internal class SessionService(
         // Read and reset before clearing isValid: after that, a focus on the serial IO lane can start
         // the next session and write these fields while this runs on the background thread.
         val usesSessionsApi = session.usesSessionsApi
-        val end = if (usesSessionsApi && releaseHeldCreate(session)) endSessionOperation(session, config?.appId) else null
+        val end = if (usesSessionsApi && releaseHeldCreate(session)) endSessionOperation(session) else null
         if (session.isCreateHeld) {
             Logging.debug("SessionService: session ${session.sessionId} ended with its create held, not reporting it")
             session.isCreateHeld = false
@@ -341,6 +341,7 @@ internal class SessionService(
                     .takeIf { it.hasProperty(IdentityConstants.ONESIGNAL_ID) }
                     ?.onesignalId
             session.subscriptionId = config?.pushSubscriptionId
+            session.appId = config?.appId
             session.localSessionId = IDManager.createLocalId()
             val create = startSessionsApi(session, directAttributionId)
             session.isValid = true
@@ -371,7 +372,7 @@ internal class SessionService(
     ): CreateSessionOperation? {
         val create =
             if (featureManager.isEnabled(FeatureFlag.SDK_SESSIONS_V2_API_CUTOVER)) {
-                createSessionOperation(session, config?.appId, identityModelStore.model.externalId, directAttributionId)
+                createSessionOperation(session, identityModelStore.model.externalId, directAttributionId)
             } else {
                 null
             }
@@ -405,11 +406,17 @@ internal class SessionService(
         val ownsSession = identity.hasProperty(IdentityConstants.ONESIGNAL_ID) && identity.onesignalId == session.onesignalId
         val externalId = identity.externalId.takeIf { ownsSession }
         val config = config
+        // Under identity verification the queue drops an anonymous create whose user or subscription
+        // is local, so it waits for a login.
+        val waitsForLogin =
+            externalId == null &&
+                config?.useIdentityVerification == JwtRequirement.REQUIRED &&
+                listOf(session.onesignalId, session.subscriptionId).any { it != null && IDManager.isLocalId(it) }
         val canSend =
-            (externalId != null || config?.useIdentityVerification != JwtRequirement.REQUIRED) &&
+            !waitsForLogin &&
                 // The queue drops a create sent without consent.
                 config?.isAwaitingConsent != true
-        return if (canSend) createSessionOperation(session, config?.appId, externalId, session.directAttributionId) else null
+        return if (canSend) createSessionOperation(session, externalId, session.directAttributionId) else null
     }
 
     /** Sends the session's cumulative duration every [ConfigModel.sessionHeartbeatInterval] of active time while focused. */
@@ -453,7 +460,7 @@ internal class SessionService(
                 // Measured from the focus, so a wall-clock jump mid-focus can't move a killed session's end.
                 session.lastHeartbeatTime = session.focusTime + focusDuration
                 if (releaseHeldCreate(session)) {
-                    updateSessionOperation(session, config?.appId, duration)?.let { operationRepo.enqueue(it) }
+                    updateSessionOperation(session, duration)?.let { operationRepo.enqueue(it) }
                 }
             }
         }
@@ -494,7 +501,7 @@ internal class SessionService(
         Logging.debug("SessionService: checkpoint with activeDuration: $duration")
         // Android 15+ blocks network requests once a backgrounded app is cached, which can happen within
         // the queue's batching delay, so send now. Each flush needs a new focus and a longer duration.
-        updateSessionOperation(session, config?.appId, duration)?.let { operationRepo.enqueue(it, flush = true) }
+        updateSessionOperation(session, duration)?.let { operationRepo.enqueue(it, flush = true) }
     }
 
     private fun handleOnUnfocused(
@@ -543,11 +550,10 @@ internal class SessionService(
 
 private fun createSessionOperation(
     session: SessionModel,
-    appId: String?,
     externalId: String?,
     directAttributionId: String?,
 ): CreateSessionOperation? =
-    withSessionIds(session, appId, "creating") { resolvedAppId, onesignalId, subscriptionId ->
+    withSessionIds(session, "creating") { resolvedAppId, onesignalId, subscriptionId ->
         CreateSessionOperation(
             appId = resolvedAppId,
             localSessionId = session.localSessionId,
@@ -568,24 +574,19 @@ private fun SessionModel.focusDurationAt(elapsedRealtimeMs: Long): Long =
  * An app killed while focused never adds its last focus to [SessionModel.activeDuration] or sets
  * [SessionModel.unfocusTime], so fall back to the last focus or heartbeat, whichever is later.
  */
-private fun endSessionOperation(
-    session: SessionModel,
-    appId: String?,
-): UpdateSessionOperation? =
+private fun endSessionOperation(session: SessionModel): UpdateSessionOperation? =
     updateSessionOperation(
         session,
-        appId,
         activeDuration = maxOf(session.activeDuration, session.lastHeartbeatDuration),
         endTime = maxOf(session.unfocusTime ?: 0L, session.focusTime, session.lastHeartbeatTime ?: 0L),
     )
 
 private fun updateSessionOperation(
     session: SessionModel,
-    appId: String?,
     activeDuration: Long,
     endTime: Long? = null,
 ): UpdateSessionOperation? =
-    withSessionIds(session, appId, if (endTime != null) "ending" else "updating") { resolvedAppId, onesignalId, subscriptionId ->
+    withSessionIds(session, if (endTime != null) "ending" else "updating") { resolvedAppId, onesignalId, subscriptionId ->
         UpdateSessionOperation(
             appId = resolvedAppId,
             sessionId = session.localSessionId,
@@ -598,10 +599,10 @@ private fun updateSessionOperation(
 
 private fun <T> withSessionIds(
     session: SessionModel,
-    appId: String?,
     action: String,
     block: (appId: String, onesignalId: String, subscriptionId: String) -> T,
 ): T? {
+    val appId = session.appId
     val onesignalId = session.onesignalId
     val subscriptionId = session.subscriptionId
     if (appId == null || onesignalId == null || subscriptionId == null) {
