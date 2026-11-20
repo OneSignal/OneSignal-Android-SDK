@@ -38,6 +38,16 @@ class SessionModel : Model() {
         }
 
     /**
+     * When the current sessions API session started, in Unix time milliseconds. Differs from
+     * [startTime] after a user switch splits the session, since the app session goes on.
+     */
+    var sessionsApiStartTime: Long
+        get() = getLongProperty(::sessionsApiStartTime.name) { startTime }
+        set(value) {
+            setLongProperty(::sessionsApiStartTime.name, value)
+        }
+
+    /**
      * When this app was last focused, in Unix time milliseconds.
      */
     var focusTime: Long
