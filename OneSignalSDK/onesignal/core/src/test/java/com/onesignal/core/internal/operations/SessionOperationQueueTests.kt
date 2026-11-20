@@ -23,10 +23,10 @@ import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.spyk
-import io.mockk.verify
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withTimeout
+import java.util.concurrent.atomic.AtomicInteger
 
 private class SessionQueueMocks(
     val prefs: MockPreferencesService = MockPreferencesService(),
@@ -55,6 +55,8 @@ private class SessionQueueMocks(
 
     var identityVerificationService = CoreInternalMocks.identityVerificationService()
 
+    private val finishedEnqueues = AtomicInteger()
+
     val operationRepo: OperationRepo by lazy {
         spyk(
             OperationRepo(
@@ -68,16 +70,20 @@ private class SessionQueueMocks(
                 sessionStateStore,
             ),
             recordPrivateCalls = true,
-        )
+        ).also { repo ->
+            every { repo["enqueueNew"](any<OperationRepo.OperationQueueItem>(), any<Boolean>()) } answers {
+                callOriginal().also { finishedEnqueues.incrementAndGet() }
+            }
+        }
     }
 
     fun queued() = synchronized(operationRepo.queue) { operationRepo.queue.map { it.operation } }
 
-    fun enqueueAll(vararg ops: Operation) {
+    // Waits for each enqueue to finish, since a verify passes once the call starts.
+    suspend fun enqueueAll(vararg ops: Operation) {
+        val target = finishedEnqueues.get() + ops.size
         ops.forEach { operationRepo.enqueue(it) }
-        verify(timeout = 1_000, exactly = ops.size) {
-            operationRepo["enqueueNew"](any<OperationRepo.OperationQueueItem>(), any<Boolean>())
-        }
+        withTimeout(1_000) { while (finishedEnqueues.get() < target) delay(5) }
     }
 }
 
