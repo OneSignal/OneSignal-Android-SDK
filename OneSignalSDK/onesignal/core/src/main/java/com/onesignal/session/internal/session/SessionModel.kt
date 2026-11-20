@@ -128,6 +128,25 @@ class SessionModel : Model() {
         }
 
     /**
+     * True while this session's create hasn't been enqueued. An anonymous user's session holds its
+     * create so a login before the first background can move the session to that user.
+     */
+    var isCreateHeld: Boolean
+        get() = getBooleanProperty(::isCreateHeld.name) { false }
+        set(value) {
+            setBooleanProperty(::isCreateHeld.name, value)
+        }
+
+    /**
+     * The opened notification that started this session, kept for a held create.
+     */
+    var directAttributionId: String?
+        get() = getOptStringProperty(::directAttributionId.name)
+        set(value) {
+            setOptStringProperty(::directAttributionId.name, value)
+        }
+
+    /**
      * Identifies this session's sessions API requests. A new local ID for each session.
      */
     var localSessionId: String
