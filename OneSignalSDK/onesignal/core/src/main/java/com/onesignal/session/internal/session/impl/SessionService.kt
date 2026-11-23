@@ -343,7 +343,7 @@ internal class SessionService(
             session.subscriptionId = config?.pushSubscriptionId
             session.appId = config?.appId
             session.localSessionId = IDManager.createLocalId()
-            val create = startSessionsApi(session, directAttributionId)
+            val create = prepareSessionsApiCreate(session, directAttributionId)
             session.isValid = true
             startedWithoutConsent = config?.isAwaitingConsent == true
             Logging.debug("SessionService: New session started at ${session.startTime}")
@@ -366,7 +366,7 @@ internal class SessionService(
      *
      * @return the create to enqueue now, or null if the session uses legacy or its create is held.
      */
-    private fun startSessionsApi(
+    private fun prepareSessionsApiCreate(
         session: SessionModel,
         directAttributionId: String?,
     ): CreateSessionOperation? {
