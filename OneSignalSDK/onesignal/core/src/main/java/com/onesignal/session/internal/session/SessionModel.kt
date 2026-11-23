@@ -177,8 +177,9 @@ class SessionModel : Model() {
         }
 
     /**
-     * True after a user switch in the background ended this sessions API session. The app session goes
-     * on, and the next sessions API session starts on the next focus.
+     * True after a user switch while this session wasn't counting time, in the background or waiting
+     * for consent. The app session goes on, and the next sessions API session starts on the next
+     * focus, whether or not an end was queued.
      */
     var isSplitPending: Boolean
         get() = getBooleanProperty(::isSplitPending.name) { false }
