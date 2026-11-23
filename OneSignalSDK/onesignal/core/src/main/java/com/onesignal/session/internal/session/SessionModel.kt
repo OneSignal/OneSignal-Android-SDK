@@ -148,7 +148,17 @@ class SessionModel : Model() {
         }
 
     /**
-     * The opened notification that started this session, kept for a held create.
+     * True from enqueuing a held create until the queue is known to have it. A kill before the queue
+     * stored it sends it again, which its idempotency key makes harmless.
+     */
+    var isCreateUnconfirmed: Boolean
+        get() = getBooleanProperty(::isCreateUnconfirmed.name) { false }
+        set(value) {
+            setBooleanProperty(::isCreateUnconfirmed.name, value)
+        }
+
+    /**
+     * The opened notification that started this session, kept for a held create until it's confirmed.
      */
     var directAttributionId: String?
         get() = getOptStringProperty(::directAttributionId.name)

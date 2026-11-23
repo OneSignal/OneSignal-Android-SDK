@@ -26,6 +26,7 @@ import com.onesignal.user.internal.backend.IdentityConstants
 import com.onesignal.user.internal.identity.IdentityModel
 import com.onesignal.user.internal.jwt.JwtRequirement
 import io.kotest.core.spec.style.FunSpec
+import io.kotest.matchers.collections.shouldNotContain
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.types.shouldBeInstanceOf
@@ -141,6 +142,9 @@ private class Mocks(
                 if (secondArg()) flushed += firstArg<Operation>()
             }
             coEvery { it.enqueueAndWait(capture(enqueued), any()) } returns true
+            every { it.hasSessionCreate(any()) } answers {
+                enqueued.any { op -> (op as? CreateSessionOperation)?.localSessionId == firstArg<String>() }
+            }
         }
 
     fun sessionModelStore(action: ((SessionModel) -> Unit)? = null): SessionModelStore {
@@ -761,7 +765,7 @@ class SessionServiceTests : FunSpec({
         create.directAttributionId shouldBe "notification-id"
         mocks.enqueued[1] shouldBe mocks.checkpoints.single()
         sessionModelStore.model.isCreateHeld shouldBe false
-        sessionModelStore.model.directAttributionId shouldBe null
+        sessionModelStore.model.isCreateUnconfirmed shouldBe true
 
         // When
         sessionService.onFocus(false)
@@ -838,6 +842,63 @@ class SessionServiceTests : FunSpec({
         val end = mocks.enqueued[1] as UpdateSessionOperation
         end.sessionId shouldBe "local-previous-session"
         end.endTime shouldBe 500L
+    }
+
+    test("cold start resends a released create the queue never stored, then ends the session") {
+        // Given
+        val mocks = Mocks(sessionsApiEnabled = true, externalId = null)
+        mocks.sessionModelStore {
+            it.isValid = true
+            it.sessionId = "previous-session"
+            it.localSessionId = "local-previous-session"
+            it.usesSessionsApi = true
+            it.isCreateUnconfirmed = true
+            it.directAttributionId = "notification-id"
+            it.startTime = 100L
+            it.onesignalId = Mocks.ONESIGNAL_ID
+            it.subscriptionId = Mocks.SUBSCRIPTION_ID
+            it.appId = MockHelper.DEFAULT_APP_ID
+            it.focusTime = 500L
+        }
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+
+        // When
+        sessionService.onFocus(false)
+
+        // Then
+        val create = mocks.enqueued[0].shouldBeInstanceOf<CreateSessionOperation>()
+        create.localSessionId shouldBe "local-previous-session"
+        create.startTime shouldBe 100L
+        create.directAttributionId shouldBe "notification-id"
+        mocks.enqueued[1].shouldBeInstanceOf<UpdateSessionOperation>().sessionId shouldBe "local-previous-session"
+    }
+
+    test("cold start sends no second create when the queue has the released one") {
+        // Given
+        val mocks = Mocks(sessionsApiEnabled = true, externalId = null)
+        every { mocks.operationRepo.hasSessionCreate("local-previous-session") } returns true
+        mocks.sessionModelStore {
+            it.isValid = true
+            it.localSessionId = "local-previous-session"
+            it.usesSessionsApi = true
+            it.isCreateUnconfirmed = true
+            it.onesignalId = Mocks.ONESIGNAL_ID
+            it.subscriptionId = Mocks.SUBSCRIPTION_ID
+            it.appId = MockHelper.DEFAULT_APP_ID
+            it.focusTime = 500L
+        }
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+
+        // When
+        sessionService.onFocus(false)
+
+        // Then
+        mocks.enqueued[0].shouldBeInstanceOf<UpdateSessionOperation>().sessionId shouldBe "local-previous-session"
+        mocks.enqueued.filterIsInstance<CreateSessionOperation>().map { it.localSessionId } shouldNotContain "local-previous-session"
     }
 
     test("anonymous session under identity verification keeps its create held while its user is local") {

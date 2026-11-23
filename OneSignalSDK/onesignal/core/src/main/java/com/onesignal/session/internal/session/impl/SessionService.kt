@@ -58,7 +58,7 @@ import kotlin.reflect.KMutableProperty1
  *
  * An anonymous user's session holds its create until the first unfocus, a heartbeat, or the session
  * end, so a login before then can move the session to that user. Under identity verification it
- * stays held while anonymous, since an anonymous user is never created.
+ * stays held while its user or subscription ID is local, since the queue would drop it.
  *
  * Time without privacy consent is not counted: losing consent while focused counts as an unfocus,
  * and regaining it while in the foreground counts as a focus. A session that started without
@@ -270,6 +270,7 @@ internal class SessionService(
         // Read and reset before clearing isValid: after that, a focus on the serial IO lane can start
         // the next session and write these fields while this runs on the background thread.
         val usesSessionsApi = session.usesSessionsApi
+        confirmReleasedCreate(session)
         val end = if (usesSessionsApi && releaseHeldCreate(session)) endSessionOperation(session) else null
         if (session.isCreateHeld) {
             Logging.debug("SessionService: session ${session.sessionId} ended with its create held, not reporting it")
@@ -378,6 +379,7 @@ internal class SessionService(
             }
         session.usesSessionsApi = create != null
         session.isCreateHeld = create != null && create.externalId == null
+        session.isCreateUnconfirmed = false
         session.directAttributionId = directAttributionId.takeIf { session.isCreateHeld }
         return create?.takeUnless { session.isCreateHeld }
     }
@@ -393,11 +395,24 @@ internal class SessionService(
         if (!session.isCreateHeld) return true
         val create = sendableHeldCreate(session)
         if (create != null) {
+            // Set before clearing the hold, so no saved state has neither while enqueue hasn't stored it.
+            session.isCreateUnconfirmed = true
             session.isCreateHeld = false
-            session.directAttributionId = null
             operationRepo.enqueue(create)
         }
         return create != null
+    }
+
+    /** Sends a released create again if the queue doesn't have it, as after a kill before it was stored. */
+    @Synchronized
+    private fun confirmReleasedCreate(session: SessionModel) {
+        if (!session.isCreateUnconfirmed) return
+        if (!operationRepo.hasSessionCreate(session.localSessionId)) {
+            Logging.debug("SessionService: resending the create for session ${session.sessionId}")
+            sendableHeldCreate(session)?.let { operationRepo.enqueue(it) }
+        }
+        session.isCreateUnconfirmed = false
+        session.directAttributionId = null
     }
 
     /** @return the held create, or null while it must stay held. */

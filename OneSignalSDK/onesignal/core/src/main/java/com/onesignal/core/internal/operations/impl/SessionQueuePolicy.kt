@@ -140,6 +140,8 @@ internal class SessionQueuePolicy(
         return orphans
     }
 
+    fun hasServerSession(localSessionId: String) = stateFor(localSessionId)?.serverSessionId != null
+
     private fun stateFor(sessionId: String) = sessions.list().firstOrNull { it.id == sessionId || it.serverSessionId == sessionId }
 
     private fun updateState(

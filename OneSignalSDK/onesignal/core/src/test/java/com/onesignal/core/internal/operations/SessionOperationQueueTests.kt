@@ -366,6 +366,30 @@ class SessionOperationQueueTests : FunSpec({
         (mocks.executed[1] as UpdateSessionOperation).sessionId shouldBe "server-other"
     }
 
+    test("hasSessionCreate is true once the create is stored and after it was sent") {
+        val mocks = SessionQueueMocks()
+        mocks.respond = { op ->
+            if (op is CreateSessionOperation) {
+                ExecutionResponse(ExecutionResult.SUCCESS, idTranslations = mapOf(op.localSessionId to "server-s1"))
+            } else {
+                ExecutionResponse(ExecutionResult.SUCCESS)
+            }
+        }
+        mocks.operationRepo.hasSessionCreate("local-s1") shouldBe false
+
+        mocks.operationRepo.loadSavedOperations()
+        mocks.enqueueAll(create())
+
+        mocks.operationRepo.hasSessionCreate("local-s1") shouldBe true
+        mocks.operationRepo.hasSessionCreate("local-s2") shouldBe false
+
+        mocks.operationRepo.start()
+        awaitExecuted(mocks, 1)
+        withTimeout(1_000) { while (mocks.operationModelStore.list().isNotEmpty()) delay(5) }
+
+        mocks.operationRepo.hasSessionCreate("local-s1") shouldBe true
+    }
+
     test("an update waits for its create and is sent with the backend session ID") {
         val mocks = SessionQueueMocks()
         mocks.respond = { op ->
