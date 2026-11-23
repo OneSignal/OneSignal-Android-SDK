@@ -158,6 +158,9 @@ internal class SessionService(
                 // Before the first focus, the session is the last run's, which the cold start ends.
                 if (!hasFocused) return@runOnSerialIO
                 val session = session?.takeIf { it.isValid && it.usesSessionsApi && !it.isSplitPending } ?: return@runOnSerialIO
+                // Every switch makes a new local ID, so a match means a focus or split that ran after
+                // this switch already started the session from the live user.
+                if (onesignalId != null && session.onesignalId == onesignalId) return@runOnSerialIO
                 when {
                     session.isCreateHeld -> {
                         Logging.debug("SessionService: moving session ${session.sessionId} with its held create to the new user")
@@ -385,7 +388,7 @@ internal class SessionService(
             startNextSession(session, focusTimeMs, focusElapsedMs, directAttributionId)
             session.isValid = true
             sessionLifeCycleNotifier.fire { it.onSessionStarted() }
-        } else if (session.isSplitPending) {
+        } else if (session.isSplitPending && config?.isAwaitingConsent != true) {
             startNextSession(session, focusTimeMs, focusElapsedMs, directAttributionId)
             sessionLifeCycleNotifier.fire { it.onSessionActive() }
         } else {
@@ -439,16 +442,15 @@ internal class SessionService(
         val counting = isFocused && !pausedForConsent
         confirmReleasedCreate(session)
         val end =
-            when {
-                !releaseHeldCreate(session, isLastChance = true) -> null
-                counting -> {
-                    val duration = session.activeDuration + session.focusDurationAt(elapsedMs)
-                    updateSessionOperation(session, maxOf(duration, session.lastHeartbeatDuration), endTime = nowMs)
-                }
-                else -> endSessionOperation(session)
+            if (counting) {
+                val duration = session.activeDuration + session.focusDurationAt(elapsedMs)
+                updateSessionOperation(session, maxOf(duration, session.lastHeartbeatDuration), endTime = nowMs)
+            } else {
+                endSessionOperation(session)
             }
         Logging.debug("SessionService: splitting session ${session.sessionId} at a user switch")
-        end?.let { operationRepo.enqueue(it) }
+        // In the background, backgroundRun won't send this end, and Android 15+ can block a later send.
+        end?.let { operationRepo.enqueue(it, flush = !counting) }
         session.activeDuration = 0L
         session.lastHeartbeatDuration = 0L
         session.lastHeartbeatTime = null

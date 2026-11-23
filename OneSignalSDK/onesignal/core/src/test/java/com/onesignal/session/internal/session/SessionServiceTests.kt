@@ -2176,6 +2176,7 @@ class SessionServiceTests : FunSpec({
         end.sessionId shouldBe firstLocalSessionId
         end.activeDuration shouldBe 10 * MINUTE_MS
         end.endTime shouldBe unfocusTime
+        (end in mocks.flushed) shouldBe true
         sessionModelStore.model.isSplitPending shouldBe true
         sessionModelStore.model.isValid shouldBe true
 
@@ -2368,6 +2369,7 @@ class SessionServiceTests : FunSpec({
         sessionService.onFocus(false)
         val localSessionId = sessionModelStore.model.localSessionId
         mocks.currentTime += MINUTE_MS
+        mocks.configModelStore.model.pushSubscriptionId = "subscription-id-a"
 
         // When
         mocks.switchUser("onesignal-id-a", "external-id-a")
@@ -2376,7 +2378,7 @@ class SessionServiceTests : FunSpec({
         val create = mocks.enqueued.single() as CreateSessionOperation
         create.localSessionId shouldBe localSessionId
         create.onesignalId shouldBe "onesignal-id-a"
-        create.subscriptionId shouldBe Mocks.SUBSCRIPTION_ID
+        create.subscriptionId shouldBe "subscription-id-a"
         create.externalId shouldBe "external-id-a"
         create.startTime shouldBe startTime
         sessionModelStore.model.isCreateHeld shouldBe false
@@ -2387,18 +2389,25 @@ class SessionServiceTests : FunSpec({
     test("login while the create is held under identity verification sends the create") {
         // Given
         val mocks = Mocks(sessionsApiEnabled = true, externalId = null)
+        mocks.identityModelStore.model.onesignalId = "local-anonymous"
         mocks.configModelStore.model.useIdentityVerification = JwtRequirement.REQUIRED
         val sessionService = mocks.sessionService
         sessionService.bootstrap()
         sessionService.start()
         mocks.sessionModelStore { it.isValid = false }
         sessionService.onFocus(false)
+        mocks.advanceTime(MINUTE_MS)
+        sessionService.onUnfocused()
+        sessionService.onFocus(false)
+        mocks.enqueued shouldBe emptyList()
 
         // When
-        mocks.switchUser("onesignal-id-a", "external-id-a")
+        mocks.switchUser("local-user-a", "external-id-a")
 
         // Then
-        (mocks.enqueued.single() as CreateSessionOperation).externalId shouldBe "external-id-a"
+        val create = mocks.enqueued.single() as CreateSessionOperation
+        create.onesignalId shouldBe "local-user-a"
+        create.externalId shouldBe "external-id-a"
     }
 
     test("login after the first unfocus moves a local anonymous session while the requirement is unknown") {
@@ -2488,6 +2497,73 @@ class SessionServiceTests : FunSpec({
         create.onesignalId shouldBe "onesignal-id-b"
         create.externalId shouldBe "external-id-b"
         create.startTime shouldBe logoutTime
+    }
+
+    test("logout then login before the serial lane runs either splits the session once") {
+        // Given
+        val mocks = Mocks(sessionsApiEnabled = true)
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        val sessionModelStore = mocks.sessionModelStore { it.isValid = false }
+        sessionService.onFocus(false)
+        val firstLocalSessionId = sessionModelStore.model.localSessionId
+        mocks.currentTime += MINUTE_MS
+        mocks.enqueued.clear()
+        val queued = mutableListOf<() -> Unit>()
+        every { runOnSerialIO(any<() -> Unit>()) } answers { queued += firstArg<() -> Unit>() }
+        try {
+            mocks.switchUser("local-anonymous", null)
+            mocks.switchUser("local-user-b", "external-id-b")
+        } finally {
+            every { runOnSerialIO(any<() -> Unit>()) } answers { firstArg<() -> Unit>().invoke() }
+        }
+
+        // When
+        queued.forEach { it() }
+
+        // Then
+        mocks.enqueued.size shouldBe 2
+        (mocks.enqueued[0] as UpdateSessionOperation).sessionId shouldBe firstLocalSessionId
+        val create = mocks.enqueued[1] as CreateSessionOperation
+        create.onesignalId shouldBe "local-user-b"
+        create.externalId shouldBe "external-id-b"
+    }
+
+    test("focus without consent after a switch in the background waits for consent to start the next session") {
+        // Given
+        val mocks = Mocks(sessionsApiEnabled = true)
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        val sessionModelStore = mocks.sessionModelStore { it.isValid = false }
+        sessionService.subscribe(mocks.spyCallback)
+        sessionService.onFocus(false)
+        val appSessionId = sessionModelStore.model.sessionId
+        val appStartTime = sessionModelStore.model.startTime
+        mocks.advanceTime(MINUTE_MS)
+        sessionService.onUnfocused()
+        mocks.isInForeground = false
+        mocks.switchUser("onesignal-id-b", "external-id-b")
+        mocks.setConsentGiven(false)
+        mocks.currentTime += 5_000
+        mocks.isInForeground = true
+        sessionService.onFocus(false)
+        sessionModelStore.model.isSplitPending shouldBe true
+        mocks.enqueued.clear()
+
+        // When
+        mocks.currentTime += 5_000
+        mocks.setConsentGiven(true)
+
+        // Then
+        val create = mocks.enqueued.single() as CreateSessionOperation
+        create.onesignalId shouldBe "onesignal-id-b"
+        create.startTime shouldBe mocks.currentTime
+        sessionModelStore.model.isSplitPending shouldBe false
+        sessionModelStore.model.sessionId shouldBe appSessionId
+        sessionModelStore.model.startTime shouldBe appStartTime
+        verify(exactly = 1) { mocks.spyCallback.onSessionStarted() }
     }
 
     test("user refresh does not split the session") {
