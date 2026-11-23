@@ -409,6 +409,7 @@ internal class SessionService(
     ) {
         val session = this.session?.takeIf { it.isValid && it.usesSessionsApi && !it.isSplitPending } ?: return
         val counting = isFocused && !pausedForConsent
+        confirmReleasedCreate(session)
         val end =
             when {
                 !releaseHeldCreate(session, isLastChance = true) -> null
