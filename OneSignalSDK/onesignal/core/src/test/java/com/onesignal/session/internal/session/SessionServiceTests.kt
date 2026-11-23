@@ -149,17 +149,19 @@ private class Mocks(
     }
 
     val enqueued = mutableListOf<Operation>()
+
+    /** Creates the queue has stored, which a test clearing [enqueued] doesn't forget. */
+    val storedCreates = mutableSetOf<String>()
     val flushed = mutableListOf<Operation>()
     val operationRepo: IOperationRepo =
         mockk<IOperationRepo>().also {
             every { it.enqueue(any(), any()) } answers {
                 enqueued += firstArg<Operation>()
                 if (secondArg()) flushed += firstArg<Operation>()
+                (firstArg<Operation>() as? CreateSessionOperation)?.let { create -> storedCreates += create.localSessionId }
             }
             coEvery { it.enqueueAndWait(capture(enqueued), any()) } returns true
-            every { it.hasSessionCreate(any()) } answers {
-                enqueued.any { op -> (op as? CreateSessionOperation)?.localSessionId == firstArg<String>() }
-            }
+            every { it.hasSessionCreate(any()) } answers { firstArg<String>() in storedCreates }
         }
 
     fun sessionModelStore(action: ((SessionModel) -> Unit)? = null): SessionModelStore {
