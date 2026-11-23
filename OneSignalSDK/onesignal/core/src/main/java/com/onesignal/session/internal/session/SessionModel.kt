@@ -128,6 +128,45 @@ class SessionModel : Model() {
         }
 
     /**
+     * The app ID when this session started. Pinned like [onesignalId], since an app ID change keeps
+     * this model.
+     */
+    var appId: String?
+        get() = getOptStringProperty(::appId.name)
+        set(value) {
+            setOptStringProperty(::appId.name, value)
+        }
+
+    /**
+     * True while this session's create hasn't been enqueued. An anonymous user's session holds its
+     * create so a login before the first background can move the session to that user.
+     */
+    var isCreateHeld: Boolean
+        get() = getBooleanProperty(::isCreateHeld.name) { false }
+        set(value) {
+            setBooleanProperty(::isCreateHeld.name, value)
+        }
+
+    /**
+     * True from enqueuing a held create until the queue is known to have it. A kill before the queue
+     * stored it sends it again, which its idempotency key makes harmless.
+     */
+    var isCreateUnconfirmed: Boolean
+        get() = getBooleanProperty(::isCreateUnconfirmed.name) { false }
+        set(value) {
+            setBooleanProperty(::isCreateUnconfirmed.name, value)
+        }
+
+    /**
+     * The opened notification that started this session, kept for a held create until it's confirmed.
+     */
+    var directAttributionId: String?
+        get() = getOptStringProperty(::directAttributionId.name)
+        set(value) {
+            setOptStringProperty(::directAttributionId.name, value)
+        }
+
+    /**
      * Identifies this session's sessions API requests. A new local ID for each session.
      */
     var localSessionId: String

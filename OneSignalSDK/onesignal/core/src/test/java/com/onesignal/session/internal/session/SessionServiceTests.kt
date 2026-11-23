@@ -24,9 +24,12 @@ import com.onesignal.session.internal.session.operations.CreateSessionOperation
 import com.onesignal.session.internal.session.operations.UpdateSessionOperation
 import com.onesignal.user.internal.backend.IdentityConstants
 import com.onesignal.user.internal.identity.IdentityModel
+import com.onesignal.user.internal.jwt.JwtRequirement
 import io.kotest.core.spec.style.FunSpec
+import io.kotest.matchers.collections.shouldNotContain
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import io.kotest.matchers.types.shouldBeInstanceOf
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -53,6 +56,7 @@ import kotlinx.coroutines.test.runTest
 // Mocks used by every test in this file
 private class Mocks(
     var sessionsApiEnabled: Boolean = false,
+    externalId: String? = EXTERNAL_ID,
 ) {
     var currentTime = 1111L
     var elapsedRealtime = 5000L
@@ -73,7 +77,11 @@ private class Mocks(
             every { it.isEnabled(FeatureFlag.SDK_SESSIONS_V2_API_CUTOVER) } answers { sessionsApiEnabled }
         }
 
-    val identityModelStore = MockHelper.identityModelStore { it.onesignalId = ONESIGNAL_ID }
+    val identityModelStore =
+        MockHelper.identityModelStore {
+            it.onesignalId = ONESIGNAL_ID
+            it.externalId = externalId
+        }
     val configModelStore = MockHelper.configModelStore { it.pushSubscriptionId = SUBSCRIPTION_ID }
 
     val identityChangeHandler = slot<ISingletonModelStoreChangeHandler<IdentityModel>>()
@@ -134,6 +142,9 @@ private class Mocks(
                 if (secondArg()) flushed += firstArg<Operation>()
             }
             coEvery { it.enqueueAndWait(capture(enqueued), any()) } returns true
+            every { it.hasSessionCreate(any()) } answers {
+                enqueued.any { op -> (op as? CreateSessionOperation)?.localSessionId == firstArg<String>() }
+            }
         }
 
     fun sessionModelStore(action: ((SessionModel) -> Unit)? = null): SessionModelStore {
@@ -178,6 +189,7 @@ private class Mocks(
     companion object {
         const val ONESIGNAL_ID = "onesignal-id"
         const val SUBSCRIPTION_ID = "subscription-id"
+        const val EXTERNAL_ID = "external-id"
     }
 }
 
@@ -441,6 +453,28 @@ class SessionServiceTests : FunSpec({
         sessionModelStore.model.subscriptionId shouldBe Mocks.SUBSCRIPTION_ID
     }
 
+    test("session operations keep the app ID the session started with") {
+        // Given
+        val mocks = Mocks(sessionsApiEnabled = true)
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        mocks.sessionModelStore { it.isValid = false }
+        sessionService.onFocus(false)
+
+        // When
+        mocks.configModelStore.model.appId = "other-app-id"
+        mocks.advanceTime(10 * MINUTE_MS)
+        sessionService.onUnfocused()
+        sessionService.backgroundRun()
+
+        // Then
+        mocks.enqueued.filterIsInstance<CreateSessionOperation>().single().appId shouldBe MockHelper.DEFAULT_APP_ID
+        val updates = mocks.enqueued.filterIsInstance<UpdateSessionOperation>()
+        updates.map { it.isEnd } shouldBe listOf(false, true)
+        updates.forEach { it.appId shouldBe MockHelper.DEFAULT_APP_ID }
+    }
+
     test("pinned local IDs are replaced with backend IDs when the user is created") {
         // Given
         val mocks = Mocks()
@@ -685,6 +719,322 @@ class SessionServiceTests : FunSpec({
         sessionModelStore.model.sessionId shouldNotBe "previous-session"
     }
 
+    test("anonymous session holds its create on focus") {
+        // Given
+        val mocks = Mocks(sessionsApiEnabled = true, externalId = null)
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        val sessionModelStore = mocks.sessionModelStore { it.isValid = false }
+        sessionService.subscribe(mocks.spyCallback)
+
+        // When
+        sessionService.onFocus(false)
+
+        // Then
+        mocks.enqueued shouldBe emptyList()
+        sessionModelStore.model.isCreateHeld shouldBe true
+        sessionModelStore.model.usesSessionsApi shouldBe true
+        verify(exactly = 1) { mocks.spyCallback.onSessionStarted() }
+    }
+
+    test("first unfocus sends the held create before the checkpoint, and later unfocuses send no other create") {
+        // Given
+        val mocks = Mocks(sessionsApiEnabled = true, externalId = null)
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        val sessionModelStore = mocks.sessionModelStore { it.isValid = false }
+        val startTime = mocks.currentTime
+        sessionService.attributeNextSessionTo("notification-id")
+        mocks.entryState = AppEntryAction.NOTIFICATION_CLICK
+        sessionService.onFocus(false)
+        mocks.advanceTime(10 * MINUTE_MS)
+        mocks.currentTime += 10 * MINUTE_MS
+
+        // When
+        sessionService.onUnfocused()
+
+        // Then
+        val create = mocks.enqueued[0] as CreateSessionOperation
+        create.localSessionId shouldBe sessionModelStore.model.localSessionId
+        create.onesignalId shouldBe Mocks.ONESIGNAL_ID
+        create.subscriptionId shouldBe Mocks.SUBSCRIPTION_ID
+        create.startTime shouldBe startTime
+        create.externalId shouldBe null
+        create.directAttributionId shouldBe "notification-id"
+        mocks.enqueued[1] shouldBe mocks.checkpoints.single()
+        sessionModelStore.model.isCreateHeld shouldBe false
+        sessionModelStore.model.isCreateUnconfirmed shouldBe true
+
+        // When
+        sessionService.onFocus(false)
+        mocks.advanceTime(5 * MINUTE_MS)
+        sessionService.onUnfocused()
+
+        // Then
+        mocks.enqueued.filterIsInstance<CreateSessionOperation>().size shouldBe 1
+        mocks.checkpoints.size shouldBe 2
+    }
+
+    test("heartbeat sends the held create before the heartbeat") {
+        // Given
+        val mocks = Mocks(sessionsApiEnabled = true, externalId = null)
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        mocks.sessionModelStore { it.isValid = false }
+        sessionService.onFocus(false)
+
+        // When
+        mocks.advanceTime(HEARTBEAT_MS)
+
+        // Then
+        (mocks.enqueued[0] as CreateSessionOperation).externalId shouldBe null
+        mocks.enqueued[1] shouldBe mocks.heartbeats.single()
+    }
+
+    test("background run sends the held create before the end") {
+        // Given
+        val mocks = Mocks(sessionsApiEnabled = true, externalId = null)
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        mocks.sessionModelStore { it.isValid = false }
+        sessionService.onFocus(false)
+
+        // When
+        sessionService.backgroundRun()
+
+        // Then
+        mocks.enqueued[0].shouldBeInstanceOf<CreateSessionOperation>()
+        (mocks.enqueued[1] as UpdateSessionOperation).isEnd shouldBe true
+    }
+
+    test("cold start after a kill while the create is held sends the create and the end") {
+        // Given
+        val mocks = Mocks(sessionsApiEnabled = true, externalId = null)
+        mocks.sessionModelStore {
+            it.isValid = true
+            it.sessionId = "previous-session"
+            it.localSessionId = "local-previous-session"
+            it.usesSessionsApi = true
+            it.isCreateHeld = true
+            it.directAttributionId = "notification-id"
+            it.startTime = 100L
+            it.onesignalId = Mocks.ONESIGNAL_ID
+            it.subscriptionId = Mocks.SUBSCRIPTION_ID
+            it.appId = MockHelper.DEFAULT_APP_ID
+            it.focusTime = 500L
+        }
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+
+        // When
+        sessionService.onFocus(false)
+
+        // Then
+        val create = mocks.enqueued[0] as CreateSessionOperation
+        create.localSessionId shouldBe "local-previous-session"
+        create.startTime shouldBe 100L
+        create.directAttributionId shouldBe "notification-id"
+        val end = mocks.enqueued[1] as UpdateSessionOperation
+        end.sessionId shouldBe "local-previous-session"
+        end.endTime shouldBe 500L
+    }
+
+    test("cold start resends a released create the queue never stored, then ends the session") {
+        // Given
+        val mocks = Mocks(sessionsApiEnabled = true, externalId = null)
+        mocks.sessionModelStore {
+            it.isValid = true
+            it.sessionId = "previous-session"
+            it.localSessionId = "local-previous-session"
+            it.usesSessionsApi = true
+            it.isCreateUnconfirmed = true
+            it.directAttributionId = "notification-id"
+            it.startTime = 100L
+            it.onesignalId = Mocks.ONESIGNAL_ID
+            it.subscriptionId = Mocks.SUBSCRIPTION_ID
+            it.appId = MockHelper.DEFAULT_APP_ID
+            it.focusTime = 500L
+        }
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+
+        // When
+        sessionService.onFocus(false)
+
+        // Then
+        val create = mocks.enqueued[0].shouldBeInstanceOf<CreateSessionOperation>()
+        create.localSessionId shouldBe "local-previous-session"
+        create.startTime shouldBe 100L
+        create.directAttributionId shouldBe "notification-id"
+        mocks.enqueued[1].shouldBeInstanceOf<UpdateSessionOperation>().sessionId shouldBe "local-previous-session"
+    }
+
+    test("cold start sends no second create when the queue has the released one") {
+        // Given
+        val mocks = Mocks(sessionsApiEnabled = true, externalId = null)
+        every { mocks.operationRepo.hasSessionCreate("local-previous-session") } returns true
+        mocks.sessionModelStore {
+            it.isValid = true
+            it.localSessionId = "local-previous-session"
+            it.usesSessionsApi = true
+            it.isCreateUnconfirmed = true
+            it.onesignalId = Mocks.ONESIGNAL_ID
+            it.subscriptionId = Mocks.SUBSCRIPTION_ID
+            it.appId = MockHelper.DEFAULT_APP_ID
+            it.focusTime = 500L
+        }
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+
+        // When
+        sessionService.onFocus(false)
+
+        // Then
+        mocks.enqueued[0].shouldBeInstanceOf<UpdateSessionOperation>().sessionId shouldBe "local-previous-session"
+        mocks.enqueued.filterIsInstance<CreateSessionOperation>().map { it.localSessionId } shouldNotContain "local-previous-session"
+    }
+
+    test("anonymous session under identity verification keeps its create held while its user is local") {
+        // Given
+        val mocks = Mocks(sessionsApiEnabled = true, externalId = null)
+        mocks.identityModelStore.model.onesignalId = "local-user"
+        mocks.configModelStore.model.useIdentityVerification = JwtRequirement.REQUIRED
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        val sessionModelStore = mocks.sessionModelStore { it.isValid = false }
+        sessionService.onFocus(false)
+        mocks.advanceTime(HEARTBEAT_MS)
+        sessionService.onUnfocused()
+
+        // When
+        sessionService.backgroundRun()
+
+        // Then
+        mocks.enqueued shouldBe emptyList()
+        sessionModelStore.model.isValid shouldBe false
+        sessionModelStore.model.isCreateHeld shouldBe false
+    }
+
+    test("anonymous session under identity verification with backend IDs sends its create on the first unfocus") {
+        // Given
+        val mocks = Mocks(sessionsApiEnabled = true, externalId = null)
+        mocks.configModelStore.model.useIdentityVerification = JwtRequirement.REQUIRED
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        mocks.sessionModelStore { it.isValid = false }
+        sessionService.onFocus(false)
+        mocks.enqueued shouldBe emptyList()
+
+        mocks.advanceTime(10 * MINUTE_MS)
+
+        // When
+        sessionService.onUnfocused()
+
+        // Then
+        val create = mocks.enqueued[0].shouldBeInstanceOf<CreateSessionOperation>()
+        create.onesignalId shouldBe Mocks.ONESIGNAL_ID
+        create.externalId shouldBe null
+        mocks.enqueued[1] shouldBe mocks.checkpoints.single()
+    }
+
+    test("anonymous session with an unknown identity verification requirement holds its local create until the end") {
+        // Given
+        val mocks = Mocks(sessionsApiEnabled = true, externalId = null)
+        mocks.identityModelStore.model.onesignalId = "local-user"
+        mocks.configModelStore.model.useIdentityVerification = JwtRequirement.UNKNOWN
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        val sessionModelStore = mocks.sessionModelStore { it.isValid = false }
+        sessionService.onFocus(false)
+        mocks.advanceTime(HEARTBEAT_MS)
+        sessionService.onUnfocused()
+        mocks.enqueued shouldBe emptyList()
+        sessionModelStore.model.isCreateHeld shouldBe true
+
+        // When
+        sessionService.backgroundRun()
+
+        // Then
+        mocks.enqueued[0].shouldBeInstanceOf<CreateSessionOperation>().onesignalId shouldBe "local-user"
+        mocks.enqueued[1].shouldBeInstanceOf<UpdateSessionOperation>().endTime shouldNotBe null
+        sessionModelStore.model.isCreateHeld shouldBe false
+    }
+
+    test("anonymous session with backend IDs sends its create on the first unfocus while the requirement is unknown") {
+        // Given
+        val mocks = Mocks(sessionsApiEnabled = true, externalId = null)
+        mocks.configModelStore.model.useIdentityVerification = JwtRequirement.UNKNOWN
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        mocks.sessionModelStore { it.isValid = false }
+        sessionService.onFocus(false)
+        mocks.advanceTime(10 * MINUTE_MS)
+
+        // When
+        sessionService.onUnfocused()
+
+        // Then
+        mocks.enqueued[0].shouldBeInstanceOf<CreateSessionOperation>().onesignalId shouldBe Mocks.ONESIGNAL_ID
+        mocks.enqueued[1] shouldBe mocks.checkpoints.single()
+    }
+
+    test("identified session under identity verification sends its create on focus") {
+        // Given
+        val mocks = Mocks(sessionsApiEnabled = true)
+        mocks.configModelStore.model.useIdentityVerification = JwtRequirement.REQUIRED
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        val sessionModelStore = mocks.sessionModelStore { it.isValid = false }
+
+        // When
+        sessionService.onFocus(false)
+
+        // Then
+        (mocks.enqueued.single() as CreateSessionOperation).externalId shouldBe Mocks.EXTERNAL_ID
+        sessionModelStore.model.isCreateHeld shouldBe false
+    }
+
+    test("held create waits for consent") {
+        // Given
+        val mocks = Mocks(sessionsApiEnabled = true, externalId = null)
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        val sessionModelStore = mocks.sessionModelStore { it.isValid = false }
+        sessionService.onFocus(false)
+        mocks.advanceTime(10 * MINUTE_MS)
+
+        // When
+        mocks.setConsentGiven(false)
+        sessionService.onUnfocused()
+
+        // Then
+        mocks.enqueued shouldBe emptyList()
+        sessionModelStore.model.isCreateHeld shouldBe true
+
+        // When
+        mocks.setConsentGiven(true)
+        sessionService.onFocus(false)
+        mocks.advanceTime(MINUTE_MS)
+        sessionService.onUnfocused()
+
+        // Then
+        mocks.enqueued[0].shouldBeInstanceOf<CreateSessionOperation>()
+        mocks.checkpoints.single().activeDuration shouldBe 11 * MINUTE_MS
+    }
+
     test("new session does not enqueue a create when the flag is off") {
         // Given
         val mocks = Mocks(sessionsApiEnabled = false)
@@ -855,6 +1205,7 @@ class SessionServiceTests : FunSpec({
             it.usesSessionsApi = true
             it.onesignalId = Mocks.ONESIGNAL_ID
             it.subscriptionId = Mocks.SUBSCRIPTION_ID
+            it.appId = MockHelper.DEFAULT_APP_ID
             it.focusTime = 500L
             it.unfocusTime = 900L
             it.activeDuration = 400L
@@ -885,6 +1236,7 @@ class SessionServiceTests : FunSpec({
             it.usesSessionsApi = true
             it.onesignalId = Mocks.ONESIGNAL_ID
             it.subscriptionId = Mocks.SUBSCRIPTION_ID
+            it.appId = MockHelper.DEFAULT_APP_ID
             it.unfocusTime = 300L
             it.focusTime = 500L
         }

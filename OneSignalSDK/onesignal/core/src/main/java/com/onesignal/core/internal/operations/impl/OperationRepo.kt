@@ -758,6 +758,13 @@ internal class OperationRepo(
      * NOTE: Sometimes the loading might take longer than expected due to I/O reads from disk,
      *       so always ensure this is call off the main thread.
      */
+    override fun hasSessionCreate(localSessionId: String): Boolean =
+        initialized.isCompleted &&
+            synchronized(queue) {
+                sessionQueuePolicy.hasServerSession(localSessionId) ||
+                    _operationModelStore.list().any { (it as? CreateSessionOperation)?.localSessionId == localSessionId }
+            }
+
     internal fun loadSavedOperations() {
         _operationModelStore.loadOperations()
         for (operation in _operationModelStore.list().reversed()) {

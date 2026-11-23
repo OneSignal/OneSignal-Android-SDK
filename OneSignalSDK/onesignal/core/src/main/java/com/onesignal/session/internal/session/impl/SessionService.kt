@@ -28,6 +28,7 @@ import com.onesignal.session.internal.session.operations.CreateSessionOperation
 import com.onesignal.session.internal.session.operations.UpdateSessionOperation
 import com.onesignal.user.internal.backend.IdentityConstants
 import com.onesignal.user.internal.identity.IdentityModelStore
+import com.onesignal.user.internal.jwt.JwtRequirement
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -54,6 +55,11 @@ import kotlin.reflect.KMutableProperty1
  * While focused, a session that [SessionModel.usesSessionsApi] reports its duration every
  * [ConfigModel.sessionHeartbeatInterval] of active time, so the server keeps it open and a crash loses little duration.
  * It also reports its duration on each unfocus, so a session killed in the background isn't short.
+ *
+ * An anonymous user's session holds its create until the first unfocus, a heartbeat, or the session
+ * end, so a login before then can move the session to that user. Under identity verification it
+ * stays held while its user or subscription ID is local, since the queue would drop it. Until the
+ * requirement is known, it stays held the same way, except at the session end.
  *
  * Time without privacy consent is not counted: losing consent while focused counts as an unfocus,
  * and regaining it while in the foreground counts as a focus. A session that started without
@@ -265,7 +271,12 @@ internal class SessionService(
         // Read and reset before clearing isValid: after that, a focus on the serial IO lane can start
         // the next session and write these fields while this runs on the background thread.
         val usesSessionsApi = session.usesSessionsApi
-        val end = if (usesSessionsApi) endSessionOperation(session, config?.appId) else null
+        confirmReleasedCreate(session)
+        val end = if (usesSessionsApi && releaseHeldCreate(session, isLastChance = true)) endSessionOperation(session) else null
+        if (session.isCreateHeld) {
+            Logging.debug("SessionService: session ${session.sessionId} ended with its create held, not reporting it")
+            session.isCreateHeld = false
+        }
         session.activeDuration = 0L
         session.lastHeartbeatDuration = 0L
         session.lastHeartbeatTime = null
@@ -332,9 +343,9 @@ internal class SessionService(
                     .takeIf { it.hasProperty(IdentityConstants.ONESIGNAL_ID) }
                     ?.onesignalId
             session.subscriptionId = config?.pushSubscriptionId
+            session.appId = config?.appId
             session.localSessionId = IDManager.createLocalId()
-            val create = sessionsApiCreate(session, directAttributionId)
-            session.usesSessionsApi = create != null
+            val create = prepareSessionsApiCreate(session, directAttributionId)
             session.isValid = true
             startedWithoutConsent = config?.isAwaitingConsent == true
             Logging.debug("SessionService: New session started at ${session.startTime}")
@@ -352,15 +363,93 @@ internal class SessionService(
     }
 
     /**
-     * @return the create for a new session when the sessions API is on, or null to report it through
-     * the legacy paths. A session the sessions API can't create falls back to legacy so it is still counted.
+     * Decides whether a new session reports through the sessions API. The flag must be on, and a
+     * session the sessions API can't create falls back to legacy so it is still counted.
+     *
+     * @return the create to enqueue now, or null if the session uses legacy or its create is held.
      */
-    private fun sessionsApiCreate(
+    private fun prepareSessionsApiCreate(
         session: SessionModel,
         directAttributionId: String?,
     ): CreateSessionOperation? {
-        if (!featureManager.isEnabled(FeatureFlag.SDK_SESSIONS_V2_API_CUTOVER)) return null
-        return createSessionOperation(session, config?.appId, identityModelStore.model.externalId, directAttributionId)
+        val create =
+            if (featureManager.isEnabled(FeatureFlag.SDK_SESSIONS_V2_API_CUTOVER)) {
+                createSessionOperation(session, identityModelStore.model.externalId, directAttributionId)
+            } else {
+                null
+            }
+        session.usesSessionsApi = create != null
+        session.isCreateHeld = create != null && create.externalId == null
+        session.isCreateUnconfirmed = false
+        session.directAttributionId = directAttributionId.takeIf { session.isCreateHeld }
+        return create?.takeUnless { session.isCreateHeld }
+    }
+
+    /**
+     * Enqueues a held create. It must be enqueued before any of the session's updates, or the queue
+     * rejects them.
+     *
+     * @return false if the create is still held, so the caller sends no update.
+     */
+    @Synchronized
+    private fun releaseHeldCreate(
+        session: SessionModel,
+        isLastChance: Boolean = false,
+    ): Boolean {
+        if (!session.isCreateHeld) return true
+        val create = sendableHeldCreate(session, isLastChance)
+        if (create != null) {
+            // Set before clearing the hold, so no saved state has neither while enqueue hasn't stored it.
+            session.isCreateUnconfirmed = true
+            session.isCreateHeld = false
+            operationRepo.enqueue(create)
+        }
+        return create != null
+    }
+
+    /** Sends a released create again if the queue doesn't have it, as after a kill before it was stored. */
+    @Synchronized
+    private fun confirmReleasedCreate(session: SessionModel) {
+        if (!session.isCreateUnconfirmed) return
+        if (!operationRepo.hasSessionCreate(session.localSessionId)) {
+            Logging.debug("SessionService: resending the create for session ${session.sessionId}")
+            sendableHeldCreate(session, isLastChance = true)?.let { operationRepo.enqueue(it) }
+        }
+        session.isCreateUnconfirmed = false
+        session.directAttributionId = null
+    }
+
+    /**
+     * @param isLastChance true when the session is ending, so a create still held is never sent.
+     * @return the held create, or null while it must stay held.
+     */
+    private fun sendableHeldCreate(
+        session: SessionModel,
+        isLastChance: Boolean,
+    ): CreateSessionOperation? {
+        val identity = identityModelStore.model
+        val ownsSession = identity.hasProperty(IdentityConstants.ONESIGNAL_ID) && identity.onesignalId == session.onesignalId
+        val externalId = identity.externalId.takeIf { ownsSession }
+        val config = config
+        // Mid-session, an unknown requirement holds like a required one, so a login can still move
+        // the session. At the end the queue waits for the requirement before sending.
+        val mayRequireJwt =
+            when (config?.useIdentityVerification) {
+                JwtRequirement.REQUIRED -> true
+                JwtRequirement.UNKNOWN -> !isLastChance
+                else -> false
+            }
+        // Under identity verification the queue drops an anonymous create whose user or subscription
+        // is local, so it waits for a login.
+        val waitsForLogin =
+            externalId == null &&
+                mayRequireJwt &&
+                listOf(session.onesignalId, session.subscriptionId).any { it != null && IDManager.isLocalId(it) }
+        val canSend =
+            !waitsForLogin &&
+                // The queue drops a create sent without consent.
+                config?.isAwaitingConsent != true
+        return if (canSend) createSessionOperation(session, externalId, session.directAttributionId) else null
     }
 
     /** Sends the session's cumulative duration every [ConfigModel.sessionHeartbeatInterval] of active time while focused. */
@@ -403,7 +492,9 @@ internal class SessionService(
                 session.lastHeartbeatDuration = duration
                 // Measured from the focus, so a wall-clock jump mid-focus can't move a killed session's end.
                 session.lastHeartbeatTime = session.focusTime + focusDuration
-                updateSessionOperation(session, config?.appId, duration)?.let { operationRepo.enqueue(it) }
+                if (releaseHeldCreate(session)) {
+                    updateSessionOperation(session, duration)?.let { operationRepo.enqueue(it) }
+                }
             }
         }
 
@@ -434,6 +525,7 @@ internal class SessionService(
         val session =
             this.session
                 ?.takeIf { it.isValid && it.usesSessionsApi && config?.isAwaitingConsent != true }
+                ?.takeIf { releaseHeldCreate(it) }
                 // The backend gets whole seconds, so a smaller change would repeat the last report.
                 ?.takeIf { MILLISECONDS.toSeconds(it.activeDuration) > MILLISECONDS.toSeconds(it.lastHeartbeatDuration) }
                 ?: return
@@ -442,7 +534,7 @@ internal class SessionService(
         Logging.debug("SessionService: checkpoint with activeDuration: $duration")
         // Android 15+ blocks network requests once a backgrounded app is cached, which can happen within
         // the queue's batching delay, so send now. Each flush needs a new focus and a longer duration.
-        updateSessionOperation(session, config?.appId, duration)?.let { operationRepo.enqueue(it, flush = true) }
+        updateSessionOperation(session, duration)?.let { operationRepo.enqueue(it, flush = true) }
     }
 
     private fun handleOnUnfocused(
@@ -491,11 +583,10 @@ internal class SessionService(
 
 private fun createSessionOperation(
     session: SessionModel,
-    appId: String?,
     externalId: String?,
     directAttributionId: String?,
 ): CreateSessionOperation? =
-    withSessionIds(session, appId, "creating") { resolvedAppId, onesignalId, subscriptionId ->
+    withSessionIds(session, "creating") { resolvedAppId, onesignalId, subscriptionId ->
         CreateSessionOperation(
             appId = resolvedAppId,
             localSessionId = session.localSessionId,
@@ -516,24 +607,19 @@ private fun SessionModel.focusDurationAt(elapsedRealtimeMs: Long): Long =
  * An app killed while focused never adds its last focus to [SessionModel.activeDuration] or sets
  * [SessionModel.unfocusTime], so fall back to the last focus or heartbeat, whichever is later.
  */
-private fun endSessionOperation(
-    session: SessionModel,
-    appId: String?,
-): UpdateSessionOperation? =
+private fun endSessionOperation(session: SessionModel): UpdateSessionOperation? =
     updateSessionOperation(
         session,
-        appId,
         activeDuration = maxOf(session.activeDuration, session.lastHeartbeatDuration),
         endTime = maxOf(session.unfocusTime ?: 0L, session.focusTime, session.lastHeartbeatTime ?: 0L),
     )
 
 private fun updateSessionOperation(
     session: SessionModel,
-    appId: String?,
     activeDuration: Long,
     endTime: Long? = null,
 ): UpdateSessionOperation? =
-    withSessionIds(session, appId, if (endTime != null) "ending" else "updating") { resolvedAppId, onesignalId, subscriptionId ->
+    withSessionIds(session, if (endTime != null) "ending" else "updating") { resolvedAppId, onesignalId, subscriptionId ->
         UpdateSessionOperation(
             appId = resolvedAppId,
             sessionId = session.localSessionId,
@@ -546,10 +632,10 @@ private fun updateSessionOperation(
 
 private fun <T> withSessionIds(
     session: SessionModel,
-    appId: String?,
     action: String,
     block: (appId: String, onesignalId: String, subscriptionId: String) -> T,
 ): T? {
+    val appId = session.appId
     val onesignalId = session.onesignalId
     val subscriptionId = session.subscriptionId
     if (appId == null || onesignalId == null || subscriptionId == null) {

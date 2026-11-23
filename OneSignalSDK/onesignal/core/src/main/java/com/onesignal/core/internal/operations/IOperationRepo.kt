@@ -48,6 +48,12 @@ interface IOperationRepo {
      */
     fun <T : Operation> containsInstanceOf(type: KClass<T>): Boolean
 
+    /**
+     * True if the create for [localSessionId] is stored or was sent. False until saved operations
+     * are loaded.
+     */
+    fun hasSessionCreate(localSessionId: String): Boolean
+
     suspend fun awaitInitialized()
 
     fun forceExecuteOperations()
