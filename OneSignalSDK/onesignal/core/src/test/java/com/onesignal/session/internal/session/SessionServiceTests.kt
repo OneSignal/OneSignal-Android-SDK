@@ -2401,6 +2401,32 @@ class SessionServiceTests : FunSpec({
         (mocks.enqueued.single() as CreateSessionOperation).externalId shouldBe "external-id-a"
     }
 
+    test("login after the first unfocus moves a local anonymous session while the requirement is unknown") {
+        // Given
+        val mocks = Mocks(sessionsApiEnabled = true, externalId = null)
+        mocks.identityModelStore.model.onesignalId = "local-user"
+        mocks.configModelStore.model.useIdentityVerification = JwtRequirement.UNKNOWN
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        val sessionModelStore = mocks.sessionModelStore { it.isValid = false }
+        val startTime = mocks.currentTime
+        sessionService.onFocus(false)
+        mocks.advanceTime(MINUTE_MS)
+        sessionService.onUnfocused()
+        mocks.enqueued shouldBe emptyList()
+
+        // When
+        mocks.switchUser("onesignal-id-a", "external-id-a")
+
+        // Then
+        val create = mocks.enqueued.single() as CreateSessionOperation
+        create.onesignalId shouldBe "onesignal-id-a"
+        create.externalId shouldBe "external-id-a"
+        create.startTime shouldBe startTime
+        sessionModelStore.model.isCreateHeld shouldBe false
+    }
+
     test("login after an anonymous session's create was sent keeps the session, and a later switch splits it") {
         // Given
         val mocks = Mocks(sessionsApiEnabled = true, externalId = null)
