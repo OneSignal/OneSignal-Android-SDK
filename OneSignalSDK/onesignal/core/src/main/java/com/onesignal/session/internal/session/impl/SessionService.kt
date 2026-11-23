@@ -58,7 +58,8 @@ import kotlin.reflect.KMutableProperty1
  *
  * An anonymous user's session holds its create until the first unfocus, a heartbeat, or the session
  * end, so a login before then can move the session to that user. Under identity verification it
- * stays held while its user or subscription ID is local, since the queue would drop it.
+ * stays held while its user or subscription ID is local, since the queue would drop it. Until the
+ * requirement is known, it stays held the same way, except at the session end.
  *
  * Time without privacy consent is not counted: losing consent while focused counts as an unfocus,
  * and regaining it while in the foreground counts as a focus. A session that started without
@@ -271,7 +272,7 @@ internal class SessionService(
         // the next session and write these fields while this runs on the background thread.
         val usesSessionsApi = session.usesSessionsApi
         confirmReleasedCreate(session)
-        val end = if (usesSessionsApi && releaseHeldCreate(session)) endSessionOperation(session) else null
+        val end = if (usesSessionsApi && releaseHeldCreate(session, isLastChance = true)) endSessionOperation(session) else null
         if (session.isCreateHeld) {
             Logging.debug("SessionService: session ${session.sessionId} ended with its create held, not reporting it")
             session.isCreateHeld = false
@@ -391,9 +392,12 @@ internal class SessionService(
      * @return false if the create is still held, so the caller sends no update.
      */
     @Synchronized
-    private fun releaseHeldCreate(session: SessionModel): Boolean {
+    private fun releaseHeldCreate(
+        session: SessionModel,
+        isLastChance: Boolean = false,
+    ): Boolean {
         if (!session.isCreateHeld) return true
-        val create = sendableHeldCreate(session)
+        val create = sendableHeldCreate(session, isLastChance)
         if (create != null) {
             // Set before clearing the hold, so no saved state has neither while enqueue hasn't stored it.
             session.isCreateUnconfirmed = true
@@ -409,23 +413,37 @@ internal class SessionService(
         if (!session.isCreateUnconfirmed) return
         if (!operationRepo.hasSessionCreate(session.localSessionId)) {
             Logging.debug("SessionService: resending the create for session ${session.sessionId}")
-            sendableHeldCreate(session)?.let { operationRepo.enqueue(it) }
+            sendableHeldCreate(session, isLastChance = true)?.let { operationRepo.enqueue(it) }
         }
         session.isCreateUnconfirmed = false
         session.directAttributionId = null
     }
 
-    /** @return the held create, or null while it must stay held. */
-    private fun sendableHeldCreate(session: SessionModel): CreateSessionOperation? {
+    /**
+     * @param isLastChance true when the session is ending, so a create still held is never sent.
+     * @return the held create, or null while it must stay held.
+     */
+    private fun sendableHeldCreate(
+        session: SessionModel,
+        isLastChance: Boolean,
+    ): CreateSessionOperation? {
         val identity = identityModelStore.model
         val ownsSession = identity.hasProperty(IdentityConstants.ONESIGNAL_ID) && identity.onesignalId == session.onesignalId
         val externalId = identity.externalId.takeIf { ownsSession }
         val config = config
+        // Mid-session, an unknown requirement holds like a required one, so a login can still move
+        // the session. At the end the queue waits for the requirement before sending.
+        val mayRequireJwt =
+            when (config?.useIdentityVerification) {
+                JwtRequirement.REQUIRED -> true
+                JwtRequirement.UNKNOWN -> !isLastChance
+                else -> false
+            }
         // Under identity verification the queue drops an anonymous create whose user or subscription
         // is local, so it waits for a login.
         val waitsForLogin =
             externalId == null &&
-                config?.useIdentityVerification == JwtRequirement.REQUIRED &&
+                mayRequireJwt &&
                 listOf(session.onesignalId, session.subscriptionId).any { it != null && IDManager.isLocalId(it) }
         val canSend =
             !waitsForLogin &&

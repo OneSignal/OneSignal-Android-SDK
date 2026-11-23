@@ -946,6 +946,49 @@ class SessionServiceTests : FunSpec({
         mocks.enqueued[1] shouldBe mocks.checkpoints.single()
     }
 
+    test("anonymous session with an unknown identity verification requirement holds its local create until the end") {
+        // Given
+        val mocks = Mocks(sessionsApiEnabled = true, externalId = null)
+        mocks.identityModelStore.model.onesignalId = "local-user"
+        mocks.configModelStore.model.useIdentityVerification = JwtRequirement.UNKNOWN
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        val sessionModelStore = mocks.sessionModelStore { it.isValid = false }
+        sessionService.onFocus(false)
+        mocks.advanceTime(HEARTBEAT_MS)
+        sessionService.onUnfocused()
+        mocks.enqueued shouldBe emptyList()
+        sessionModelStore.model.isCreateHeld shouldBe true
+
+        // When
+        sessionService.backgroundRun()
+
+        // Then
+        mocks.enqueued[0].shouldBeInstanceOf<CreateSessionOperation>().onesignalId shouldBe "local-user"
+        mocks.enqueued[1].shouldBeInstanceOf<UpdateSessionOperation>().endTime shouldNotBe null
+        sessionModelStore.model.isCreateHeld shouldBe false
+    }
+
+    test("anonymous session with backend IDs sends its create on the first unfocus while the requirement is unknown") {
+        // Given
+        val mocks = Mocks(sessionsApiEnabled = true, externalId = null)
+        mocks.configModelStore.model.useIdentityVerification = JwtRequirement.UNKNOWN
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        mocks.sessionModelStore { it.isValid = false }
+        sessionService.onFocus(false)
+        mocks.advanceTime(10 * MINUTE_MS)
+
+        // When
+        sessionService.onUnfocused()
+
+        // Then
+        mocks.enqueued[0].shouldBeInstanceOf<CreateSessionOperation>().onesignalId shouldBe Mocks.ONESIGNAL_ID
+        mocks.enqueued[1] shouldBe mocks.checkpoints.single()
+    }
+
     test("identified session under identity verification sends its create on focus") {
         // Given
         val mocks = Mocks(sessionsApiEnabled = true)
