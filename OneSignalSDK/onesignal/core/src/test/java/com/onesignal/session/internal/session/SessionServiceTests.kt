@@ -2322,6 +2322,38 @@ class SessionServiceTests : FunSpec({
         sessionModelStore.model.isSplitPending shouldBe false
     }
 
+    test("login before the first focus leaves the last run's held session with its user") {
+        // Given
+        val mocks = Mocks(sessionsApiEnabled = true, externalId = null)
+        mocks.sessionModelStore {
+            it.isValid = true
+            it.localSessionId = "local-previous-session"
+            it.usesSessionsApi = true
+            it.isCreateHeld = true
+            it.onesignalId = Mocks.ONESIGNAL_ID
+            it.subscriptionId = Mocks.SUBSCRIPTION_ID
+            it.appId = MockHelper.DEFAULT_APP_ID
+            it.focusTime = 500L
+        }
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        mocks.switchUser("onesignal-id-b", "external-id-b")
+        mocks.enqueued shouldBe emptyList()
+
+        // When
+        sessionService.onFocus(false)
+
+        // Then
+        val create = mocks.enqueued[0].shouldBeInstanceOf<CreateSessionOperation>()
+        create.localSessionId shouldBe "local-previous-session"
+        create.onesignalId shouldBe Mocks.ONESIGNAL_ID
+        create.externalId shouldBe null
+        val end = mocks.enqueued[1].shouldBeInstanceOf<UpdateSessionOperation>()
+        end.sessionId shouldBe "local-previous-session"
+        end.onesignalId shouldBe Mocks.ONESIGNAL_ID
+    }
+
     test("login while the create is held moves the session to the new user and sends its create") {
         // Given
         val mocks = Mocks(sessionsApiEnabled = true, externalId = null)

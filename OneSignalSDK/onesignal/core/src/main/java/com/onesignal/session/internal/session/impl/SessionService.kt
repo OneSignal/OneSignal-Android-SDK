@@ -155,6 +155,8 @@ internal class SessionService(
             val nowMs = time.currentTimeMillis
             val elapsedMs = time.elapsedRealtimeMillis
             runOnSerialIO {
+                // Before the first focus, the session is the last run's, which the cold start ends.
+                if (!hasFocused) return@runOnSerialIO
                 val session = session?.takeIf { it.isValid && it.usesSessionsApi && !it.isSplitPending } ?: return@runOnSerialIO
                 when {
                     session.isCreateHeld -> {
