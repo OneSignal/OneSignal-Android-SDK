@@ -320,16 +320,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
                     fetchUserDataFromApi()
                     return@withContext
                 }
-                resetUserFetch()
-                aliasesList.clear()
-                emailsList.clear()
-                smsNumbersList.clear()
-                triggersList.clear()
-                refreshAliases()
-                refreshEmails()
-                refreshSmsNumbers()
-                refreshTriggers()
-                loadExistingTags()
+                showSwitchedUser()
                 _isLoading.value = false
             }
         }
@@ -363,16 +354,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
                     resetLanguagePicker()
                     refreshPushSubscription()
                     if (!sameUser) {
-                        resetUserFetch()
-                        aliasesList.clear()
-                        emailsList.clear()
-                        smsNumbersList.clear()
-                        triggersList.clear()
-                        refreshAliases()
-                        refreshEmails()
-                        refreshSmsNumbers()
-                        refreshTriggers()
-                        loadExistingTags()
+                        showSwitchedUser()
                     }
                     // Any user-state event already fired while the SDK call waited on the backend,
                     // so nothing else refetches now.
@@ -380,6 +362,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
                 } else {
                     DemoLog.e("Composite login failed: ${result.error}")
                     _isLoading.value = false
+                    // The SDK switches the local user before it sends the login and doesn't
+                    // switch back when the send fails, so follow the user it is on now.
+                    val current = OneSignal.User.externalId.ifEmpty { null }
+                    if (current != _externalUserId.value) {
+                        SharedPreferenceUtil.cacheUserExternalUserId(getApplication(), current.orEmpty())
+                        _externalUserId.value = current
+                        resetLanguagePicker()
+                        refreshPushSubscription()
+                        showSwitchedUser()
+                        if (current != null && SharedPreferenceUtil.getCachedJwtToken(getApplication(), current) != null) {
+                            fetchUserDataFromApi()
+                        }
+                    }
                 }
             }
         }
@@ -429,6 +424,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
                 refreshTriggers()
             }
         }
+    }
+
+    private fun showSwitchedUser() {
+        resetUserFetch()
+        aliasesList.clear()
+        emailsList.clear()
+        smsNumbersList.clear()
+        triggersList.clear()
+        refreshAliases()
+        refreshEmails()
+        refreshSmsNumbers()
+        refreshTriggers()
+        loadExistingTags()
     }
 
     // A fetch still in flight belongs to the previous user, so drop its result. Clear the row
