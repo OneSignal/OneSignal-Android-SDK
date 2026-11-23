@@ -264,32 +264,37 @@ internal class SessionService(
      * @return the operation that ends the session through the sessions API, for the caller to enqueue.
      */
     private fun endSession(): UpdateSessionOperation? {
-        // Defensive: if bootstrap() has not run yet, there is no session state to end.
-        // This can happen when SyncJobService races with
-        // an in-flight initWithContext that has not yet reached bootstrapServices().
-        val session = this.session?.takeIf { it.isValid } ?: return null
-        val activeDuration = session.activeDuration
-        Logging.debug("SessionService.backgroundRun: Session ended. activeDuration: $activeDuration")
+        // Locked with handleSplit, which runs on the serial IO lane, so only one of them ends the session.
+        val (end, activeDuration, usesSessionsApi) =
+            synchronized(this) {
+                // Defensive: if bootstrap() has not run yet, there is no session state to end.
+                // This can happen when SyncJobService races with
+                // an in-flight initWithContext that has not yet reached bootstrapServices().
+                val session = this.session?.takeIf { it.isValid } ?: return null
+                val activeDuration = session.activeDuration
+                Logging.debug("SessionService.backgroundRun: Session ended. activeDuration: $activeDuration")
 
-        // Read and reset before clearing isValid: after that, a focus on the serial IO lane can start
-        // the next session and write these fields while this runs on the background thread.
-        val usesSessionsApi = session.usesSessionsApi
-        confirmReleasedCreate(session)
-        val end =
-            if (usesSessionsApi && !session.isSplitPending && releaseHeldCreate(session, isLastChance = true)) {
-                endSessionOperation(session)
-            } else {
-                null
+                // Read and reset before clearing isValid: after that, a focus on the serial IO lane can start
+                // the next session and write these fields while this runs on the background thread.
+                val usesSessionsApi = session.usesSessionsApi
+                confirmReleasedCreate(session)
+                val end =
+                    if (usesSessionsApi && !session.isSplitPending && releaseHeldCreate(session, isLastChance = true)) {
+                        endSessionOperation(session)
+                    } else {
+                        null
+                    }
+                session.isSplitPending = false
+                if (session.isCreateHeld) {
+                    Logging.debug("SessionService: session ${session.sessionId} ended with its create held, not reporting it")
+                    session.isCreateHeld = false
+                }
+                session.activeDuration = 0L
+                session.lastHeartbeatDuration = 0L
+                session.lastHeartbeatTime = null
+                session.isValid = false
+                Triple(end, activeDuration, usesSessionsApi)
             }
-        session.isSplitPending = false
-        if (session.isCreateHeld) {
-            Logging.debug("SessionService: session ${session.sessionId} ended with its create held, not reporting it")
-            session.isCreateHeld = false
-        }
-        session.activeDuration = 0L
-        session.lastHeartbeatDuration = 0L
-        session.lastHeartbeatTime = null
-        session.isValid = false
         sessionLifeCycleNotifier.fire { it.onSessionEnded(activeDuration, usesSessionsApi) }
         return end
     }
@@ -397,6 +402,7 @@ internal class SessionService(
         runOnSerialIO { handleSplit(nowMs, elapsedMs) }
     }
 
+    @Synchronized
     private fun handleSplit(
         nowMs: Long,
         elapsedMs: Long,

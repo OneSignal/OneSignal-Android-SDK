@@ -47,11 +47,14 @@ import io.mockk.verifyOrder
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
+import java.util.concurrent.CountDownLatch
+import kotlin.concurrent.thread
 
 // Mocks used by every test in this file
 private class Mocks(
@@ -2238,6 +2241,39 @@ class SessionServiceTests : FunSpec({
         val create = mocks.enqueued.single().shouldBeInstanceOf<CreateSessionOperation>()
         create.onesignalId shouldBe "onesignal-id-b"
         create.directAttributionId shouldBe "notification-id"
+    }
+
+    test("split in the background while the session times out sends one end") {
+        // Given
+        val mocks = Mocks(sessionsApiEnabled = true)
+        val sessionService = mocks.sessionService
+        sessionService.bootstrap()
+        sessionService.start()
+        mocks.sessionModelStore { it.isValid = false }
+        sessionService.onFocus(false)
+        mocks.advanceTime(10 * MINUTE_MS)
+        sessionService.onUnfocused()
+        mocks.enqueued.clear()
+        val splitEnqueuing = CountDownLatch(1)
+        val releaseSplit = CountDownLatch(1)
+        every { mocks.operationRepo.enqueue(any(), any()) } answers {
+            synchronized(mocks.enqueued) { mocks.enqueued += firstArg<Operation>() }
+            splitEnqueuing.countDown()
+            releaseSplit.await()
+        }
+
+        // When
+        mocks.switchUser("onesignal-id-b", "external-id-b")
+        val split = thread { sessionService.splitSession() }
+        splitEnqueuing.await()
+        val timeout = thread { runBlocking { sessionService.backgroundRun() } }
+        timeout.join(200)
+        releaseSplit.countDown()
+        split.join()
+        timeout.join()
+
+        // Then
+        mocks.enqueued.filterIsInstance<UpdateSessionOperation>().count { it.isEnd } shouldBe 1
     }
 
     test("session timing out after a split in the background sends no second end") {
