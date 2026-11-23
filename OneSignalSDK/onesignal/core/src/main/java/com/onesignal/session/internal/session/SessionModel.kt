@@ -119,8 +119,8 @@ class SessionModel : Model() {
         }
 
     /**
-     * The OneSignal ID when this session started. Session updates keep using it after a
-     * login or user switch.
+     * The OneSignal ID when this session started. Session updates keep using it after a user
+     * switch, except that a login while the create is held moves the session to the new user.
      */
     var onesignalId: String?
         get() = getOptStringProperty(::onesignalId.name)
@@ -145,6 +145,17 @@ class SessionModel : Model() {
         get() = getOptStringProperty(::appId.name)
         set(value) {
             setOptStringProperty(::appId.name, value)
+        }
+
+    /**
+     * The external ID of the user this session follows, null while anonymous. A login after an
+     * anonymous session's create was sent sets it without moving the session, so a later switch
+     * splits.
+     */
+    var externalId: String?
+        get() = getOptStringProperty(::externalId.name)
+        set(value) {
+            setOptStringProperty(::externalId.name, value)
         }
 
     /**
