@@ -38,6 +38,16 @@ class SessionModel : Model() {
         }
 
     /**
+     * When the current sessions API session started, in Unix time milliseconds. Differs from
+     * [startTime] after a user switch splits the session, since the app session goes on.
+     */
+    var sessionsApiStartTime: Long
+        get() = getLongProperty(::sessionsApiStartTime.name) { startTime }
+        set(value) {
+            setLongProperty(::sessionsApiStartTime.name, value)
+        }
+
+    /**
      * When this app was last focused, in Unix time milliseconds.
      */
     var focusTime: Long
@@ -164,6 +174,17 @@ class SessionModel : Model() {
         get() = getOptStringProperty(::directAttributionId.name)
         set(value) {
             setOptStringProperty(::directAttributionId.name, value)
+        }
+
+    /**
+     * True after a user switch while this session wasn't counting time, in the background or waiting
+     * for consent. The app session goes on, and the next sessions API session starts on the next
+     * focus, whether or not an end was queued.
+     */
+    var isSplitPending: Boolean
+        get() = getBooleanProperty(::isSplitPending.name) { false }
+        set(value) {
+            setBooleanProperty(::isSplitPending.name, value)
         }
 
     /**
