@@ -2,6 +2,8 @@ package com.onesignal.example.ui.components
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -79,32 +81,80 @@ fun PrimaryButton(
     }
 }
 
+enum class ButtonStyle { Primary, Outline }
+
+data class GridAction(
+    val text: String,
+    val onClick: () -> Unit,
+    val testTag: String? = null,
+    val style: ButtonStyle = ButtonStyle.Primary,
+    val enabled: Boolean = true,
+)
+
+/**
+ * Two equal columns per styles.md "Button Grid". An odd last action spans both
+ * columns. Callers drop hidden actions from the list so the rest reflow.
+ */
 @Composable
-fun GridPrimaryButton(
-    text: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    testTag: String? = null,
-) {
-    Button(
-        onClick = onClick,
-        modifier = modifier.height(DemoLayout.buttonHeight).applyTestTag(testTag),
-        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-        shape = ButtonShape,
-        elevation = ButtonDefaults.buttonElevation(
-            defaultElevation = 0.dp,
-            pressedElevation = 0.dp,
-        ),
-        contentPadding = PaddingValues(horizontal = DemoLayout.gap),
+fun ButtonGrid(actions: List<GridAction>, modifier: Modifier = Modifier) {
+    if (actions.isEmpty()) return
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = DemoLayout.pagePadding, vertical = 4.dp),
+        verticalArrangement = Arrangement.spacedBy(DemoLayout.gap),
     ) {
-        ScaleDownText(text = text, style = ButtonTextStyle, color = Color.White)
+        actions.chunked(2).forEach { row ->
+            Row(horizontalArrangement = Arrangement.spacedBy(DemoLayout.gap)) {
+                row.forEach { action -> GridButton(action, Modifier.weight(1f)) }
+            }
+        }
     }
 }
 
 @Composable
-private fun ScaleDownText(text: String, style: TextStyle, color: Color) {
-    var scaledStyle by remember(text, style) { mutableStateOf(style) }
-    var readyToDraw by remember(text, style) { mutableStateOf(false) }
+private fun GridButton(action: GridAction, modifier: Modifier) {
+    val buttonModifier = modifier.height(DemoLayout.buttonHeight).applyTestTag(action.testTag)
+    val contentPadding = PaddingValues(horizontal = DemoLayout.gap)
+    when (action.style) {
+        ButtonStyle.Primary -> Button(
+            onClick = action.onClick,
+            modifier = buttonModifier,
+            enabled = action.enabled,
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primary,
+                disabledContainerColor = OsGrey500,
+            ),
+            shape = ButtonShape,
+            elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp, pressedElevation = 0.dp),
+            contentPadding = contentPadding,
+        ) {
+            ScaleDownText(text = action.text, style = ButtonTextStyle, color = Color.White)
+        }
+        ButtonStyle.Outline -> {
+            val color = if (action.enabled) OsPrimary else OsGrey500
+            OutlinedButton(
+                onClick = action.onClick,
+                modifier = buttonModifier,
+                enabled = action.enabled,
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = color, disabledContentColor = OsGrey500),
+                shape = ButtonShape,
+                border = BorderStroke(1.dp, color),
+                contentPadding = contentPadding,
+            ) {
+                ScaleDownText(text = action.text, style = ButtonTextStyle, color = color)
+            }
+        }
+    }
+}
+
+@Composable
+private fun ScaleDownText(text: String, style: TextStyle, color: Color) = BoxWithConstraints(
+    contentAlignment = Alignment.Center,
+) {
+    // Keyed on width so a cell that grows after a reflow scales back up.
+    var scaledStyle by remember(text, style, maxWidth) { mutableStateOf(style) }
+    var readyToDraw by remember(text, style, maxWidth) { mutableStateOf(false) }
     Text(
         text = text,
         style = scaledStyle,

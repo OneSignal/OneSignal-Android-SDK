@@ -2,10 +2,8 @@ package com.onesignal.example.ui.main
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -30,16 +28,16 @@ import com.onesignal.example.ui.components.CardKvRow
 import com.onesignal.example.ui.components.CollapsibleSingleList
 import com.onesignal.example.ui.components.CustomNotificationDialog
 import com.onesignal.example.ui.components.DemoSection
-import com.onesignal.example.ui.components.DestructiveButton
 import com.onesignal.example.ui.components.DropdownRow
-import com.onesignal.example.ui.components.GridPrimaryButton
+import com.onesignal.example.ui.components.ButtonGrid
+import com.onesignal.example.ui.components.ButtonStyle
+import com.onesignal.example.ui.components.GridAction
 import com.onesignal.example.ui.components.LocalSnackbarController
 import com.onesignal.example.ui.components.CompositeLoginDialog
 import com.onesignal.example.ui.components.LoginDialog
 import com.onesignal.example.ui.components.MultiPairInputDialog
 import com.onesignal.example.ui.components.MultiSelectRemoveDialog
 import com.onesignal.example.ui.components.OutcomeDialog
-import com.onesignal.example.ui.components.OutlineButton
 import com.onesignal.example.ui.components.PairInputDialog
 import com.onesignal.example.ui.components.PairList
 import com.onesignal.example.ui.components.PrimaryButton
@@ -234,33 +232,41 @@ fun UserSection(
 
         Spacer(modifier = Modifier.height(DemoLayout.gap))
 
-        PrimaryButton(
-            text = if (isLoggedIn) "SWITCH USER" else "LOGIN USER",
-            onClick = { loginOpen = true },
-            enabled = !isLoading,
-            testTag = "login_user_button",
+        // LOGIN spans alone when logged out and pairs with LOGOUT when logged in, so the
+        // Android-only profile and JWT actions get their own rows.
+        ButtonGrid(
+            listOfNotNull(
+                GridAction(
+                    text = if (isLoggedIn) "SWITCH USER" else "LOGIN USER",
+                    onClick = { loginOpen = true },
+                    testTag = "login_user_button",
+                    enabled = !isLoading,
+                ),
+                GridAction(
+                    text = "LOGOUT USER",
+                    onClick = onLogout,
+                    testTag = "logout_user_button",
+                    style = ButtonStyle.Outline,
+                    enabled = !isLoading,
+                ).takeIf { isLoggedIn },
+            ),
         )
-
-        OutlineButton(
-            text = "LOGIN WITH PROFILE",
-            onClick = { compositeLoginOpen = true },
-            enabled = !isLoading,
-            testTag = "composite_login_button",
-        )
-
-        if (isLoggedIn) {
-            OutlineButton(
-                text = "LOGOUT USER",
-                onClick = onLogout,
-                enabled = !isLoading,
-                testTag = "logout_user_button",
-            )
-        }
-
-        OutlineButton(
-            text = "UPDATE USER JWT",
-            onClick = { updateJwtOpen = true },
-            testTag = "update_user_jwt_button",
+        ButtonGrid(
+            listOf(
+                GridAction(
+                    text = "LOGIN WITH PROFILE",
+                    onClick = { compositeLoginOpen = true },
+                    testTag = "composite_login_button",
+                    style = ButtonStyle.Outline,
+                    enabled = !isLoading,
+                ),
+                GridAction(
+                    text = "UPDATE USER JWT",
+                    onClick = { updateJwtOpen = true },
+                    testTag = "update_user_jwt_button",
+                    style = ButtonStyle.Outline,
+                ),
+            ),
         )
     }
 
@@ -365,11 +371,15 @@ fun SendPushSection(
             sectionKey = "send_push",
             onInfoClick = onInfoClick,
         ) {
-            PrimaryButton(text = "SIMPLE", onClick = onSimpleClick, testTag = "send_simple_button")
-            PrimaryButton(text = "WITH IMAGE", onClick = onImageClick, testTag = "send_image_button")
-            PrimaryButton(text = "WITH SOUND", onClick = onSoundClick, testTag = "send_sound_button")
-            PrimaryButton(text = "CUSTOM", onClick = { customOpen = true }, testTag = "send_custom_button")
-            OutlineButton(text = "CLEAR ALL", onClick = onClearAllClick, testTag = "clear_all_button")
+            ButtonGrid(
+                listOf(
+                    GridAction("SIMPLE", onSimpleClick, "send_simple_button"),
+                    GridAction("WITH IMAGE", onImageClick, "send_image_button"),
+                    GridAction("WITH SOUND", onSoundClick, "send_sound_button"),
+                    GridAction("CUSTOM", { customOpen = true }, "send_custom_button"),
+                    GridAction("CLEAR ALL", onClearAllClick, "clear_all_button", ButtonStyle.Outline),
+                ),
+            )
         }
     }
 
@@ -475,23 +485,11 @@ fun SendInAppMessageSection(
             sectionKey = "send_iam",
             onInfoClick = onInfoClick,
         ) {
-            Column(
-                modifier = Modifier.padding(horizontal = DemoLayout.pagePadding, vertical = 4.dp),
-                verticalArrangement = Arrangement.spacedBy(DemoLayout.gap),
-            ) {
-                InAppMessageType.entries.chunked(2).forEach { rowTypes ->
-                    Row(horizontalArrangement = Arrangement.spacedBy(DemoLayout.gap)) {
-                        rowTypes.forEach { type ->
-                            GridPrimaryButton(
-                                text = type.title,
-                                onClick = { onSendMessage(type) },
-                                modifier = Modifier.weight(1f),
-                                testTag = "send_iam_${type.triggerValue}_button",
-                            )
-                        }
-                    }
-                }
-            }
+            ButtonGrid(
+                InAppMessageType.entries.map { type ->
+                    GridAction(type.title, { onSendMessage(type) }, "send_iam_${type.triggerValue}_button")
+                },
+            )
         }
     }
 }
@@ -517,11 +515,11 @@ fun AliasesSection(
             )
         }
         Spacer(modifier = Modifier.height(DemoLayout.gap))
-        PrimaryButton(text = "ADD ALIAS", onClick = { addOpen = true }, testTag = "add_alias_button")
-        PrimaryButton(
-            text = "ADD MULTIPLE ALIASES",
-            onClick = { addMultipleOpen = true },
-            testTag = "add_multiple_aliases_button",
+        ButtonGrid(
+            listOf(
+                GridAction("ADD ALIAS", { addOpen = true }, "add_alias_button"),
+                GridAction("ADD ALIASES", { addMultipleOpen = true }, "add_multiple_aliases_button"),
+            ),
         )
     }
 
@@ -655,20 +653,14 @@ fun TagsSection(
             )
         }
         Spacer(modifier = Modifier.height(DemoLayout.gap))
-        PrimaryButton(text = "ADD TAG", onClick = { addOpen = true }, testTag = "add_tag_button")
-        PrimaryButton(
-            text = "ADD MULTIPLE TAGS",
-            onClick = { addMultipleOpen = true },
-            testTag = "add_multiple_tags_button",
+        ButtonGrid(
+            listOfNotNull(
+                GridAction("ADD TAG", { addOpen = true }, "add_tag_button"),
+                GridAction("ADD TAGS", { addMultipleOpen = true }, "add_multiple_tags_button"),
+                GridAction("REMOVE TAGS", { removeOpen = true }, "remove_tags_button", ButtonStyle.Outline)
+                    .takeIf { tags.isNotEmpty() },
+            ),
         )
-
-        if (tags.isNotEmpty()) {
-            DestructiveButton(
-                text = "REMOVE TAGS",
-                onClick = { removeOpen = true },
-                testTag = "remove_tags_button",
-            )
-        }
     }
 
     if (addOpen) {
@@ -775,25 +767,17 @@ fun TriggersSection(
             )
         }
         Spacer(modifier = Modifier.height(DemoLayout.gap))
-        PrimaryButton(text = "ADD TRIGGER", onClick = { addOpen = true }, testTag = "add_trigger_button")
-        PrimaryButton(
-            text = "ADD MULTIPLE TRIGGERS",
-            onClick = { addMultipleOpen = true },
-            testTag = "add_multiple_triggers_button",
+        val hasTriggers = triggers.isNotEmpty()
+        ButtonGrid(
+            listOfNotNull(
+                GridAction("ADD TRIGGER", { addOpen = true }, "add_trigger_button"),
+                GridAction("ADD TRIGGERS", { addMultipleOpen = true }, "add_multiple_triggers_button"),
+                GridAction("REMOVE TRIGGERS", { removeOpen = true }, "remove_triggers_button", ButtonStyle.Outline)
+                    .takeIf { hasTriggers },
+                GridAction("CLEAR ALL", onClearAll, "clear_triggers_button", ButtonStyle.Outline)
+                    .takeIf { hasTriggers },
+            ),
         )
-
-        if (triggers.isNotEmpty()) {
-            DestructiveButton(
-                text = "REMOVE TRIGGERS",
-                onClick = { removeOpen = true },
-                testTag = "remove_triggers_button",
-            )
-            DestructiveButton(
-                text = "CLEAR ALL TRIGGERS",
-                onClick = onClearAll,
-                testTag = "clear_triggers_button",
-            )
-        }
     }
 
     if (addOpen) {
@@ -886,14 +870,15 @@ fun LocationSection(
             )
         }
         Spacer(modifier = Modifier.height(DemoLayout.gap))
-        PrimaryButton(text = "PROMPT LOCATION", onClick = onPromptLocation, testTag = "prompt_location_button")
-        PrimaryButton(
-            text = "CHECK LOCATION",
-            onClick = {
-                val shared = onCheckLocationShared()
-                snackbar.show("Location shared: $shared")
-            },
-            testTag = "check_location_button",
+        ButtonGrid(
+            listOf(
+                GridAction("PROMPT LOCATION", onPromptLocation, "prompt_location_button"),
+                GridAction(
+                    text = "CHECK LOCATION",
+                    onClick = { snackbar.show("Location shared: ${onCheckLocationShared()}") },
+                    testTag = "check_location_button",
+                ),
+            ),
         )
     }
 }
