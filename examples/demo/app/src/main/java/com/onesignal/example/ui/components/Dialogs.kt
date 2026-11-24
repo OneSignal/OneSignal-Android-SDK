@@ -508,6 +508,65 @@ fun LoginDialog(
 }
 
 @Composable
+fun UpdateUserJwtDialog(
+    initialExternalId: String,
+    onDismiss: () -> Unit,
+    onConfirm: (externalId: String, token: String) -> Unit,
+) {
+    var externalId by remember { mutableStateOf(initialExternalId) }
+    var token by remember { mutableStateOf("") }
+
+    DemoDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            DialogTitle("Update User JWT")
+        },
+        text = {
+            Column {
+                OutlinedTextField(
+                    value = externalId,
+                    onValueChange = { externalId = it },
+                    label = { Text("External User Id") },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("update_jwt_external_id_input"),
+                    singleLine = true,
+                    shape = TextFieldShape,
+                    colors = dialogTextFieldColors()
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = token,
+                    onValueChange = { token = it },
+                    label = { Text("JWT Token") },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("update_jwt_token_input"),
+                    singleLine = true,
+                    shape = TextFieldShape,
+                    colors = dialogTextFieldColors()
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { onConfirm(externalId, token) },
+                enabled = externalId.isNotBlank() && token.isNotBlank(),
+                modifier = Modifier.testTag("update_jwt_confirm_button"),
+                colors = dialogTextButtonColors(),
+            ) {
+                DialogActionLabel("Update")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss, colors = dialogTextButtonColors()) {
+                DialogActionLabel("Cancel")
+            }
+        },
+    )
+}
+
+@Composable
 fun CompositeLoginDialog(
     onDismiss: () -> Unit,
     onConfirm: (

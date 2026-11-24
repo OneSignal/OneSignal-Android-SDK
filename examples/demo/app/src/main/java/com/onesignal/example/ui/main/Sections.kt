@@ -45,6 +45,7 @@ import com.onesignal.example.ui.components.SectionCard
 import com.onesignal.example.ui.components.SingleInputDialog
 import com.onesignal.example.ui.components.ToggleRow
 import com.onesignal.example.ui.components.TrackEventDialog
+import com.onesignal.example.ui.components.UpdateUserJwtDialog
 import com.onesignal.example.ui.theme.DemoLayout
 import com.onesignal.example.ui.theme.OsCardBorder
 import com.onesignal.example.ui.theme.OsDivider
@@ -285,17 +286,13 @@ fun UserSection(
     }
 
     if (updateJwtOpen) {
-        PairInputDialog(
-            title = "Update User JWT",
-            keyLabel = "External User Id",
-            valueLabel = "JWT Token",
+        UpdateUserJwtDialog(
+            initialExternalId = externalUserId.orEmpty(),
             onDismiss = { updateJwtOpen = false },
             onConfirm = { externalId, token ->
                 onUpdateJwt(externalId, token)
                 updateJwtOpen = false
             },
-            keyTestTag = "update_jwt_external_id_input",
-            valueTestTag = "update_jwt_token_input",
         )
     }
 }
