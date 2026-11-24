@@ -69,11 +69,11 @@ Alternatively, from the terminal:
 ./gradlew :app:installGmsDebug
 ```
 
-A OneSignal App ID is required; the build fails without one.
+Without a OneSignal App ID the demo uses the shared example app (`1154c350-e715-4b71-a58b-1b84b6745baa`) and installs as `com.onesignal.example`.
 
-Firebase Installation ID registration is off by default. To turn it on, add a `google-services.json` with a client for `com.onesignal.sdkdemo` to `examples/demo/app/` (gitignored) and set `FIREBASE_INSTALLATION_ID_ENABLED=true`. Otherwise the `gms` build uses the legacy FCM token path.
+Firebase Installation ID registration is off by default. To turn it on, add a `google-services.json` with a client for `com.onesignal.example` (or your `DEMO_BUNDLE_ID`) to `examples/demo/app/` (gitignored) and set `FIREBASE_INSTALLATION_ID_ENABLED=true`. Otherwise the `gms` build uses the legacy FCM token path.
 
-Copy `examples/demo/local.properties.example` to `examples/demo/local.properties` and set `ONESIGNAL_APP_ID=YOUR_APP_ID_HERE` (or pass `-PONESIGNAL_APP_ID=...` on the Gradle CLI). The value is read straight from `BuildConfig` on every launch — no uninstall required. See [`examples/build.md`](../build.md) for the full override contract.
+Copy `examples/demo/local.properties.example` to `examples/demo/local.properties` and optionally set `ONESIGNAL_APP_ID=YOUR_APP_ID_HERE` (or pass `-PONESIGNAL_APP_ID=...` on the Gradle CLI). The value is read straight from `BuildConfig` on every launch — no uninstall required. See [`examples/build.md`](../build.md) for the full override contract.
 
 Once launched, you should see the following screen:
 

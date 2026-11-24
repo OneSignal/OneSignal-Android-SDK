@@ -25,14 +25,16 @@ The demo uses **`examples/demo/local.properties`** as its Capacitor-style overri
 ```properties
 ONESIGNAL_APP_ID=
 ONESIGNAL_ANDROID_CHANNEL_ID=
+DEMO_BUNDLE_ID=
 ```
 
-Each key resolves in this order at build time: `-PKEY=value` from the CLI → `local.properties` → a built-in default. `ONESIGNAL_APP_ID` has no default and is required; the build fails if it is unset. The values are surfaced through `BuildConfig.ONESIGNAL_APP_ID` and `BuildConfig.ONESIGNAL_ANDROID_CHANNEL_ID` (see `app/build.gradle.kts`'s `demoOverride(...)` helper).
+Each key resolves in this order at build time: `-PKEY=value` from the CLI → `local.properties` → a built-in default. `ONESIGNAL_APP_ID` defaults to the shared example app (`1154c350-e715-4b71-a58b-1b84b6745baa`). The values are surfaced through `BuildConfig.ONESIGNAL_APP_ID` and `BuildConfig.ONESIGNAL_ANDROID_CHANNEL_ID` (see `app/build.gradle.kts`'s `demoOverride(...)` helper).
 
 | Key | Used by | Capacitor counterpart |
 |-----|---------|-----------------------|
 | `ONESIGNAL_APP_ID` | `MainApplication.onCreate` + `MainViewModel.loadInitialState` | `VITE_ONESIGNAL_APP_ID` |
 | `ONESIGNAL_ANDROID_CHANNEL_ID` | `OneSignalService.sendNotification` (WITH SOUND payload) | `VITE_ONESIGNAL_ANDROID_CHANNEL_ID` |
+| `DEMO_BUNDLE_ID` | `gms` flavor `applicationId` (default `com.onesignal.example`; E2E passes `com.onesignal.sdkdemo`) | `-PDEMO_BUNDLE_ID` (Gradle) |
 | `SHOW_NSE_SECTION` | `MainScreen` (renders the Notification Service Extension section) | none |
 
 > Changing `ONESIGNAL_APP_ID` no longer needs an uninstall — the value is read straight from `BuildConfig` on every launch, no SharedPreferences cache.
@@ -100,8 +102,8 @@ android {
         targetSdk = 34
         multiDexEnabled = true
 
-        // demoOverride() walks -P, then local.properties. No default: preBuild fails if unset.
-        buildConfigField("String", "ONESIGNAL_APP_ID", "\"${onesignalAppId.orEmpty()}\"")
+        // demoOverride() walks -P, then local.properties, then the shared example app ID.
+        buildConfigField("String", "ONESIGNAL_APP_ID", "\"$onesignalAppId\"")
     }
 
     buildFeatures {
@@ -112,7 +114,7 @@ android {
     composeOptions { kotlinCompilerExtensionVersion = "1.5.15" }
 
     productFlavors {
-        create("gms")    { dimension = "default"; applicationId = "com.onesignal.sdkdemo"; minSdk = 23 }
+        create("gms")    { dimension = "default"; applicationId = demoBundleId; minSdk = 23 }
         create("huawei") { dimension = "default"; applicationId = "com.onesignal.example" }
     }
 }
@@ -123,7 +125,7 @@ android {
 - `release` -- `isMinifyEnabled = true`, `isShrinkResources = true`, consumes the SDK's published ProGuard rules.
 - `profileable` -- declared via `create("profileable") { initWith(release); ... }` so it inherits R8/shrinker settings while staying profileable on-device (used for Macrobenchmark / Android Studio profiling).
 - `flavorDimensions += "default"` with `gms` and `huawei` flavors (see table above).
-- BuildConfig fields: `ONESIGNAL_APP_ID`, `ONESIGNAL_ANDROID_CHANNEL_ID`, and the boolean `SHOW_NSE_SECTION`, all populated through the `demoOverride(...)` helper (`-P` -> `local.properties` -> default). `ONESIGNAL_APP_ID` has no default; `preBuild` fails if it is unset.
+- BuildConfig fields: `ONESIGNAL_APP_ID`, `ONESIGNAL_ANDROID_CHANNEL_ID`, and the boolean `SHOW_NSE_SECTION`, all populated through the `demoOverride(...)` helper (`-P` -> `local.properties` -> default). `ONESIGNAL_APP_ID` falls back to the shared example app.
 
 #### Root Gradle toolchain
 
@@ -312,9 +314,9 @@ The `vine_boom.wav` file from [`sdk-shared/assets`](https://github.com/OneSignal
 
 ### Service config files
 
-The `gms` flavor's `applicationId` is `com.onesignal.sdkdemo`. The `huawei` flavor stays on `com.onesignal.example`.
+The `gms` flavor's `applicationId` is `DEMO_BUNDLE_ID` (default `com.onesignal.example`; E2E builds with `-PDEMO_BUNDLE_ID=com.onesignal.sdkdemo`). The `huawei` flavor is always `com.onesignal.example`.
 
-- `app/google-services.json` → a client for `com.onesignal.sdkdemo`. It is gitignored. When it exists, the Google Services plugin is applied (except for Huawei-only runs). `firebase_messaging_installation_id_enabled` stays off unless the build sets `FIREBASE_INSTALLATION_ID_ENABLED=true`, which requires this file. The E2E workflow writes it from the `APPIUM_GOOGLE_SERVICES_JSON` secret and turns the flag on.
+- `app/google-services.json` → a client for `DEMO_BUNDLE_ID`. It is gitignored. When it exists and has a client for that package, the Google Services plugin is applied (except for Huawei-only runs); otherwise the build warns and skips Firebase. `firebase_messaging_installation_id_enabled` stays off unless the build sets `FIREBASE_INSTALLATION_ID_ENABLED=true`, which requires this file. The E2E workflow writes it from the `APPIUM_GOOGLE_SERVICES_JSON` secret and turns the flag on.
 
 - `app/agconnect-services.json` → every `package_name` entry set to `com.onesignal.example` for the `huawei` flavor.
 
