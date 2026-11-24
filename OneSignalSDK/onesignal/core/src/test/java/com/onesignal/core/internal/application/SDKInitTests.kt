@@ -11,6 +11,11 @@ import com.onesignal.core.internal.preferences.PreferenceOneSignalKeys.PREFS_LEG
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.internal.OneSignalImp
+import com.onesignal.internal.UninitializedInAppMessagesManager
+import com.onesignal.internal.UninitializedLocationManager
+import com.onesignal.internal.UninitializedNotificationsManager
+import com.onesignal.internal.UninitializedSessionManager
+import com.onesignal.internal.UninitializedUserManager
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.maps.shouldContain
@@ -101,7 +106,7 @@ class SDKInitTests : FunSpec({
             .commit()
     }
 
-    test("accessor instances after initWithContext without appID shows the failure reason") {
+    test("accessors after initWithContext without appID return stand-ins") {
         // Given
         val context = getApplicationContext<Context>()
         val os = OneSignalImp()
@@ -110,14 +115,8 @@ class SDKInitTests : FunSpec({
         os.initWithContext(context)
 
         // Then
-        val ex = shouldThrow<IllegalStateException> {
-            os.user.onesignalId // Should trigger waitUntilInitInternal → throw failure message
-        }
-        // The main exception preserves the caller's stack trace
-        ex.message shouldBe "OneSignal initWithContext failed."
-        // The detailed failure reason is in the suppressed exception
-        ex.suppressed.size shouldBe 1
-        ex.suppressed[0].message shouldBe "suspendInitInternal: no appId provided or found in local storage. Please pass a valid appId to initWithContext()."
+        os.user shouldBe UninitializedUserManager
+        os.user.onesignalId shouldBe ""
 
         // Calling initWithContext with an appID after the failure should not throw anymore
         val result = os.initWithContext(context, "appID")
@@ -126,24 +125,23 @@ class SDKInitTests : FunSpec({
         os.isInitialized shouldBe true
     }
 
-    test("OneSignal accessors throw before calling initWithContext") {
+    test("OneSignal accessors return stand-ins before calling initWithContext") {
         val os = OneSignalImp()
 
-        shouldThrow<IllegalStateException> {
-            os.user
+        os.user shouldBe UninitializedUserManager
+        os.inAppMessages shouldBe UninitializedInAppMessagesManager
+        os.session shouldBe UninitializedSessionManager
+        os.notifications shouldBe UninitializedNotificationsManager
+        os.location shouldBe UninitializedLocationManager
+        runBlocking {
+            os.getUser() shouldBe UninitializedUserManager
+            os.getNotifications().requestPermission(true) shouldBe false
         }
-        shouldThrow<IllegalStateException> {
-            os.inAppMessages
-        }
-        shouldThrow<IllegalStateException> {
-            os.session
-        }
-        shouldThrow<IllegalStateException> {
-            os.notifications
-        }
-        shouldThrow<IllegalStateException> {
-            os.location
-        }
+
+        os.user.addTag("key", "value")
+        os.user.pushSubscription.id shouldBe ""
+        os.inAppMessages.paused = true
+        os.inAppMessages.paused shouldBe false
     }
 
     test("initWithContext returns gracefully when Android user is locked") {
@@ -159,10 +157,8 @@ class SDKInitTests : FunSpec({
 
         // Then
         // Init runs asynchronously and fails the locked-storage check, transitioning to FAILED.
-        // Reading an accessor blocks until that terminal state and surfaces the failure.
-        shouldThrow<IllegalStateException> {
-            os.user.onesignalId
-        }
+        // Reading an accessor blocks until that terminal state and then hands out the stand-in.
+        os.user shouldBe UninitializedUserManager
         os.isInitialized shouldBe false
 
         unmockkObject(AndroidUtils)
@@ -511,13 +507,9 @@ class SDKInitTests : FunSpec({
             os.initWithContext(brokenContext, "appId")
         }
 
-        // Then: SDK transitions to FAILED, accessor throws with the cast as suppressed cause.
-        val ex =
-            shouldThrow<IllegalStateException> {
-                os.user.onesignalId
-            }
-        ex.message shouldBe "OneSignal initWithContext failed."
-        ex.suppressed.any { it is ClassCastException } shouldBe true
+        // Then: SDK transitions to FAILED and the accessor hands out the stand-in.
+        os.isInitialized shouldBe false
+        os.user shouldBe UninitializedUserManager
 
         // And: a retry with a working context succeeds (FAILED is not "accessible",
         // so the retry legitimately re-enters init).
@@ -677,32 +669,20 @@ class SDKInitTests : FunSpec({
         os.isInitialized shouldBe true
     }
 
-    test("login should throw exception when initWithContext is never called") {
-        // Given
+    test("login is ignored when initWithContext is never called") {
         val oneSignalImp = OneSignalImp()
 
-        // When/Then - should throw exception immediately
-        val exception =
-            shouldThrow<IllegalStateException> {
-                oneSignalImp.login("testUser", null)
-            }
+        oneSignalImp.login("testUser", null)
 
-        // Should throw immediately because isInitialized is false
-        exception.message shouldBe "Must call 'initWithContext' before 'login'"
+        oneSignalImp.isInitialized shouldBe false
     }
 
-    test("logout should throw exception when initWithContext is never called") {
-        // Given
+    test("logout is ignored when initWithContext is never called") {
         val oneSignalImp = OneSignalImp()
 
-        // When/Then - should throw exception immediately
-        val exception =
-            shouldThrow<IllegalStateException> {
-                oneSignalImp.logout()
-            }
+        oneSignalImp.logout()
 
-        // Should throw immediately because isInitialized is false
-        exception.message shouldBe "Must call 'initWithContext' before 'logout'"
+        oneSignalImp.isInitialized shouldBe false
     }
 
     // Regression test for the SessionService NPE during in-flight background init.
