@@ -232,8 +232,6 @@ fun UserSection(
 
         Spacer(modifier = Modifier.height(DemoLayout.gap))
 
-        // LOGIN spans alone when logged out and pairs with LOGOUT when logged in, so the
-        // Android-only profile and JWT actions get their own rows.
         ButtonGrid(
             listOfNotNull(
                 GridAction(
@@ -249,10 +247,6 @@ fun UserSection(
                     style = ButtonStyle.Outline,
                     enabled = !isLoading,
                 ).takeIf { isLoggedIn },
-            ),
-        )
-        ButtonGrid(
-            listOf(
                 GridAction(
                     text = "LOGIN WITH PROFILE",
                     onClick = { compositeLoginOpen = true },
