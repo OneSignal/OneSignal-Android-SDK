@@ -35,6 +35,7 @@ import com.onesignal.user.internal.identity.IdentityModelStore
 import com.onesignal.user.internal.jwt.JwtTokenStore
 import com.onesignal.user.internal.operations.CreateSubscriptionOperation
 import com.onesignal.user.internal.operations.DeleteSubscriptionOperation
+import com.onesignal.user.internal.operations.LOGIN_WITH_PROFILE_METHOD
 import com.onesignal.user.internal.operations.LoginUserOperation
 import com.onesignal.user.internal.operations.RefreshUserOperation
 import com.onesignal.user.internal.operations.SetAliasOperation
@@ -220,7 +221,14 @@ internal class LoginUserOperationExecutor(
             val subscriptionList = subscriptions.toList()
             val jwt = resolveJwt(createUserOperation, _jwtTokenStore, _identityVerificationService)
             val response =
-                _userBackend.createUser(createUserOperation.appId, identities, subscriptionList.map { it.second }, properties, jwt)
+                _userBackend.createUser(
+                    createUserOperation.appId,
+                    identities,
+                    subscriptionList.map { it.second },
+                    properties,
+                    jwt,
+                    apiMethod = if (createUserOperation.profileLogin) LOGIN_WITH_PROFILE_METHOD else null,
+                )
             val idTranslations = mutableMapOf<String, String>()
             // Add the "local-to-backend" ID translation to the IdentifierTranslator for any operations that were
             // *not* executed but still reference the locally-generated IDs.
