@@ -1,6 +1,9 @@
 package com.onesignal.example.ui.components
 
+import android.view.WindowManager
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -14,6 +17,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTagsAsResourceId
@@ -22,7 +26,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.window.DialogWindowProvider
 import com.onesignal.example.ui.theme.DemoLayout
+import com.onesignal.example.ui.theme.OsBackdrop
+import com.onesignal.example.ui.theme.OsCardBackground
 import com.onesignal.example.ui.theme.OsGrey500
 import com.onesignal.example.ui.theme.OsGrey700
 import com.onesignal.example.ui.theme.OsPrimary
@@ -30,6 +37,7 @@ import org.json.JSONObject
 
 private val TextFieldShape = RoundedCornerShape(DemoLayout.inputRadius)
 private val DialogShape = RoundedCornerShape(DemoLayout.dialogRadius)
+private val DialogVerticalInset = 24.dp
 
 @Composable
 private fun dialogTextFieldColors() = OutlinedTextFieldDefaults.colors(
@@ -71,6 +79,81 @@ private fun Modifier.exposeTestTagsAsResourceId(): Modifier =
     this.semantics { testTagsAsResourceId = true }
 
 /**
+ * Full-width dialog anchored below the safe area per styles.md "Dialogs".
+ *
+ * The dialog window fills the screen and draws its own backdrop so the card's
+ * top edge never moves. When the keyboard opens only the bottom bound shrinks
+ * and the content scrolls, which keeps Appium element frames stable while the
+ * action row stays above the keyboard.
+ */
+@Composable
+private fun DemoDialog(
+    onDismissRequest: () -> Unit,
+    title: @Composable () -> Unit,
+    text: @Composable () -> Unit,
+    confirmButton: @Composable () -> Unit,
+    dismissButton: (@Composable () -> Unit)? = null,
+) {
+    Dialog(
+        onDismissRequest = onDismissRequest,
+        properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
+    ) {
+        val window = (LocalView.current.parent as? DialogWindowProvider)?.window
+        SideEffect {
+            window?.clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
+            window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
+        }
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .exposeTestTagsAsResourceId(),
+        ) {
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .background(OsBackdrop)
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = onDismissRequest,
+                    ),
+            )
+            Surface(
+                modifier = Modifier
+                    .windowInsetsPadding(WindowInsets.safeDrawing)
+                    .padding(horizontal = DemoLayout.pagePadding, vertical = DialogVerticalInset)
+                    .fillMaxWidth()
+                    .wrapContentHeight(Alignment.Top),
+                shape = DialogShape,
+                color = OsCardBackground,
+            ) {
+                Column {
+                    Column(
+                        modifier = Modifier
+                            .weight(1f, fill = false)
+                            .verticalScroll(rememberScrollState())
+                            .padding(start = 24.dp, end = 24.dp, top = 24.dp),
+                    ) {
+                        title()
+                        Spacer(modifier = Modifier.height(16.dp))
+                        text()
+                    }
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 24.dp, end = 24.dp, top = 24.dp, bottom = 24.dp),
+                        horizontalArrangement = Arrangement.spacedBy(DemoLayout.gap, Alignment.End),
+                    ) {
+                        dismissButton?.invoke()
+                        confirmButton()
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
  * Dialog for entering a single value.
  */
 @Composable
@@ -85,10 +168,8 @@ fun SingleInputDialog(
 ) {
     var value by remember { mutableStateOf("") }
 
-    AlertDialog(
+    DemoDialog(
         onDismissRequest = onDismiss,
-        modifier = Modifier.fillMaxWidth().padding(horizontal = DemoLayout.pagePadding).exposeTestTagsAsResourceId(),
-        properties = DialogProperties(usePlatformDefaultWidth = false),
         title = {
             DialogTitle(title)
         },
@@ -119,7 +200,6 @@ fun SingleInputDialog(
                 DialogActionLabel("Cancel")
             }
         },
-        shape = DialogShape
     )
 }
 
@@ -140,61 +220,50 @@ fun PairInputDialog(
     var key by remember { mutableStateOf("") }
     var value by remember { mutableStateOf("") }
 
-    Dialog(
+    DemoDialog(
         onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false)
-    ) {
-        Surface(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = DemoLayout.pagePadding).exposeTestTagsAsResourceId(),
-            shape = DialogShape,
-            tonalElevation = 2.dp
-        ) {
-            Column(modifier = Modifier.padding(24.dp)) {
-                DialogTitle(title)
-                Spacer(modifier = Modifier.height(20.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    OutlinedTextField(
-                        value = key,
-                        onValueChange = { key = it },
-                        label = { Text(keyLabel) },
-                        modifier = Modifier.weight(1f).applyTestTag(keyTestTag),
-                        singleLine = true,
-                        shape = TextFieldShape,
-                        colors = dialogTextFieldColors()
-                    )
-                    OutlinedTextField(
-                        value = value,
-                        onValueChange = { value = it },
-                        label = { Text(valueLabel) },
-                        modifier = Modifier.weight(1f).applyTestTag(valueTestTag),
-                        singleLine = true,
-                        shape = TextFieldShape,
-                        colors = dialogTextFieldColors()
-                    )
-                }
-                Spacer(modifier = Modifier.height(24.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End
-                ) {
-                    TextButton(onClick = onDismiss, colors = dialogTextButtonColors()) {
-                        DialogActionLabel("Cancel")
-                    }
-                    TextButton(
-                        onClick = { onConfirm(key, value) },
-                        enabled = key.isNotBlank() && value.isNotBlank(),
-                        modifier = Modifier.applyTestTag(confirmTestTag),
-                        colors = dialogTextButtonColors(),
-                    ) {
-                        DialogActionLabel("Add")
-                    }
-                }
+        title = { DialogTitle(title) },
+        text = {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                OutlinedTextField(
+                    value = key,
+                    onValueChange = { key = it },
+                    label = { Text(keyLabel) },
+                    modifier = Modifier.weight(1f).applyTestTag(keyTestTag),
+                    singleLine = true,
+                    shape = TextFieldShape,
+                    colors = dialogTextFieldColors()
+                )
+                OutlinedTextField(
+                    value = value,
+                    onValueChange = { value = it },
+                    label = { Text(valueLabel) },
+                    modifier = Modifier.weight(1f).applyTestTag(valueTestTag),
+                    singleLine = true,
+                    shape = TextFieldShape,
+                    colors = dialogTextFieldColors()
+                )
             }
-        }
-    }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { onConfirm(key, value) },
+                enabled = key.isNotBlank() && value.isNotBlank(),
+                modifier = Modifier.applyTestTag(confirmTestTag),
+                colors = dialogTextButtonColors(),
+            ) {
+                DialogActionLabel("Add")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss, colors = dialogTextButtonColors()) {
+                DialogActionLabel("Cancel")
+            }
+        },
+    )
 }
 
 /**
@@ -212,112 +281,96 @@ fun MultiPairInputDialog(
 
     val allValid = pairs.all { it.first.isNotBlank() && it.second.isNotBlank() }
 
-    Dialog(
+    DemoDialog(
         onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false)
-    ) {
-        Surface(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = DemoLayout.pagePadding).exposeTestTagsAsResourceId(),
-            shape = DialogShape,
-            tonalElevation = 2.dp
-        ) {
-            Column(modifier = Modifier.padding(24.dp)) {
-                DialogTitle(title)
-                Spacer(modifier = Modifier.height(20.dp))
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(max = 400.dp)
-                        .verticalScroll(rememberScrollState())
-                ) {
-                    pairs.forEachIndexed { index, (key, value) ->
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            OutlinedTextField(
-                                value = key,
-                                onValueChange = { newKey ->
-                                    pairs = pairs.toMutableList().apply {
-                                        this[index] = Pair(newKey, this[index].second)
-                                    }
-                                },
-                                label = { Text(keyLabel) },
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .testTag("multipair_key_$index"),
-                                singleLine = true,
-                                shape = TextFieldShape,
-                                colors = dialogTextFieldColors()
-                            )
-                            OutlinedTextField(
-                                value = value,
-                                onValueChange = { newValue ->
-                                    pairs = pairs.toMutableList().apply {
-                                        this[index] = Pair(this[index].first, newValue)
-                                    }
-                                },
-                                label = { Text(valueLabel) },
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .testTag("multipair_value_$index"),
-                                singleLine = true,
-                                shape = TextFieldShape,
-                                colors = dialogTextFieldColors()
-                            )
-                            if (pairs.size > 1) {
-                                IconButton(
-                                    onClick = {
-                                        pairs = pairs.toMutableList().apply { removeAt(index) }
-                                    }
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Close,
-                                        contentDescription = "Remove row",
-                                        tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f)
-                                    )
+        title = { DialogTitle(title) },
+        text = {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                pairs.forEachIndexed { index, (key, value) ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        OutlinedTextField(
+                            value = key,
+                            onValueChange = { newKey ->
+                                pairs = pairs.toMutableList().apply {
+                                    this[index] = Pair(newKey, this[index].second)
                                 }
+                            },
+                            label = { Text(keyLabel) },
+                            modifier = Modifier
+                                .weight(1f)
+                                .testTag("multipair_key_$index"),
+                            singleLine = true,
+                            shape = TextFieldShape,
+                            colors = dialogTextFieldColors()
+                        )
+                        OutlinedTextField(
+                            value = value,
+                            onValueChange = { newValue ->
+                                pairs = pairs.toMutableList().apply {
+                                    this[index] = Pair(this[index].first, newValue)
+                                }
+                            },
+                            label = { Text(valueLabel) },
+                            modifier = Modifier
+                                .weight(1f)
+                                .testTag("multipair_value_$index"),
+                            singleLine = true,
+                            shape = TextFieldShape,
+                            colors = dialogTextFieldColors()
+                        )
+                        if (pairs.size > 1) {
+                            IconButton(
+                                onClick = {
+                                    pairs = pairs.toMutableList().apply { removeAt(index) }
+                                }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = "Remove row",
+                                    tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f)
+                                )
                             }
                         }
-                        if (index < pairs.lastIndex) {
-                            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
-                        }
                     }
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    TextButton(
-                        onClick = { pairs = pairs + Pair("", "") },
-                        modifier = Modifier
-                            .align(Alignment.CenterHorizontally)
-                            .testTag("multipair_add_row_button")
-                    ) {
-                        Icon(Icons.Default.Add, contentDescription = null)
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("Add Row")
+                    if (index < pairs.lastIndex) {
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
                     }
                 }
-                Spacer(modifier = Modifier.height(24.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                TextButton(
+                    onClick = { pairs = pairs + Pair("", "") },
+                    modifier = Modifier
+                        .align(Alignment.CenterHorizontally)
+                        .testTag("multipair_add_row_button")
                 ) {
-                    TextButton(onClick = onDismiss, colors = dialogTextButtonColors()) {
-                        DialogActionLabel("Cancel")
-                    }
-                    TextButton(
-                        onClick = { onConfirm(pairs) },
-                        enabled = allValid,
-                        modifier = Modifier.testTag("multipair_confirm_button"),
-                        colors = dialogTextButtonColors(),
-                    ) {
-                        DialogActionLabel("Add All")
-                    }
+                    Icon(Icons.Default.Add, contentDescription = null)
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Add Row")
                 }
             }
-        }
-    }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { onConfirm(pairs) },
+                enabled = allValid,
+                modifier = Modifier.testTag("multipair_confirm_button"),
+                colors = dialogTextButtonColors(),
+            ) {
+                DialogActionLabel("Add All")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss, colors = dialogTextButtonColors()) {
+                DialogActionLabel("Cancel")
+            }
+        },
+    )
 }
 
 /**
@@ -332,20 +385,13 @@ fun MultiSelectRemoveDialog(
 ) {
     var selectedKeys by remember { mutableStateOf(setOf<String>()) }
 
-    AlertDialog(
+    DemoDialog(
         onDismissRequest = onDismiss,
-        modifier = Modifier.fillMaxWidth().padding(horizontal = DemoLayout.pagePadding).exposeTestTagsAsResourceId(),
-        properties = DialogProperties(usePlatformDefaultWidth = false),
         title = {
             DialogTitle(title)
         },
         text = {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(max = 400.dp)
-                    .verticalScroll(rememberScrollState())
-            ) {
+            Column(modifier = Modifier.fillMaxWidth()) {
                 items.forEach { (key, _) ->
                     Row(
                         modifier = Modifier
@@ -395,7 +441,6 @@ fun MultiSelectRemoveDialog(
                 DialogActionLabel("Cancel")
             }
         },
-        shape = DialogShape
     )
 }
 
@@ -412,10 +457,8 @@ fun LoginDialog(
     var externalId by remember { mutableStateOf("") }
     var jwtToken by remember { mutableStateOf("") }
 
-    AlertDialog(
+    DemoDialog(
         onDismissRequest = onDismiss,
-        modifier = Modifier.fillMaxWidth().padding(horizontal = DemoLayout.pagePadding).exposeTestTagsAsResourceId(),
-        properties = DialogProperties(usePlatformDefaultWidth = false),
         title = {
             DialogTitle("Login User")
         },
@@ -461,7 +504,6 @@ fun LoginDialog(
                 DialogActionLabel("Cancel")
             }
         },
-        shape = DialogShape
     )
 }
 
@@ -484,10 +526,8 @@ fun CompositeLoginDialog(
     var emailEnabled by remember { mutableStateOf("") }
     var smsEnabled by remember { mutableStateOf("") }
 
-    AlertDialog(
+    DemoDialog(
         onDismissRequest = onDismiss,
-        modifier = Modifier.fillMaxWidth().padding(horizontal = DemoLayout.pagePadding).exposeTestTagsAsResourceId(),
-        properties = DialogProperties(usePlatformDefaultWidth = false),
         title = {
             DialogTitle("Login With Profile")
         },
@@ -596,7 +636,6 @@ fun CompositeLoginDialog(
                 DialogActionLabel("Cancel")
             }
         },
-        shape = DialogShape
     )
 }
 
@@ -626,10 +665,8 @@ fun OutcomeDialog(
         Triple(2, "Outcome with Value", "outcome_type_value_radio")
     )
 
-    AlertDialog(
+    DemoDialog(
         onDismissRequest = onDismiss,
-        modifier = Modifier.fillMaxWidth().padding(horizontal = DemoLayout.pagePadding).exposeTestTagsAsResourceId(),
-        properties = DialogProperties(usePlatformDefaultWidth = false),
         title = {
             DialogTitle("Send Outcome")
         },
@@ -705,7 +742,6 @@ fun OutcomeDialog(
                 DialogActionLabel("Cancel")
             }
         },
-        shape = DialogShape
     )
 }
 
@@ -747,10 +783,8 @@ fun TrackEventDialog(
 
     val isValueValid = isValidJsonObject(eventValue)
 
-    AlertDialog(
+    DemoDialog(
         onDismissRequest = onDismiss,
-        modifier = Modifier.fillMaxWidth().padding(horizontal = DemoLayout.pagePadding).exposeTestTagsAsResourceId(),
-        properties = DialogProperties(usePlatformDefaultWidth = false),
         title = {
             DialogTitle("Track Event")
         },
@@ -820,7 +854,6 @@ fun TrackEventDialog(
                 DialogActionLabel("Cancel")
             }
         },
-        shape = DialogShape
     )
 }
 
@@ -835,10 +868,8 @@ fun CustomNotificationDialog(
     var title by remember { mutableStateOf("") }
     var body by remember { mutableStateOf("") }
 
-    AlertDialog(
+    DemoDialog(
         onDismissRequest = onDismiss,
-        modifier = Modifier.fillMaxWidth().padding(horizontal = DemoLayout.pagePadding).exposeTestTagsAsResourceId(),
-        properties = DialogProperties(usePlatformDefaultWidth = false),
         title = {
             DialogTitle("Custom Notification")
         },
@@ -884,7 +915,6 @@ fun CustomNotificationDialog(
                 DialogActionLabel("Cancel")
             }
         },
-        shape = DialogShape
     )
 }
 
@@ -898,10 +928,8 @@ fun TooltipDialog(
     options: List<Pair<String, String>>? = null,
     onDismiss: () -> Unit
 ) {
-    AlertDialog(
+    DemoDialog(
         onDismissRequest = onDismiss,
-        modifier = Modifier.fillMaxWidth().padding(horizontal = DemoLayout.pagePadding).exposeTestTagsAsResourceId(),
-        properties = DialogProperties(usePlatformDefaultWidth = false),
         title = {
             Text(
                 title,
@@ -937,6 +965,5 @@ fun TooltipDialog(
                 DialogActionLabel("OK")
             }
         },
-        shape = DialogShape
     )
 }
