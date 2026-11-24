@@ -14,11 +14,12 @@ internal class ReceiveReceiptProcessor(
         appId: String,
         subscriptionId: String,
         notificationId: String,
+        onesignalId: String?,
     ) {
         val deviceType = _deviceService.deviceType
 
         try {
-            _backend.updateNotificationAsReceived(appId, notificationId, subscriptionId, deviceType)
+            _backend.updateNotificationAsReceived(appId, notificationId, subscriptionId, deviceType, onesignalId)
         } catch (ex: BackendException) {
             Logging.info("Receive receipt failed with statusCode: ${ex.statusCode} response: ${ex.response}")
         }
