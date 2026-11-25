@@ -16,5 +16,6 @@ object DemoLayout {
     val dialogRadius = 28.dp
     val inputRadius = 8.dp
     val logoHeight = 22.dp
+    val appBarHeight = 48.dp
     val appBarElevation = 8.dp
 }
