@@ -22,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.onesignal.example.BuildConfig
 import com.onesignal.example.data.model.CompositeLoginRequest
 import com.onesignal.example.data.model.InAppMessageType
 import com.onesignal.example.data.model.NotificationExtensionOptions
@@ -135,22 +136,25 @@ fun AppSection(
             CardKvRow(label = "App ID", value = appId, valueTestTag = "app_id_value")
         }
 
-        Spacer(modifier = Modifier.height(DemoLayout.gap))
+        // Only the shared example app needs the nudge; a configured App ID is already "your own".
+        if (BuildConfig.USES_DEFAULT_APP_ID) {
+            Spacer(modifier = Modifier.height(DemoLayout.gap))
 
-        DemoCard(containerColor = OsWarningBackground) {
-            Text(
-                "Add your own App ID, then rebuild to fully test all functionality.",
-                style = MaterialTheme.typography.bodySmall,
-                color = OsGrey700,
-            )
-            Text(
-                "Get your keys at onesignal.com",
-                style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold),
-                color = OsPrimary,
-                modifier = Modifier
-                    .padding(top = 4.dp)
-                    .clickable { onGetKeysClick() },
-            )
+            DemoCard(containerColor = OsWarningBackground) {
+                Text(
+                    "Add your own App ID, then rebuild to fully test all functionality.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = OsGrey700,
+                )
+                Text(
+                    "Get your keys at onesignal.com",
+                    style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold),
+                    color = OsPrimary,
+                    modifier = Modifier
+                        .padding(top = 4.dp)
+                        .clickable { onGetKeysClick() },
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(DemoLayout.gap))

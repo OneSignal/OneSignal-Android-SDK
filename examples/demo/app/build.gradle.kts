@@ -51,7 +51,8 @@ if (hasGoogleServices && !huaweiOnly) {
 
 // Set via `local.properties` (ONESIGNAL_APP_ID=...) or `-PONESIGNAL_APP_ID=...`; falls back to
 // the shared example app.
-val onesignalAppId: String = demoOverride("ONESIGNAL_APP_ID") ?: "1154c350-e715-4b71-a58b-1b84b6745baa"
+val defaultOnesignalAppId = "1154c350-e715-4b71-a58b-1b84b6745baa"
+val onesignalAppId: String = demoOverride("ONESIGNAL_APP_ID") ?: defaultOnesignalAppId
 
 // Off by default so local and release builds keep the legacy token path. E2E opts in with
 // `-PFIREBASE_INSTALLATION_ID_ENABLED=true`; the flag does nothing without the default FirebaseApp.
@@ -80,6 +81,7 @@ android {
 
         // OneSignal App ID exposed via BuildConfig so the demo always reads it from one place.
         buildConfigField("String", "ONESIGNAL_APP_ID", "\"$onesignalAppId\"")
+        buildConfigField("boolean", "USES_DEFAULT_APP_ID", "${onesignalAppId == defaultOnesignalAppId}")
 
         // Optional OneSignal channel id used by the "WITH SOUND" notification payload.
         // Falls back to the same default the Capacitor demo ships with so the shared Appium
