@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
@@ -31,8 +33,32 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.onesignal.example.ui.theme.DemoLayout
 import com.onesignal.example.ui.theme.OsDivider
+import com.onesignal.example.ui.theme.OsGrey500
 import com.onesignal.example.ui.theme.OsGrey600
 import com.onesignal.example.ui.theme.OsPrimary
+import com.onesignal.example.ui.theme.rowLabel
+
+private val ItemVerticalPadding = 6.dp
+private val StateSlotHeight = 20.dp
+private val RemoveButtonSize = 28.dp
+private val RemoveIconSize = 16.dp
+
+@Composable
+private fun RemoveButton(contentDescription: String, onClick: () -> Unit, testTag: String?) {
+    // Shift by the button's inner padding so the X lines up with the card's content edge.
+    val modifier = Modifier
+        .size(RemoveButtonSize)
+        .offset(x = (RemoveButtonSize - RemoveIconSize) / 2)
+        .let { if (testTag != null) it.testTag(testTag) else it }
+    IconButton(onClick = onClick, modifier = modifier) {
+        Icon(
+            imageVector = Icons.Default.Close,
+            contentDescription = contentDescription,
+            tint = OsGrey600,
+            modifier = Modifier.size(RemoveIconSize),
+        )
+    }
+}
 
 @Composable
 fun PairItem(
@@ -45,7 +71,7 @@ fun PairItem(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(DemoLayout.gap / 2),
+            .padding(vertical = ItemVerticalPadding),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1f)) {
@@ -56,7 +82,7 @@ fun PairItem(
             }
             Text(
                 text = key,
-                style = MaterialTheme.typography.bodyMedium,
+                style = MaterialTheme.typography.rowLabel,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = keyModifier,
@@ -76,19 +102,11 @@ fun PairItem(
             )
         }
         if (onDelete != null) {
-            val removeModifier = if (sectionKey != null) {
-                Modifier.size(28.dp).testTag("${sectionKey}_remove_$key")
-            } else {
-                Modifier.size(28.dp)
-            }
-            IconButton(onClick = onDelete, modifier = removeModifier) {
-                Icon(
-                    imageVector = Icons.Default.Close,
-                    contentDescription = "Remove $key",
-                    tint = OsPrimary,
-                    modifier = Modifier.size(18.dp),
-                )
-            }
+            RemoveButton(
+                contentDescription = "Remove $key",
+                onClick = onDelete,
+                testTag = sectionKey?.let { "${it}_remove_$key" },
+            )
         }
     }
 }
@@ -103,7 +121,7 @@ fun SingleItem(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(DemoLayout.gap / 2),
+            .padding(vertical = ItemVerticalPadding),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         val valueModifier = Modifier
@@ -116,19 +134,11 @@ fun SingleItem(
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
-        val removeModifier = if (sectionKey != null) {
-            Modifier.size(28.dp).testTag("${sectionKey}_remove_$value")
-        } else {
-            Modifier.size(28.dp)
-        }
-        IconButton(onClick = onDelete, modifier = removeModifier) {
-            Icon(
-                imageVector = Icons.Default.Close,
-                contentDescription = "Remove $value",
-                tint = OsPrimary,
-                modifier = Modifier.size(18.dp),
-            )
-        }
+        RemoveButton(
+            contentDescription = "Remove $value",
+            onClick = onDelete,
+            testTag = sectionKey?.let { "${it}_remove_$value" },
+        )
     }
 }
 
@@ -140,12 +150,12 @@ fun EmptyState(
 ) {
     val containerModifier = modifier
         .fillMaxWidth()
-        .padding(vertical = DemoLayout.cardPadding)
+        .height(StateSlotHeight)
     Box(modifier = containerModifier, contentAlignment = Alignment.Center) {
         Text(
             text = text,
-            style = MaterialTheme.typography.bodyMedium,
-            color = OsGrey600,
+            style = MaterialTheme.typography.bodySmall,
+            color = OsGrey500,
             modifier = if (sectionKey != null) Modifier.testTag("${sectionKey}_empty") else Modifier,
         )
     }
@@ -158,13 +168,13 @@ fun LoadingState(
 ) {
     val containerModifier = modifier
         .fillMaxWidth()
-        .padding(vertical = DemoLayout.cardPadding)
+        .height(StateSlotHeight)
         .let { if (sectionKey != null) it.testTag("${sectionKey}_loading") else it }
     Box(modifier = containerModifier, contentAlignment = Alignment.Center) {
         CircularProgressIndicator(
             color = OsPrimary,
             strokeWidth = 2.dp,
-            modifier = Modifier.size(24.dp),
+            modifier = Modifier.size(18.dp),
         )
     }
 }

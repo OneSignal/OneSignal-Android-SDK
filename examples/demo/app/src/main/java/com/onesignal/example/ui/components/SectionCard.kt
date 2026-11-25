@@ -4,7 +4,9 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -23,7 +25,12 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.onesignal.example.ui.theme.DemoLayout
 import com.onesignal.example.ui.theme.OsCardBorder
-import com.onesignal.example.ui.theme.OsGrey500
+import com.onesignal.example.ui.theme.OsGrey600
+
+private val InfoIconSize = 18.dp
+
+// The icon sits centered in its touch box; shifting by the leftover space lines its glyph up with the card edge.
+private val InfoIconOffset = (DemoLayout.sectionHeaderHeight - InfoIconSize) / 2
 
 @Composable
 fun SectionCard(
@@ -32,6 +39,7 @@ fun SectionCard(
     showCard: Boolean = true,
     sectionKey: String? = null,
     onInfoClick: (() -> Unit)? = null,
+    aboveCard: (@Composable () -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val containerModifier = if (sectionKey != null) {
@@ -44,7 +52,8 @@ fun SectionCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = DemoLayout.pagePadding)
-                .padding(bottom = DemoLayout.gap),
+                .padding(bottom = DemoLayout.gap)
+                .height(DemoLayout.sectionHeaderHeight),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
@@ -53,46 +62,62 @@ fun SectionCard(
                 modifier = Modifier.weight(1f),
             )
             if (onInfoClick != null) {
-                val infoModifier = if (sectionKey != null) {
-                    Modifier.size(32.dp).offset(x = 11.dp).testTag("${sectionKey}_info_icon")
-                } else {
-                    Modifier.size(32.dp).offset(x = 11.dp)
-                }
+                val infoModifier = Modifier
+                    .size(DemoLayout.sectionHeaderHeight)
+                    .offset(x = InfoIconOffset)
+                    .let { if (sectionKey != null) it.testTag("${sectionKey}_info_icon") else it }
                 IconButton(onClick = onInfoClick, modifier = infoModifier) {
                     Icon(
                         imageVector = Icons.Outlined.Info,
                         contentDescription = "$title info",
-                        tint = OsGrey500,
-                        modifier = Modifier.size(18.dp),
+                        tint = OsGrey600,
+                        modifier = Modifier.size(InfoIconSize),
                     )
                 }
             }
         }
 
+        if (aboveCard != null) {
+            aboveCard()
+            Spacer(modifier = Modifier.height(DemoLayout.gap))
+        }
+
         if (showCard) {
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = DemoLayout.pagePadding),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                shape = MaterialTheme.shapes.medium,
-                border = BorderStroke(DemoLayout.cardBorderWidth, OsCardBorder),
-                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(DemoLayout.cardPadding),
-                    content = content,
-                )
-            }
+            DemoCard(content = content)
         } else {
             Column(modifier = Modifier.fillMaxWidth(), content = content)
         }
     }
 }
 
-/** Wraps a top-level demo section with 24dp bottom spacing (styles.md section spacing). */
+/** White card with a hairline border (styles.md "Cards"); flat, no shadow. */
+@Composable
+fun DemoCard(
+    modifier: Modifier = Modifier,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = DemoLayout.pagePadding),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        shape = MaterialTheme.shapes.medium,
+        border = BorderStroke(DemoLayout.cardBorderWidth, OsCardBorder),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(
+                    horizontal = DemoLayout.cardPaddingHorizontal,
+                    vertical = DemoLayout.cardPaddingVertical,
+                ),
+            content = content,
+        )
+    }
+}
+
+/** Wraps a top-level demo section with the section spacing below it (styles.md "Spacing"). */
 @Composable
 fun DemoSection(
     modifier: Modifier = Modifier,

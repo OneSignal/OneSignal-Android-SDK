@@ -9,15 +9,17 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.ripple.LocalRippleTheme
+import androidx.compose.material.ripple.RippleAlpha
+import androidx.compose.material.ripple.RippleTheme
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -26,62 +28,20 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.onesignal.example.ui.theme.DemoLayout
+import com.onesignal.example.ui.theme.OsControlBorder
 import com.onesignal.example.ui.theme.OsGrey500
+import com.onesignal.example.ui.theme.OsInk
+import com.onesignal.example.ui.theme.OsNeutralBackground
 import com.onesignal.example.ui.theme.OsPrimary
 
-private val ButtonShape = RoundedCornerShape(DemoLayout.buttonRadius)
-
-private val ButtonTextStyle
-    @Composable get() = MaterialTheme.typography.bodyMedium.copy(
-        fontWeight = FontWeight.SemiBold,
-    )
-
-private const val MIN_TEXT_SCALE = 0.7f
-private const val TEXT_SCALE_STEP = 0.95f
-
-private fun Modifier.applyTestTag(tag: String?): Modifier =
-    if (tag != null) this.testTag(tag) else this
-
-private fun Modifier.buttonLayout(testTag: String?): Modifier = this
-    .fillMaxWidth()
-    .padding(horizontal = DemoLayout.pagePadding)
-    .height(DemoLayout.buttonHeight)
-    .applyTestTag(testTag)
-
-@Composable
-fun PrimaryButton(
-    text: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    backgroundColor: Color = MaterialTheme.colorScheme.primary,
-    enabled: Boolean = true,
-    testTag: String? = null,
-) {
-    Button(
-        onClick = onClick,
-        modifier = modifier.buttonLayout(testTag),
-        colors = ButtonDefaults.buttonColors(
-            containerColor = backgroundColor,
-            disabledContainerColor = OsGrey500,
-        ),
-        enabled = enabled,
-        shape = ButtonShape,
-        elevation = ButtonDefaults.buttonElevation(
-            defaultElevation = 0.dp,
-            pressedElevation = 0.dp,
-        ),
-    ) {
-        Text(text = text, style = ButtonTextStyle, color = Color.White)
-    }
-}
-
-enum class ButtonStyle { Primary, Outline }
+/** Primary is filled red; Secondary is outlined with a dark label. */
+enum class ButtonStyle { Primary, Secondary }
 
 data class GridAction(
     val text: String,
@@ -90,6 +50,97 @@ data class GridAction(
     val style: ButtonStyle = ButtonStyle.Primary,
     val enabled: Boolean = true,
 )
+
+private val ButtonShape = RoundedCornerShape(DemoLayout.buttonRadius)
+private val ButtonContentPadding = PaddingValues(horizontal = 12.dp)
+
+private val ButtonTextStyle
+    @Composable get() = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp, fontWeight = FontWeight.Medium)
+
+private const val MIN_TEXT_SCALE = 0.7f
+private const val TEXT_SCALE_STEP = 0.95f
+
+// Press always darkens, on red and white alike; the default ripple takes the label color and turns red buttons pink.
+@Immutable
+private object DarkenRippleTheme : RippleTheme {
+    private val alpha = RippleAlpha(
+        draggedAlpha = 0.12f,
+        focusedAlpha = 0.12f,
+        hoveredAlpha = 0.08f,
+        pressedAlpha = 0.12f,
+    )
+
+    @Composable
+    override fun defaultColor(): Color = Color.Black
+
+    @Composable
+    override fun rippleAlpha(): RippleAlpha = alpha
+}
+
+private class ButtonColors(val container: Color, val content: Color, val border: Color?)
+
+private fun ButtonStyle.colors(enabled: Boolean): ButtonColors = when {
+    !enabled && this == ButtonStyle.Primary -> ButtonColors(OsNeutralBackground, OsGrey500, null)
+    !enabled -> ButtonColors(Color.Transparent, OsGrey500, OsControlBorder)
+    this == ButtonStyle.Primary -> ButtonColors(OsPrimary, Color.White, null)
+    else -> ButtonColors(Color.Transparent, OsInk, OsControlBorder)
+}
+
+private fun Modifier.applyTestTag(tag: String?): Modifier =
+    if (tag != null) this.testTag(tag) else this
+
+private fun Modifier.fullWidthButton(): Modifier = this
+    .fillMaxWidth()
+    .padding(horizontal = DemoLayout.pagePadding)
+
+@Composable
+private fun DemoButton(
+    text: String,
+    onClick: () -> Unit,
+    style: ButtonStyle,
+    modifier: Modifier,
+    enabled: Boolean,
+    testTag: String?,
+) {
+    val colors = style.colors(enabled)
+    CompositionLocalProvider(LocalRippleTheme provides DarkenRippleTheme) {
+        Button(
+            onClick = onClick,
+            modifier = modifier.height(DemoLayout.buttonHeight).applyTestTag(testTag),
+            enabled = enabled,
+            shape = ButtonShape,
+            colors = ButtonDefaults.buttonColors(
+                containerColor = colors.container,
+                contentColor = colors.content,
+                disabledContainerColor = colors.container,
+                disabledContentColor = colors.content,
+            ),
+            elevation = null,
+            border = colors.border?.let { BorderStroke(DemoLayout.buttonBorderWidth, it) },
+            contentPadding = ButtonContentPadding,
+        ) {
+            ScaleDownText(text = text, style = ButtonTextStyle, color = colors.content)
+        }
+    }
+}
+
+@Composable
+fun PrimaryButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    testTag: String? = null,
+) = DemoButton(text, onClick, ButtonStyle.Primary, modifier.fullWidthButton(), enabled, testTag)
+
+@Composable
+fun SecondaryButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    testTag: String? = null,
+) = DemoButton(text, onClick, ButtonStyle.Secondary, modifier.fullWidthButton(), enabled, testTag)
 
 /**
  * Two equal columns per styles.md "Button Grid". An odd last action spans both
@@ -106,43 +157,16 @@ fun ButtonGrid(actions: List<GridAction>, modifier: Modifier = Modifier) {
     ) {
         actions.chunked(2).forEach { row ->
             Row(horizontalArrangement = Arrangement.spacedBy(DemoLayout.gap)) {
-                row.forEach { action -> GridButton(action, Modifier.weight(1f)) }
-            }
-        }
-    }
-}
-
-@Composable
-private fun GridButton(action: GridAction, modifier: Modifier) {
-    val buttonModifier = modifier.height(DemoLayout.buttonHeight).applyTestTag(action.testTag)
-    val contentPadding = PaddingValues(horizontal = DemoLayout.gap)
-    when (action.style) {
-        ButtonStyle.Primary -> Button(
-            onClick = action.onClick,
-            modifier = buttonModifier,
-            enabled = action.enabled,
-            colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.primary,
-                disabledContainerColor = OsGrey500,
-            ),
-            shape = ButtonShape,
-            elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp, pressedElevation = 0.dp),
-            contentPadding = contentPadding,
-        ) {
-            ScaleDownText(text = action.text, style = ButtonTextStyle, color = Color.White)
-        }
-        ButtonStyle.Outline -> {
-            val color = if (action.enabled) OsPrimary else OsGrey500
-            OutlinedButton(
-                onClick = action.onClick,
-                modifier = buttonModifier,
-                enabled = action.enabled,
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = color, disabledContentColor = OsGrey500),
-                shape = ButtonShape,
-                border = BorderStroke(1.dp, color),
-                contentPadding = contentPadding,
-            ) {
-                ScaleDownText(text = action.text, style = ButtonTextStyle, color = color)
+                row.forEach { action ->
+                    DemoButton(
+                        text = action.text,
+                        onClick = action.onClick,
+                        style = action.style,
+                        modifier = Modifier.weight(1f),
+                        enabled = action.enabled,
+                        testTag = action.testTag,
+                    )
+                }
             }
         }
     }
@@ -171,79 +195,4 @@ private fun ScaleDownText(text: String, style: TextStyle, color: Color) = BoxWit
             }
         },
     )
-}
-
-@Composable
-fun OutlineButton(
-    text: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    enabled: Boolean = true,
-    testTag: String? = null,
-) {
-    val color = if (enabled) OsPrimary else OsGrey500
-    OutlinedButton(
-        onClick = onClick,
-        modifier = modifier.buttonLayout(testTag),
-        colors = ButtonDefaults.outlinedButtonColors(
-            contentColor = color,
-            disabledContentColor = OsGrey500,
-        ),
-        enabled = enabled,
-        shape = ButtonShape,
-        border = BorderStroke(1.dp, color),
-    ) {
-        Text(text = text, style = ButtonTextStyle, color = color)
-    }
-}
-
-@Composable
-fun DestructiveButton(
-    text: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    enabled: Boolean = true,
-    testTag: String? = null,
-) {
-    OutlineButton(text = text, onClick = onClick, modifier = modifier, enabled = enabled, testTag = testTag)
-}
-
-@Composable
-fun IconButton(
-    text: String,
-    icon: ImageVector,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    backgroundColor: Color = OsPrimary,
-    testTag: String? = null,
-) {
-    Button(
-        onClick = onClick,
-        modifier = modifier.buttonLayout(testTag),
-        colors = ButtonDefaults.buttonColors(containerColor = backgroundColor),
-        shape = ButtonShape,
-        elevation = ButtonDefaults.buttonElevation(
-            defaultElevation = 0.dp,
-            pressedElevation = 0.dp,
-        ),
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = text,
-                style = ButtonTextStyle,
-                color = Color.White,
-                modifier = Modifier.padding(end = DemoLayout.gap),
-            )
-            androidx.compose.material3.Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = Color.White,
-                modifier = Modifier.size(18.dp),
-            )
-        }
-    }
 }

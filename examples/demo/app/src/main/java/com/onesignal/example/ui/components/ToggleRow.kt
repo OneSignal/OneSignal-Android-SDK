@@ -17,12 +17,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.onesignal.example.ui.theme.OsGrey600
+import com.onesignal.example.ui.theme.OsInk
 import com.onesignal.example.ui.theme.OsPrimary
+import com.onesignal.example.ui.theme.OsSwitchTrack
+import com.onesignal.example.ui.theme.rowLabel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -45,11 +49,11 @@ fun ToggleRow(
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = label,
-                style = MaterialTheme.typography.bodyMedium,
+                style = MaterialTheme.typography.rowLabel,
                 color = if (enabled) {
-                    MaterialTheme.colorScheme.onSurface
+                    OsInk
                 } else {
-                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                    OsInk.copy(alpha = 0.45f)
                 },
             )
             if (description != null) {
@@ -57,7 +61,7 @@ fun ToggleRow(
                 Text(
                     text = description,
                     style = MaterialTheme.typography.bodySmall,
-                    color = OsGrey600.copy(alpha = if (enabled) 1f else 0.4f),
+                    color = OsGrey600.copy(alpha = if (enabled) 1f else 0.55f),
                 )
             }
         }
@@ -82,6 +86,12 @@ fun ToggleRow(
                     checkedThumbColor = MaterialTheme.colorScheme.surface,
                     checkedTrackColor = OsPrimary,
                     checkedBorderColor = OsPrimary,
+                    uncheckedThumbColor = Color.White,
+                    uncheckedTrackColor = OsSwitchTrack,
+                    uncheckedBorderColor = OsSwitchTrack,
+                    disabledUncheckedThumbColor = Color.White,
+                    disabledUncheckedTrackColor = OsSwitchTrack.copy(alpha = 0.5f),
+                    disabledUncheckedBorderColor = Color.Transparent,
                 ),
             )
         }

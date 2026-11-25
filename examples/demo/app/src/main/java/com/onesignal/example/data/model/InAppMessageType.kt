@@ -13,35 +13,35 @@ enum class InAppMessageType(
         triggerKey = "iam_type",
         triggerValue = "top_banner",
     ),
-    BOTTOM_BANNER(
-        title = "BOTTOM",
-        triggerKey = "iam_type",
-        triggerValue = "bottom_banner",
-    ),
     CENTER_MODAL(
         title = "CENTER",
         triggerKey = "iam_type",
         triggerValue = "center_modal",
     ),
-    HTML(
-        title = "HTML",
+    BOTTOM_BANNER(
+        title = "BOTTOM",
         triggerKey = "iam_type",
-        triggerValue = "html",
+        triggerValue = "bottom_banner",
     ),
     FULL_SCREEN(
         title = "FULL",
         triggerKey = "iam_type",
         triggerValue = "full_screen",
     ),
-    FULL_BLEED(
-        title = "FULL BLEED",
-        triggerKey = "iam_type",
-        triggerValue = "full_bleed",
-    ),
     CAROUSEL(
         title = "CAROUSEL",
         triggerKey = "iam_type",
         triggerValue = "carousel",
+    ),
+    HTML(
+        title = "HTML",
+        triggerKey = "iam_type",
+        triggerValue = "html",
+    ),
+    FULL_BLEED(
+        title = "FULL BLEED",
+        triggerKey = "iam_type",
+        triggerValue = "full_bleed",
     ),
     CAROUSEL_BLEED(
         title = "CAROUSEL BLEED",

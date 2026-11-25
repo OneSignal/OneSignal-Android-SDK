@@ -1,16 +1,19 @@
 package com.onesignal.example.ui.main
 
-import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -19,23 +22,23 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.onesignal.example.BuildConfig
 import com.onesignal.example.data.model.CompositeLoginRequest
 import com.onesignal.example.data.model.InAppMessageType
 import com.onesignal.example.data.model.NotificationExtensionOptions
+import com.onesignal.example.ui.components.ButtonGrid
+import com.onesignal.example.ui.components.ButtonStyle
 import com.onesignal.example.ui.components.CardKvRow
 import com.onesignal.example.ui.components.CollapsibleSingleList
+import com.onesignal.example.ui.components.CompositeLoginDialog
 import com.onesignal.example.ui.components.CustomNotificationDialog
 import com.onesignal.example.ui.components.DemoSection
 import com.onesignal.example.ui.components.DropdownRow
-import com.onesignal.example.ui.components.ButtonGrid
-import com.onesignal.example.ui.components.ButtonStyle
 import com.onesignal.example.ui.components.GridAction
 import com.onesignal.example.ui.components.LocalSnackbarController
-import com.onesignal.example.ui.components.CompositeLoginDialog
 import com.onesignal.example.ui.components.LoginDialog
 import com.onesignal.example.ui.components.MultiPairInputDialog
 import com.onesignal.example.ui.components.MultiSelectRemoveDialog
@@ -49,12 +52,12 @@ import com.onesignal.example.ui.components.ToggleRow
 import com.onesignal.example.ui.components.TrackEventDialog
 import com.onesignal.example.ui.components.UpdateUserJwtDialog
 import com.onesignal.example.ui.theme.DemoLayout
-import com.onesignal.example.ui.theme.OsCardBorder
 import com.onesignal.example.ui.theme.OsDivider
-import com.onesignal.example.ui.theme.OsGrey600
-import com.onesignal.example.ui.theme.OsGrey700
 import com.onesignal.example.ui.theme.OsPrimary
 import com.onesignal.example.ui.theme.OsWarningBackground
+import com.onesignal.example.ui.theme.OsWarningBorder
+import com.onesignal.example.ui.theme.OsWarningIcon
+import com.onesignal.example.ui.theme.OsWarningText
 
 private val languageOptions = listOf(
     "Device Default" to "",
@@ -104,25 +107,6 @@ private val languageOptions = listOf(
 )
 
 @Composable
-private fun DemoCard(
-    modifier: Modifier = Modifier,
-    containerColor: Color = MaterialTheme.colorScheme.surface,
-    content: @Composable ColumnScope.() -> Unit,
-) {
-    Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = DemoLayout.pagePadding),
-        colors = CardDefaults.cardColors(containerColor = containerColor),
-        shape = MaterialTheme.shapes.medium,
-        border = BorderStroke(DemoLayout.cardBorderWidth, OsCardBorder),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-    ) {
-        Column(modifier = Modifier.padding(DemoLayout.cardPadding), content = content)
-    }
-}
-
-@Composable
 fun AppSection(
     appId: String,
     consentRequired: Boolean,
@@ -132,34 +116,23 @@ fun AppSection(
     onGetKeysClick: () -> Unit,
 ) {
     DemoSection {
-        SectionCard(title = "App", sectionKey = "app") {
-            CardKvRow(label = "App ID", value = appId, valueTestTag = "app_id_value")
-        }
-
-        // Only the shared example app needs the nudge; a configured App ID is already "your own".
-        if (BuildConfig.USES_DEFAULT_APP_ID) {
-            Spacer(modifier = Modifier.height(DemoLayout.gap))
-
-            DemoCard(containerColor = OsWarningBackground) {
-                Text(
-                    "Add your own App ID, then rebuild to fully test all functionality.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = OsGrey700,
-                )
-                Text(
-                    "Get your keys at onesignal.com",
-                    style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold),
-                    color = OsPrimary,
-                    modifier = Modifier
-                        .padding(top = 4.dp)
-                        .clickable { onGetKeysClick() },
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(DemoLayout.gap))
-
-        DemoCard {
+        SectionCard(
+            title = "App",
+            sectionKey = "app",
+            // Only the shared example app needs the nudge; a configured App ID is already "your own".
+            aboveCard = if (BuildConfig.USES_DEFAULT_APP_ID) {
+                { GuidanceBanner(onGetKeysClick = onGetKeysClick) }
+            } else {
+                null
+            },
+        ) {
+            CardKvRow(
+                label = "App ID",
+                value = appId,
+                valueTestTag = "app_id_value",
+                copyable = true,
+            )
+            CardDivider()
             ToggleRow(
                 label = "Consent Required",
                 description = "Require consent before SDK processes data",
@@ -169,7 +142,7 @@ fun AppSection(
                 contentDescription = "Consent required",
             )
             if (consentRequired) {
-                HorizontalDivider(color = OsDivider, modifier = Modifier.padding(vertical = DemoLayout.gap))
+                CardDivider()
                 ToggleRow(
                     label = "Privacy Consent",
                     description = "Consent given for data collection",
@@ -181,6 +154,49 @@ fun AppSection(
             }
         }
     }
+}
+
+/** styles.md "Guidance Banner": an amber callout above the App card, not a card of its own. */
+@Composable
+private fun GuidanceBanner(onGetKeysClick: () -> Unit) {
+    val shape = MaterialTheme.shapes.medium
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = DemoLayout.pagePadding)
+            .background(OsWarningBackground, shape)
+            .border(DemoLayout.cardBorderWidth, OsWarningBorder, shape)
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+    ) {
+        Icon(
+            imageVector = Icons.Outlined.Info,
+            contentDescription = null,
+            tint = OsWarningIcon,
+            modifier = Modifier
+                .padding(top = 1.dp, end = 10.dp)
+                .size(16.dp),
+        )
+        Column {
+            Text(
+                "Set your App ID and rebuild to test all features.",
+                style = MaterialTheme.typography.bodySmall,
+                color = OsWarningText,
+            )
+            Text(
+                "Create an app at onesignal.com",
+                style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold),
+                color = OsPrimary,
+                modifier = Modifier
+                    .padding(top = 4.dp)
+                    .clickable { onGetKeysClick() },
+            )
+        }
+    }
+}
+
+@Composable
+private fun CardDivider() {
+    HorizontalDivider(color = OsDivider, modifier = Modifier.padding(vertical = DemoLayout.gap))
 }
 
 @Composable
@@ -203,10 +219,11 @@ fun UserSection(
         SectionCard(title = "User", sectionKey = "user") {
             CardKvRow(
                 label = "External ID",
-                value = externalUserId ?: "—",
+                value = externalUserId,
                 valueTestTag = "user_external_id_value",
+                copyable = true,
             )
-            HorizontalDivider(color = OsDivider, modifier = Modifier.padding(vertical = DemoLayout.gap))
+            CardDivider()
             DropdownRow(
                 label = "Language",
                 selectedValue = language,
@@ -230,21 +247,21 @@ fun UserSection(
                     text = "LOGOUT USER",
                     onClick = onLogout,
                     testTag = "logout_user_button",
-                    style = ButtonStyle.Outline,
+                    style = ButtonStyle.Secondary,
                     enabled = !isLoading,
                 ).takeIf { isLoggedIn },
                 GridAction(
                     text = "LOGIN WITH PROFILE",
                     onClick = { compositeLoginOpen = true },
                     testTag = "composite_login_button",
-                    style = ButtonStyle.Outline,
+                    style = ButtonStyle.Secondary,
                     enabled = !isLoading,
                 ),
                 GridAction(
                     text = "UPDATE USER JWT",
                     onClick = { updateJwtOpen = true },
                     testTag = "update_user_jwt_button",
-                    style = ButtonStyle.Outline,
+                    style = ButtonStyle.Secondary,
                 ).takeIf { isLoggedIn },
             ),
         )
@@ -292,28 +309,25 @@ fun PushSection(
     onPromptPush: () -> Unit,
     onInfoClick: () -> Unit,
 ) {
+    val isSubscribed = pushEnabled && hasPermission && pushSubscriptionToken.isNotEmpty()
     DemoSection {
         SectionCard(title = "Push", sectionKey = "push", onInfoClick = onInfoClick) {
             CardKvRow(
                 label = "Push ID",
-                value = pushSubscriptionId.takeUnless { it.isNullOrEmpty() } ?: "—",
+                value = pushSubscriptionId,
                 valueTestTag = "push_id_value",
-                valueColor = if (!pushSubscriptionId.isNullOrEmpty()) OsGrey600 else OsGrey600.copy(alpha = 0.5f),
+                copyable = true,
             )
-            HorizontalDivider(color = OsDivider, modifier = Modifier.padding(vertical = DemoLayout.gap))
+            CardDivider()
             CardKvRow(
                 label = "Status",
-                value = if (pushEnabled && hasPermission && pushSubscriptionToken.isNotEmpty()) {
-                    "Subscribed"
-                } else {
-                    "Unsubscribed"
-                },
+                value = if (isSubscribed) "Subscribed" else "Unsubscribed",
                 valueTestTag = "push_subscription_status",
-                monospaceValue = false,
             )
-            HorizontalDivider(color = OsDivider, modifier = Modifier.padding(vertical = DemoLayout.gap))
+            CardDivider()
             ToggleRow(
                 label = "Opted In",
+                description = if (!hasPermission) "Grant push permission to enable" else null,
                 checked = pushEnabled,
                 onCheckedChange = onEnabledChange,
                 enabled = hasPermission,
@@ -351,9 +365,9 @@ fun SendPushSection(
                 listOf(
                     GridAction("SIMPLE", onSimpleClick, "send_simple_button"),
                     GridAction("WITH IMAGE", onImageClick, "send_image_button"),
-                    GridAction("WITH SOUND", onSoundClick, "send_sound_button"),
-                    GridAction("CUSTOM", { customOpen = true }, "send_custom_button"),
-                    GridAction("CLEAR ALL", onClearAllClick, "clear_all_button", ButtonStyle.Outline),
+                    GridAction("WITH SOUND", onSoundClick, "send_sound_button", ButtonStyle.Secondary),
+                    GridAction("CUSTOM", { customOpen = true }, "send_custom_button", ButtonStyle.Secondary),
+                    GridAction("CLEAR ALL", onClearAllClick, "clear_all_button", ButtonStyle.Secondary),
                 ),
             )
         }
@@ -385,7 +399,7 @@ fun NotificationExtensionSection(
                 testTag = "nse_enabled_toggle",
                 contentDescription = "Enable notification service extension",
             )
-            HorizontalDivider(color = OsDivider, modifier = Modifier.padding(vertical = DemoLayout.gap))
+            CardDivider()
             ToggleRow(
                 label = "Apply Extender",
                 description = "Prefix the title with [NSE] through a NotificationCompat.Extender",
@@ -395,7 +409,7 @@ fun NotificationExtensionSection(
                 testTag = "nse_extender_toggle",
                 contentDescription = "Apply notification extender",
             )
-            HorizontalDivider(color = OsDivider, modifier = Modifier.padding(vertical = DemoLayout.gap))
+            CardDivider()
             ToggleRow(
                 label = "Force High Importance Channel",
                 description = "Move every notification onto an app-owned IMPORTANCE_HIGH channel",
@@ -405,7 +419,7 @@ fun NotificationExtensionSection(
                 testTag = "nse_high_importance_toggle",
                 contentDescription = "Force high importance channel",
             )
-            HorizontalDivider(color = OsDivider, modifier = Modifier.padding(vertical = DemoLayout.gap))
+            CardDivider()
             ToggleRow(
                 label = "Delay Display",
                 description = "preventDefault(), then display() five seconds later",
@@ -415,7 +429,7 @@ fun NotificationExtensionSection(
                 testTag = "nse_delay_toggle",
                 contentDescription = "Delay notification display",
             )
-            HorizontalDivider(color = OsDivider, modifier = Modifier.padding(vertical = DemoLayout.gap))
+            CardDivider()
             ToggleRow(
                 label = "Discard",
                 description = "preventDefault(true). Takes precedence over the switches above",
@@ -449,6 +463,13 @@ fun InAppMessagingSection(
     }
 }
 
+private val PrimaryInAppMessageTypes = setOf(
+    InAppMessageType.TOP_BANNER,
+    InAppMessageType.CENTER_MODAL,
+    InAppMessageType.BOTTOM_BANNER,
+    InAppMessageType.FULL_SCREEN,
+)
+
 @Composable
 fun SendInAppMessageSection(
     onSendMessage: (InAppMessageType) -> Unit,
@@ -463,7 +484,12 @@ fun SendInAppMessageSection(
         ) {
             ButtonGrid(
                 InAppMessageType.entries.map { type ->
-                    GridAction(type.title, { onSendMessage(type) }, "send_iam_${type.triggerValue}_button")
+                    GridAction(
+                        type.title,
+                        { onSendMessage(type) },
+                        "send_iam_${type.triggerValue}_button",
+                        if (type in PrimaryInAppMessageTypes) ButtonStyle.Primary else ButtonStyle.Secondary,
+                    )
                 },
             )
         }
@@ -494,7 +520,7 @@ fun AliasesSection(
         ButtonGrid(
             listOf(
                 GridAction("ADD ALIAS", { addOpen = true }, "add_alias_button"),
-                GridAction("ADD ALIASES", { addMultipleOpen = true }, "add_multiple_aliases_button"),
+                GridAction("ADD ALIASES", { addMultipleOpen = true }, "add_multiple_aliases_button", ButtonStyle.Secondary),
             ),
         )
     }
@@ -632,8 +658,8 @@ fun TagsSection(
         ButtonGrid(
             listOfNotNull(
                 GridAction("ADD TAG", { addOpen = true }, "add_tag_button"),
-                GridAction("ADD TAGS", { addMultipleOpen = true }, "add_multiple_tags_button"),
-                GridAction("REMOVE TAGS", { removeOpen = true }, "remove_tags_button", ButtonStyle.Outline)
+                GridAction("ADD TAGS", { addMultipleOpen = true }, "add_multiple_tags_button", ButtonStyle.Secondary),
+                GridAction("REMOVE TAGS", { removeOpen = true }, "remove_tags_button", ButtonStyle.Secondary)
                     .takeIf { tags.isNotEmpty() },
             ),
         )
@@ -747,10 +773,10 @@ fun TriggersSection(
         ButtonGrid(
             listOfNotNull(
                 GridAction("ADD TRIGGER", { addOpen = true }, "add_trigger_button"),
-                GridAction("ADD TRIGGERS", { addMultipleOpen = true }, "add_multiple_triggers_button"),
-                GridAction("REMOVE TRIGGERS", { removeOpen = true }, "remove_triggers_button", ButtonStyle.Outline)
+                GridAction("ADD TRIGGERS", { addMultipleOpen = true }, "add_multiple_triggers_button", ButtonStyle.Secondary),
+                GridAction("REMOVE TRIGGERS", { removeOpen = true }, "remove_triggers_button", ButtonStyle.Secondary)
                     .takeIf { hasTriggers },
-                GridAction("CLEAR ALL", onClearAll, "clear_triggers_button", ButtonStyle.Outline)
+                GridAction("CLEAR ALL", onClearAll, "clear_triggers_button", ButtonStyle.Secondary)
                     .takeIf { hasTriggers },
             ),
         )
@@ -853,6 +879,7 @@ fun LocationSection(
                     text = "CHECK LOCATION",
                     onClick = { snackbar.show("Location shared: ${onCheckLocationShared()}") },
                     testTag = "check_location_button",
+                    style = ButtonStyle.Secondary,
                 ),
             ),
         )

@@ -20,14 +20,15 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import com.onesignal.example.ui.components.DemoAppBar
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.onesignal.example.ui.components.DestructiveButton
-import com.onesignal.example.ui.theme.OsLightBackground
+import com.onesignal.example.ui.components.DemoAppBar
+import com.onesignal.example.ui.components.SecondaryButton
+import com.onesignal.example.ui.theme.DemoLayout
 import com.onesignal.example.ui.theme.OneSignalTheme
+import com.onesignal.example.ui.theme.OsLightBackground
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -46,7 +47,13 @@ class SecondaryActivity : ComponentActivity() {
                 Scaffold(
                     topBar = {
                         DemoAppBar(
-                            title = { Text("Secondary Screen", color = Color.White) },
+                            title = {
+                                Text(
+                                    "Secondary Screen",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = Color.White,
+                                )
+                            },
                             navigationIcon = {
                                 IconButton(onClick = { finish() }) {
                                     Icon(
@@ -69,20 +76,20 @@ class SecondaryActivity : ComponentActivity() {
                     ) {
                         Text(
                             text = "Secondary Screen",
-                            style = MaterialTheme.typography.headlineMedium
+                            style = MaterialTheme.typography.headlineSmall
                         )
 
-                        Spacer(modifier = Modifier.height(32.dp))
+                        Spacer(modifier = Modifier.height(24.dp))
 
-                        DestructiveButton(
+                        SecondaryButton(
                             text = "CRASH",
                             onClick = { triggerCrash() }
                         )
 
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(DemoLayout.gap))
 
-                        DestructiveButton(
-                            text = "SIMULATE ANR (10s block)",
+                        SecondaryButton(
+                            text = "Simulate ANR (10s block)",
                             onClick = { triggerAnr() }
                         )
                     }

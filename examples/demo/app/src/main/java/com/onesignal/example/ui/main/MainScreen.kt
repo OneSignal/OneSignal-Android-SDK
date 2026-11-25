@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -46,11 +47,12 @@ import com.onesignal.example.data.model.NotificationExtensionOptions
 import com.onesignal.example.data.model.NotificationType
 import com.onesignal.example.ui.components.LocalSnackbarController
 import com.onesignal.example.ui.components.LogView
-import com.onesignal.example.ui.components.OutlineButton
+import com.onesignal.example.ui.components.SecondaryButton
 import com.onesignal.example.ui.components.TooltipDialog
 import com.onesignal.example.ui.components.rememberSnackbarController
 import com.onesignal.example.ui.secondary.SecondaryActivity
 import com.onesignal.example.ui.theme.DemoLayout
+import com.onesignal.example.ui.theme.OsInk
 import com.onesignal.example.util.TooltipHelper
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -97,10 +99,10 @@ fun MainScreen(viewModel: MainViewModel) {
                             modifier = Modifier.height(DemoLayout.logoHeight),
                             colorFilter = ColorFilter.tint(Color.White),
                         )
-                        Spacer(modifier = Modifier.width(10.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             "Android",
-                            style = MaterialTheme.typography.titleMedium,
+                            style = MaterialTheme.typography.bodyLarge,
                             color = Color.White,
                         )
                     }
@@ -111,6 +113,8 @@ fun MainScreen(viewModel: MainViewModel) {
             SnackbarHost(hostState = snackbarHostState) { data ->
                 Snackbar(
                     modifier = Modifier.testTag("snackbar_toast"),
+                    shape = RoundedCornerShape(DemoLayout.buttonRadius),
+                    containerColor = OsInk,
                     contentColor = Color.White,
                 ) {
                     Text(
@@ -264,7 +268,7 @@ fun MainScreen(viewModel: MainViewModel) {
                         onInfoClick = { showTooltipDialog = "location" }
                     )
 
-                    OutlineButton(
+                    SecondaryButton(
                         text = "NEXT SCREEN",
                         onClick = {
                             context.startActivity(Intent(context, SecondaryActivity::class.java))

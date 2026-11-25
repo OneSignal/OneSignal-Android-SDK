@@ -33,8 +33,11 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.DialogWindowProvider
 import com.onesignal.example.data.model.CompositeLoginRequest
 import com.onesignal.example.ui.theme.DemoLayout
+import com.onesignal.example.ui.theme.OsBackdrop
 import com.onesignal.example.ui.theme.OsCardBackground
+import com.onesignal.example.ui.theme.OsControlBorder
 import com.onesignal.example.ui.theme.OsGrey500
+import com.onesignal.example.ui.theme.OsGrey600
 import com.onesignal.example.ui.theme.OsGrey700
 import com.onesignal.example.ui.theme.OsPrimary
 import org.json.JSONObject
@@ -42,7 +45,6 @@ import org.json.JSONObject
 private val TextFieldShape = RoundedCornerShape(DemoLayout.inputRadius)
 private val DialogShape = RoundedCornerShape(DemoLayout.dialogRadius)
 private val DialogVerticalInset = 24.dp
-private const val BACKDROP_ALPHA = 0.54f
 
 // JWTs run to hundreds of characters; wrapping lets testers see what they pasted.
 private const val JWT_MIN_LINES = 3
@@ -50,10 +52,13 @@ private const val JWT_MAX_LINES = 5
 
 @Composable
 private fun dialogTextFieldColors() = OutlinedTextFieldDefaults.colors(
-    unfocusedBorderColor = OsGrey700,
+    unfocusedBorderColor = OsControlBorder,
     focusedBorderColor = OsPrimary,
     cursorColor = OsPrimary,
     focusedLabelColor = OsPrimary,
+    unfocusedLabelColor = OsGrey600,
+    focusedPlaceholderColor = OsGrey500,
+    unfocusedPlaceholderColor = OsGrey500,
 )
 
 // OutlinedTextField enforces a 56dp minimum height; this keeps its look at a denser size
@@ -125,6 +130,10 @@ private fun dialogTextButtonColors() = ButtonDefaults.textButtonColors(
     disabledContentColor = OsGrey500,
 )
 
+// Cancel stays neutral so the red confirm action is the one that stands out.
+@Composable
+private fun dialogDismissButtonColors() = ButtonDefaults.textButtonColors(contentColor = OsGrey700)
+
 @Composable
 private fun DialogTitle(text: String, modifier: Modifier = Modifier) {
     Text(text = text, style = MaterialTheme.typography.headlineSmall, modifier = modifier)
@@ -134,7 +143,7 @@ private fun DialogTitle(text: String, modifier: Modifier = Modifier) {
 private fun DialogActionLabel(text: String) {
     Text(
         text = text,
-        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
+        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
     )
 }
 
@@ -175,7 +184,7 @@ private fun DemoDialog(
             // The system dim covers the status and navigation bars, which the dialog window
             // itself doesn't reach, so it serves as the osBackdrop.
             window?.addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
-            window?.setDimAmount(BACKDROP_ALPHA)
+            window?.setDimAmount(OsBackdrop.alpha)
             window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
         }
         Box(
@@ -270,7 +279,7 @@ fun SingleInputDialog(
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss, colors = dialogTextButtonColors()) {
+            TextButton(onClick = onDismiss, colors = dialogDismissButtonColors()) {
                 DialogActionLabel("Cancel")
             }
         },
@@ -333,7 +342,7 @@ fun PairInputDialog(
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss, colors = dialogTextButtonColors()) {
+            TextButton(onClick = onDismiss, colors = dialogDismissButtonColors()) {
                 DialogActionLabel("Cancel")
             }
         },
@@ -405,7 +414,7 @@ fun MultiPairInputDialog(
                                 Icon(
                                     imageVector = Icons.Default.Close,
                                     contentDescription = "Remove row",
-                                    tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f)
+                                    tint = OsGrey600
                                 )
                             }
                         }
@@ -440,7 +449,7 @@ fun MultiPairInputDialog(
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss, colors = dialogTextButtonColors()) {
+            TextButton(onClick = onDismiss, colors = dialogDismissButtonColors()) {
                 DialogActionLabel("Cancel")
             }
         },
@@ -513,7 +522,7 @@ fun MultiSelectRemoveDialog(
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss, colors = dialogTextButtonColors()) {
+            TextButton(onClick = onDismiss, colors = dialogDismissButtonColors()) {
                 DialogActionLabel("Cancel")
             }
         },
@@ -577,7 +586,7 @@ fun LoginDialog(
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss, colors = dialogTextButtonColors()) {
+            TextButton(onClick = onDismiss, colors = dialogDismissButtonColors()) {
                 DialogActionLabel("Cancel")
             }
         },
@@ -637,7 +646,7 @@ fun UpdateUserJwtDialog(
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss, colors = dialogTextButtonColors()) {
+            TextButton(onClick = onDismiss, colors = dialogDismissButtonColors()) {
                 DialogActionLabel("Cancel")
             }
         },
@@ -785,7 +794,7 @@ fun CompositeLoginDialog(
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss, colors = dialogTextButtonColors()) {
+            TextButton(onClick = onDismiss, colors = dialogDismissButtonColors()) {
                 DialogActionLabel("Cancel")
             }
         },
@@ -997,7 +1006,7 @@ fun OutcomeDialog(
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss, colors = dialogTextButtonColors()) {
+            TextButton(onClick = onDismiss, colors = dialogDismissButtonColors()) {
                 DialogActionLabel("Cancel")
             }
         },
@@ -1109,7 +1118,7 @@ fun TrackEventDialog(
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss, colors = dialogTextButtonColors()) {
+            TextButton(onClick = onDismiss, colors = dialogDismissButtonColors()) {
                 DialogActionLabel("Cancel")
             }
         },
@@ -1170,7 +1179,7 @@ fun CustomNotificationDialog(
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss, colors = dialogTextButtonColors()) {
+            TextButton(onClick = onDismiss, colors = dialogDismissButtonColors()) {
                 DialogActionLabel("Cancel")
             }
         },
@@ -1209,6 +1218,7 @@ fun TooltipDialog(
                         Text(
                             text = "• $name: $desc",
                             style = MaterialTheme.typography.bodySmall,
+                            color = OsGrey700,
                             modifier = Modifier.padding(vertical = 3.dp)
                         )
                     }

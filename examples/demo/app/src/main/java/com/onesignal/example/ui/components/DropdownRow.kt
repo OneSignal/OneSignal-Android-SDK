@@ -1,10 +1,9 @@
 package com.onesignal.example.ui.components
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
@@ -17,10 +16,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.unit.dp
 import com.onesignal.example.ui.theme.OsGrey600
+import com.onesignal.example.ui.theme.OsGrey700
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -39,27 +39,23 @@ fun DropdownRow(
         onExpandedChange = { expanded = it },
         modifier = Modifier.fillMaxWidth(),
     ) {
-        Row(
+        CardRow(
+            label = label,
             modifier = Modifier
-                .fillMaxWidth()
                 .menuAnchor()
                 .testTag(testTag),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(text = label, style = MaterialTheme.typography.bodyMedium)
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = selectedLabel,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = OsGrey600,
-                )
-                Icon(
-                    imageVector = Icons.Default.ArrowDropDown,
-                    contentDescription = null,
-                    tint = OsGrey600,
-                )
-            }
+            Text(
+                text = selectedLabel,
+                style = MaterialTheme.typography.bodySmall,
+                color = OsGrey700,
+            )
+            Icon(
+                imageVector = Icons.Default.KeyboardArrowDown,
+                contentDescription = null,
+                tint = OsGrey600,
+                modifier = Modifier.size(18.dp),
+            )
         }
 
         ExposedDropdownMenu(
