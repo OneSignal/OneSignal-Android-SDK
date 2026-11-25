@@ -1,7 +1,6 @@
 package com.onesignal.example.ui.components
 
 import android.view.WindowManager
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
@@ -34,7 +33,6 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.DialogWindowProvider
 import com.onesignal.example.data.model.CompositeLoginRequest
 import com.onesignal.example.ui.theme.DemoLayout
-import com.onesignal.example.ui.theme.OsBackdrop
 import com.onesignal.example.ui.theme.OsCardBackground
 import com.onesignal.example.ui.theme.OsGrey500
 import com.onesignal.example.ui.theme.OsGrey700
@@ -44,6 +42,7 @@ import org.json.JSONObject
 private val TextFieldShape = RoundedCornerShape(DemoLayout.inputRadius)
 private val DialogShape = RoundedCornerShape(DemoLayout.dialogRadius)
 private val DialogVerticalInset = 24.dp
+private const val BACKDROP_ALPHA = 0.54f
 
 // JWTs run to hundreds of characters; wrapping lets testers see what they pasted.
 private const val JWT_MIN_LINES = 3
@@ -154,7 +153,7 @@ private fun Modifier.exposeTestTagsAsResourceId(): Modifier =
 /**
  * Full-width dialog anchored below the safe area per styles.md "Dialogs".
  *
- * The dialog window fills the screen and draws its own backdrop so the card's
+ * The dialog window fills the space between the system bars so the card's
  * top edge never moves. When the keyboard opens only the bottom bound shrinks
  * and the content scrolls, which keeps Appium element frames stable while the
  * action row stays above the keyboard.
@@ -173,7 +172,10 @@ private fun DemoDialog(
     ) {
         val window = (LocalView.current.parent as? DialogWindowProvider)?.window
         SideEffect {
-            window?.clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
+            // The system dim covers the status and navigation bars, which the dialog window
+            // itself doesn't reach, so it serves as the osBackdrop.
+            window?.addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
+            window?.setDimAmount(BACKDROP_ALPHA)
             window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
         }
         Box(
@@ -184,7 +186,6 @@ private fun DemoDialog(
             Box(
                 modifier = Modifier
                     .matchParentSize()
-                    .background(OsBackdrop)
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
