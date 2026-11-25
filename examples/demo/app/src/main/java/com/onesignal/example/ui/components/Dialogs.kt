@@ -700,7 +700,9 @@ fun CompositeLoginDialog(
                         ),
                     )
                 },
-                enabled = externalId.isNotBlank(),
+                enabled = externalId.isNotBlank() &&
+                    !isHalfFilled(tagKey, tagValue) &&
+                    !isHalfFilled(aliasLabel, aliasId),
                 modifier = Modifier.testTag("composite_login_confirm_button"),
                 colors = dialogTextButtonColors(),
             ) {
@@ -715,9 +717,13 @@ fun CompositeLoginDialog(
     )
 }
 
-// A half-filled row is dropped rather than sent, since the SDK rejects empty keys and values.
 private fun completePair(key: String, value: String): Map<String, String> =
     if (key.isNotBlank() && value.isNotBlank()) mapOf(key to value) else emptyMap()
+
+// The SDK rejects empty keys and values, so a row must be fully filled or left empty.
+private fun isHalfFilled(key: String, value: String): Boolean = key.isNotBlank() != value.isNotBlank()
+
+private const val HALF_FILLED_HINT = "Fill both or leave both empty"
 
 @Composable
 private fun ProfilePairRow(
@@ -730,11 +736,15 @@ private fun ProfilePairRow(
     onValueChange: (String) -> Unit,
     valueTestTag: String,
 ) {
+    val keyMissing = key.isBlank() && value.isNotBlank()
+    val valueMissing = value.isBlank() && key.isNotBlank()
     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         OutlinedTextField(
             value = key,
             onValueChange = onKeyChange,
             label = { Text(keyLabel) },
+            isError = keyMissing,
+            supportingText = if (keyMissing) { { Text(HALF_FILLED_HINT) } } else null,
             modifier = Modifier.weight(1f).testTag(keyTestTag),
             singleLine = true,
             shape = TextFieldShape,
@@ -744,6 +754,8 @@ private fun ProfilePairRow(
             value = value,
             onValueChange = onValueChange,
             label = { Text(valueLabel) },
+            isError = valueMissing,
+            supportingText = if (valueMissing) { { Text(HALF_FILLED_HINT) } } else null,
             modifier = Modifier.weight(1f).testTag(valueTestTag),
             singleLine = true,
             shape = TextFieldShape,
