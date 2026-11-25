@@ -35,7 +35,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
@@ -52,7 +52,9 @@ import com.onesignal.example.util.DemoLog
 private val entryStyle = TextStyle(
     color = OsLogText,
     fontSize = 9.sp,
-    lineHeight = 1.4.em,
+    lineHeight = 1.5.em,
+    // Each entry is a single-line Text, so the default trim would drop all of the extra height.
+    lineHeightStyle = LineHeightStyle(alignment = LineHeightStyle.Alignment.Center, trim = LineHeightStyle.Trim.None),
 )
 
 @Composable
@@ -82,7 +84,6 @@ fun LogView(modifier: Modifier = Modifier) {
                 text = "LOGS (${logs.size})",
                 modifier = Modifier.weight(1f),
                 color = OsGrey500,
-                fontFamily = FontFamily.Monospace,
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
                 letterSpacing = 0.5.sp,
