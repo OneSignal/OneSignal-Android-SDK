@@ -588,8 +588,8 @@ fun CompositeLoginDialog(
     var email by remember { mutableStateOf("") }
     var sms by remember { mutableStateOf("") }
     var jwtToken by remember { mutableStateOf("") }
-    var emailEnabled by remember { mutableStateOf("") }
-    var smsEnabled by remember { mutableStateOf("") }
+    var emailEnabled by remember { mutableStateOf<Boolean?>(null) }
+    var smsEnabled by remember { mutableStateOf<Boolean?>(null) }
 
     DemoDialog(
         onDismissRequest = onDismiss,
@@ -622,6 +622,14 @@ fun CompositeLoginDialog(
                     shape = TextFieldShape,
                     colors = dialogTextFieldColors()
                 )
+                if (email.isNotBlank()) {
+                    SubscriptionStatusRow(
+                        label = "Email status",
+                        value = emailEnabled,
+                        onValueChange = { emailEnabled = it },
+                        testTag = "composite_login_email_enabled_input",
+                    )
+                }
                 Spacer(modifier = Modifier.height(12.dp))
                 OutlinedTextField(
                     value = sms,
@@ -635,34 +643,14 @@ fun CompositeLoginDialog(
                     shape = TextFieldShape,
                     colors = dialogTextFieldColors()
                 )
-                Spacer(modifier = Modifier.height(12.dp))
-                OutlinedTextField(
-                    value = emailEnabled,
-                    onValueChange = { emailEnabled = it },
-                    label = { Text("Email status: true / false / blank") },
-                    isError = emailEnabled.isStatusTypo(),
-                    supportingText = { if (emailEnabled.isStatusTypo()) Text("Type true, false, or leave blank") },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .testTag("composite_login_email_enabled_input"),
-                    singleLine = true,
-                    shape = TextFieldShape,
-                    colors = dialogTextFieldColors()
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                OutlinedTextField(
-                    value = smsEnabled,
-                    onValueChange = { smsEnabled = it },
-                    label = { Text("SMS status: true / false / blank") },
-                    isError = smsEnabled.isStatusTypo(),
-                    supportingText = { if (smsEnabled.isStatusTypo()) Text("Type true, false, or leave blank") },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .testTag("composite_login_sms_enabled_input"),
-                    singleLine = true,
-                    shape = TextFieldShape,
-                    colors = dialogTextFieldColors()
-                )
+                if (sms.isNotBlank()) {
+                    SubscriptionStatusRow(
+                        label = "SMS status",
+                        value = smsEnabled,
+                        onValueChange = { smsEnabled = it },
+                        testTag = "composite_login_sms_enabled_input",
+                    )
+                }
                 Spacer(modifier = Modifier.height(12.dp))
                 OutlinedTextField(
                     value = jwtToken,
@@ -686,11 +674,11 @@ fun CompositeLoginDialog(
                         email.ifBlank { null },
                         sms.ifBlank { null },
                         jwtToken.ifBlank { null },
-                        emailEnabled.toOptionalBoolean(),
-                        smsEnabled.toOptionalBoolean(),
+                        emailEnabled.takeIf { email.isNotBlank() },
+                        smsEnabled.takeIf { sms.isNotBlank() },
                     )
                 },
-                enabled = externalId.isNotBlank() && !emailEnabled.isStatusTypo() && !smsEnabled.isStatusTypo(),
+                enabled = externalId.isNotBlank(),
                 modifier = Modifier.testTag("composite_login_confirm_button"),
                 colors = dialogTextButtonColors(),
             ) {
@@ -705,11 +693,29 @@ fun CompositeLoginDialog(
     )
 }
 
-/** Blank means the caller is not stating a status, which the SDK sends as omitted. */
-private fun String.toOptionalBoolean(): Boolean? = trim().lowercase().toBooleanStrictOrNull()
+// "Keep existing" sends no status, so an address that already exists keeps the one it has.
+private val subscriptionStatusOptions = listOf(
+    "Keep existing" to "",
+    "Subscribed" to "true",
+    "Unsubscribed" to "false",
+)
 
-/** Text that is neither blank nor a boolean, so it would silently read as "no status". */
-private fun String.isStatusTypo(): Boolean = isNotBlank() && toOptionalBoolean() == null
+@Composable
+private fun SubscriptionStatusRow(
+    label: String,
+    value: Boolean?,
+    onValueChange: (Boolean?) -> Unit,
+    testTag: String,
+) {
+    Spacer(modifier = Modifier.height(4.dp))
+    DropdownRow(
+        label = label,
+        selectedValue = value?.toString().orEmpty(),
+        options = subscriptionStatusOptions,
+        onValueSelected = { onValueChange(it.toBooleanStrictOrNull()) },
+        testTag = testTag,
+    )
+}
 
 /**
  * Dialog for outcome selection and input.
