@@ -635,14 +635,13 @@ fun CompositeLoginDialog(
                     shape = TextFieldShape,
                     colors = dialogTextFieldColors()
                 )
-                if (email.isNotBlank()) {
-                    SubscriptionStatusRow(
-                        label = "Email status",
-                        value = emailEnabled,
-                        onValueChange = { emailEnabled = it },
-                        testTag = "composite_login_email_enabled_input",
-                    )
-                }
+                Spacer(modifier = Modifier.height(12.dp))
+                SubscriptionStatusField(
+                    label = "Email status",
+                    value = emailEnabled,
+                    onValueChange = { emailEnabled = it },
+                    testTag = "composite_login_email_enabled_input",
+                )
                 Spacer(modifier = Modifier.height(12.dp))
                 OutlinedTextField(
                     value = sms,
@@ -656,14 +655,13 @@ fun CompositeLoginDialog(
                     shape = TextFieldShape,
                     colors = dialogTextFieldColors()
                 )
-                if (sms.isNotBlank()) {
-                    SubscriptionStatusRow(
-                        label = "SMS status",
-                        value = smsEnabled,
-                        onValueChange = { smsEnabled = it },
-                        testTag = "composite_login_sms_enabled_input",
-                    )
-                }
+                Spacer(modifier = Modifier.height(12.dp))
+                SubscriptionStatusField(
+                    label = "SMS status",
+                    value = smsEnabled,
+                    onValueChange = { smsEnabled = it },
+                    testTag = "composite_login_sms_enabled_input",
+                )
             }
         },
         confirmButton = {
@@ -695,26 +693,48 @@ fun CompositeLoginDialog(
 
 // "Keep existing" sends no status, so an address that already exists keeps the one it has.
 private val subscriptionStatusOptions = listOf(
-    "Keep existing" to "",
-    "Subscribed" to "true",
-    "Unsubscribed" to "false",
+    "Keep existing" to null,
+    "Subscribed" to true,
+    "Unsubscribed" to false,
 )
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun SubscriptionStatusRow(
+private fun SubscriptionStatusField(
     label: String,
     value: Boolean?,
     onValueChange: (Boolean?) -> Unit,
     testTag: String,
 ) {
-    Spacer(modifier = Modifier.height(4.dp))
-    DropdownRow(
-        label = label,
-        selectedValue = value?.toString().orEmpty(),
-        options = subscriptionStatusOptions,
-        onValueSelected = { onValueChange(it.toBooleanStrictOrNull()) },
-        testTag = testTag,
-    )
+    var expanded by remember { mutableStateOf(false) }
+    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
+        OutlinedTextField(
+            value = subscriptionStatusOptions.first { it.second == value }.first,
+            onValueChange = {},
+            readOnly = true,
+            label = { Text(label) },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            modifier = Modifier
+                .fillMaxWidth()
+                .menuAnchor()
+                .testTag(testTag),
+            singleLine = true,
+            shape = TextFieldShape,
+            colors = dialogTextFieldColors(),
+        )
+        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            subscriptionStatusOptions.forEach { (optionLabel, optionValue) ->
+                DropdownMenuItem(
+                    text = { Text(optionLabel) },
+                    onClick = {
+                        onValueChange(optionValue)
+                        expanded = false
+                    },
+                    contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,
+                )
+            }
+        }
+    }
 }
 
 /**
