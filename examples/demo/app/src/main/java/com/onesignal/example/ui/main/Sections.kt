@@ -22,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.onesignal.example.data.model.CompositeLoginRequest
 import com.onesignal.example.data.model.InAppMessageType
 import com.onesignal.example.data.model.NotificationExtensionOptions
 import com.onesignal.example.ui.components.CardKvRow
@@ -184,7 +185,7 @@ fun UserSection(
     language: String,
     onLanguageChange: (String) -> Unit,
     onLogin: (String, String?) -> Unit,
-    onLoginWithProfile: (String, String?, String?, String?, Boolean?, Boolean?) -> Unit,
+    onLoginWithProfile: (CompositeLoginRequest) -> Unit,
     onLogout: () -> Unit,
     onUpdateJwt: (String, String) -> Unit,
     isLoading: Boolean = false,
@@ -258,8 +259,8 @@ fun UserSection(
     if (compositeLoginOpen) {
         CompositeLoginDialog(
             onDismiss = { compositeLoginOpen = false },
-            onConfirm = { userId, email, sms, jwt, emailEnabled, smsEnabled ->
-                onLoginWithProfile(userId, email, sms, jwt, emailEnabled, smsEnabled)
+            onConfirm = { request ->
+                onLoginWithProfile(request)
                 compositeLoginOpen = false
             },
         )

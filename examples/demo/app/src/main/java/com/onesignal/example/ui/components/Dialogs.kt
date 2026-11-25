@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.DialogWindowProvider
+import com.onesignal.example.data.model.CompositeLoginRequest
 import com.onesignal.example.ui.theme.DemoLayout
 import com.onesignal.example.ui.theme.OsBackdrop
 import com.onesignal.example.ui.theme.OsCardBackground
@@ -575,14 +576,7 @@ fun UpdateUserJwtDialog(
 @Composable
 fun CompositeLoginDialog(
     onDismiss: () -> Unit,
-    onConfirm: (
-        externalId: String,
-        email: String?,
-        sms: String?,
-        jwt: String?,
-        emailEnabled: Boolean?,
-        smsEnabled: Boolean?,
-    ) -> Unit,
+    onConfirm: (CompositeLoginRequest) -> Unit,
 ) {
     var externalId by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
@@ -590,6 +584,10 @@ fun CompositeLoginDialog(
     var jwtToken by remember { mutableStateOf("") }
     var emailEnabled by remember { mutableStateOf<Boolean?>(null) }
     var smsEnabled by remember { mutableStateOf<Boolean?>(null) }
+    var tagKey by remember { mutableStateOf("") }
+    var tagValue by remember { mutableStateOf("") }
+    var aliasLabel by remember { mutableStateOf("") }
+    var aliasId by remember { mutableStateOf("") }
 
     DemoDialog(
         onDismissRequest = onDismiss,
@@ -662,18 +660,44 @@ fun CompositeLoginDialog(
                     onValueChange = { smsEnabled = it },
                     testTag = "composite_login_sms_enabled_input",
                 )
+                Spacer(modifier = Modifier.height(12.dp))
+                ProfilePairRow(
+                    keyLabel = "Tag key",
+                    key = tagKey,
+                    onKeyChange = { tagKey = it },
+                    keyTestTag = "composite_login_tag_key_input",
+                    valueLabel = "Tag value",
+                    value = tagValue,
+                    onValueChange = { tagValue = it },
+                    valueTestTag = "composite_login_tag_value_input",
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                ProfilePairRow(
+                    keyLabel = "Alias label",
+                    key = aliasLabel,
+                    onKeyChange = { aliasLabel = it },
+                    keyTestTag = "composite_login_alias_label_input",
+                    valueLabel = "Alias ID",
+                    value = aliasId,
+                    onValueChange = { aliasId = it },
+                    valueTestTag = "composite_login_alias_id_input",
+                )
             }
         },
         confirmButton = {
             TextButton(
                 onClick = {
                     onConfirm(
-                        externalId,
-                        email.ifBlank { null },
-                        sms.ifBlank { null },
-                        jwtToken.ifBlank { null },
-                        emailEnabled.takeIf { email.isNotBlank() },
-                        smsEnabled.takeIf { sms.isNotBlank() },
+                        CompositeLoginRequest(
+                            externalId = externalId,
+                            jwt = jwtToken.ifBlank { null },
+                            email = email.ifBlank { null },
+                            emailEnabled = emailEnabled.takeIf { email.isNotBlank() },
+                            sms = sms.ifBlank { null },
+                            smsEnabled = smsEnabled.takeIf { sms.isNotBlank() },
+                            tags = completePair(tagKey, tagValue),
+                            aliases = completePair(aliasLabel, aliasId),
+                        ),
                     )
                 },
                 enabled = externalId.isNotBlank(),
@@ -689,6 +713,43 @@ fun CompositeLoginDialog(
             }
         },
     )
+}
+
+// A half-filled row is dropped rather than sent, since the SDK rejects empty keys and values.
+private fun completePair(key: String, value: String): Map<String, String> =
+    if (key.isNotBlank() && value.isNotBlank()) mapOf(key to value) else emptyMap()
+
+@Composable
+private fun ProfilePairRow(
+    keyLabel: String,
+    key: String,
+    onKeyChange: (String) -> Unit,
+    keyTestTag: String,
+    valueLabel: String,
+    value: String,
+    onValueChange: (String) -> Unit,
+    valueTestTag: String,
+) {
+    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        OutlinedTextField(
+            value = key,
+            onValueChange = onKeyChange,
+            label = { Text(keyLabel) },
+            modifier = Modifier.weight(1f).testTag(keyTestTag),
+            singleLine = true,
+            shape = TextFieldShape,
+            colors = dialogTextFieldColors(),
+        )
+        OutlinedTextField(
+            value = value,
+            onValueChange = onValueChange,
+            label = { Text(valueLabel) },
+            modifier = Modifier.weight(1f).testTag(valueTestTag),
+            singleLine = true,
+            shape = TextFieldShape,
+            colors = dialogTextFieldColors(),
+        )
+    }
 }
 
 // "Default" sends no status: an existing address keeps its own, a new one gets the backend default.

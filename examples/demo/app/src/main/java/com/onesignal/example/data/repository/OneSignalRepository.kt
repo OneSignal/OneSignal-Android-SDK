@@ -2,6 +2,7 @@ package com.onesignal.example.data.repository
 
 import com.onesignal.OneSignal
 import com.onesignal.example.data.model.CompositeLoginExample
+import com.onesignal.example.data.model.CompositeLoginRequest
 import com.onesignal.example.data.model.NotificationType
 import com.onesignal.example.data.network.OneSignalService
 import com.onesignal.example.data.network.UserData
@@ -22,20 +23,21 @@ class OneSignalRepository {
         DemoLog.d("Logged in user with onesignalId: ${OneSignal.User.onesignalId}")
     }
 
-    suspend fun loginUserWithProfile(
-        externalUserId: String,
-        email: String?,
-        sms: String?,
-        jwtToken: String? = null,
-        emailEnabled: Boolean? = null,
-        smsEnabled: Boolean? = null,
-    ) = withContext(Dispatchers.IO) {
+    suspend fun loginUserWithProfile(request: CompositeLoginRequest) = withContext(Dispatchers.IO) {
         DemoLog.d(
-            "Composite login externalUserId: $externalUserId email=$email sms=$sms " +
-                "emailEnabled=$emailEnabled smsEnabled=$smsEnabled",
+            "Composite login externalUserId: ${request.externalId} email=${request.email} sms=${request.sms} " +
+                "emailEnabled=${request.emailEnabled} smsEnabled=${request.smsEnabled} " +
+                "tags=${request.tags} aliases=${request.aliases}",
         )
-        val profile = CompositeLoginExample.profile(email, sms, emptyMap(), emptyMap(), emailEnabled, smsEnabled)
-        val result = OneSignal.login(externalUserId, profile, jwtToken)
+        val profile = CompositeLoginExample.profile(
+            request.email,
+            request.sms,
+            request.tags,
+            request.aliases,
+            request.emailEnabled,
+            request.smsEnabled,
+        )
+        val result = OneSignal.login(request.externalId, profile, request.jwt)
         DemoLog.d("Composite login result: $result")
         result
     }

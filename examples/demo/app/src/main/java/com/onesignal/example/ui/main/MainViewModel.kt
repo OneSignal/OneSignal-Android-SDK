@@ -9,6 +9,7 @@ import com.onesignal.IUserJwtInvalidatedListener
 import com.onesignal.OneSignal
 import com.onesignal.UserJwtInvalidatedEvent
 import com.onesignal.notifications.IPermissionObserver
+import com.onesignal.example.data.model.CompositeLoginRequest
 import com.onesignal.example.data.model.NotificationExtensionOptions
 import com.onesignal.example.data.model.NotificationType
 import com.onesignal.example.data.repository.OneSignalRepository
@@ -295,18 +296,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
         }
     }
 
-    fun loginUserWithProfile(
-        externalUserId: String,
-        email: String?,
-        sms: String?,
-        jwtToken: String? = null,
-        emailEnabled: Boolean? = null,
-        smsEnabled: Boolean? = null,
-    ) {
+    fun loginUserWithProfile(request: CompositeLoginRequest) {
+        val externalUserId = request.externalId
+        val jwtToken = request.jwt
         _isLoading.value = true
         viewModelScope.launch(Dispatchers.IO) {
-            val result =
-                repository.loginUserWithProfile(externalUserId, email, sms, jwtToken, emailEnabled, smsEnabled)
+            val result = repository.loginUserWithProfile(request)
             withContext(Dispatchers.Main) {
                 if (result.isSuccess) {
                     SharedPreferenceUtil.cacheUserExternalUserId(getApplication(), externalUserId)
