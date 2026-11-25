@@ -430,7 +430,7 @@ class ConfigModel : Model() {
 
     companion object {
         const val DEFAULT_TIMEOUT_MS = 60_000L
-        const val DEFAULT_SESSION_HEARTBEAT_INTERVAL_MS = 30 * 60 * 1000L
+        const val DEFAULT_SESSION_HEARTBEAT_INTERVAL_MS = 3 * 60 * 1000L
     }
 }
 

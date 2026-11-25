@@ -87,12 +87,9 @@ internal class ParamsBackendService(
         }
 
         // optJSONObject, not expandJSONObject: a null or non-object value must not abort the whole parse.
-        val sessionHeartbeatInterval =
-            responseJson.optJSONObject("sessions")
-                ?.optLong("heartbeat_interval_seconds", 0L)
-                ?.takeIf { it > 0 }
-                ?.coerceIn(MIN_HEARTBEAT_INTERVAL_SECONDS, MAX_HEARTBEAT_INTERVAL_SECONDS)
-                ?.let { TimeUnit.SECONDS.toMillis(it) }
+        // Forced to 180 s for heartbeat testing, as if the params sent it.
+        val sessionHeartbeatInterval: Long? =
+            TimeUnit.SECONDS.toMillis(180L.coerceIn(MIN_HEARTBEAT_INTERVAL_SECONDS, MAX_HEARTBEAT_INTERVAL_SECONDS))
 
         return ParamsObject(
             googleProjectNumber = responseJson.safeString("android_sender_id"),
