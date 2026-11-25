@@ -11,7 +11,7 @@ ATTEMPTS="$STATE_DIR/attempts.jsonl"
 PROXY_LOG="$STATE_DIR/proxy.log"
 PID_FILE="$STATE_DIR/proxy.pid"
 PORT="${RETRY_TEST_PORT:-8899}"
-PACKAGE="${RETRY_TEST_PACKAGE:-com.onesignal.sdkdemo}"
+PACKAGE="${RETRY_TEST_PACKAGE:-com.onesignal.example}"
 CA_CERT="$HOME/.mitmproxy/mitmproxy-ca-cert.pem"
 IV_APP_ID="${RETRY_TEST_IV_APP_ID:-}"
 IV_KEY="${RETRY_TEST_IV_KEY:-}"
@@ -211,7 +211,7 @@ cmd_install() {
   local app_id=()
   [[ -n "$IV_APP_ID" ]] && app_id=(-PONESIGNAL_APP_ID="$IV_APP_ID")
   (cd "$SDK_DIR" && ANDROID_SERIAL="$SERIAL" ./gradlew -q :app:installGmsDebug \
-    -PSDK_VERSION="${SDK_VERSION:-0.0.0-retry-test}" -PRETRY_TEST_CA="$CA_CERT" ${app_id[@]+"${app_id[@]}"})
+    -PSDK_VERSION="${SDK_VERSION:-0.0.0-retry-test}" -PDEMO_BUNDLE_ID="$PACKAGE" -PRETRY_TEST_CA="$CA_CERT" ${app_id[@]+"${app_id[@]}"})
   dev shell pm grant "$PACKAGE" android.permission.POST_NOTIFICATIONS 2>/dev/null || true
   # The stylus handwriting prompt on newer emulators swallows Maestro's text input.
   dev shell settings put secure stylus_handwriting_enabled 0
@@ -237,7 +237,7 @@ cmd_tap() {
   # The grep only trims output; with pipefail a failed flow still fails `tap`.
   local status=0
   MAESTRO_CLI_NO_ANALYTICS=1 MAESTRO_CLI_ANALYSIS_NOTIFICATION_DISABLED=true \
-    maestro --device "$SERIAL" test ${env[@]+"${env[@]}"} "$SCRIPT_DIR/flows/$action.yaml" \
+    maestro --device "$SERIAL" test -e "APP_ID=$PACKAGE" ${env[@]+"${env[@]}"} "$SCRIPT_DIR/flows/$action.yaml" \
     | { grep -E '^ *(>|[A-Z].*(COMPLETED|FAILED|WARNED))' || true; } || status=$?
   [[ "$status" == "0" ]] || die "maestro flow '$action' failed (exit $status)"
 }

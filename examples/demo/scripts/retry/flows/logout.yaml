@@ -1,4 +1,4 @@
-appId: com.onesignal.sdkdemo
+appId: ${APP_ID}
 ---
 - runFlow:
     file: _scroll-to.yaml

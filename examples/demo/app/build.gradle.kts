@@ -32,32 +32,34 @@ if (taskRequests.contains("huawei")) {
     apply(plugin = "com.huawei.agconnect")
 }
 
-// Firebase configuration is local so the demo must remain buildable without it.
+// gms package. E2E builds with `-PDEMO_BUNDLE_ID=com.onesignal.sdkdemo`.
+val demoBundleId: String = demoOverride("DEMO_BUNDLE_ID") ?: "com.onesignal.example"
+
+// Firebase configuration is local so the demo must remain buildable without it, or with one
+// issued for a different package (the Google Services plugin fails when no client matches).
 // Skipped for Huawei-only runs: the file may have no client for the huawei applicationId.
-val hasGoogleServices = file("google-services.json").exists()
+val googleServicesFile = file("google-services.json")
+val hasGoogleServices = googleServicesFile.exists() &&
+    Regex("\"package_name\"\\s*:\\s*\"${Regex.escape(demoBundleId)}\"").containsMatchIn(googleServicesFile.readText())
+if (googleServicesFile.exists() && !hasGoogleServices) {
+    logger.warn("app/google-services.json has no client for $demoBundleId; building without Firebase")
+}
 val huaweiOnly = taskRequests.contains("huawei") && !taskRequests.contains("gms")
 if (hasGoogleServices && !huaweiOnly) {
     apply(plugin = "com.google.gms.google-services")
 }
 
-// Required: set via `local.properties` (ONESIGNAL_APP_ID=...) or `-PONESIGNAL_APP_ID=...`.
-// Checked when a build runs rather than at configuration, so IDE sync and lint work without it.
-val onesignalAppId: String? = demoOverride("ONESIGNAL_APP_ID")
-tasks.named("preBuild") {
-    doFirst {
-        if (onesignalAppId == null) {
-            throw GradleException(
-                "ONESIGNAL_APP_ID is not set. Add it to examples/demo/local.properties or pass -PONESIGNAL_APP_ID=...",
-            )
-        }
-    }
-}
+// Set via `local.properties` (ONESIGNAL_APP_ID=...) or `-PONESIGNAL_APP_ID=...`; falls back to
+// the shared example app.
+val onesignalAppId: String = demoOverride("ONESIGNAL_APP_ID") ?: "1154c350-e715-4b71-a58b-1b84b6745baa"
 
 // Off by default so local and release builds keep the legacy token path. E2E opts in with
 // `-PFIREBASE_INSTALLATION_ID_ENABLED=true`; the flag does nothing without the default FirebaseApp.
 val firebaseInstallationIdEnabled = demoOverride("FIREBASE_INSTALLATION_ID_ENABLED")?.toBoolean() ?: false
 if (firebaseInstallationIdEnabled && !hasGoogleServices) {
-    throw GradleException("FIREBASE_INSTALLATION_ID_ENABLED requires examples/demo/app/google-services.json")
+    throw GradleException(
+        "FIREBASE_INSTALLATION_ID_ENABLED requires examples/demo/app/google-services.json with a client for $demoBundleId",
+    )
 }
 
 // OneSignal SDK version - can be overridden via gradle property SDK_VERSION
@@ -77,7 +79,7 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         // OneSignal App ID exposed via BuildConfig so the demo always reads it from one place.
-        buildConfigField("String", "ONESIGNAL_APP_ID", "\"${onesignalAppId.orEmpty()}\"")
+        buildConfigField("String", "ONESIGNAL_APP_ID", "\"$onesignalAppId\"")
 
         // Optional OneSignal channel id used by the "WITH SOUND" notification payload.
         // Falls back to the same default the Capacitor demo ships with so the shared Appium
@@ -106,7 +108,7 @@ android {
     productFlavors {
         create("gms") {
             dimension = "default"
-            applicationId = "com.onesignal.sdkdemo"
+            applicationId = demoBundleId
             minSdk = 23
             manifestPlaceholders["firebaseInstallationIdEnabled"] = firebaseInstallationIdEnabled.toString()
         }

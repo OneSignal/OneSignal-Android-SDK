@@ -7,9 +7,13 @@
 # (e.g. `./gradlew :app:installGmsDebug -PONESIGNAL_APP_ID=...`),
 # and the CLI takes precedence over local.properties.
 
-# Required: your OneSignal App ID. Get one at https://onesignal.com.
-# The build fails if this is unset.
+# Optional: your OneSignal App ID. Leave empty to use the shared example app
+# (1154c350-e715-4b71-a58b-1b84b6745baa).
 ONESIGNAL_APP_ID=
+
+# Optional: the gms applicationId. Defaults to com.onesignal.example; E2E uses
+# com.onesignal.sdkdemo. The huawei flavor always uses com.onesignal.example.
+DEMO_BUNDLE_ID=
 
 # Optional: notification channel id used by the "WITH SOUND" payload.
 # Leave empty to use the shared default (matches Capacitor's
@@ -18,5 +22,5 @@ ONESIGNAL_APP_ID=
 ONESIGNAL_ANDROID_CHANNEL_ID=
 
 # Optional: turn on Firebase Installation ID registration (gms only).
-# Requires app/google-services.json with a client for com.onesignal.sdkdemo.
+# Requires app/google-services.json with a client for DEMO_BUNDLE_ID.
 FIREBASE_INSTALLATION_ID_ENABLED=false
