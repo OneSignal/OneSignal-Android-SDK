@@ -611,6 +611,19 @@ fun CompositeLoginDialog(
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 OutlinedTextField(
+                    value = jwtToken,
+                    onValueChange = { jwtToken = it },
+                    label = { Text("JWT Token (optional)") },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("composite_login_jwt_input"),
+                    minLines = JWT_MIN_LINES,
+                    maxLines = JWT_MAX_LINES,
+                    shape = TextFieldShape,
+                    colors = dialogTextFieldColors()
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                OutlinedTextField(
                     value = email,
                     onValueChange = { email = it },
                     label = { Text("Email (optional)") },
@@ -651,19 +664,6 @@ fun CompositeLoginDialog(
                         testTag = "composite_login_sms_enabled_input",
                     )
                 }
-                Spacer(modifier = Modifier.height(12.dp))
-                OutlinedTextField(
-                    value = jwtToken,
-                    onValueChange = { jwtToken = it },
-                    label = { Text("JWT Token (optional)") },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .testTag("composite_login_jwt_input"),
-                    minLines = JWT_MIN_LINES,
-                    maxLines = JWT_MAX_LINES,
-                    shape = TextFieldShape,
-                    colors = dialogTextFieldColors()
-                )
             }
         },
         confirmButton = {
