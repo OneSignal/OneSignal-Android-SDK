@@ -52,7 +52,6 @@ import com.onesignal.example.ui.theme.OsDivider
 import com.onesignal.example.ui.theme.OsGrey600
 import com.onesignal.example.ui.theme.OsGrey700
 import com.onesignal.example.ui.theme.OsPrimary
-import com.onesignal.example.ui.theme.OsSuccess
 import com.onesignal.example.ui.theme.OsWarningBackground
 
 private val languageOptions = listOf(
@@ -206,14 +205,6 @@ fun UserSection(
                 onCheckedChange = onUseIdentityVerificationChange,
                 testTag = "identity_verification_toggle",
                 contentDescription = "Identity verification",
-            )
-            HorizontalDivider(color = OsDivider, modifier = Modifier.padding(vertical = DemoLayout.gap))
-            CardKvRow(
-                label = "Status",
-                value = if (isLoggedIn) "Logged In" else "Anonymous",
-                valueTestTag = "user_status_value",
-                valueColor = if (isLoggedIn) OsSuccess else OsGrey600,
-                monospaceValue = true,
             )
             HorizontalDivider(color = OsDivider, modifier = Modifier.padding(vertical = DemoLayout.gap))
             CardKvRow(
