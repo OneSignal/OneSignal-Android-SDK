@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.BasicTextField
@@ -464,36 +465,38 @@ fun MultiSelectRemoveDialog(
         },
         text = {
             Column(modifier = Modifier.fillMaxWidth()) {
-                items.forEach { (key, _) ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                selectedKeys = if (key in selectedKeys) {
-                                    selectedKeys - key
-                                } else {
-                                    selectedKeys + key
+                CompactControls {
+                    items.forEach { (key, _) ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    selectedKeys = if (key in selectedKeys) {
+                                        selectedKeys - key
+                                    } else {
+                                        selectedKeys + key
+                                    }
                                 }
-                            }
-                            .padding(vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Checkbox(
-                            checked = key in selectedKeys,
-                            onCheckedChange = { checked ->
-                                selectedKeys = if (checked) {
-                                    selectedKeys + key
-                                } else {
-                                    selectedKeys - key
-                                }
-                            },
-                            modifier = Modifier.testTag("remove_checkbox_$key"),
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = key,
-                            style = MaterialTheme.typography.bodyMedium
-                        )
+                                .padding(vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Checkbox(
+                                checked = key in selectedKeys,
+                                onCheckedChange = { checked ->
+                                    selectedKeys = if (checked) {
+                                        selectedKeys + key
+                                    } else {
+                                        selectedKeys - key
+                                    }
+                                },
+                                modifier = Modifier.testTag("remove_checkbox_$key"),
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(
+                                text = key,
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
                     }
                 }
             }
@@ -840,6 +843,13 @@ private fun ProfilePairRow(
     }
 }
 
+// Drops Material's 48dp touch target around radios and checkboxes; their rows are tappable instead.
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun CompactControls(content: @Composable () -> Unit) {
+    CompositionLocalProvider(LocalMinimumInteractiveComponentEnforcement provides false, content = content)
+}
+
 // "Default" sends no status: an existing address keeps its own, a new one gets the backend default.
 private val subscriptionStatusOptions = listOf(
     "Default" to null,
@@ -913,21 +923,26 @@ fun OutcomeDialog(
         },
         text = {
             Column {
-                outcomeTypes.forEach { (index, label, tag) ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        RadioButton(
-                            selected = selectedType == index,
-                            onClick = { selectedType = index },
-                            modifier = Modifier.testTag(tag),
-                        )
-                        Text(
-                            text = label,
-                            style = MaterialTheme.typography.bodyLarge,
-                            modifier = Modifier.padding(start = 4.dp),
-                        )
+                CompactControls {
+                    outcomeTypes.forEach { (index, label, tag) ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .selectable(selected = selectedType == index, onClick = { selectedType = index })
+                                .padding(vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = selectedType == index,
+                                onClick = { selectedType = index },
+                                modifier = Modifier.testTag(tag),
+                            )
+                            Text(
+                                text = label,
+                                style = MaterialTheme.typography.bodyLarge,
+                                modifier = Modifier.padding(start = 12.dp),
+                            )
+                        }
                     }
                 }
 
