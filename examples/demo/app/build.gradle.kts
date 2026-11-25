@@ -51,7 +51,7 @@ if (hasGoogleServices && !huaweiOnly) {
 
 // Set via `local.properties` (ONESIGNAL_APP_ID=...) or `-PONESIGNAL_APP_ID=...`; falls back to
 // the shared example app.
-val onesignalAppId: String = demoOverride("ONESIGNAL_APP_ID") ?: "1154c350-e715-4b71-a58b-1b84b6745baa"
+val onesignalAppId: String = demoOverride("ONESIGNAL_APP_ID") ?: "3e9392ef-2e75-4934-abe5-6809a8a22187"
 
 // Off by default so local and release builds keep the legacy token path. E2E opts in with
 // `-PFIREBASE_INSTALLATION_ID_ENABLED=true`; the flag does nothing without the default FirebaseApp.
