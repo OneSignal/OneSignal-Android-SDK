@@ -50,7 +50,7 @@ private fun Modifier.applyTestTag(tag: String?): Modifier =
 
 private fun Modifier.buttonLayout(testTag: String?): Modifier = this
     .fillMaxWidth()
-    .padding(horizontal = DemoLayout.pagePadding, vertical = 4.dp)
+    .padding(horizontal = DemoLayout.pagePadding)
     .height(DemoLayout.buttonHeight)
     .applyTestTag(testTag)
 
@@ -101,7 +101,7 @@ fun ButtonGrid(actions: List<GridAction>, modifier: Modifier = Modifier) {
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = DemoLayout.pagePadding, vertical = 4.dp),
+            .padding(horizontal = DemoLayout.pagePadding),
         verticalArrangement = Arrangement.spacedBy(DemoLayout.gap),
     ) {
         actions.chunked(2).forEach { row ->
