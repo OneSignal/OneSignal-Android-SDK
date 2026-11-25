@@ -241,7 +241,7 @@ fun UserSection(
                     onClick = { updateJwtOpen = true },
                     testTag = "update_user_jwt_button",
                     style = ButtonStyle.Outline,
-                ),
+                ).takeIf { isLoggedIn },
             ),
         )
     }
@@ -266,7 +266,7 @@ fun UserSection(
         )
     }
 
-    if (updateJwtOpen) {
+    if (updateJwtOpen && isLoggedIn) {
         UpdateUserJwtDialog(
             initialExternalId = externalUserId.orEmpty(),
             onDismiss = { updateJwtOpen = false },
