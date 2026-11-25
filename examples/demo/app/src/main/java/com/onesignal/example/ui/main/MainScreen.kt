@@ -130,6 +130,7 @@ fun MainScreen(viewModel: MainViewModel) {
                         .fillMaxSize()
                         .background(MaterialTheme.colorScheme.background)
                         .verticalScroll(rememberScrollState())
+                        .padding(top = DemoLayout.scrollTopPadding)
                         .testTag("main_scroll_view")
                 ) {
                     AppSection(
