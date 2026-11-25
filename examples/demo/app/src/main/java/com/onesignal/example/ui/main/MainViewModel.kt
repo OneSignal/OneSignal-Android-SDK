@@ -758,7 +758,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
     private fun String?.orNullText(): String = if (isNullOrEmpty()) "null" else this
 
     override fun onUserJwtInvalidated(event: UserJwtInvalidatedEvent) {
-        DemoLog.w("JWT invalidated for externalId: ${event.externalId}")
+        DemoLog.w("JWT invalidated: ${event.externalId}")
     }
 
     override fun onCleared() {
