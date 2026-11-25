@@ -662,22 +662,24 @@ fun CompositeLoginDialog(
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 ProfilePairRow(
-                    keyLabel = "Tag key",
+                    caption = "Tag (optional)",
+                    keyLabel = "Key",
                     key = tagKey,
                     onKeyChange = { tagKey = it },
                     keyTestTag = "composite_login_tag_key_input",
-                    valueLabel = "Tag value",
+                    valueLabel = "Value",
                     value = tagValue,
                     onValueChange = { tagValue = it },
                     valueTestTag = "composite_login_tag_value_input",
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 ProfilePairRow(
-                    keyLabel = "Alias label",
+                    caption = "Alias (optional)",
+                    keyLabel = "Label",
                     key = aliasLabel,
                     onKeyChange = { aliasLabel = it },
                     keyTestTag = "composite_login_alias_label_input",
-                    valueLabel = "Alias ID",
+                    valueLabel = "ID",
                     value = aliasId,
                     onValueChange = { aliasId = it },
                     valueTestTag = "composite_login_alias_id_input",
@@ -727,6 +729,7 @@ private const val HALF_FILLED_HINT = "Fill both or leave both empty"
 
 @Composable
 private fun ProfilePairRow(
+    caption: String,
     keyLabel: String,
     key: String,
     onKeyChange: (String) -> Unit,
@@ -738,6 +741,12 @@ private fun ProfilePairRow(
 ) {
     val keyMissing = key.isBlank() && value.isNotBlank()
     val valueMissing = value.isBlank() && key.isNotBlank()
+    Text(
+        text = caption,
+        style = MaterialTheme.typography.bodySmall,
+        color = OsGrey700,
+        modifier = Modifier.padding(bottom = 4.dp),
+    )
     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         OutlinedTextField(
             value = key,
