@@ -113,7 +113,7 @@ class MainApplication : MultiDexApplication() {
         OneSignal.Notifications.addForegroundLifecycleListener(object : INotificationLifecycleListener {
             override fun onWillDisplay(event: INotificationWillDisplayEvent) {
                 val notification: IDisplayableNotification = event.notification
-                DemoLog.show("Notification foregroundWillDisplay: ${notification.notificationId} ${notification.title.orEmpty()}")
+                DemoLog.show("Notif willDisplay: ${notification.notificationId} ${notification.title.orEmpty()}")
 
                 // Prevent OneSignal from displaying the notification immediately on return.
                 // Spin up a new thread to mimic some asynchronous behavior.
