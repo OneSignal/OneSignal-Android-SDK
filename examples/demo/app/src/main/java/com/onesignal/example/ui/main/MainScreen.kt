@@ -43,7 +43,7 @@ import com.onesignal.example.data.model.NotificationExtensionOptions
 import com.onesignal.example.data.model.NotificationType
 import com.onesignal.example.ui.components.LocalSnackbarController
 import com.onesignal.example.ui.components.LogView
-import com.onesignal.example.ui.components.PrimaryButton
+import com.onesignal.example.ui.components.OutlineButton
 import com.onesignal.example.ui.components.TooltipDialog
 import com.onesignal.example.ui.components.rememberSnackbarController
 import com.onesignal.example.ui.secondary.SecondaryActivity
@@ -258,7 +258,7 @@ fun MainScreen(viewModel: MainViewModel) {
                         onInfoClick = { showTooltipDialog = "location" }
                     )
 
-                    PrimaryButton(
+                    OutlineButton(
                         text = "NEXT SCREEN",
                         onClick = {
                             context.startActivity(Intent(context, SecondaryActivity::class.java))
