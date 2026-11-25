@@ -39,6 +39,10 @@ private val TextFieldShape = RoundedCornerShape(DemoLayout.inputRadius)
 private val DialogShape = RoundedCornerShape(DemoLayout.dialogRadius)
 private val DialogVerticalInset = 24.dp
 
+// JWTs run to hundreds of characters; wrapping lets testers see what they pasted.
+private const val JWT_MIN_LINES = 3
+private const val JWT_MAX_LINES = 5
+
 @Composable
 private fun dialogTextFieldColors() = OutlinedTextFieldDefaults.colors(
     unfocusedBorderColor = OsGrey700,
@@ -483,7 +487,8 @@ fun LoginDialog(
                     modifier = Modifier
                         .fillMaxWidth()
                         .testTag("login_user_jwt_input"),
-                    singleLine = true,
+                    minLines = JWT_MIN_LINES,
+                    maxLines = JWT_MAX_LINES,
                     shape = TextFieldShape,
                     colors = dialogTextFieldColors()
                 )
@@ -542,7 +547,8 @@ fun UpdateUserJwtDialog(
                     modifier = Modifier
                         .fillMaxWidth()
                         .testTag("update_jwt_token_input"),
-                    singleLine = true,
+                    minLines = JWT_MIN_LINES,
+                    maxLines = JWT_MAX_LINES,
                     shape = TextFieldShape,
                     colors = dialogTextFieldColors()
                 )
@@ -665,7 +671,8 @@ fun CompositeLoginDialog(
                     modifier = Modifier
                         .fillMaxWidth()
                         .testTag("composite_login_jwt_input"),
-                    singleLine = true,
+                    minLines = JWT_MIN_LINES,
+                    maxLines = JWT_MAX_LINES,
                     shape = TextFieldShape,
                     colors = dialogTextFieldColors()
                 )
