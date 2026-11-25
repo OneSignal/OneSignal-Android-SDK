@@ -178,7 +178,7 @@ private fun GuidanceBanner(onGetKeysClick: () -> Unit) {
         )
         Column {
             Text(
-                "Set your App ID and rebuild to test all features.",
+                "Set your App ID and rebuild to test all features",
                 style = MaterialTheme.typography.bodySmall,
                 color = OsWarningText,
             )
