@@ -48,10 +48,10 @@ import com.onesignal.example.ui.theme.OsLogBackground
 import com.onesignal.example.ui.theme.OsLogText
 import com.onesignal.example.util.DemoLog
 
+// Proportional rather than monospace so long IDs and titles fit on one line.
 private val entryStyle = TextStyle(
     color = OsLogText,
-    fontFamily = FontFamily.Monospace,
-    fontSize = 8.sp,
+    fontSize = 9.sp,
     lineHeight = 1.4.em,
 )
 
