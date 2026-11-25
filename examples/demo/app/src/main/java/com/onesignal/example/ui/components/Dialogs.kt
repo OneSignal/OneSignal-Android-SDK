@@ -691,9 +691,9 @@ fun CompositeLoginDialog(
     )
 }
 
-// "Not set" sends no status: an existing address keeps its own, a new one gets the backend default.
+// "Default" sends no status: an existing address keeps its own, a new one gets the backend default.
 private val subscriptionStatusOptions = listOf(
-    "Not set" to null,
+    "Default" to null,
     "Subscribed" to true,
     "Unsubscribed" to false,
 )
