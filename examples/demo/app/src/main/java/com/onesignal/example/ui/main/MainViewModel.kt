@@ -93,8 +93,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
     val notificationExtensionOptions: LiveData<NotificationExtensionOptions> = _notificationExtensionOptions
 
     // Identity Verification toggle (demo app only, controls alias used for API calls)
-    private val _useIdentityVerification = MutableLiveData<Boolean>()
-    val useIdentityVerification: LiveData<Boolean> = _useIdentityVerification
 
     // Loading state
     private val _isLoading = MutableLiveData<Boolean>()
@@ -156,7 +154,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
         _privacyConsentGiven.value = repository.getPrivacyConsent()
         _inAppMessagesPaused.value = repository.isInAppMessagesPaused()
         _locationShared.value = repository.isLocationShared()
-        _useIdentityVerification.value = SharedPreferenceUtil.getCachedIdentityVerification(context)
         _notificationExtensionOptions.value = SharedPreferenceUtil.getNotificationExtensionOptions(context)
         _language.value = SharedPreferenceUtil.getCachedLanguage(context)
 
@@ -178,16 +175,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
     
     fun fetchUserDataFromApi() {
         val requestId = ++fetchRequestSequence
-        val useIV = _useIdentityVerification.value == true
+        // Apps with identity verification reject unauthenticated lookups, and a logged-in
+        // user there always has a JWT, so a cached token selects the signed lookup.
+        val externalId = _externalUserId.value
+        val jwt = if (externalId.isNullOrEmpty()) null else SharedPreferenceUtil.getCachedJwtToken(getApplication())?.takeIf { it.isNotBlank() }
         val aliasLabel: String
         val aliasValue: String
 
-        if (useIV) {
-            val externalId = _externalUserId.value
-            if (externalId.isNullOrEmpty()) {
-                _isLoading.value = false
-                return
-            }
+        if (externalId != null && jwt != null) {
             aliasLabel = "external_id"
             aliasValue = externalId
         } else {
@@ -199,8 +194,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
             aliasLabel = "onesignal_id"
             aliasValue = onesignalId
         }
-
-        val jwt = if (useIV) SharedPreferenceUtil.getCachedJwtToken(getApplication()) else null
 
         _isLoading.value = true
         viewModelScope.launch(Dispatchers.IO) {
@@ -344,6 +337,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
             withContext(Dispatchers.Main) {
                 SharedPreferenceUtil.cacheJwtToken(getApplication(), jwtToken)
                 DemoLog.i("Updated JWT for: $externalUserId")
+                fetchUserDataFromApi()
             }
         }
     }
@@ -354,6 +348,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
             repository.logoutUser()
             withContext(Dispatchers.Main) {
                 SharedPreferenceUtil.cacheUserExternalUserId(getApplication(), "")
+                SharedPreferenceUtil.cacheJwtToken(getApplication(), null)
                 _externalUserId.value = null
                 resetLanguagePicker()
                 loadExistingAliases()
@@ -368,12 +363,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
                 refreshTriggers()
             }
         }
-    }
-
-    fun setUseIdentityVerification(enabled: Boolean) {
-        SharedPreferenceUtil.cacheIdentityVerification(getApplication(), enabled)
-        _useIdentityVerification.value = enabled
-        DemoLog.i(if (enabled) "Identity verification enabled" else "Identity verification disabled")
     }
 
     fun setLanguage(language: String) {

@@ -182,8 +182,6 @@ fun AppSection(
 fun UserSection(
     externalUserId: String?,
     language: String,
-    useIdentityVerification: Boolean,
-    onUseIdentityVerificationChange: (Boolean) -> Unit,
     onLanguageChange: (String) -> Unit,
     onLogin: (String, String?) -> Unit,
     onLoginWithProfile: (String, String?, String?, String?, Boolean?, Boolean?) -> Unit,
@@ -198,15 +196,6 @@ fun UserSection(
 
     DemoSection {
         SectionCard(title = "User", sectionKey = "user") {
-            ToggleRow(
-                label = "Identity Verification",
-                description = "Use external_id for API calls",
-                checked = useIdentityVerification,
-                onCheckedChange = onUseIdentityVerificationChange,
-                testTag = "identity_verification_toggle",
-                contentDescription = "Identity verification",
-            )
-            HorizontalDivider(color = OsDivider, modifier = Modifier.padding(vertical = DemoLayout.gap))
             CardKvRow(
                 label = "External ID",
                 value = externalUserId ?: "—",
