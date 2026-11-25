@@ -7,21 +7,24 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.LocalMinimumInteractiveComponentEnforcement
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
-import com.onesignal.example.ui.theme.DemoLayout
 import com.onesignal.example.ui.theme.OsGrey600
 import com.onesignal.example.ui.theme.OsPrimary
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ToggleRow(
     label: String,
@@ -36,7 +39,7 @@ fun ToggleRow(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(vertical = DemoLayout.gap),
+            .padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1f)) {
@@ -68,16 +71,19 @@ fun ToggleRow(
                     mod
                 }
             }
-        Switch(
-            checked = checked,
-            onCheckedChange = onCheckedChange,
-            enabled = enabled,
-            modifier = switchModifier,
-            colors = SwitchDefaults.colors(
-                checkedThumbColor = MaterialTheme.colorScheme.surface,
-                checkedTrackColor = OsPrimary,
-                checkedBorderColor = OsPrimary,
-            ),
-        )
+        // styles.md drops the extra tap-target padding Material adds around the 32dp switch.
+        CompositionLocalProvider(LocalMinimumInteractiveComponentEnforcement provides false) {
+            Switch(
+                checked = checked,
+                onCheckedChange = onCheckedChange,
+                enabled = enabled,
+                modifier = switchModifier,
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = MaterialTheme.colorScheme.surface,
+                    checkedTrackColor = OsPrimary,
+                    checkedBorderColor = OsPrimary,
+                ),
+            )
+        }
     }
 }

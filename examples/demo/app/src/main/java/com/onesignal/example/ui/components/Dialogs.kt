@@ -8,6 +8,10 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -51,6 +55,69 @@ private fun dialogTextFieldColors() = OutlinedTextFieldDefaults.colors(
     cursorColor = OsPrimary,
     focusedLabelColor = OsPrimary,
 )
+
+// OutlinedTextField enforces a 56dp minimum height; this keeps its look at a denser size
+// so dialogs need less scrolling in Appium runs.
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun DemoTextField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    label: (@Composable () -> Unit)? = null,
+    placeholder: (@Composable () -> Unit)? = null,
+    trailingIcon: (@Composable () -> Unit)? = null,
+    supportingText: (@Composable () -> Unit)? = null,
+    isError: Boolean = false,
+    readOnly: Boolean = false,
+    singleLine: Boolean = false,
+    minLines: Int = 1,
+    maxLines: Int = if (singleLine) 1 else Int.MAX_VALUE,
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
+    shape: Shape = TextFieldShape,
+    colors: TextFieldColors = dialogTextFieldColors(),
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    BasicTextField(
+        value = value,
+        onValueChange = onValueChange,
+        modifier = modifier,
+        readOnly = readOnly,
+        textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
+        cursorBrush = SolidColor(if (isError) MaterialTheme.colorScheme.error else OsPrimary),
+        keyboardOptions = keyboardOptions,
+        interactionSource = interactionSource,
+        singleLine = singleLine,
+        maxLines = maxLines,
+        minLines = minLines,
+        decorationBox = { innerTextField ->
+            OutlinedTextFieldDefaults.DecorationBox(
+                value = value,
+                innerTextField = innerTextField,
+                enabled = true,
+                singleLine = singleLine,
+                visualTransformation = VisualTransformation.None,
+                interactionSource = interactionSource,
+                isError = isError,
+                label = label,
+                placeholder = placeholder,
+                trailingIcon = trailingIcon,
+                supportingText = supportingText,
+                colors = colors,
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp),
+                container = {
+                    OutlinedTextFieldDefaults.ContainerBox(
+                        enabled = true,
+                        isError = isError,
+                        interactionSource = interactionSource,
+                        colors = colors,
+                        shape = shape,
+                    )
+                },
+            )
+        },
+    )
+}
 
 @Composable
 private fun dialogTextButtonColors() = ButtonDefaults.textButtonColors(
@@ -137,16 +204,16 @@ private fun DemoDialog(
                         modifier = Modifier
                             .weight(1f, fill = false)
                             .verticalScroll(rememberScrollState())
-                            .padding(start = 24.dp, end = 24.dp, top = 24.dp),
+                            .padding(start = 20.dp, end = 20.dp, top = 20.dp),
                     ) {
                         title()
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(12.dp))
                         text()
                     }
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(start = 24.dp, end = 24.dp, top = 24.dp, bottom = 24.dp),
+                            .padding(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 12.dp),
                         horizontalArrangement = Arrangement.spacedBy(DemoLayout.gap, Alignment.End),
                     ) {
                         dismissButton?.invoke()
@@ -179,7 +246,7 @@ fun SingleInputDialog(
             DialogTitle(title)
         },
         text = {
-            OutlinedTextField(
+            DemoTextField(
                 value = value,
                 onValueChange = { value = it },
                 label = { Text(label) },
@@ -233,7 +300,7 @@ fun PairInputDialog(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                OutlinedTextField(
+                DemoTextField(
                     value = key,
                     onValueChange = { key = it },
                     label = { Text(keyLabel) },
@@ -242,7 +309,7 @@ fun PairInputDialog(
                     shape = TextFieldShape,
                     colors = dialogTextFieldColors()
                 )
-                OutlinedTextField(
+                DemoTextField(
                     value = value,
                     onValueChange = { value = it },
                     label = { Text(valueLabel) },
@@ -297,7 +364,7 @@ fun MultiPairInputDialog(
                         horizontalArrangement = Arrangement.spacedBy(10.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        OutlinedTextField(
+                        DemoTextField(
                             value = key,
                             onValueChange = { newKey ->
                                 pairs = pairs.toMutableList().apply {
@@ -312,7 +379,7 @@ fun MultiPairInputDialog(
                             shape = TextFieldShape,
                             colors = dialogTextFieldColors()
                         )
-                        OutlinedTextField(
+                        DemoTextField(
                             value = value,
                             onValueChange = { newValue ->
                                 pairs = pairs.toMutableList().apply {
@@ -469,7 +536,7 @@ fun LoginDialog(
         },
         text = {
             Column {
-                OutlinedTextField(
+                DemoTextField(
                     value = externalId,
                     onValueChange = { externalId = it },
                     label = { Text("External User Id") },
@@ -481,7 +548,7 @@ fun LoginDialog(
                     colors = dialogTextFieldColors()
                 )
                 Spacer(modifier = Modifier.height(12.dp))
-                OutlinedTextField(
+                DemoTextField(
                     value = jwtToken,
                     onValueChange = { jwtToken = it },
                     label = { Text("JWT Token (optional)") },
@@ -529,7 +596,7 @@ fun UpdateUserJwtDialog(
         },
         text = {
             Column {
-                OutlinedTextField(
+                DemoTextField(
                     value = externalId,
                     onValueChange = { externalId = it },
                     label = { Text("External User Id") },
@@ -541,7 +608,7 @@ fun UpdateUserJwtDialog(
                     colors = dialogTextFieldColors()
                 )
                 Spacer(modifier = Modifier.height(12.dp))
-                OutlinedTextField(
+                DemoTextField(
                     value = token,
                     onValueChange = { token = it },
                     label = { Text("JWT Token") },
@@ -596,7 +663,7 @@ fun CompositeLoginDialog(
         },
         text = {
             Column {
-                OutlinedTextField(
+                DemoTextField(
                     value = externalId,
                     onValueChange = { externalId = it },
                     label = { Text("External User Id") },
@@ -608,7 +675,7 @@ fun CompositeLoginDialog(
                     colors = dialogTextFieldColors()
                 )
                 Spacer(modifier = Modifier.height(12.dp))
-                OutlinedTextField(
+                DemoTextField(
                     value = jwtToken,
                     onValueChange = { jwtToken = it },
                     label = { Text("JWT Token (optional)") },
@@ -621,7 +688,7 @@ fun CompositeLoginDialog(
                     colors = dialogTextFieldColors()
                 )
                 Spacer(modifier = Modifier.height(12.dp))
-                OutlinedTextField(
+                DemoTextField(
                     value = email,
                     onValueChange = { email = it },
                     label = { Text("Email (optional)") },
@@ -641,7 +708,7 @@ fun CompositeLoginDialog(
                     testTag = "composite_login_email_enabled_input",
                 )
                 Spacer(modifier = Modifier.height(12.dp))
-                OutlinedTextField(
+                DemoTextField(
                     value = sms,
                     onValueChange = { sms = it },
                     label = { Text("SMS (optional)") },
@@ -745,10 +812,10 @@ private fun ProfilePairRow(
         text = caption,
         style = MaterialTheme.typography.bodySmall,
         color = OsGrey700,
-        modifier = Modifier.padding(bottom = 4.dp),
+        modifier = Modifier.padding(top = 4.dp, bottom = 4.dp),
     )
     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        OutlinedTextField(
+        DemoTextField(
             value = key,
             onValueChange = onKeyChange,
             label = { Text(keyLabel) },
@@ -759,7 +826,7 @@ private fun ProfilePairRow(
             shape = TextFieldShape,
             colors = dialogTextFieldColors(),
         )
-        OutlinedTextField(
+        DemoTextField(
             value = value,
             onValueChange = onValueChange,
             label = { Text(valueLabel) },
@@ -790,7 +857,7 @@ private fun SubscriptionStatusField(
 ) {
     var expanded by remember { mutableStateOf(false) }
     ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
-        OutlinedTextField(
+        DemoTextField(
             value = subscriptionStatusOptions.first { it.second == value }.first,
             onValueChange = {},
             readOnly = true,
@@ -866,7 +933,7 @@ fun OutcomeDialog(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                OutlinedTextField(
+                DemoTextField(
                     value = outcomeName,
                     onValueChange = { outcomeName = it },
                     label = { Text("Outcome Name") },
@@ -879,8 +946,8 @@ fun OutcomeDialog(
                 )
 
                 if (selectedType == 2) {
-                    Spacer(modifier = Modifier.height(10.dp))
-                    OutlinedTextField(
+                    Spacer(modifier = Modifier.height(12.dp))
+                    DemoTextField(
                         value = outcomeValue,
                         onValueChange = { outcomeValue = it },
                         label = { Text("Value") },
@@ -964,7 +1031,7 @@ fun TrackEventDialog(
         },
         text = {
             Column {
-                OutlinedTextField(
+                DemoTextField(
                     value = eventName,
                     onValueChange = { eventName = it },
                     label = { Text("Event Name") },
@@ -977,9 +1044,9 @@ fun TrackEventDialog(
                     colors = dialogTextFieldColors()
                 )
 
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
-                OutlinedTextField(
+                DemoTextField(
                     value = eventValue,
                     onValueChange = {
                         eventValue = it
@@ -1049,7 +1116,7 @@ fun CustomNotificationDialog(
         },
         text = {
             Column {
-                OutlinedTextField(
+                DemoTextField(
                     value = title,
                     onValueChange = { title = it },
                     label = { Text("Title") },
@@ -1060,8 +1127,8 @@ fun CustomNotificationDialog(
                     shape = TextFieldShape,
                     colors = dialogTextFieldColors()
                 )
-                Spacer(modifier = Modifier.height(10.dp))
-                OutlinedTextField(
+                Spacer(modifier = Modifier.height(12.dp))
+                DemoTextField(
                     value = body,
                     onValueChange = { body = it },
                     label = { Text("Body") },
