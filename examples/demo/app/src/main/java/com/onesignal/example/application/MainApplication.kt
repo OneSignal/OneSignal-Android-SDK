@@ -103,7 +103,7 @@ class MainApplication : MultiDexApplication() {
         OneSignal.Notifications.addClickListener(object : INotificationClickListener {
             override fun onClick(event: INotificationClickEvent) {
                 val notification = event.notification
-                DemoLog.show("Notification click: ${notification.notificationId} ${notification.title.orEmpty()}")
+                DemoLog.show("Notif click: ${notification.notificationId} ${notification.title.orEmpty()}")
                 
                 // uncomment to see the full event object
                 // DemoLog.d("Event: ${event.toJSONObject()}")
