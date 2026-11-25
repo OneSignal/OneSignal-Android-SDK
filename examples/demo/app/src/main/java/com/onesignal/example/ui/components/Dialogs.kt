@@ -716,6 +716,8 @@ fun CompositeLoginDialog(
                     value = sms,
                     onValueChange = { sms = it },
                     label = { Text("SMS (optional)") },
+                    // The SDK rejects numbers that aren't E.164.
+                    placeholder = { Text("+14155552671") },
                     modifier = Modifier
                         .fillMaxWidth()
                         .testTag("composite_login_sms_input"),
