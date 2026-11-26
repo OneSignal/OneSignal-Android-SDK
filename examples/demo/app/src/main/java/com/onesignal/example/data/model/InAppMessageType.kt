@@ -9,27 +9,27 @@ enum class InAppMessageType(
     val triggerValue: String,
 ) {
     TOP_BANNER(
-        title = "TOP",
+        title = "Top",
         triggerKey = "iam_type",
         triggerValue = "top_banner",
     ),
     CENTER_MODAL(
-        title = "CENTER",
+        title = "Center",
         triggerKey = "iam_type",
         triggerValue = "center_modal",
     ),
     BOTTOM_BANNER(
-        title = "BOTTOM",
+        title = "Bottom",
         triggerKey = "iam_type",
         triggerValue = "bottom_banner",
     ),
     FULL_SCREEN(
-        title = "FULL",
+        title = "Full",
         triggerKey = "iam_type",
         triggerValue = "full_screen",
     ),
     CAROUSEL(
-        title = "CAROUSEL",
+        title = "Carousel",
         triggerKey = "iam_type",
         triggerValue = "carousel",
     ),
@@ -39,12 +39,12 @@ enum class InAppMessageType(
         triggerValue = "html",
     ),
     FULL_BLEED(
-        title = "FULL BLEED",
+        title = "Full Bleed",
         triggerKey = "iam_type",
         triggerValue = "full_bleed",
     ),
     CAROUSEL_BLEED(
-        title = "CAROUSEL BLEED",
+        title = "Carousel Bleed",
         triggerKey = "iam_type",
         triggerValue = "carousel_bleed",
     )

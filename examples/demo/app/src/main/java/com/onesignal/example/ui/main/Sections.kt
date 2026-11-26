@@ -238,27 +238,27 @@ fun UserSection(
         ButtonGrid(
             listOfNotNull(
                 GridAction(
-                    text = if (isLoggedIn) "SWITCH USER" else "LOGIN USER",
+                    text = if (isLoggedIn) "Switch User" else "Login User",
                     onClick = { loginOpen = true },
                     testTag = "login_user_button",
                     enabled = !isLoading,
                 ),
                 GridAction(
-                    text = "LOGOUT USER",
+                    text = "Logout User",
                     onClick = onLogout,
                     testTag = "logout_user_button",
                     style = ButtonStyle.Secondary,
                     enabled = !isLoading,
                 ).takeIf { isLoggedIn },
                 GridAction(
-                    text = "LOGIN WITH PROFILE",
+                    text = "Login with Profile",
                     onClick = { compositeLoginOpen = true },
                     testTag = "composite_login_button",
                     style = ButtonStyle.Secondary,
                     enabled = !isLoading,
                 ),
                 GridAction(
-                    text = "UPDATE USER JWT",
+                    text = "Update User JWT",
                     onClick = { updateJwtOpen = true },
                     testTag = "update_user_jwt_button",
                     style = ButtonStyle.Secondary,
@@ -338,7 +338,7 @@ fun PushSection(
 
         if (!hasPermission) {
             Spacer(modifier = Modifier.height(DemoLayout.gap))
-            PrimaryButton(text = "PROMPT PUSH", onClick = onPromptPush, testTag = "prompt_push_button")
+            PrimaryButton(text = "Prompt Push", onClick = onPromptPush, testTag = "prompt_push_button")
         }
     }
 }
@@ -363,11 +363,11 @@ fun SendPushSection(
         ) {
             ButtonGrid(
                 listOf(
-                    GridAction("SIMPLE", onSimpleClick, "send_simple_button"),
-                    GridAction("WITH IMAGE", onImageClick, "send_image_button"),
-                    GridAction("WITH SOUND", onSoundClick, "send_sound_button", ButtonStyle.Secondary),
-                    GridAction("CUSTOM", { customOpen = true }, "send_custom_button", ButtonStyle.Secondary),
-                    GridAction("CLEAR ALL", onClearAllClick, "clear_all_button", ButtonStyle.Secondary),
+                    GridAction("Simple", onSimpleClick, "send_simple_button"),
+                    GridAction("With Image", onImageClick, "send_image_button"),
+                    GridAction("With Sound", onSoundClick, "send_sound_button", ButtonStyle.Secondary),
+                    GridAction("Custom", { customOpen = true }, "send_custom_button", ButtonStyle.Secondary),
+                    GridAction("Clear All", onClearAllClick, "clear_all_button", ButtonStyle.Secondary),
                 ),
             )
         }
@@ -519,8 +519,8 @@ fun AliasesSection(
         Spacer(modifier = Modifier.height(DemoLayout.gap))
         ButtonGrid(
             listOf(
-                GridAction("ADD ALIAS", { addOpen = true }, "add_alias_button"),
-                GridAction("ADD ALIASES", { addMultipleOpen = true }, "add_multiple_aliases_button", ButtonStyle.Secondary),
+                GridAction("Add Alias", { addOpen = true }, "add_alias_button"),
+                GridAction("Add Aliases", { addMultipleOpen = true }, "add_multiple_aliases_button", ButtonStyle.Secondary),
             ),
         )
     }
@@ -575,7 +575,7 @@ fun EmailsSection(
             )
         }
         Spacer(modifier = Modifier.height(DemoLayout.gap))
-        PrimaryButton(text = "ADD EMAIL", onClick = { addOpen = true }, testTag = "add_email_button")
+        PrimaryButton(text = "Add Email", onClick = { addOpen = true }, testTag = "add_email_button")
     }
 
     if (addOpen) {
@@ -613,7 +613,7 @@ fun SmsSection(
             )
         }
         Spacer(modifier = Modifier.height(DemoLayout.gap))
-        PrimaryButton(text = "ADD SMS", onClick = { addOpen = true }, testTag = "add_sms_button")
+        PrimaryButton(text = "Add SMS", onClick = { addOpen = true }, testTag = "add_sms_button")
     }
 
     if (addOpen) {
@@ -657,9 +657,9 @@ fun TagsSection(
         Spacer(modifier = Modifier.height(DemoLayout.gap))
         ButtonGrid(
             listOfNotNull(
-                GridAction("ADD TAG", { addOpen = true }, "add_tag_button"),
-                GridAction("ADD TAGS", { addMultipleOpen = true }, "add_multiple_tags_button", ButtonStyle.Secondary),
-                GridAction("REMOVE TAGS", { removeOpen = true }, "remove_tags_button", ButtonStyle.Secondary)
+                GridAction("Add Tag", { addOpen = true }, "add_tag_button"),
+                GridAction("Add Tags", { addMultipleOpen = true }, "add_multiple_tags_button", ButtonStyle.Secondary),
+                GridAction("Remove Tags", { removeOpen = true }, "remove_tags_button", ButtonStyle.Secondary)
                     .takeIf { tags.isNotEmpty() },
             ),
         )
@@ -719,7 +719,7 @@ fun OutcomeSection(
             sectionKey = "outcomes",
             onInfoClick = onInfoClick,
         ) {
-            PrimaryButton(text = "SEND OUTCOME", onClick = { open = true }, testTag = "send_outcome_button")
+            PrimaryButton(text = "Send Outcome", onClick = { open = true }, testTag = "send_outcome_button")
         }
     }
 
@@ -772,11 +772,11 @@ fun TriggersSection(
         val hasTriggers = triggers.isNotEmpty()
         ButtonGrid(
             listOfNotNull(
-                GridAction("ADD TRIGGER", { addOpen = true }, "add_trigger_button"),
-                GridAction("ADD TRIGGERS", { addMultipleOpen = true }, "add_multiple_triggers_button", ButtonStyle.Secondary),
-                GridAction("REMOVE TRIGGERS", { removeOpen = true }, "remove_triggers_button", ButtonStyle.Secondary)
+                GridAction("Add Trigger", { addOpen = true }, "add_trigger_button"),
+                GridAction("Add Triggers", { addMultipleOpen = true }, "add_multiple_triggers_button", ButtonStyle.Secondary),
+                GridAction("Remove Triggers", { removeOpen = true }, "remove_triggers_button", ButtonStyle.Secondary)
                     .takeIf { hasTriggers },
-                GridAction("CLEAR ALL", onClearAll, "clear_triggers_button", ButtonStyle.Secondary)
+                GridAction("Clear All", onClearAll, "clear_triggers_button", ButtonStyle.Secondary)
                     .takeIf { hasTriggers },
             ),
         )
@@ -834,7 +834,7 @@ fun CustomEventsSection(
             sectionKey = "custom_events",
             onInfoClick = onInfoClick,
         ) {
-            PrimaryButton(text = "TRACK EVENT", onClick = { open = true }, testTag = "track_event_button")
+            PrimaryButton(text = "Track Event", onClick = { open = true }, testTag = "track_event_button")
         }
     }
 
@@ -874,9 +874,9 @@ fun LocationSection(
         Spacer(modifier = Modifier.height(DemoLayout.gap))
         ButtonGrid(
             listOf(
-                GridAction("PROMPT LOCATION", onPromptLocation, "prompt_location_button"),
+                GridAction("Prompt Location", onPromptLocation, "prompt_location_button"),
                 GridAction(
-                    text = "CHECK LOCATION",
+                    text = "Check Location",
                     onClick = { snackbar.show("Location shared: ${onCheckLocationShared()}") },
                     testTag = "check_location_button",
                     style = ButtonStyle.Secondary,

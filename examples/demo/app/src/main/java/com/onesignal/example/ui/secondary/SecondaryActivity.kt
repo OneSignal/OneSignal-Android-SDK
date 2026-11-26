@@ -82,14 +82,14 @@ class SecondaryActivity : ComponentActivity() {
                         Spacer(modifier = Modifier.height(24.dp))
 
                         SecondaryButton(
-                            text = "CRASH",
+                            text = "Crash",
                             onClick = { triggerCrash() }
                         )
 
                         Spacer(modifier = Modifier.height(DemoLayout.gap))
 
                         SecondaryButton(
-                            text = "SIMULATE ANR (10S BLOCK)",
+                            text = "Simulate ANR (10s Block)",
                             onClick = { triggerAnr() }
                         )
                     }

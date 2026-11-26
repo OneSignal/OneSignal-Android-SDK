@@ -269,7 +269,7 @@ fun MainScreen(viewModel: MainViewModel) {
                     )
 
                     SecondaryButton(
-                        text = "NEXT SCREEN",
+                        text = "Next Screen",
                         onClick = {
                             context.startActivity(Intent(context, SecondaryActivity::class.java))
                         },
