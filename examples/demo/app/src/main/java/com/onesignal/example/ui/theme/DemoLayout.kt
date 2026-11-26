@@ -6,7 +6,7 @@ import androidx.compose.ui.unit.dp
 object DemoLayout {
     const val toastDurationMs = 3_000L
     val gap = 8.dp
-    val sectionGap = 16.dp
+    val sectionGap = 20.dp
     val pagePadding = 16.dp
     val scrollTopPadding = 16.dp
     val cardPaddingHorizontal = 16.dp
