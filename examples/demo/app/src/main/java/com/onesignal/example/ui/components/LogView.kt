@@ -95,7 +95,7 @@ fun LogView(modifier: Modifier = Modifier) {
             Text(
                 text = "Logs",
                 color = OsLogText,
-                fontSize = 11.sp,
+                fontSize = 13.sp,
                 fontWeight = FontWeight.SemiBold,
             )
             Spacer(modifier = Modifier.width(6.dp))
