@@ -38,7 +38,11 @@ import com.onesignal.example.ui.theme.OsGrey600
 import com.onesignal.example.ui.theme.OsPrimary
 import com.onesignal.example.ui.theme.rowLabel
 
-private val ItemVerticalPadding = 6.dp
+// Rows carry no vertical padding of their own, so the card's padding alone sets the list's top and bottom edge.
+// The divider sits lower than center: the row above ends in descender space and the row below starts
+// with ascender space, so equal padding reads as closer to the row above.
+private val ItemDividerSpacingAbove = 5.dp
+private val ItemDividerSpacingBelow = 1.dp
 private val StateSlotHeight = 20.dp
 private val RemoveButtonSize = 28.dp
 private val RemoveIconSize = 16.dp
@@ -61,6 +65,14 @@ private fun RemoveButton(contentDescription: String, onClick: () -> Unit, testTa
 }
 
 @Composable
+private fun ItemDivider() {
+    HorizontalDivider(
+        color = OsDivider,
+        modifier = Modifier.padding(top = ItemDividerSpacingAbove, bottom = ItemDividerSpacingBelow),
+    )
+}
+
+@Composable
 fun PairItem(
     key: String,
     value: String,
@@ -69,9 +81,7 @@ fun PairItem(
     sectionKey: String? = null,
 ) {
     Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(vertical = ItemVerticalPadding),
+        modifier = modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1f)) {
@@ -119,9 +129,7 @@ fun SingleItem(
     sectionKey: String? = null,
 ) {
     Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(vertical = ItemVerticalPadding),
+        modifier = modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         val valueModifier = Modifier
@@ -208,12 +216,12 @@ fun CollapsibleSingleList(
             displayItems.forEachIndexed { index, item ->
                 SingleItem(value = item, onDelete = { onDelete(item) }, sectionKey = sectionKey)
                 if (index < displayItems.lastIndex) {
-                    HorizontalDivider(color = OsDivider)
+                    ItemDivider()
                 }
             }
 
             if (shouldCollapse) {
-                HorizontalDivider(color = OsDivider)
+                HorizontalDivider(color = OsDivider, modifier = Modifier.padding(top = ItemDividerSpacingAbove))
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -264,7 +272,7 @@ fun PairList(
                     sectionKey = sectionKey,
                 )
                 if (index < items.lastIndex) {
-                    HorizontalDivider(color = OsDivider)
+                    ItemDivider()
                 }
             }
         }
