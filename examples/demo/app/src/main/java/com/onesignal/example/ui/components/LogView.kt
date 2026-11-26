@@ -93,11 +93,10 @@ fun LogView(modifier: Modifier = Modifier) {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = "LOGS",
+                text = "Logs",
                 color = OsLogText,
                 fontSize = 11.sp,
                 fontWeight = FontWeight.SemiBold,
-                letterSpacing = 0.8.sp,
             )
             Spacer(modifier = Modifier.width(6.dp))
             Text(
