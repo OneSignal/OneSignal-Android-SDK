@@ -22,7 +22,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.onesignal.example.ui.theme.DemoLayout
 import com.onesignal.example.ui.theme.OsCardBorder
 import com.onesignal.example.ui.theme.OsGrey600
@@ -57,8 +59,12 @@ fun SectionCard(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = title.uppercase(),
-                style = MaterialTheme.typography.labelLarge,
+                text = title,
+                style = MaterialTheme.typography.labelLarge.copy(
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    letterSpacing = 0.sp,
+                ),
                 modifier = Modifier.weight(1f),
             )
             if (onInfoClick != null) {
